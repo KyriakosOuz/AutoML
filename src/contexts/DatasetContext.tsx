@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -131,9 +132,8 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
-    // Only update to final if we're explicitly coming from cleaned with target and columns
-    if (targetColumn && columnsToKeep && processingStage === 'cleaned' && 
-        processingStage !== 'final') {
+    // Only update to final if we're coming from cleaned with target and columns
+    if (targetColumn && columnsToKeep && processingStage === 'cleaned') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
