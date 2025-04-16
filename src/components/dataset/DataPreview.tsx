@@ -146,24 +146,32 @@ const DataPreview: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {previewData.map((row, rowIndex) => (
-                  <TableRow key={rowIndex}>
-                    <TableCell className="text-center font-medium">{rowIndex + 1}</TableCell>
-                    {previewColumns.map((column) => {
-                      const value = row[column];
-                      const displayValue = 
-                        value === null || value === undefined ? 
-                        <span className="text-gray-400 italic">null</span> : 
-                        String(value);
-                      
-                      return (
-                        <TableCell key={`${rowIndex}-${column}`}>
-                          {displayValue}
-                        </TableCell>
-                      );
-                    })}
+                {Array.isArray(previewData) ? (
+                  previewData.map((row, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      <TableCell className="text-center font-medium">{rowIndex + 1}</TableCell>
+                      {previewColumns.map((column) => {
+                        const value = row[column];
+                        const displayValue = 
+                          value === null || value === undefined ? 
+                          <span className="text-gray-400 italic">null</span> : 
+                          String(value);
+                        
+                        return (
+                          <TableCell key={`${rowIndex}-${column}`}>
+                            {displayValue}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={previewColumns.length + 1} className="text-center text-gray-500 py-4">
+                      Data structure invalid. Please refresh the preview.
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
