@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -43,7 +43,8 @@ const MissingValueHandler: React.FC = () => {
     datasetId, 
     overview, 
     updateState,
-    setProcessingStage
+    setProcessingStage,
+    processingStage
   } = useDataset();
 
   // Detect if there are missing values
@@ -116,7 +117,9 @@ const MissingValueHandler: React.FC = () => {
         <CardDescription>
           {hasMissingValues 
             ? `Your dataset has ${overview.total_missing_values} missing values that need to be handled` 
-            : `Your dataset doesn't have missing values or they've been handled`}
+            : processingStage === 'cleaned' 
+              ? 'Missing values have been successfully handled'
+              : `Your dataset doesn't have missing values`}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
@@ -227,7 +230,9 @@ const MissingValueHandler: React.FC = () => {
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertTitle>All Data Is Complete</AlertTitle>
             <AlertDescription>
-              Your dataset has no missing values or they have been successfully handled.
+              {processingStage === 'cleaned' 
+                ? 'Your dataset has been successfully processed. All missing values have been handled.'
+                : 'Your dataset has no missing values.'}
             </AlertDescription>
           </Alert>
         )}

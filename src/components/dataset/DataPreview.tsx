@@ -70,10 +70,16 @@ const DataPreview: React.FC = () => {
     }
   }, [datasetId, stage]);
 
-  // Update stage when processingStage changes
+  // Set the default stage based on the latest available processing stage
   useEffect(() => {
     if (processingStage) {
-      setStage(processingStage as PreviewStage);
+      if (processingStage === 'cleaned' && stage === 'raw') {
+        setStage('cleaned');
+        fetchPreview();
+      } else if (stage !== processingStage && (processingStage === 'final' || processingStage === 'processed')) {
+        setStage(processingStage);
+        fetchPreview();
+      }
     }
   }, [processingStage]);
 
@@ -95,11 +101,11 @@ const DataPreview: React.FC = () => {
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="raw" disabled={!hasRawData}>Raw Data</SelectItem>
+              <SelectItem value="raw">Raw Data</SelectItem>
               <SelectItem value="cleaned" disabled={!hasCleanedData}>Cleaned Data</SelectItem>
               <SelectItem value="final" disabled={!hasFinalData}>Final Data</SelectItem>
               <SelectItem value="processed" disabled={!hasProcessedData}>Processed Data</SelectItem>
-              <SelectItem value="latest" disabled={!hasRawData}>Latest Stage</SelectItem>
+              <SelectItem value="latest">Latest Stage</SelectItem>
             </SelectContent>
           </Select>
           <Button

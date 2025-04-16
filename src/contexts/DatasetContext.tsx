@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
 export interface DatasetOverview {
@@ -104,13 +104,26 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   });
   
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       localStorage.setItem('datasetState', JSON.stringify(state));
     } catch (error) {
       console.error('Failed to save state to localStorage:', error);
     }
   }, [state]);
+
+  // Ensure we have consistent processingStage based on data availability
+  useEffect(() => {
+    const { datasetId, targetColumn, columnsToKeep, processingStage } = state;
+    
+    if (datasetId && !processingStage) {
+      setState(prev => ({ ...prev, processingStage: 'raw' }));
+    }
+    
+    if (targetColumn && columnsToKeep && processingStage === 'cleaned') {
+      setState(prev => ({ ...prev, processingStage: 'final' }));
+    }
+  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));

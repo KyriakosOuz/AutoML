@@ -25,19 +25,13 @@ import { Badge } from '@/components/ui/badge';
 import { 
   AlertCircle, 
   BarChart3, 
-  HelpCircle, 
-  ChevronRight, 
-  ListFilter 
+  HelpCircle,
+  Save
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent
-} from '@/components/ui/chart';
 import {
   Bar,
   BarChart,
@@ -60,7 +54,8 @@ const FeatureImportanceChart: React.FC = () => {
     setTaskType,
     taskType,
     setColumnsToKeep,
-    columnsToKeep
+    columnsToKeep,
+    updateState
   } = useDataset();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -135,18 +130,49 @@ const FeatureImportanceChart: React.FC = () => {
     setSelectedColumns([]);
   };
 
-  const saveFeatures = () => {
+  const saveDataset = async () => {
+    if (!datasetId || !targetColumn) {
+      setError('Dataset ID and target column are required');
+      return;
+    }
+
     if (selectedColumns.length === 0) {
       setError('Select at least one feature column');
       return;
     }
-    
-    setColumnsToKeep(selectedColumns);
-    toast({
-      title: "Features selected",
-      description: `${selectedColumns.length} features selected for analysis`,
-      duration: 3000
-    });
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await datasetApi.saveDataset(
+        datasetId, 
+        targetColumn,
+        selectedColumns
+      );
+      
+      // Update context with response data
+      updateState({
+        datasetId: response.dataset_id,
+        fileUrl: response.file_url,
+        columnsToKeep: response.columns_to_keep,
+        targetColumn: response.target_column,
+        overview: response.overview,
+        processingStage: 'final'
+      });
+      
+      toast({
+        title: "Features saved",
+        description: "Selected features have been saved successfully.",
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error saving dataset:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save dataset');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const analyzeFeatures = async () => {
@@ -219,55 +245,55 @@ const FeatureImportanceChart: React.FC = () => {
         )}
 
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium">Target Column</label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full p-0">
-                        <HelpCircle className="h-3 w-3" />
-                        <span className="sr-only">Help</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">
-                        This is the variable you want to predict. Selecting a target will
-                        automatically detect the task type (regression or classification).
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Select
-                value={targetColumn || ''}
-                onValueChange={handleTargetColumnChange}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select target column" />
-                </SelectTrigger>
-                <SelectContent>
-                  {previewColumns.map((column) => (
-                    <SelectItem key={column} value={column}>
-                      {column}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Step 1: Target Column Selection */}
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <h3 className="font-medium mb-3">Step 1: Select Target Column</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-sm font-medium">Target Column</label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full p-0">
+                      <HelpCircle className="h-3 w-3" />
+                      <span className="sr-only">Help</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">
+                      This is the variable you want to predict. Selecting a target will
+                      automatically detect the task type (regression or classification).
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
+            <Select
+              value={targetColumn || ''}
+              onValueChange={handleTargetColumnChange}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select target column" />
+              </SelectTrigger>
+              <SelectContent>
+                {previewColumns.map((column) => (
+                  <SelectItem key={column} value={column}>
+                    {column}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
             {targetColumn && taskType && (
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg w-full">
-                  <div className="flex items-center justify-between mb-1">
+              <div className="mt-3">
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between">
                     <h4 className="font-medium text-purple-800">Detected Task Type</h4>
                     <Badge className="capitalize bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
                       {taskType.replace('_', ' ')}
                     </Badge>
                   </div>
-                  <p className="text-sm text-purple-700">
+                  <p className="text-sm text-purple-700 mt-1">
                     {taskType === 'regression' && 'Predicting a continuous numerical value'}
                     {taskType === 'binary_classification' && 'Predicting between two classes'}
                     {taskType === 'multiclass_classification' && 'Predicting between multiple classes'}
@@ -277,13 +303,13 @@ const FeatureImportanceChart: React.FC = () => {
             )}
           </div>
 
+          {/* Step 2: Feature Selection */}
           {targetColumn && (
-            <div className="space-y-3 mt-6 border rounded-md p-4">
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+              <h3 className="font-medium mb-3">Step 2: Select Features</h3>
+              
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <ListFilter className="h-4 w-4" />
-                  Select Features
-                </h4>
+                <p className="text-sm text-gray-600">Choose which columns to include in your model</p>
                 <div className="space-x-2">
                   <Button 
                     variant="outline" 
@@ -332,27 +358,38 @@ const FeatureImportanceChart: React.FC = () => {
               <div className="text-sm text-gray-500 mt-2">
                 <p>Selected {selectedColumns.length} of {availableFeatures.length} features</p>
               </div>
-              
-              <div className="flex justify-end mt-2">
-                <Button 
-                  onClick={saveFeatures}
-                  size="sm"
-                  variant="outline"
-                  disabled={selectedColumns.length === 0 || isLoading}
-                >
-                  Save Feature Selection
-                </Button>
-              </div>
             </div>
           )}
 
+          {/* Step 3: Analyze Feature Importance */}
+          {targetColumn && selectedColumns.length > 0 && (
+            <div className="mt-4">
+              {!featureImportance ? (
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={analyzeFeatures} 
+                    disabled={isLoading || !targetColumn || selectedColumns.length === 0}
+                    variant="default"
+                    size="lg"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Feature importance chart */}
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-6">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-[300px] w-full rounded-lg" />
             </div>
           ) : featureImportance && featureImportance.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+              <h3 className="font-medium mb-3">Step 3: Feature Importance Analysis</h3>
+              
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-800">Feature Importance</h4>
                 <p className="text-xs text-gray-500">
@@ -360,7 +397,7 @@ const FeatureImportanceChart: React.FC = () => {
                 </p>
               </div>
               
-              <div className="h-[350px] w-full bg-gray-50 rounded-lg p-4">
+              <div className="h-[350px] w-full bg-white rounded-lg p-4 border border-gray-200">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={featureImportance}
@@ -378,14 +415,6 @@ const FeatureImportanceChart: React.FC = () => {
                       dataKey="feature" 
                       width={120}
                       tick={{ fontSize: 12 }}
-                    />
-                    <ChartTooltip
-                      cursor={{ fill: 'rgba(180, 180, 180, 0.1)' }}
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value: number) => [`${(value * 100).toFixed(2)}%`, 'Importance']}
-                        />
-                      }
                     />
                     <Bar 
                       dataKey="importance" 
@@ -406,26 +435,20 @@ const FeatureImportanceChart: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             </div>
-          ) : targetColumn && columnsToKeep && columnsToKeep.length > 0 ? (
-            <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg">
-              <BarChart3 className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-              <p>Click "Analyze Feature Importance" to see which features are most important for predicting {targetColumn}</p>
-            </div>
           ) : null}
         </div>
       </CardContent>
-      {targetColumn && columnsToKeep && columnsToKeep.length > 0 && !featureImportance && (
+      
+      {targetColumn && selectedColumns.length > 0 && featureImportance && (
         <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
           <Button 
-            onClick={analyzeFeatures} 
+            onClick={saveDataset} 
             disabled={isLoading || !targetColumn || selectedColumns.length === 0}
             variant="default"
             size="lg"
-            className="mt-2"
           >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <Save className="h-4 w-4 mr-2" />
+            {isLoading ? 'Saving...' : 'Save & Continue'}
           </Button>
         </CardFooter>
       )}
