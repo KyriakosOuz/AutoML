@@ -78,6 +78,11 @@ const FeatureImportanceChart: React.FC = () => {
       
       console.log('Task type detection response:', response);
       
+      // Safety check for response and task_type
+      if (!response || typeof response.task_type === 'undefined') {
+        throw new Error('Invalid response from task type detection');
+      }
+      
       // Only update the main context after API call completes
       // This prevents unwanted tab navigation
       const updatedState: {

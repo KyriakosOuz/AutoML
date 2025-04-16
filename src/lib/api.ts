@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -79,7 +78,8 @@ const apiRequest = async (
       );
     }
     
-    return await response.json();
+    const responseData = await response.json();
+    return responseData;
   } catch (error) {
     console.error('API request error:', error);
     throw error;
@@ -125,14 +125,23 @@ export const datasetApi = {
   // Detect Task Type
   detectTaskType: (datasetId: string, targetColumn: string) => {
     console.log(`Calling detectTaskType with datasetId: ${datasetId}, targetColumn: ${targetColumn}`);
+    
+    if (!datasetId || !targetColumn) {
+      throw new Error('Dataset ID and target column are required');
+    }
+    
     return apiRequest(`${DATASET_API_PREFIX}/detect-task-type/`, 'POST', {
       dataset_id: datasetId,
       target_column: targetColumn
     }, true);
   },
   
-  // 5. Save Dataset (Features + Target)
+  // Save Dataset (Features + Target)
   saveDataset: (datasetId: string, targetColumn: string, columnsToKeep: string[]) => {
+    if (!datasetId || !targetColumn || !columnsToKeep) {
+      throw new Error('Dataset ID, target column, and columns are required');
+    }
+    
     return apiRequest(`${DATASET_API_PREFIX}/save-dataset/`, 'POST', {
       dataset_id: datasetId,
       target_column: targetColumn,

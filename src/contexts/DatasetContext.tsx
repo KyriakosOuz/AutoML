@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -90,7 +89,7 @@ const initialState: DatasetContextState = {
   processedFileUrl: null,
   isLoading: false,
   error: null,
-  processingStage: 'raw', // Default to raw data
+  processingStage: null, // Start with null to avoid immediate redirects
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -123,17 +122,15 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     const { datasetId, targetColumn, columnsToKeep, processingStage } = state;
     
-    // We'll take a more conservative approach to updating processingStage
-    // to prevent unwanted redirects/state changes
-
-    // Only set to raw if we have a dataset but no explicit stage
-    if (datasetId && !processingStage) {
-      console.log('Setting default processing stage to raw');
+    // Only explicitly update if certain logical conditions are met
+    // Avoid unnecessary updates that might trigger unwanted redirects
+    
+    if (datasetId && processingStage === null) {
+      console.log('Setting initial processing stage to raw');
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
-    // Only update to final if we're coming from cleaned with target and columns
-    if (targetColumn && columnsToKeep && processingStage === 'cleaned') {
+    if (datasetId && targetColumn && columnsToKeep && processingStage === 'cleaned') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
@@ -158,6 +155,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
   
   const resetState = () => {
+    console.log('Resetting dataset state to initial state');
     setState(initialState);
     try {
       localStorage.removeItem('datasetState');
