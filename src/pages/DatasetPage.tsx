@@ -49,6 +49,9 @@ const DatasetPageContent = () => {
   const [activeTab, setActiveTab] = useState<string>("upload");
   const { toast } = useToast();
   
+  // Prevent automatic tab switching except for initial load
+  const [hasInitializedTabs, setHasInitializedTabs] = useState(false);
+  
   // Determine the current active step
   const getActiveStep = () => {
     if (!datasetId) return 0;
@@ -57,18 +60,21 @@ const DatasetPageContent = () => {
     return 3;
   };
 
-  // Update active tab when state changes
+  // Initialize tabs only once based on data state
   useEffect(() => {
-    if (!datasetId) {
-      setActiveTab("upload");
-    } else if (datasetId && !targetColumn) {
-      setActiveTab("explore");
-    } else if (targetColumn && !taskType) {
-      setActiveTab("features");
-    } else if (taskType) {
-      setActiveTab("preprocess");
+    if (!hasInitializedTabs) {
+      if (!datasetId) {
+        setActiveTab("upload");
+      } else if (datasetId && !targetColumn) {
+        setActiveTab("explore");
+      } else if (targetColumn && !taskType) {
+        setActiveTab("features");
+      } else if (taskType) {
+        setActiveTab("preprocess");
+      }
+      setHasInitializedTabs(true);
     }
-  }, [datasetId, targetColumn, taskType]);
+  }, [datasetId, targetColumn, taskType, hasInitializedTabs]);
 
   // Check if a tab should be enabled
   const isTabEnabled = (tabName: string): boolean => {

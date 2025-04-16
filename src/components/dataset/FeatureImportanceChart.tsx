@@ -56,6 +56,8 @@ const FeatureImportanceChart: React.FC = () => {
   } = useDataset();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetectingTaskType, setIsDetectingTaskType] = useState(false);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(targetColumn);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -64,24 +66,32 @@ const FeatureImportanceChart: React.FC = () => {
     if (!value) return;
     
     try {
-      setIsLoading(true);
+      // Update local state first for UI responsiveness
+      setSelectedTarget(value);
+      setIsDetectingTaskType(true);
       setError(null);
-      
-      // Set the target column immediately to update UI
-      setTargetColumn(value);
-      
-      // Reset feature importance when target column changes
-      setFeatureImportance(null);
       
       // Call the API to detect task type
       const response = await datasetApi.detectTaskType(datasetId || '', value);
-      setTaskType(response.task_type);
+      
+      // Only update the main context after API call completes
+      // This prevents unwanted tab navigation
+      const updatedState = {
+        targetColumn: value,
+        taskType: response.task_type,
+      };
       
       // Use all non-target columns as default selected columns
       if (previewColumns) {
         const defaultColumns = previewColumns.filter(col => col !== value);
-        setColumnsToKeep(defaultColumns);
+        updatedState.columnsToKeep = defaultColumns;
       }
+      
+      // Apply all updates together
+      updateState(updatedState);
+      
+      // Reset feature importance when target column changes
+      setFeatureImportance(null);
       
       toast({
         title: "Task type detected",
@@ -92,9 +102,9 @@ const FeatureImportanceChart: React.FC = () => {
     } catch (error) {
       console.error('Error detecting task type:', error);
       setError(error instanceof Error ? error.message : 'Failed to detect task type');
-      setTargetColumn(null); // Reset on error
+      setSelectedTarget(targetColumn); // Reset on error
     } finally {
-      setIsLoading(false);
+      setIsDetectingTaskType(false);
     }
   };
 
@@ -110,10 +120,11 @@ const FeatureImportanceChart: React.FC = () => {
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
       
-      setFeatureImportance(response.feature_importance);
-      if (!taskType) {
-        setTaskType(response.task_type);
-      }
+      // Use updateState to batch update context
+      updateState({
+        featureImportance: response.feature_importance,
+        taskType: response.task_type || taskType
+      });
       
       toast({
         title: "Feature importance analyzed",
@@ -224,9 +235,9 @@ const FeatureImportanceChart: React.FC = () => {
               </TooltipProvider>
             </div>
             <Select
-              value={targetColumn || ''}
+              value={selectedTarget || ''}
               onValueChange={handleTargetColumnChange}
-              disabled={isLoading}
+              disabled={isDetectingTaskType || isLoading}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select target column" />
@@ -240,7 +251,16 @@ const FeatureImportanceChart: React.FC = () => {
               </SelectContent>
             </Select>
             
-            {targetColumn && taskType && (
+            {isDetectingTaskType && (
+              <div className="mt-3">
+                <div className="flex items-center gap-2 text-purple-700">
+                  <Skeleton className="h-4 w-4 rounded-full animate-pulse bg-purple-200" />
+                  <span className="text-sm">Detecting task type...</span>
+                </div>
+              </div>
+            )}
+            
+            {selectedTarget && taskType && !isDetectingTaskType && (
               <div className="mt-3">
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
                   <div className="flex items-center justify-between">
@@ -260,7 +280,7 @@ const FeatureImportanceChart: React.FC = () => {
           </div>
 
           {/* Step 2: Analyze Feature Importance */}
-          {targetColumn && taskType && (
+          {selectedTarget && taskType && !isDetectingTaskType && (
             <div className="mt-4 flex justify-center">
               {!featureImportance ? (
                 <Button 

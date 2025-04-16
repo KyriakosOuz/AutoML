@@ -111,7 +111,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       const saveTimeout = setTimeout(() => {
         console.log('Saving state to localStorage:', state.processingStage);
         localStorage.setItem('datasetState', JSON.stringify(state));
-      }, 300);
+      }, 500); // Increased from 300ms to 500ms for more stability
       
       return () => clearTimeout(saveTimeout);
     } catch (error) {
@@ -123,20 +123,25 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     const { datasetId, targetColumn, columnsToKeep, processingStage } = state;
     
-    // Don't override processingStage if it was explicitly set to 'cleaned'
-    // or if we're in an intermediate state during data processing
-    if (datasetId && !processingStage && processingStage !== 'cleaned') {
+    // We'll take a more conservative approach to updating processingStage
+    // to prevent unwanted redirects/state changes
+
+    // Only set to raw if we have a dataset but no explicit stage
+    if (datasetId && !processingStage) {
       console.log('Setting default processing stage to raw');
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
-    // Only update to final if we're coming from cleaned with target and columns
-    if (targetColumn && columnsToKeep && processingStage === 'cleaned') {
+    // Only update to final if we're explicitly coming from cleaned with target and columns
+    // AND we don't already have a final stage
+    if (targetColumn && columnsToKeep && processingStage === 'cleaned' && 
+        processingStage !== 'final') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
+  // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
   const setOverview = (overview: DatasetOverview | null) => setState(prev => ({ ...prev, overview }));
@@ -154,11 +159,23 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
   const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
   
-  const resetState = () => setState(initialState);
+  const resetState = () => {
+    setState(initialState);
+    try {
+      localStorage.removeItem('datasetState');
+    } catch (error) {
+      console.error('Failed to clear localStorage:', error);
+    }
+  };
   
+  // This is a more atomic update function that can update multiple state properties at once
+  // Use this when you need to update multiple related properties to avoid multiple re-renders
   const updateState = (newState: Partial<DatasetContextState>) => {
     console.log('Updating dataset state with:', newState);
-    setState(prev => ({ ...prev, ...newState }));
+    setState(prev => {
+      // Make a single state update instead of multiple individual updates
+      return { ...prev, ...newState };
+    });
   };
   
   const contextValue: DatasetContextProps = {
