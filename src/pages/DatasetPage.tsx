@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
@@ -46,6 +46,7 @@ const StartOverButton = () => {
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
   const { datasetId, targetColumn, taskType } = useDataset();
+  const [activeTab, setActiveTab] = useState<string>("upload");
   
   // Determine the current active step
   const getActiveStep = () => {
@@ -54,6 +55,19 @@ const DatasetPageContent = () => {
     if (!taskType) return 2;
     return 3;
   };
+
+  // Update active tab when state changes
+  useEffect(() => {
+    if (!datasetId) {
+      setActiveTab("upload");
+    } else if (datasetId && !targetColumn) {
+      setActiveTab("explore");
+    } else if (targetColumn && !taskType) {
+      setActiveTab("features");
+    } else if (taskType) {
+      setActiveTab("preprocess");
+    }
+  }, [datasetId, targetColumn, taskType]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -116,7 +130,7 @@ const DatasetPageContent = () => {
         </header>
         
         <div className="space-y-6">
-          <Tabs defaultValue="upload" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="upload">Upload</TabsTrigger>
               <TabsTrigger value="explore" disabled={!datasetId}>Explore</TabsTrigger>
@@ -126,34 +140,64 @@ const DatasetPageContent = () => {
             
             <TabsContent value="upload" className="pt-4">
               <FileUpload />
+              {datasetId && (
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    onClick={() => setActiveTab("explore")} 
+                    className="flex items-center gap-2"
+                  >
+                    Next: Explore Data
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="explore" className="pt-4">
               <DataPreview />
               <MissingValueHandler />
+              <div className="flex justify-end mt-4">
+                <Button 
+                  onClick={() => setActiveTab("features")} 
+                  className="flex items-center gap-2"
+                >
+                  Next: Select Features
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </TabsContent>
             
             <TabsContent value="features" className="pt-4">
               <FeatureImportanceChart />
               <FeatureSelector />
+              {targetColumn && taskType && (
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    onClick={() => setActiveTab("preprocess")} 
+                    className="flex items-center gap-2"
+                  >
+                    Next: Preprocess Data
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="preprocess" className="pt-4">
               <PreprocessingOptions />
+              {datasetId && targetColumn && taskType && (
+                <div className="flex justify-end mt-8">
+                  <Link to="/training">
+                    <Button size="lg" className="flex items-center gap-2">
+                      <PlayCircle className="h-5 w-5" />
+                      Continue to Model Training
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
-          
-          {datasetId && targetColumn && taskType && (
-            <div className="flex justify-end mt-8">
-              <Link to="/training">
-                <Button size="lg" className="flex items-center gap-2">
-                  <PlayCircle className="h-5 w-5" />
-                  Continue to Model Training
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
-              </Link>
-            </div>
-          )}
         </div>
         
         <footer className="mt-12 text-center text-sm text-gray-500">

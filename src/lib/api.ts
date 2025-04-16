@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -87,12 +86,8 @@ const apiRequest = async (
 // Dataset API endpoints
 export const datasetApi = {
   // 1. Upload Dataset
-  uploadDataset: (file: File, customMissingSymbol?: string) => {
-    const data = { 
-      file, 
-      ...(customMissingSymbol && { custom_missing_symbol: customMissingSymbol })
-    };
-    return apiRequest(`${DATASET_API_PREFIX}/dataset-overview/`, 'POST', data, true);
+  uploadDataset: (file: File) => {
+    return apiRequest(`${DATASET_API_PREFIX}/dataset-overview/`, 'POST', { file }, true);
   },
   
   // 2. Preview Dataset

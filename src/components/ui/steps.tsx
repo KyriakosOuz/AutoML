@@ -10,6 +10,7 @@ export interface StepProps {
   status?: 'pending' | 'current' | 'complete';
   className?: string;
   children?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export interface StepsProps {
@@ -17,6 +18,7 @@ export interface StepsProps {
   orientation?: 'horizontal' | 'vertical';
   className?: string;
   children: React.ReactNode;
+  onStepClick?: (index: number) => void;
 }
 
 export const Step = ({
@@ -26,13 +28,16 @@ export const Step = ({
   status = 'pending',
   className,
   children,
+  onClick,
 }: StepProps) => {
   return (
     <div
       className={cn(
-        'flex flex-col items-center text-center',
+        'flex flex-col items-center text-center transition-all duration-200',
+        onClick && status !== 'pending' && 'cursor-pointer hover:opacity-80',
         className
       )}
+      onClick={onClick && status !== 'pending' ? onClick : undefined}
     >
       <div
         className={cn(
@@ -60,7 +65,12 @@ export const Step = ({
           {title}
         </h4>
         {description && (
-          <p className="text-xs text-gray-500">{description}</p>
+          <p className={cn(
+            'text-xs',
+            status === 'complete' ? 'text-gray-600' :
+            status === 'current' ? 'text-gray-600' :
+            'text-gray-400'
+          )}>{description}</p>
         )}
       </div>
       {children}
@@ -68,7 +78,13 @@ export const Step = ({
   );
 };
 
-export const Steps = ({ active, orientation = 'horizontal', className, children }: StepsProps) => {
+export const Steps = ({ 
+  active, 
+  orientation = 'horizontal', 
+  className, 
+  children,
+  onStepClick
+}: StepsProps) => {
   const steps = React.Children.toArray(children);
 
   return (
@@ -84,9 +100,13 @@ export const Steps = ({ active, orientation = 'horizontal', className, children 
           index < active ? 'complete' : 
           index === active ? 'current' : 'pending';
 
-        // Clone the step element to pass the status prop
+        // Define onClick handler if onStepClick is provided
+        const handleClick = onStepClick ? () => onStepClick(index) : undefined;
+
+        // Clone the step element to pass the status prop and onClick handler
         const stepWithProps = React.cloneElement(step as React.ReactElement<StepProps>, {
           status,
+          onClick: handleClick,
         });
 
         const isLast = index === steps.length - 1;
@@ -108,7 +128,8 @@ export const Steps = ({ active, orientation = 'horizontal', className, children 
                     : 'h-12 w-1 my-2',
                   index < active
                     ? 'bg-primary'
-                    : 'bg-gray-200'
+                    : 'bg-gray-200',
+                  'transition-colors duration-300'
                 )}
               />
             )}

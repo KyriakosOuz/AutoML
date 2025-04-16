@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -34,12 +34,11 @@ const MissingValueHandler: React.FC = () => {
   } = useDataset();
 
   // Detect if there are missing values
-  const hasMissingValues = overview && 
-    Object.values(overview.missing_values || {}).some(count => count > 0);
+  const hasMissingValues = overview && overview.total_missing_values > 0;
   
   // Show which columns have missing values
-  const missingValueColumns = overview && overview.missing_values ? 
-    Object.entries(overview.missing_values)
+  const missingValueColumns = overview && overview.missing_values_count ? 
+    Object.entries(overview.missing_values_count)
       .filter(([_, count]) => count > 0)
       .map(([column, count]) => ({ column, count })) : 
     [];
@@ -54,7 +53,6 @@ const MissingValueHandler: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      // Use the custom missing symbol from the dataset context if available
       const response = await datasetApi.handleMissingValues(
         datasetId, 
         strategy
@@ -85,7 +83,7 @@ const MissingValueHandler: React.FC = () => {
         <CardTitle className="text-xl text-primary">Handle Missing Values</CardTitle>
         <CardDescription>
           {hasMissingValues 
-            ? `Choose a strategy to handle missing values in your dataset` 
+            ? `Choose a strategy to handle ${overview.total_missing_values} missing values in your dataset` 
             : `Your dataset doesn't have missing values or they've been handled`}
         </CardDescription>
       </CardHeader>
