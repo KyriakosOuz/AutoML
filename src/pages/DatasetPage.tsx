@@ -8,18 +8,43 @@ import FeatureImportanceChart from '@/components/dataset/FeatureImportanceChart'
 import TaskDetector from '@/components/dataset/TaskDetector';
 import FeatureSelector from '@/components/dataset/FeatureSelector';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { LogOut, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const DatasetPage: React.FC = () => {
+  const { user, signOut } = useAuth();
+
   return (
     <DatasetProvider>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container max-w-5xl mx-auto px-4">
-          <header className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dataset Upload & Preprocessing</h1>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Upload, explore, and preprocess your datasets for machine learning. 
-              Handle missing values, select features, and prepare your data for modeling.
-            </p>
+          <header className="mb-8">
+            <div className="flex justify-between items-center mb-6">
+              <Link to="/" className="text-xl font-bold text-gray-900">AutoML Web App</Link>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600 hidden md:block">
+                  {user?.email}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={signOut}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
+            </div>
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dataset Upload & Preprocessing</h1>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Upload, explore, and preprocess your datasets for machine learning. 
+                Handle missing values, select features, and prepare your data for modeling.
+              </p>
+            </div>
           </header>
           
           <div className="space-y-6">

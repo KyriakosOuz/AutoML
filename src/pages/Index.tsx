@@ -1,11 +1,48 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, BarChart, Database, LineChart, Upload } from "lucide-react";
+import { ArrowRight, BarChart, Database, LineChart, Upload, LogIn, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
-      <div className="container max-w-6xl mx-auto px-4 py-16">
+      <header className="container max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">AutoML Web App</h1>
+        <div>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                {user.email}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={signOut}
+                className="flex items-center gap-2"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Sign In
+              </Button>
+            </Link>
+          )}
+        </div>
+      </header>
+      
+      <div className="container max-w-6xl mx-auto px-4 py-10">
         <div className="flex flex-col items-center text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             AutoML Web App
@@ -14,9 +51,9 @@ const Index = () => {
             Your complete platform for data upload, preprocessing, model training and deployment.
             Get powerful machine learning insights without writing code.
           </p>
-          <Link to="/dataset">
+          <Link to={user ? "/dataset" : "/auth"}>
             <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-              Get Started
+              {user ? "Get Started" : "Sign In to Start"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
@@ -77,9 +114,9 @@ const Index = () => {
                 Begin by uploading your dataset and exploring the power of automated machine learning.
               </p>
             </div>
-            <Link to="/dataset">
+            <Link to={user ? "/dataset" : "/auth"}>
               <Button size="lg" variant="secondary" className="w-full md:w-auto">
-                Go to Dataset Handler
+                {user ? "Go to Dataset Handler" : "Sign In to Continue"}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

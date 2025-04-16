@@ -1,26 +1,13 @@
-
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
 const API_BASE_URL = 'https://smart-whole-cockatoo.ngrok-free.app';
 const DATASET_API_PREFIX = '/dataset';
 
-// Initialize Supabase client - would be imported from your Supabase config
-// This is placeholder - users will need to have Supabase configured
+// Use the Supabase client to get auth token
 export const getAuthToken = async (): Promise<string | null> => {
-  // This should fetch the JWT token from your Supabase auth
-  // Placeholder implementation - replace with actual implementation
-  const supabase = getSupabaseClient();
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token || null;
-};
-
-// Get Supabase client - placeholder function
-export const getSupabaseClient = () => {
-  // Replace with your actual Supabase configuration
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return createClient(supabaseUrl, supabaseKey);
 };
 
 // Generic API request function
