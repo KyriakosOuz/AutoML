@@ -76,7 +76,11 @@ const FeatureImportanceChart: React.FC = () => {
       
       // Only update the main context after API call completes
       // This prevents unwanted tab navigation
-      const updatedState = {
+      const updatedState: {
+        targetColumn: string;
+        taskType: string;
+        columnsToKeep?: string[];
+      } = {
         targetColumn: value,
         taskType: response.task_type,
       };
