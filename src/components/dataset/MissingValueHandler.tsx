@@ -18,15 +18,12 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AlertCircle, Wand2 } from 'lucide-react';
+import { Wand2, AlertCircle } from 'lucide-react';
 
 type ImputationStrategy = 'mean' | 'median' | 'mode' | 'drop' | 'skip';
 
 const MissingValueHandler: React.FC = () => {
   const [strategy, setStrategy] = useState<ImputationStrategy>('mean');
-  const [customMissingSymbol, setCustomMissingSymbol] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -57,10 +54,10 @@ const MissingValueHandler: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Use the custom missing symbol from the dataset context if available
       const response = await datasetApi.handleMissingValues(
         datasetId, 
-        strategy,
-        customMissingSymbol || undefined
+        strategy
       );
       
       // Update context with response data
@@ -69,9 +66,6 @@ const MissingValueHandler: React.FC = () => {
         fileUrl: response.file_url,
         overview: response.overview
       });
-      
-      // Clear custom symbols after successful processing
-      setCustomMissingSymbol('');
       
     } catch (error) {
       console.error('Error handling missing values:', error);
@@ -118,15 +112,12 @@ const MissingValueHandler: React.FC = () => {
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="strategy" className="text-sm font-medium">
-              Imputation Strategy
-            </Label>
             <Select
               value={strategy}
               onValueChange={(value) => setStrategy(value as ImputationStrategy)}
               disabled={isLoading || !hasMissingValues}
             >
-              <SelectTrigger id="strategy" className="w-full mt-1">
+              <SelectTrigger id="strategy" className="w-full">
                 <SelectValue placeholder="Select strategy" />
               </SelectTrigger>
               <SelectContent>
@@ -143,24 +134,6 @@ const MissingValueHandler: React.FC = () => {
               {strategy === 'mode' && 'Replace missing values with the most frequent value in the column'}
               {strategy === 'drop' && 'Remove rows containing any missing values'}
               {strategy === 'skip' && 'Keep missing values as they are'}
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="custom-missing" className="text-sm font-medium">
-              Custom Missing Symbol (Optional)
-            </Label>
-            <Input
-              id="custom-missing"
-              type="text"
-              placeholder="e.g., NA, ?, -"
-              value={customMissingSymbol}
-              onChange={(e) => setCustomMissingSymbol(e.target.value)}
-              className="mt-1"
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Specify additional symbols that represent missing values in your dataset
             </p>
           </div>
 

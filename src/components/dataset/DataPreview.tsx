@@ -20,7 +20,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 type PreviewStage = 'raw' | 'cleaned' | 'final' | 'processed' | 'latest';
 
 const DataPreview: React.FC = () => {
-  const [stage, setStage] = useState<PreviewStage>('latest');
+  const [stage, setStage] = useState<PreviewStage>('raw');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   
@@ -42,8 +42,13 @@ const DataPreview: React.FC = () => {
       
       const response = await datasetApi.previewDataset(datasetId, stage);
       
-      setPreviewData(response.preview);
-      setPreviewColumns(response.columns);
+      if (response && response.data) {
+        setPreviewData(response.data.preview || []);
+        setPreviewColumns(response.data.columns || []);
+      } else {
+        setPreviewData(response.preview || []);
+        setPreviewColumns(response.columns || []);
+      }
     } catch (error) {
       console.error('Error fetching preview:', error);
       setPreviewError(error instanceof Error ? error.message : 'Failed to load data preview');
@@ -51,6 +56,12 @@ const DataPreview: React.FC = () => {
       setIsLoadingPreview(false);
     }
   };
+
+  // Determine which stages are available
+  const hasRawData = !!datasetId;
+  const hasCleanedData = false; // Set this based on your app's state
+  const hasFinalData = false; // Set this based on your app's state
+  const hasProcessedData = false; // Set this based on your app's state
 
   useEffect(() => {
     if (datasetId) {
@@ -76,11 +87,11 @@ const DataPreview: React.FC = () => {
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="raw">Raw Data</SelectItem>
-              <SelectItem value="cleaned">Cleaned Data</SelectItem>
-              <SelectItem value="final">Final Data</SelectItem>
-              <SelectItem value="processed">Processed Data</SelectItem>
-              <SelectItem value="latest">Latest Stage</SelectItem>
+              <SelectItem value="raw" disabled={!hasRawData}>Raw Data</SelectItem>
+              <SelectItem value="cleaned" disabled={!hasCleanedData}>Cleaned Data</SelectItem>
+              <SelectItem value="final" disabled={!hasFinalData}>Final Data</SelectItem>
+              <SelectItem value="processed" disabled={!hasProcessedData}>Processed Data</SelectItem>
+              <SelectItem value="latest" disabled={!hasRawData}>Latest Stage</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -152,7 +163,7 @@ const DataPreview: React.FC = () => {
           <div className="mt-4 text-sm text-gray-500">
             <p>
               Dataset has {overview.num_rows} rows and {overview.num_columns} columns
-              ({overview.numerical_features.length} numerical, {overview.categorical_features.length} categorical)
+              ({overview.numerical_features?.length || 0} numerical, {overview.categorical_features?.length || 0} categorical)
             </p>
           </div>
         )}
