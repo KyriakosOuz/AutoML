@@ -63,7 +63,7 @@ const FeatureImportanceChart: React.FC = () => {
 
   // Handle target column change and detect task type
   const handleTargetColumnChange = async (value: string) => {
-    if (!value) return;
+    if (!value || !datasetId) return;
     
     try {
       // Update local state first for UI responsiveness
@@ -71,8 +71,12 @@ const FeatureImportanceChart: React.FC = () => {
       setIsDetectingTaskType(true);
       setError(null);
       
+      console.log(`Detecting task type for dataset ${datasetId} with target column ${value}`);
+      
       // Call the API to detect task type
-      const response = await datasetApi.detectTaskType(datasetId || '', value);
+      const response = await datasetApi.detectTaskType(datasetId, value);
+      
+      console.log('Task type detection response:', response);
       
       // Only update the main context after API call completes
       // This prevents unwanted tab navigation

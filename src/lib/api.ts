@@ -51,8 +51,10 @@ const apiRequest = async (
           if (key === 'file' && value instanceof File) {
             formData.append(key, value);
           } else if (Array.isArray(value)) {
+            // Handle arrays by converting to JSON string
             formData.append(key, JSON.stringify(value));
           } else if (typeof value === 'object') {
+            // Handle objects by converting to JSON string
             formData.append(key, JSON.stringify(value));
           } else {
             formData.append(key, String(value));
@@ -122,6 +124,7 @@ export const datasetApi = {
   
   // Detect Task Type
   detectTaskType: (datasetId: string, targetColumn: string) => {
+    console.log(`Calling detectTaskType with datasetId: ${datasetId}, targetColumn: ${targetColumn}`);
     return apiRequest(`${DATASET_API_PREFIX}/detect-task-type/`, 'POST', {
       dataset_id: datasetId,
       target_column: targetColumn
@@ -133,7 +136,7 @@ export const datasetApi = {
     return apiRequest(`${DATASET_API_PREFIX}/save-dataset/`, 'POST', {
       dataset_id: datasetId,
       target_column: targetColumn,
-      columns_to_keep: JSON.stringify(columnsToKeep)
+      columns_to_keep: columnsToKeep // Directly pass the array, no need for JSON.stringify
     }, true);
   },
   

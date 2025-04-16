@@ -21,7 +21,7 @@ const FileUpload: React.FC = () => {
     setIsLoading, 
     setError, 
     isLoading, 
-    error 
+    error,
   } = useDataset();
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -108,12 +108,13 @@ const FileUpload: React.FC = () => {
       const numericalFeatures = overview.numerical_features || [];
       const categoricalFeatures = overview.categorical_features || [];
       
-      // Update context with response data
+      // Update context with response data - using fresh state update to prevent state reset
       updateState({
         datasetId: data.dataset_id,
         fileUrl: data.file_url,
         overview: overview,
         previewColumns: [...numericalFeatures, ...categoricalFeatures],
+        processingStage: 'raw', // Explicitly set processing stage
       });
       
       // Reset file input
