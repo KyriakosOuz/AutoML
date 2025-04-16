@@ -33,9 +33,13 @@ const DataPreview: React.FC = () => {
   const [stage, setStage] = useState<PreviewStage>('raw');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const fetchPreview = async () => {
-    if (!datasetId) return;
+    if (!datasetId) {
+      console.log('No dataset ID available, skipping preview fetch');
+      return;
+    }
     
     try {
       setIsLoadingPreview(true);
@@ -53,6 +57,8 @@ const DataPreview: React.FC = () => {
         setPreviewData(response.preview || []);
         setPreviewColumns(response.columns || []);
       }
+      
+      setInitialLoadComplete(true);
     } catch (error) {
       console.error('Error fetching preview:', error);
       setPreviewError(error instanceof Error ? error.message : 'Failed to load data preview');
@@ -67,6 +73,7 @@ const DataPreview: React.FC = () => {
   const hasFinalData = processingStage === 'final' || processingStage === 'processed';
   const hasProcessedData = processingStage === 'processed';
 
+  // Initial load of preview data when component mounts or dataset/stage changes
   useEffect(() => {
     if (datasetId) {
       console.log('DatasetId or stage changed - fetching preview');
@@ -75,18 +82,24 @@ const DataPreview: React.FC = () => {
   }, [datasetId, stage]);
 
   // Set the default stage based on the latest available processing stage
+  // This is separate from the fetch to prevent duplicate API calls
   useEffect(() => {
+    if (!initialLoadComplete) return;
+    
     console.log('Processing stage changed:', processingStage);
     if (processingStage) {
+      // Only change the stage if the new stage is more advanced than the current one
+      // or if we're explicitly at the raw stage and cleaned is now available
       if (processingStage === 'cleaned' && stage === 'raw') {
+        console.log('Setting stage to cleaned because processing stage changed');
         setStage('cleaned');
-        fetchPreview();
-      } else if (stage !== processingStage && (processingStage === 'final' || processingStage === 'processed')) {
+      } else if ((processingStage === 'final' || processingStage === 'processed') && 
+                 (stage === 'raw' || stage === 'cleaned')) {
+        console.log('Setting stage to match processing stage:', processingStage);
         setStage(processingStage);
-        fetchPreview();
       }
     }
-  }, [processingStage]);
+  }, [processingStage, initialLoadComplete]);
 
   if (!datasetId) {
     return null;

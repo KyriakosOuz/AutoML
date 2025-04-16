@@ -46,7 +46,9 @@ const MissingValueHandler: React.FC = () => {
     processingStage,
     setProcessingStage,
     previewData,
-    setPreviewData
+    setPreviewData,
+    previewColumns,
+    setPreviewColumns
   } = useDataset();
 
   // Detect if there are missing values
@@ -70,9 +72,16 @@ const MissingValueHandler: React.FC = () => {
     if (!datasetId) return;
     
     try {
+      console.log('Refreshing data preview for cleaned data');
       const response = await datasetApi.previewDataset(datasetId, 'cleaned');
+      console.log('Preview refresh response:', response);
+      
       if (response && response.data) {
-        setPreviewData(response.data);
+        setPreviewData(response.data.preview || []);
+        setPreviewColumns(response.data.columns || []);
+      } else {
+        setPreviewData(response.preview || []);
+        setPreviewColumns(response.columns || []);
       }
     } catch (error) {
       console.error('Error refreshing data preview:', error);
@@ -92,18 +101,32 @@ const MissingValueHandler: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      console.log('Processing missing values with strategy:', strategy);
+      
       const response = await datasetApi.handleMissingValues(
         datasetId, 
         strategy
       );
       
-      // Update context with response data and set processing stage to 'cleaned'
-      updateState({
-        datasetId: response.dataset_id,
-        fileUrl: response.file_url,
+      console.log('Missing values processing response:', response);
+      
+      // Create a consolidated update to prevent multiple state changes
+      const newState = {
         overview: response.overview,
         processingStage: 'cleaned'
-      });
+      };
+      
+      // Only update these if they exist in the response
+      if (response.dataset_id) {
+        newState.datasetId = response.dataset_id;
+      }
+      
+      if (response.file_url) {
+        newState.fileUrl = response.file_url;
+      }
+      
+      // Update context with consolidated state changes
+      updateState(newState);
       
       // Refresh the data preview with cleaned data
       await refreshDataPreview();

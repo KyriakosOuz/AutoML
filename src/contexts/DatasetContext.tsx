@@ -104,23 +104,35 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   });
   
+  // Save state to localStorage with debounce to prevent rapid updates
   useEffect(() => {
     try {
-      localStorage.setItem('datasetState', JSON.stringify(state));
+      // Delay saving to localStorage to prevent race conditions
+      const saveTimeout = setTimeout(() => {
+        console.log('Saving state to localStorage:', state.processingStage);
+        localStorage.setItem('datasetState', JSON.stringify(state));
+      }, 300);
+      
+      return () => clearTimeout(saveTimeout);
     } catch (error) {
       console.error('Failed to save state to localStorage:', error);
     }
   }, [state]);
 
-  // Ensure we have consistent processingStage based on data availability
+  // Ensure consistent processingStage based on data availability
   useEffect(() => {
     const { datasetId, targetColumn, columnsToKeep, processingStage } = state;
     
-    if (datasetId && !processingStage) {
+    // Don't override processingStage if it was explicitly set to 'cleaned'
+    // or if we're in an intermediate state during data processing
+    if (datasetId && !processingStage && processingStage !== 'cleaned') {
+      console.log('Setting default processing stage to raw');
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
+    // Only update to final if we're coming from cleaned with target and columns
     if (targetColumn && columnsToKeep && processingStage === 'cleaned') {
+      console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
@@ -145,6 +157,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const resetState = () => setState(initialState);
   
   const updateState = (newState: Partial<DatasetContextState>) => {
+    console.log('Updating dataset state with:', newState);
     setState(prev => ({ ...prev, ...newState }));
   };
   
