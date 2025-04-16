@@ -41,7 +41,10 @@ const DataPreview: React.FC = () => {
       setIsLoadingPreview(true);
       setPreviewError(null);
       
+      console.log('Fetching preview for dataset:', datasetId, 'stage:', stage);
+      
       const response = await datasetApi.previewDataset(datasetId, stage);
+      console.log('Preview response:', response);
       
       if (response && response.data) {
         setPreviewData(response.data.preview || []);
@@ -66,12 +69,14 @@ const DataPreview: React.FC = () => {
 
   useEffect(() => {
     if (datasetId) {
+      console.log('DatasetId or stage changed - fetching preview');
       fetchPreview();
     }
   }, [datasetId, stage]);
 
   // Set the default stage based on the latest available processing stage
   useEffect(() => {
+    console.log('Processing stage changed:', processingStage);
     if (processingStage) {
       if (processingStage === 'cleaned' && stage === 'raw') {
         setStage('cleaned');

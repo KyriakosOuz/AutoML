@@ -87,7 +87,9 @@ const FileUpload: React.FC = () => {
         });
       }, 300);
       
-      // Call API to upload dataset - fix the function call to use the optional parameter
+      console.log('Uploading file:', selectedFile.name);
+      
+      // Call API to upload dataset
       const response = await datasetApi.uploadDataset(
         selectedFile, 
         customMissingSymbol || undefined
@@ -95,6 +97,8 @@ const FileUpload: React.FC = () => {
       
       clearInterval(progressInterval);
       setUploadProgress(100);
+      
+      console.log('Upload response:', response);
       
       // Access the data property from the response
       const data = response.data || response;
