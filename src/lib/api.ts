@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -102,7 +103,7 @@ export const datasetApi = {
   // Handle Missing Values
   handleMissingValues: (
     datasetId: string, 
-    strategy: 'mean' | 'median' | 'mode' | 'drop' | 'skip'
+    strategy: 'mean' | 'median' | 'mode' | 'drop' | 'hot_deck' | 'skip'
   ) => {
     const data = { 
       dataset_id: datasetId, 

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Types
@@ -7,6 +8,7 @@ export interface DatasetOverview {
   missing_values: Record<string, any>;
   numerical_features: string[];
   categorical_features: string[];
+  // Properties from backend response
   total_missing_values?: number;
   missing_values_count?: Record<string, number>;
   column_names?: string[];

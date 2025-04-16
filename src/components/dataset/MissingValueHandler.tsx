@@ -45,14 +45,14 @@ const MissingValueHandler: React.FC = () => {
     updateState 
   } = useDataset();
 
-  // Detect if there are missing values - using optional chaining to safely access the property
+  // Detect if there are missing values
   const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
   
   // Show which columns have missing values
   const missingValueColumns = overview?.missing_values_count ? 
     Object.entries(overview.missing_values_count)
       .filter(([_, count]) => count > 0)
-      .map(([column, count]) => ({ column, count, percentage: (count / overview.num_rows) * 100 }))
+      .map(([column, count]) => ({ column, count, percentage: (count / (overview.num_rows || 1)) * 100 }))
       .sort((a, b) => b.count - a.count) : 
     [];
 
@@ -61,7 +61,10 @@ const MissingValueHandler: React.FC = () => {
   const totalCells = totalRows * (overview?.num_columns || 0);
   const overallMissingPercentage = totalCells > 0 ? (totalMissingCells / totalCells) * 100 : 0;
 
-  const handleProcessMissingValues = async () => {
+  const handleProcessMissingValues = async (e: React.MouseEvent) => {
+    // Prevent default to avoid any navigation
+    e.preventDefault();
+    
     if (!datasetId) {
       setError('No dataset selected');
       return;

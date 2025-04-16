@@ -22,7 +22,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, BarChart3, HelpCircle, ArrowRight, ChevronRight } from 'lucide-react';
+import { 
+  AlertCircle, 
+  BarChart3, 
+  HelpCircle, 
+  ChevronRight, 
+  ListFilter 
+} from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   ChartContainer,
@@ -48,22 +57,35 @@ const FeatureImportanceChart: React.FC = () => {
     setTargetColumn,
     setFeatureImportance,
     featureImportance,
-    setTaskType, 
-    taskType
+    setTaskType,
+    taskType,
+    setColumnsToKeep,
+    columnsToKeep
   } = useDataset();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    columnsToKeep || 
+    (previewColumns?.filter(col => col !== targetColumn) || [])
+  );
 
   const handleTargetColumnChange = async (value: string) => {
+    if (!value) return;
+    
     setTargetColumn(value);
     // Reset feature importance when target column changes
     setFeatureImportance(null);
     
+    // Update selected columns to exclude the new target
+    setSelectedColumns(prev => prev.filter(col => col !== value));
+    
     // Call the API to detect task type
-    if (value) {
+    try {
       await detectTaskType(value);
+    } catch (err) {
+      console.error('Error detecting task type:', err);
     }
   };
   
@@ -94,9 +116,47 @@ const FeatureImportanceChart: React.FC = () => {
     }
   };
 
+  const toggleFeature = (column: string) => {
+    setSelectedColumns(prev => {
+      if (prev.includes(column)) {
+        return prev.filter(col => col !== column);
+      } else {
+        return [...prev, column];
+      }
+    });
+  };
+
+  const selectAll = () => {
+    if (!previewColumns || !targetColumn) return;
+    setSelectedColumns(previewColumns.filter(col => col !== targetColumn));
+  };
+
+  const deselectAll = () => {
+    setSelectedColumns([]);
+  };
+
+  const saveFeatures = () => {
+    if (selectedColumns.length === 0) {
+      setError('Select at least one feature column');
+      return;
+    }
+    
+    setColumnsToKeep(selectedColumns);
+    toast({
+      title: "Features selected",
+      description: `${selectedColumns.length} features selected for analysis`,
+      duration: 3000
+    });
+  };
+
   const analyzeFeatures = async () => {
     if (!datasetId || !targetColumn) {
       setError('Dataset ID and target column are required');
+      return;
+    }
+
+    if (selectedColumns.length === 0) {
+      setError('Select at least one feature column');
       return;
     }
 
@@ -136,6 +196,8 @@ const FeatureImportanceChart: React.FC = () => {
     return null;
   }
 
+  const availableFeatures = previewColumns.filter(col => col !== targetColumn);
+
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
       <CardHeader className="bg-gradient-to-r from-gray-50 to-white">
@@ -144,7 +206,7 @@ const FeatureImportanceChart: React.FC = () => {
           Target Selection & Feature Analysis
         </CardTitle>
         <CardDescription>
-          Select your target variable and analyze feature importance
+          Select your target variable, choose features, and analyze feature importance
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -215,6 +277,75 @@ const FeatureImportanceChart: React.FC = () => {
             )}
           </div>
 
+          {targetColumn && (
+            <div className="space-y-3 mt-6 border rounded-md p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  <ListFilter className="h-4 w-4" />
+                  Select Features
+                </h4>
+                <div className="space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={selectAll}
+                    disabled={isLoading}
+                  >
+                    Select All
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={deselectAll}
+                    disabled={isLoading}
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+              
+              <Separator className="my-2" />
+              
+              <div className="space-y-2 max-h-[200px] overflow-y-auto p-1">
+                {availableFeatures.length === 0 ? (
+                  <p className="text-sm text-gray-500 p-2">No features available</p>
+                ) : (
+                  availableFeatures.map((column) => (
+                    <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                      <Checkbox 
+                        id={`feature-${column}`}
+                        checked={selectedColumns.includes(column)}
+                        onCheckedChange={() => toggleFeature(column)}
+                        disabled={isLoading}
+                      />
+                      <Label 
+                        htmlFor={`feature-${column}`}
+                        className="cursor-pointer flex-1"
+                      >
+                        {column}
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              <div className="text-sm text-gray-500 mt-2">
+                <p>Selected {selectedColumns.length} of {availableFeatures.length} features</p>
+              </div>
+              
+              <div className="flex justify-end mt-2">
+                <Button 
+                  onClick={saveFeatures}
+                  size="sm"
+                  variant="outline"
+                  disabled={selectedColumns.length === 0 || isLoading}
+                >
+                  Save Feature Selection
+                </Button>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-4 w-full" />
@@ -275,7 +406,7 @@ const FeatureImportanceChart: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             </div>
-          ) : targetColumn ? (
+          ) : targetColumn && columnsToKeep && columnsToKeep.length > 0 ? (
             <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg">
               <BarChart3 className="h-10 w-10 mx-auto mb-3 text-gray-400" />
               <p>Click "Analyze Feature Importance" to see which features are most important for predicting {targetColumn}</p>
@@ -283,11 +414,11 @@ const FeatureImportanceChart: React.FC = () => {
           ) : null}
         </div>
       </CardContent>
-      {targetColumn && !featureImportance && (
+      {targetColumn && columnsToKeep && columnsToKeep.length > 0 && !featureImportance && (
         <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
           <Button 
             onClick={analyzeFeatures} 
-            disabled={isLoading || !targetColumn}
+            disabled={isLoading || !targetColumn || selectedColumns.length === 0}
             variant="default"
             size="lg"
             className="mt-2"
