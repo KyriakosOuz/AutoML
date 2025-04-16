@@ -87,7 +87,7 @@ const FileUpload: React.FC = () => {
         });
       }, 300);
       
-      // Call API to upload dataset
+      // Call API to upload dataset - fix the function call to use the optional parameter
       const response = await datasetApi.uploadDataset(
         selectedFile, 
         customMissingSymbol || undefined

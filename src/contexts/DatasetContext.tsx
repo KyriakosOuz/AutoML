@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Types
@@ -8,6 +7,12 @@ export interface DatasetOverview {
   missing_values: Record<string, any>;
   numerical_features: string[];
   categorical_features: string[];
+  total_missing_values?: number;
+  missing_values_count?: Record<string, number>;
+  column_names?: string[];
+  unique_values_count?: Record<string, number>;
+  data_types?: Record<string, string>;
+  feature_classification?: Record<string, string>;
 }
 
 export interface FeatureImportance {
@@ -16,7 +21,6 @@ export interface FeatureImportance {
 }
 
 export interface DatasetContextProps {
-  // Dataset state
   datasetId: string | null;
   fileUrl: string | null;
   overview: DatasetOverview | null;
@@ -31,7 +35,6 @@ export interface DatasetContextProps {
   isLoading: boolean;
   error: string | null;
   
-  // Dataset state setters
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
   setOverview: (overview: DatasetOverview | null) => void;
@@ -46,7 +49,6 @@ export interface DatasetContextProps {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   
-  // Helper functions
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
 }
@@ -67,10 +69,8 @@ interface DatasetContextState {
   error: string | null;
 }
 
-// Create context
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
 
-// Define initial state
 const initialState: DatasetContextState = {
   datasetId: null,
   fileUrl: null,
@@ -87,11 +87,8 @@ const initialState: DatasetContextState = {
   error: null,
 };
 
-// Provider component
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize state
   const [state, setState] = useState<DatasetContextState>(() => {
-    // Try to load state from localStorage
     try {
       const savedState = localStorage.getItem('datasetState');
       return savedState ? JSON.parse(savedState) : initialState;
@@ -101,7 +98,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   });
   
-  // Save state to localStorage whenever it changes
   React.useEffect(() => {
     try {
       localStorage.setItem('datasetState', JSON.stringify(state));
@@ -110,7 +106,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [state]);
   
-  // Individual state setters
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
   const setOverview = (overview: DatasetOverview | null) => setState(prev => ({ ...prev, overview }));
@@ -127,15 +122,12 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setIsLoading = (isLoading: boolean) => setState(prev => ({ ...prev, isLoading }));
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
   
-  // Reset state
   const resetState = () => setState(initialState);
   
-  // Update multiple state properties at once
   const updateState = (newState: Partial<DatasetContextState>) => {
     setState(prev => ({ ...prev, ...newState }));
   };
   
-  // Context value
   const contextValue: DatasetContextProps = {
     ...state,
     setDatasetId,
@@ -162,7 +154,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
-// Custom hook to use the dataset context
 export const useDataset = (): DatasetContextProps => {
   const context = useContext(DatasetContext);
   if (context === undefined) {
