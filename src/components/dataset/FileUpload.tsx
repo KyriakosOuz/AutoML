@@ -96,12 +96,20 @@ const FileUpload: React.FC = () => {
       clearInterval(progressInterval);
       setUploadProgress(100);
       
+      // Access the data property from the response
+      const data = response.data || response;
+
+      // Make sure we're working with the correct structure
+      const overview = data.overview || {};
+      const numericalFeatures = overview.numerical_features || [];
+      const categoricalFeatures = overview.categorical_features || [];
+      
       // Update context with response data
       updateState({
-        datasetId: response.dataset_id,
-        fileUrl: response.file_url,
-        overview: response.overview,
-        previewColumns: response.overview.numerical_features.concat(response.overview.categorical_features),
+        datasetId: data.dataset_id,
+        fileUrl: data.file_url,
+        overview: overview,
+        previewColumns: [...numericalFeatures, ...categoricalFeatures],
       });
       
       // Reset file input
