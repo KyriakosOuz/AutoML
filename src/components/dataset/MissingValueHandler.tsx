@@ -110,8 +110,14 @@ const MissingValueHandler: React.FC = () => {
       
       console.log('Missing values processing response:', response);
       
-      // Create a consolidated update to prevent multiple state changes
-      const newState = {
+      // Create a consolidated update with the correct property structure
+      // This matches the DatasetContextState interface properties
+      const newState: Partial<{
+        overview: any;
+        processingStage: string;
+        datasetId?: string;
+        fileUrl?: string;
+      }> = {
         overview: response.overview,
         processingStage: 'cleaned'
       };
@@ -158,7 +164,7 @@ const MissingValueHandler: React.FC = () => {
         </CardTitle>
         <CardDescription>
           {hasMissingValues 
-            ? `Your dataset has ${overview.total_missing_values} missing values that need to be handled` 
+            ? `Your dataset has ${overview?.total_missing_values} missing values that need to be handled` 
             : processingStage === 'cleaned' 
               ? 'Missing values have been successfully handled'
               : `Your dataset doesn't have missing values`}
@@ -285,7 +291,7 @@ const MissingValueHandler: React.FC = () => {
           disabled={isLoading || !hasMissingValues}
           variant="default"
           size="lg"
-          type="button" // Changed from submit to button to prevent form submission
+          type="button"
         >
           <Wand2 className="h-4 w-4 mr-2" />
           {isLoading ? 'Processing...' : 'Process Missing Values'}
