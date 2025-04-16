@@ -5,14 +5,15 @@ import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
 import FeatureImportanceChart from '@/components/dataset/FeatureImportanceChart';
-import TaskDetector from '@/components/dataset/TaskDetector';
 import FeatureSelector from '@/components/dataset/FeatureSelector';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, RotateCcw, PlayCircle } from 'lucide-react';
+import { LogOut, RotateCcw, PlayCircle, Database, FileSpreadsheet, Workflow, Sliders, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { Steps, Step } from '@/components/ui/steps';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const StartOverButton = () => {
   const { resetState } = useDataset();
@@ -45,13 +46,24 @@ const StartOverButton = () => {
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
   const { datasetId, targetColumn, taskType } = useDataset();
+  
+  // Determine the current active step
+  const getActiveStep = () => {
+    if (!datasetId) return 0;
+    if (!targetColumn) return 1;
+    if (!taskType) return 2;
+    return 3;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container max-w-5xl mx-auto px-4">
         <header className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <Link to="/" className="text-xl font-bold text-gray-900">AutoML Web App</Link>
+            <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              AutoML Web App
+            </Link>
             <div className="flex items-center gap-4">
               {datasetId && <StartOverButton />}
               <div className="text-sm text-gray-600 hidden md:block">
@@ -68,30 +80,76 @@ const DatasetPageContent = () => {
               </Button>
             </div>
           </div>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dataset Upload & Preprocessing</h1>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Dataset Processing</h1>
             <p className="text-gray-600 max-w-2xl mx-auto">
               Upload, explore, and preprocess your datasets for machine learning. 
-              Handle missing values, select features, and prepare your data for modeling.
+              Handle missing values, analyze features, and prepare your data for modeling.
             </p>
           </div>
+          
+          <Steps active={getActiveStep()} className="mb-8">
+            <Step 
+              title="Upload" 
+              description="Dataset" 
+              icon={<FileSpreadsheet className="h-5 w-5" />} 
+              status={!datasetId ? "current" : "complete"} 
+            />
+            <Step 
+              title="Target" 
+              description="Selection" 
+              icon={<Workflow className="h-5 w-5" />} 
+              status={datasetId && !targetColumn ? "current" : datasetId && targetColumn ? "complete" : "pending"} 
+            />
+            <Step 
+              title="Feature" 
+              description="Selection" 
+              icon={<Sliders className="h-5 w-5" />} 
+              status={targetColumn && !taskType ? "current" : targetColumn && taskType ? "complete" : "pending"} 
+            />
+            <Step 
+              title="Preprocessing" 
+              description="Options" 
+              status={taskType ? "current" : "pending"} 
+            />
+          </Steps>
         </header>
         
         <div className="space-y-6">
-          <FileUpload />
-          <DataPreview />
-          <MissingValueHandler />
-          <FeatureImportanceChart />
-          <TaskDetector />
-          <FeatureSelector />
-          <PreprocessingOptions />
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="upload">Upload</TabsTrigger>
+              <TabsTrigger value="explore" disabled={!datasetId}>Explore</TabsTrigger>
+              <TabsTrigger value="features" disabled={!datasetId}>Features</TabsTrigger>
+              <TabsTrigger value="preprocess" disabled={!datasetId || !targetColumn}>Preprocess</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upload" className="pt-4">
+              <FileUpload />
+            </TabsContent>
+            
+            <TabsContent value="explore" className="pt-4">
+              <DataPreview />
+              <MissingValueHandler />
+            </TabsContent>
+            
+            <TabsContent value="features" className="pt-4">
+              <FeatureImportanceChart />
+              <FeatureSelector />
+            </TabsContent>
+            
+            <TabsContent value="preprocess" className="pt-4">
+              <PreprocessingOptions />
+            </TabsContent>
+          </Tabs>
           
           {datasetId && targetColumn && taskType && (
-            <div className="flex justify-center mt-8">
+            <div className="flex justify-end mt-8">
               <Link to="/training">
                 <Button size="lg" className="flex items-center gap-2">
                   <PlayCircle className="h-5 w-5" />
-                  Proceed to Model Training
+                  Continue to Model Training
+                  <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
             </div>
