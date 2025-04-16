@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import DatasetPage from "./pages/DatasetPage";
+import ModelTrainingPage from "./pages/ModelTrainingPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
@@ -26,6 +27,11 @@ const App = () => (
             <Route path="/dataset" element={
               <ProtectedRoute>
                 <DatasetPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/training" element={
+              <ProtectedRoute>
+                <ModelTrainingPage />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

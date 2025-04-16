@@ -10,9 +10,9 @@ import FeatureSelector from '@/components/dataset/FeatureSelector';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, RotateCcw, User } from 'lucide-react';
+import { LogOut, RotateCcw, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const StartOverButton = () => {
   const { resetState } = useDataset();
@@ -44,7 +44,7 @@ const StartOverButton = () => {
 
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
-  const { datasetId } = useDataset();
+  const { datasetId, targetColumn, taskType } = useDataset();
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -85,6 +85,17 @@ const DatasetPageContent = () => {
           <TaskDetector />
           <FeatureSelector />
           <PreprocessingOptions />
+          
+          {datasetId && targetColumn && taskType && (
+            <div className="flex justify-center mt-8">
+              <Link to="/training">
+                <Button size="lg" className="flex items-center gap-2">
+                  <PlayCircle className="h-5 w-5" />
+                  Proceed to Model Training
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
         
         <footer className="mt-12 text-center text-sm text-gray-500">
