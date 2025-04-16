@@ -20,18 +20,19 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 type PreviewStage = 'raw' | 'cleaned' | 'final' | 'processed' | 'latest';
 
 const DataPreview: React.FC = () => {
-  const [stage, setStage] = useState<PreviewStage>('raw');
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  
   const { 
     datasetId, 
     previewData, 
     previewColumns, 
     setPreviewData, 
     setPreviewColumns,
-    overview
+    overview,
+    processingStage
   } = useDataset();
+  
+  const [stage, setStage] = useState<PreviewStage>('raw');
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const fetchPreview = async () => {
     if (!datasetId) return;
@@ -57,17 +58,24 @@ const DataPreview: React.FC = () => {
     }
   };
 
-  // Determine which stages are available
+  // Determine which stages are available based on processing status
   const hasRawData = !!datasetId;
-  const hasCleanedData = false; // Set this based on your app's state
-  const hasFinalData = false; // Set this based on your app's state
-  const hasProcessedData = false; // Set this based on your app's state
+  const hasCleanedData = processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
+  const hasFinalData = processingStage === 'final' || processingStage === 'processed';
+  const hasProcessedData = processingStage === 'processed';
 
   useEffect(() => {
     if (datasetId) {
       fetchPreview();
     }
   }, [datasetId, stage]);
+
+  // Update stage when processingStage changes
+  useEffect(() => {
+    if (processingStage) {
+      setStage(processingStage as PreviewStage);
+    }
+  }, [processingStage]);
 
   if (!datasetId) {
     return null;

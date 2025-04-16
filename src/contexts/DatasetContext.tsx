@@ -36,6 +36,7 @@ export interface DatasetContextProps {
   processedFileUrl: string | null;
   isLoading: boolean;
   error: string | null;
+  processingStage: string | null; // Track the current processing stage
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -50,6 +51,7 @@ export interface DatasetContextProps {
   setProcessedFileUrl: (url: string | null) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setProcessingStage: (stage: string | null) => void;
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -69,6 +71,7 @@ interface DatasetContextState {
   processedFileUrl: string | null;
   isLoading: boolean;
   error: string | null;
+  processingStage: string | null; // Track the current processing stage
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -87,6 +90,7 @@ const initialState: DatasetContextState = {
   processedFileUrl: null,
   isLoading: false,
   error: null,
+  processingStage: 'raw', // Default to raw data
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -123,6 +127,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setState(prev => ({ ...prev, processedFileUrl }));
   const setIsLoading = (isLoading: boolean) => setState(prev => ({ ...prev, isLoading }));
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
+  const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
   
   const resetState = () => setState(initialState);
   
@@ -145,6 +150,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProcessedFileUrl,
     setIsLoading,
     setError,
+    setProcessingStage,
     resetState,
     updateState,
   };

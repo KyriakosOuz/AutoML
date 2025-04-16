@@ -31,7 +31,7 @@ import { Wand2, AlertCircle, Info, CheckCircle2, BadgeAlert } from 'lucide-react
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 
-type ImputationStrategy = 'mean' | 'median' | 'mode' | 'drop' | 'skip';
+type ImputationStrategy = 'mean' | 'median' | 'mode' | 'hot_deck' | 'drop' | 'skip';
 
 const MissingValueHandler: React.FC = () => {
   const [strategy, setStrategy] = useState<ImputationStrategy>('mode');
@@ -42,7 +42,8 @@ const MissingValueHandler: React.FC = () => {
   const { 
     datasetId, 
     overview, 
-    updateState 
+    updateState,
+    setProcessingStage
   } = useDataset();
 
   // Detect if there are missing values
@@ -61,7 +62,7 @@ const MissingValueHandler: React.FC = () => {
   const totalCells = totalRows * (overview?.num_columns || 0);
   const overallMissingPercentage = totalCells > 0 ? (totalMissingCells / totalCells) * 100 : 0;
 
-  const handleProcessMissingValues = async (e: React.MouseEvent) => {
+  const handleProcessMissingValues = async (e: React.FormEvent) => {
     // Prevent default to avoid any navigation
     e.preventDefault();
     
@@ -79,11 +80,12 @@ const MissingValueHandler: React.FC = () => {
         strategy
       );
       
-      // Update context with response data
+      // Update context with response data and set processing stage to 'cleaned'
       updateState({
         datasetId: response.dataset_id,
         fileUrl: response.file_url,
-        overview: response.overview
+        overview: response.overview,
+        processingStage: 'cleaned'
       });
       
       toast({
@@ -200,6 +202,7 @@ const MissingValueHandler: React.FC = () => {
                       <SelectItem value="mean">Mean (for numerical values)</SelectItem>
                       <SelectItem value="median">Median (for numerical values)</SelectItem>
                       <SelectItem value="mode">Mode (most frequent value)</SelectItem>
+                      <SelectItem value="hot_deck">Hot Deck (random sampling)</SelectItem>
                       <SelectItem value="drop">Drop rows with missing values</SelectItem>
                       <SelectItem value="skip">Skip (keep missing values)</SelectItem>
                     </SelectContent>
@@ -211,6 +214,7 @@ const MissingValueHandler: React.FC = () => {
                     {strategy === 'mean' && 'Replace missing values with the mean (average) of each column. Only works with numerical data.'}
                     {strategy === 'median' && 'Replace missing values with the median (middle value) of each column. Only works with numerical data.'}
                     {strategy === 'mode' && 'Replace missing values with the most frequent value in each column. Works with both numerical and categorical data.'}
+                    {strategy === 'hot_deck' && 'Replace missing values with randomly selected values from the same column. Maintains the natural distribution of data.'}
                     {strategy === 'drop' && 'Remove all rows that contain any missing values. This may significantly reduce your dataset size.'}
                     {strategy === 'skip' && 'Keep missing values as they are. Some machine learning algorithms cannot handle missing values.'}
                   </p>
@@ -229,16 +233,17 @@ const MissingValueHandler: React.FC = () => {
         )}
       </CardContent>
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
-        <Button 
-          onClick={handleProcessMissingValues} 
-          disabled={isLoading || !hasMissingValues}
-          variant="default"
-          size="lg"
-          className="mt-2"
-        >
-          <Wand2 className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : 'Process Missing Values'}
-        </Button>
+        <form onSubmit={handleProcessMissingValues} className="w-full flex justify-end">
+          <Button 
+            type="submit"
+            disabled={isLoading || !hasMissingValues}
+            variant="default"
+            size="lg"
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {isLoading ? 'Processing...' : 'Process Missing Values'}
+          </Button>
+        </form>
       </CardFooter>
     </Card>
   );

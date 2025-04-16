@@ -185,21 +185,24 @@ const DatasetPageContent = () => {
             <TabsContent value="upload" className="pt-4">
               <FileUpload />
               {datasetId && (
-                <div className="flex justify-end mt-4">
-                  <Button 
-                    onClick={goToNextTab} 
-                    className="flex items-center gap-2"
-                  >
-                    Next: Explore Data
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <>
+                  <DataPreview />
+                  <div className="flex justify-end mt-4">
+                    <Button 
+                      onClick={goToNextTab} 
+                      className="flex items-center gap-2"
+                    >
+                      Next: Explore Data
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
               )}
             </TabsContent>
             
             <TabsContent value="explore" className="pt-4">
-              <DataPreview />
               <MissingValueHandler />
+              <DataPreview />
               <div className="flex justify-end mt-4">
                 <Button 
                   onClick={goToNextTab} 
@@ -215,20 +218,24 @@ const DatasetPageContent = () => {
               <FeatureImportanceChart />
               <FeatureSelector />
               {targetColumn && taskType && (
-                <div className="flex justify-end mt-4">
-                  <Button 
-                    onClick={goToNextTab} 
-                    className="flex items-center gap-2"
-                  >
-                    Next: Preprocess Data
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <>
+                  <DataPreview />
+                  <div className="flex justify-end mt-4">
+                    <Button 
+                      onClick={goToNextTab} 
+                      className="flex items-center gap-2"
+                    >
+                      Next: Preprocess Data
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
               )}
             </TabsContent>
             
             <TabsContent value="preprocess" className="pt-4">
               <PreprocessingOptions />
+              <DataPreview />
               {datasetId && targetColumn && taskType && (
                 <div className="flex justify-end mt-8">
                   <Link to="/training">
