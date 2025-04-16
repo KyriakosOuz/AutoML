@@ -7,7 +7,8 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle 
+  CardTitle, 
+  CardFooter
 } from '@/components/ui/card';
 import { 
   Select, 
@@ -17,11 +18,12 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, BarChart3, HelpCircle } from 'lucide-react';
+import { AlertCircle, BarChart3, HelpCircle, ArrowRight, ChevronRight } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   ChartContainer,
   ChartTooltip,
@@ -52,20 +54,20 @@ const FeatureImportanceChart: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleTargetColumnChange = async (value: string) => {
     setTargetColumn(value);
     // Reset feature importance when target column changes
     setFeatureImportance(null);
-    setTaskType(null);
     
-    // Automatically analyze features when target column is selected
+    // Call the API to detect task type
     if (value) {
-      await analyzeFeatures(value);
+      await detectTaskType(value);
     }
   };
-
-  const analyzeFeatures = async (selectedTarget: string) => {
+  
+  const detectTaskType = async (selectedTarget: string) => {
     if (!datasetId || !selectedTarget) {
       setError('Dataset ID and target column are required');
       return;
@@ -75,10 +77,45 @@ const FeatureImportanceChart: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await datasetApi.featureImportancePreview(datasetId, selectedTarget);
+      const response = await datasetApi.detectTaskType(datasetId, selectedTarget);
+      setTaskType(response.task_type);
+      
+      toast({
+        title: "Task type detected",
+        description: `Detected task type: ${response.task_type.replace('_', ' ')}`,
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error detecting task type:', error);
+      setError(error instanceof Error ? error.message : 'Failed to detect task type');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const analyzeFeatures = async () => {
+    if (!datasetId || !targetColumn) {
+      setError('Dataset ID and target column are required');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
       
       setFeatureImportance(response.feature_importance);
-      setTaskType(response.task_type);
+      if (!taskType) {
+        setTaskType(response.task_type);
+      }
+      
+      toast({
+        title: "Feature importance analyzed",
+        description: "Feature importance analysis completed successfully",
+        duration: 3000,
+      });
       
     } catch (error) {
       console.error('Error analyzing features:', error);
@@ -114,6 +151,7 @@ const FeatureImportanceChart: React.FC = () => {
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -134,7 +172,7 @@ const FeatureImportanceChart: React.FC = () => {
                     <TooltipContent>
                       <p className="max-w-xs">
                         This is the variable you want to predict. Selecting a target will
-                        automatically analyze the importance of other features.
+                        automatically detect the task type (regression or classification).
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -158,7 +196,7 @@ const FeatureImportanceChart: React.FC = () => {
               </Select>
             </div>
             
-            {taskType && (
+            {targetColumn && taskType && (
               <div className="flex items-center">
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg w-full">
                   <div className="flex items-center justify-between mb-1">
@@ -240,11 +278,26 @@ const FeatureImportanceChart: React.FC = () => {
           ) : targetColumn ? (
             <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg">
               <BarChart3 className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-              <p>Select a target column to analyze feature importance</p>
+              <p>Click "Analyze Feature Importance" to see which features are most important for predicting {targetColumn}</p>
             </div>
           ) : null}
         </div>
       </CardContent>
+      {targetColumn && !featureImportance && (
+        <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
+          <Button 
+            onClick={analyzeFeatures} 
+            disabled={isLoading || !targetColumn}
+            variant="default"
+            size="lg"
+            className="mt-2"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };

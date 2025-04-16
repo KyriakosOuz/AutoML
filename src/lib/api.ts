@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -100,7 +99,7 @@ export const datasetApi = {
     return apiRequest(`${DATASET_API_PREFIX}/preview-data/`, 'POST', { dataset_id: datasetId, stage }, true);
   },
   
-  // 3. Handle Missing Values
+  // Handle Missing Values
   handleMissingValues: (
     datasetId: string, 
     strategy: 'mean' | 'median' | 'mode' | 'drop' | 'skip'
@@ -112,7 +111,7 @@ export const datasetApi = {
     return apiRequest(`${DATASET_API_PREFIX}/handle-dataset/`, 'POST', data, true);
   },
   
-  // 4. Feature Importance Preview
+  // Feature Importance Preview
   featureImportancePreview: (datasetId: string, targetColumn: string) => {
     return apiRequest(`${DATASET_API_PREFIX}/feature-importance-preview/`, 'POST', {
       dataset_id: datasetId,
@@ -120,7 +119,7 @@ export const datasetApi = {
     }, true);
   },
   
-  // 5. Detect Task Type
+  // Detect Task Type
   detectTaskType: (datasetId: string, targetColumn: string) => {
     return apiRequest(`${DATASET_API_PREFIX}/detect-task-type/`, 'POST', {
       dataset_id: datasetId,
@@ -128,7 +127,7 @@ export const datasetApi = {
     }, true);
   },
   
-  // 6. Save Dataset (Features + Target)
+  // 5. Save Dataset (Features + Target)
   saveDataset: (datasetId: string, targetColumn: string, columnsToKeep: string[]) => {
     return apiRequest(`${DATASET_API_PREFIX}/save-dataset/`, 'POST', {
       dataset_id: datasetId,

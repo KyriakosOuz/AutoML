@@ -45,8 +45,9 @@ const StartOverButton = () => {
 
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
-  const { datasetId, targetColumn, taskType } = useDataset();
+  const { datasetId, targetColumn, taskType, overview } = useDataset();
   const [activeTab, setActiveTab] = useState<string>("upload");
+  const { toast } = useToast();
   
   // Determine the current active step
   const getActiveStep = () => {
@@ -68,6 +69,49 @@ const DatasetPageContent = () => {
       setActiveTab("preprocess");
     }
   }, [datasetId, targetColumn, taskType]);
+
+  // Check if a tab should be enabled
+  const isTabEnabled = (tabName: string): boolean => {
+    if (tabName === "upload") return true;
+    if (tabName === "explore") return !!datasetId;
+    if (tabName === "features") return !!datasetId;
+    if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType;
+    return false;
+  };
+
+  // Handle tab change with validation
+  const handleTabChange = (value: string) => {
+    if (isTabEnabled(value)) {
+      setActiveTab(value);
+    } else {
+      // Show toast message explaining why the tab is disabled
+      let message = "You need to complete previous steps first:";
+      if (value === "explore" && !datasetId) {
+        message = "Please upload a dataset first";
+      } else if (value === "features" && !datasetId) {
+        message = "Please upload a dataset first";
+      } else if (value === "preprocess" && (!datasetId || !targetColumn || !taskType)) {
+        message = "Please complete target selection and feature selection first";
+      }
+      
+      toast({
+        title: "Tab disabled",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Navigate to next tab
+  const goToNextTab = () => {
+    if (activeTab === "upload" && datasetId) {
+      setActiveTab("explore");
+    } else if (activeTab === "explore" && datasetId) {
+      setActiveTab("features");
+    } else if (activeTab === "features" && datasetId && targetColumn && taskType) {
+      setActiveTab("preprocess");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -130,12 +174,12 @@ const DatasetPageContent = () => {
         </header>
         
         <div className="space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="upload">Upload</TabsTrigger>
-              <TabsTrigger value="explore" disabled={!datasetId}>Explore</TabsTrigger>
-              <TabsTrigger value="features" disabled={!datasetId}>Features</TabsTrigger>
-              <TabsTrigger value="preprocess" disabled={!datasetId || !targetColumn}>Preprocess</TabsTrigger>
+              <TabsTrigger value="explore" disabled={!isTabEnabled("explore")}>Explore</TabsTrigger>
+              <TabsTrigger value="features" disabled={!isTabEnabled("features")}>Features</TabsTrigger>
+              <TabsTrigger value="preprocess" disabled={!isTabEnabled("preprocess")}>Preprocess</TabsTrigger>
             </TabsList>
             
             <TabsContent value="upload" className="pt-4">
@@ -143,7 +187,7 @@ const DatasetPageContent = () => {
               {datasetId && (
                 <div className="flex justify-end mt-4">
                   <Button 
-                    onClick={() => setActiveTab("explore")} 
+                    onClick={goToNextTab} 
                     className="flex items-center gap-2"
                   >
                     Next: Explore Data
@@ -158,7 +202,7 @@ const DatasetPageContent = () => {
               <MissingValueHandler />
               <div className="flex justify-end mt-4">
                 <Button 
-                  onClick={() => setActiveTab("features")} 
+                  onClick={goToNextTab} 
                   className="flex items-center gap-2"
                 >
                   Next: Select Features
@@ -173,7 +217,7 @@ const DatasetPageContent = () => {
               {targetColumn && taskType && (
                 <div className="flex justify-end mt-4">
                   <Button 
-                    onClick={() => setActiveTab("preprocess")} 
+                    onClick={goToNextTab} 
                     className="flex items-center gap-2"
                   >
                     Next: Preprocess Data
