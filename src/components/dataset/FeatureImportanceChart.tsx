@@ -28,9 +28,6 @@ import {
   HelpCircle,
   Save
 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   Bar,
@@ -61,41 +58,30 @@ const FeatureImportanceChart: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [selectedColumns, setSelectedColumns] = useState<string[]>(
-    columnsToKeep || 
-    (previewColumns?.filter(col => col !== targetColumn) || [])
-  );
 
+  // Handle target column change and detect task type
   const handleTargetColumnChange = async (value: string) => {
     if (!value) return;
     
-    setTargetColumn(value);
-    // Reset feature importance when target column changes
-    setFeatureImportance(null);
-    
-    // Update selected columns to exclude the new target
-    setSelectedColumns(prev => prev.filter(col => col !== value));
-    
-    // Call the API to detect task type
-    try {
-      await detectTaskType(value);
-    } catch (err) {
-      console.error('Error detecting task type:', err);
-    }
-  };
-  
-  const detectTaskType = async (selectedTarget: string) => {
-    if (!datasetId || !selectedTarget) {
-      setError('Dataset ID and target column are required');
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await datasetApi.detectTaskType(datasetId, selectedTarget);
+      // Set the target column immediately to update UI
+      setTargetColumn(value);
+      
+      // Reset feature importance when target column changes
+      setFeatureImportance(null);
+      
+      // Call the API to detect task type
+      const response = await datasetApi.detectTaskType(datasetId || '', value);
       setTaskType(response.task_type);
+      
+      // Use all non-target columns as default selected columns
+      if (previewColumns) {
+        const defaultColumns = previewColumns.filter(col => col !== value);
+        setColumnsToKeep(defaultColumns);
+      }
       
       toast({
         title: "Task type detected",
@@ -106,70 +92,7 @@ const FeatureImportanceChart: React.FC = () => {
     } catch (error) {
       console.error('Error detecting task type:', error);
       setError(error instanceof Error ? error.message : 'Failed to detect task type');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleFeature = (column: string) => {
-    setSelectedColumns(prev => {
-      if (prev.includes(column)) {
-        return prev.filter(col => col !== column);
-      } else {
-        return [...prev, column];
-      }
-    });
-  };
-
-  const selectAll = () => {
-    if (!previewColumns || !targetColumn) return;
-    setSelectedColumns(previewColumns.filter(col => col !== targetColumn));
-  };
-
-  const deselectAll = () => {
-    setSelectedColumns([]);
-  };
-
-  const saveDataset = async () => {
-    if (!datasetId || !targetColumn) {
-      setError('Dataset ID and target column are required');
-      return;
-    }
-
-    if (selectedColumns.length === 0) {
-      setError('Select at least one feature column');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await datasetApi.saveDataset(
-        datasetId, 
-        targetColumn,
-        selectedColumns
-      );
-      
-      // Update context with response data
-      updateState({
-        datasetId: response.dataset_id,
-        fileUrl: response.file_url,
-        columnsToKeep: response.columns_to_keep,
-        targetColumn: response.target_column,
-        overview: response.overview,
-        processingStage: 'final'
-      });
-      
-      toast({
-        title: "Features saved",
-        description: "Selected features have been saved successfully.",
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      console.error('Error saving dataset:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save dataset');
+      setTargetColumn(null); // Reset on error
     } finally {
       setIsLoading(false);
     }
@@ -178,11 +101,6 @@ const FeatureImportanceChart: React.FC = () => {
   const analyzeFeatures = async () => {
     if (!datasetId || !targetColumn) {
       setError('Dataset ID and target column are required');
-      return;
-    }
-
-    if (selectedColumns.length === 0) {
-      setError('Select at least one feature column');
       return;
     }
 
@@ -211,6 +129,46 @@ const FeatureImportanceChart: React.FC = () => {
     }
   };
 
+  const saveDataset = async () => {
+    if (!datasetId || !targetColumn || !columnsToKeep) {
+      setError('Dataset ID, target column, and features are required');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await datasetApi.saveDataset(
+        datasetId, 
+        targetColumn,
+        columnsToKeep
+      );
+      
+      // Update context with response data
+      updateState({
+        datasetId: response.dataset_id,
+        fileUrl: response.file_url,
+        columnsToKeep: response.columns_to_keep,
+        targetColumn: response.target_column,
+        overview: response.overview,
+        processingStage: 'final'
+      });
+      
+      toast({
+        title: "Features saved",
+        description: "Selected features have been saved successfully.",
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error saving dataset:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save dataset');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Set colors for feature bars based on importance
   const getBarColor = (importance: number) => {
     if (importance > 0.5) return '#8B5CF6'; // High importance - purple
@@ -222,8 +180,6 @@ const FeatureImportanceChart: React.FC = () => {
     return null;
   }
 
-  const availableFeatures = previewColumns.filter(col => col !== targetColumn);
-
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
       <CardHeader className="bg-gradient-to-r from-gray-50 to-white">
@@ -232,7 +188,7 @@ const FeatureImportanceChart: React.FC = () => {
           Target Selection & Feature Analysis
         </CardTitle>
         <CardDescription>
-          Select your target variable, choose features, and analyze feature importance
+          Select your target variable and analyze feature importance
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -290,7 +246,7 @@ const FeatureImportanceChart: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-purple-800">Detected Task Type</h4>
                     <Badge className="capitalize bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
-                      {taskType.replace('_', ' ')}
+                      {taskType ? taskType.replace(/_/g, ' ') : ''}
                     </Badge>
                   </div>
                   <p className="text-sm text-purple-700 mt-1">
@@ -303,79 +259,19 @@ const FeatureImportanceChart: React.FC = () => {
             )}
           </div>
 
-          {/* Step 2: Feature Selection */}
-          {targetColumn && (
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-medium mb-3">Step 2: Select Features</h3>
-              
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-600">Choose which columns to include in your model</p>
-                <div className="space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={selectAll}
-                    disabled={isLoading}
-                  >
-                    Select All
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={deselectAll}
-                    disabled={isLoading}
-                  >
-                    Deselect All
-                  </Button>
-                </div>
-              </div>
-              
-              <Separator className="my-2" />
-              
-              <div className="space-y-2 max-h-[200px] overflow-y-auto p-1">
-                {availableFeatures.length === 0 ? (
-                  <p className="text-sm text-gray-500 p-2">No features available</p>
-                ) : (
-                  availableFeatures.map((column) => (
-                    <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                      <Checkbox 
-                        id={`feature-${column}`}
-                        checked={selectedColumns.includes(column)}
-                        onCheckedChange={() => toggleFeature(column)}
-                        disabled={isLoading}
-                      />
-                      <Label 
-                        htmlFor={`feature-${column}`}
-                        className="cursor-pointer flex-1"
-                      >
-                        {column}
-                      </Label>
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              <div className="text-sm text-gray-500 mt-2">
-                <p>Selected {selectedColumns.length} of {availableFeatures.length} features</p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Analyze Feature Importance */}
-          {targetColumn && selectedColumns.length > 0 && (
-            <div className="mt-4">
+          {/* Step 2: Analyze Feature Importance */}
+          {targetColumn && taskType && (
+            <div className="mt-4 flex justify-center">
               {!featureImportance ? (
-                <div className="flex justify-center">
-                  <Button 
-                    onClick={analyzeFeatures} 
-                    disabled={isLoading || !targetColumn || selectedColumns.length === 0}
-                    variant="default"
-                    size="lg"
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
-                  </Button>
-                </div>
+                <Button 
+                  onClick={analyzeFeatures} 
+                  disabled={isLoading || !targetColumn}
+                  variant="default"
+                  size="lg"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
+                </Button>
               ) : null}
             </div>
           )}
@@ -388,7 +284,7 @@ const FeatureImportanceChart: React.FC = () => {
             </div>
           ) : featureImportance && featureImportance.length > 0 ? (
             <div className="space-y-3 mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-medium mb-3">Step 3: Feature Importance Analysis</h3>
+              <h3 className="font-medium mb-3">Step 2: Feature Importance Analysis</h3>
               
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-800">Feature Importance</h4>
@@ -439,11 +335,11 @@ const FeatureImportanceChart: React.FC = () => {
         </div>
       </CardContent>
       
-      {targetColumn && selectedColumns.length > 0 && featureImportance && (
+      {targetColumn && featureImportance && featureImportance.length > 0 && (
         <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
           <Button 
             onClick={saveDataset} 
-            disabled={isLoading || !targetColumn || selectedColumns.length === 0}
+            disabled={isLoading || !targetColumn}
             variant="default"
             size="lg"
           >

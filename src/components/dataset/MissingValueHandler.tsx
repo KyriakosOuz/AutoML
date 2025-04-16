@@ -43,8 +43,10 @@ const MissingValueHandler: React.FC = () => {
     datasetId, 
     overview, 
     updateState,
+    processingStage,
     setProcessingStage,
-    processingStage
+    previewData,
+    setPreviewData
   } = useDataset();
 
   // Detect if there are missing values
@@ -62,6 +64,20 @@ const MissingValueHandler: React.FC = () => {
   const totalMissingCells = overview?.total_missing_values || 0;
   const totalCells = totalRows * (overview?.num_columns || 0);
   const overallMissingPercentage = totalCells > 0 ? (totalMissingCells / totalCells) * 100 : 0;
+
+  // Function to refresh data preview after handling missing values
+  const refreshDataPreview = async () => {
+    if (!datasetId) return;
+    
+    try {
+      const response = await datasetApi.previewDataset(datasetId, 'cleaned');
+      if (response && response.data) {
+        setPreviewData(response.data);
+      }
+    } catch (error) {
+      console.error('Error refreshing data preview:', error);
+    }
+  };
 
   const handleProcessMissingValues = async (e: React.FormEvent) => {
     // Prevent default to avoid any navigation
@@ -88,6 +104,9 @@ const MissingValueHandler: React.FC = () => {
         overview: response.overview,
         processingStage: 'cleaned'
       });
+      
+      // Refresh the data preview with cleaned data
+      await refreshDataPreview();
       
       toast({
         title: "Missing values processed",
@@ -238,17 +257,16 @@ const MissingValueHandler: React.FC = () => {
         )}
       </CardContent>
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
-        <form onSubmit={handleProcessMissingValues} className="w-full flex justify-end">
-          <Button 
-            type="submit"
-            disabled={isLoading || !hasMissingValues}
-            variant="default"
-            size="lg"
-          >
-            <Wand2 className="h-4 w-4 mr-2" />
-            {isLoading ? 'Processing...' : 'Process Missing Values'}
-          </Button>
-        </form>
+        <Button 
+          onClick={handleProcessMissingValues} 
+          disabled={isLoading || !hasMissingValues}
+          variant="default"
+          size="lg"
+          type="button" // Changed from submit to button to prevent form submission
+        >
+          <Wand2 className="h-4 w-4 mr-2" />
+          {isLoading ? 'Processing...' : 'Process Missing Values'}
+        </Button>
       </CardFooter>
     </Card>
   );

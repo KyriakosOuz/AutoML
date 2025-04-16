@@ -45,7 +45,7 @@ const StartOverButton = () => {
 
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
-  const { datasetId, targetColumn, taskType, overview } = useDataset();
+  const { datasetId, targetColumn, taskType, overview, processingStage } = useDataset();
   const [activeTab, setActiveTab] = useState<string>("upload");
   const { toast } = useToast();
   
@@ -168,6 +168,7 @@ const DatasetPageContent = () => {
             <Step 
               title="Preprocessing" 
               description="Options" 
+              icon={<PlayCircle className="h-5 w-5" />}
               status={taskType ? "current" : "pending"} 
             />
           </Steps>
@@ -216,20 +217,17 @@ const DatasetPageContent = () => {
             
             <TabsContent value="features" className="pt-4">
               <FeatureImportanceChart />
-              <FeatureSelector />
+              {targetColumn && taskType && <DataPreview />}
               {targetColumn && taskType && (
-                <>
-                  <DataPreview />
-                  <div className="flex justify-end mt-4">
-                    <Button 
-                      onClick={goToNextTab} 
-                      className="flex items-center gap-2"
-                    >
-                      Next: Preprocess Data
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </>
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    onClick={goToNextTab} 
+                    className="flex items-center gap-2"
+                  >
+                    Next: Preprocess Data
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </TabsContent>
             
