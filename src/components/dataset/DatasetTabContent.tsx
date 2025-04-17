@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, Info, AlertCircle, BarChart } from 'lucide-react';
+import { ArrowRight, PlayCircle, Info, AlertCircle, BarChart, Sparkles, Filter } from 'lucide-react';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
@@ -15,10 +16,11 @@ import { useState, useEffect } from 'react';
 import { datasetApi } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TabContentProps {
   activeTab: string;
@@ -191,6 +193,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     }
   };
   
+  const isPreprocessTabReady = datasetId && targetColumn && taskType && columnsToKeep && columnsToKeep.length > 0;
+  
   return (
     <>
       <TabsContent value="upload" className="pt-4">
@@ -230,10 +234,13 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       <TabsContent value="features" className="pt-4">
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Data Target & Task Type</CardTitle>
+            <CardTitle>Target Selection</CardTitle>
+            <CardDescription>
+              Select the column you want to predict, then analyze feature importance
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   Target Column
@@ -267,35 +274,24 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Task Type
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[250px] text-xs">
-                          {getTaskTypeTooltip(taskType)}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm flex items-center">
-                  {isAnalyzingFeatures ? (
-                    "Detecting task type..."
-                  ) : featureError ? (
-                    <span className="text-destructive">{featureError}</span>
-                  ) : taskType ? (
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {formatTaskType(taskType)}
-                    </Badge>
-                  ) : (
-                    "Not determined yet"
-                  )}
-                </div>
+              <div className="flex justify-center">
+                {featureError && (
+                  <Alert variant="destructive" className="mb-4 w-full">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{featureError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <Button 
+                  onClick={analyzeFeatures}
+                  disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <BarChart className="mr-2 h-5 w-5" />
+                  {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -308,26 +304,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onSelectAll={handleSelectAll}
           onClearAll={handleClearAll}
         />
-        
-        <div className="flex justify-center mt-6 mb-6">
-          {featureError && (
-            <Alert variant="destructive" className="mb-4 w-full">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{featureError}</AlertDescription>
-            </Alert>
-          )}
-          
-          <Button 
-            onClick={analyzeFeatures}
-            disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
-            size="lg"
-            className="bg-primary hover:bg-primary/90"
-          >
-            <BarChart className="mr-2 h-5 w-5" />
-            {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
-          </Button>
-        </div>
         
         {featureImportance && featureImportance.length > 0 ? (
           <>
@@ -364,18 +340,127 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="preprocess" className="pt-4">
-        <PreprocessingOptions />
-        <DataPreview />
-        {datasetId && targetColumn && taskType && (
-          <div className="flex justify-end mt-8">
-            <Link to="/training">
-              <Button size="lg" className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white">
-                <PlayCircle className="h-5 w-5" />
-                Next: Train Model
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
+        {isPreprocessTabReady ? (
+          <>
+            <Card className="w-full mb-6">
+              <CardHeader>
+                <CardTitle className="text-xl text-primary flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Data Preprocessing
+                </CardTitle>
+                <CardDescription>
+                  Apply transformations to prepare your data for machine learning
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Alert className="bg-blue-50 border-blue-200 mb-4">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertTitle className="text-blue-700">Preprocessing Information</AlertTitle>
+                    <AlertDescription className="text-blue-600">
+                      <p className="mb-2">You are about to prepare your data for machine learning training with:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Target column: <Badge className="ml-1 bg-primary/20 text-primary">{targetColumn}</Badge></li>
+                        <li>Task type: <Badge className="ml-1 bg-primary/20 text-primary">{formatTaskType(taskType)}</Badge></li>
+                        <li>Selected features: <Badge className="ml-1 bg-primary/20 text-primary">{columnsToKeep?.length || 0}</Badge></li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <Info className="h-4 w-4 text-amber-500" />
+                    <AlertDescription className="text-amber-700 text-sm">
+                      <p>Preprocessing helps improve model performance by:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-1">
+                        <li>Scaling numerical features to similar ranges</li>
+                        <li>Balancing classes for better classification</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </CardContent>
+            </Card>
+
+            <PreprocessingOptions />
+            
+            <div className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Data Preview</CardTitle>
+                  <CardDescription>
+                    View your dataset with selected features for training
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DataPreview />
+                </CardContent>
+              </Card>
+            </div>
+
+            {processingStage === 'processed' && (
+              <div className="flex justify-end mt-8">
+                <Link to="/training">
+                  <Button size="lg" className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white">
+                    <PlayCircle className="h-5 w-5" />
+                    Continue to Training
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Preprocessing</CardTitle>
+              <CardDescription>
+                Complete previous steps to access preprocessing options
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              {!datasetId ? (
+                <div className="text-center space-y-4">
+                  <Filter className="h-12 w-12 text-gray-300 mx-auto" />
+                  <h3 className="text-lg font-medium">No Dataset Uploaded</h3>
+                  <p className="text-sm text-gray-500 max-w-md mx-auto">
+                    Please upload a dataset in the "Upload" tab before proceeding to preprocessing.
+                  </p>
+                  <Button variant="outline" onClick={() => document.querySelector('[data-value="upload"]')?.click()}>
+                    Go to Upload Tab
+                  </Button>
+                </div>
+              ) : !targetColumn || !taskType ? (
+                <div className="text-center space-y-4">
+                  <BarChart className="h-12 w-12 text-gray-300 mx-auto" />
+                  <h3 className="text-lg font-medium">Target Column Not Selected</h3>
+                  <p className="text-sm text-gray-500 max-w-md mx-auto">
+                    Please select a target column and analyze feature importance in the "Features" tab.
+                  </p>
+                  <Button variant="outline" onClick={() => document.querySelector('[data-value="features"]')?.click()}>
+                    Go to Features Tab
+                  </Button>
+                </div>
+              ) : !columnsToKeep || columnsToKeep.length === 0 ? (
+                <div className="text-center space-y-4">
+                  <Filter className="h-12 w-12 text-gray-300 mx-auto" />
+                  <h3 className="text-lg font-medium">Features Not Selected</h3>
+                  <p className="text-sm text-gray-500 max-w-md mx-auto">
+                    Please select and save features in the "Features" tab before proceeding to preprocessing.
+                  </p>
+                  <Button variant="outline" onClick={() => document.querySelector('[data-value="features"]')?.click()}>
+                    Go to Features Tab
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+                  <Skeleton className="h-6 w-48 mx-auto" />
+                  <Skeleton className="h-4 w-64 mx-auto" />
+                  <Skeleton className="h-10 w-32 mx-auto" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </TabsContent>
     </>

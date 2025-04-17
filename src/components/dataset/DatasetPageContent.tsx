@@ -58,7 +58,7 @@ const DatasetPageContent: React.FC = () => {
         (!overview.total_missing_values || overview.total_missing_values === 0);
       return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
     }
-    if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
+    if (tabName === "preprocess") return !!datasetId;
     return false;
   };
 
@@ -71,8 +71,6 @@ const DatasetPageContent: React.FC = () => {
         message = "Please upload a dataset first";
       } else if (value === "features" && !isTabEnabled("features")) {
         message = "Please process missing values first";
-      } else if (value === "preprocess" && processingStage !== 'final') {
-        message = "Please complete feature selection first";
       }
       
       toast({
@@ -88,22 +86,9 @@ const DatasetPageContent: React.FC = () => {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-    } else if (activeTab === "features" && processingStage === 'final') {
+    } else if (activeTab === "features") {
       setActiveTab("preprocess");
     }
-  };
-
-  const formatTaskType = (type: string | null): string => {
-    if (!type) return '';
-    
-    if (type === 'binary_classification') return 'Binary Classification';
-    if (type === 'multiclass_classification') return 'Multiclass Classification';
-    if (type === 'regression') return 'Regression';
-    
-    return type
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   return (
@@ -130,7 +115,6 @@ const DatasetPageContent: React.FC = () => {
               processingStage={processingStage}
               columnsToKeep={columnsToKeep}
               goToNextTab={goToNextTab}
-              formatTaskType={formatTaskType}
             />
           </Tabs>
         </div>
