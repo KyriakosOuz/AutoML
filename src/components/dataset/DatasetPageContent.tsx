@@ -71,7 +71,7 @@ const DatasetPageContent: React.FC = () => {
         message = "Please upload a dataset first";
       } else if (value === "features" && !isTabEnabled("features")) {
         message = "Please process missing values first";
-      } else if (value === "preprocess" && !isTabEnabled("preprocess")) {
+      } else if (value === "preprocess" && processingStage !== 'final') {
         message = "Please complete feature selection first";
       }
       
@@ -84,29 +84,13 @@ const DatasetPageContent: React.FC = () => {
   };
 
   const goToNextTab = () => {
-    // Changed this function to not force disabling previous tabs
     if (activeTab === "upload" && datasetId) {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-    } else if (activeTab === "features") {
-      // Removed the processingStage condition to allow moving to preprocess
-      // even if feature selection is not fully complete
+    } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
-  };
-
-  const formatTaskType = (type: string | null): string => {
-    if (!type) return '';
-    
-    if (type === 'binary_classification') return 'Binary Classification';
-    if (type === 'multiclass_classification') return 'Multiclass Classification';
-    if (type === 'regression') return 'Regression';
-    
-    return type
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   return (
