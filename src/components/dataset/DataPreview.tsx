@@ -21,23 +21,14 @@ import {
   Loader2,
   XCircle,
   CheckCircle,
-  Info,
-  Target
+  Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type PreviewStage = 'raw' | 'cleaned' | 'final' | 'processed' | 'latest';
 
-interface DataPreviewProps {
-  highlightTargetColumn?: string | null;
-}
-
-const DataPreview: React.FC<DataPreviewProps> = ({ 
-  highlightTargetColumn = null 
-}) => {
+const DataPreview: React.FC = () => {
   const { 
     datasetId, 
     previewData, 
@@ -45,8 +36,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     setPreviewData, 
     setPreviewColumns,
     overview,
-    processingStage,
-    targetColumn
+    processingStage
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -54,9 +44,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const { toast } = useToast();
-
-  // Use provided highlightTargetColumn prop or fall back to context targetColumn
-  const columnToHighlight = highlightTargetColumn || targetColumn;
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -112,10 +99,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     if (processingStage) {
       console.log('Processing stage changed:', processingStage);
       
-      if (processingStage === 'processed' && stage !== 'processed') {
-        console.log('Setting stage to processed');
-        setStage('processed');
-      } else if (processingStage === 'final' && stage !== 'final' && stage !== 'processed') {
+      if (processingStage === 'final' && stage !== 'final') {
         console.log('Setting stage to final');
         setStage('final');
       } else if (processingStage === 'cleaned' && stage === 'raw') {
@@ -151,42 +135,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     return labels[selectedStage];
   };
 
-  // Custom styling for the target column
-  const getColumnHeaderStyle = (column: string) => {
-    if (column === columnToHighlight) {
-      return "bg-purple-100 text-purple-800 font-semibold";
-    }
-    return "";
-  };
-
-  const getCellStyle = (column: string) => {
-    if (column === columnToHighlight) {
-      return "bg-purple-50 text-purple-900";
-    }
-    return "";
-  };
-
   return (
     <Card className="w-full mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-xl text-primary">Data Preview</CardTitle>
-          {columnToHighlight && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge className="ml-2 bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-help">
-                    <Target className="h-3 w-3 mr-1" />
-                    Target: {columnToHighlight}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-sm">This is your target column for prediction</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        <CardTitle className="text-xl text-primary">Data Preview</CardTitle>
         <div className="flex items-center gap-2">
           <Select
             value={stage}
@@ -275,16 +227,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 <TableRow>
                   <TableHead className="w-[50px] text-center">#</TableHead>
                   {previewColumns.map((column) => (
-                    <TableHead key={column} className={getColumnHeaderStyle(column)}>
-                      {column === columnToHighlight ? (
-                        <div className="flex items-center gap-1">
-                          <Target className="h-3 w-3" />
-                          {column}
-                        </div>
-                      ) : (
-                        column
-                      )}
-                    </TableHead>
+                    <TableHead key={column}>{column}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -301,10 +244,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                           String(value);
                         
                         return (
-                          <TableCell 
-                            key={`${rowIndex}-${column}`}
-                            className={getCellStyle(column)}
-                          >
+                          <TableCell key={`${rowIndex}-${column}`}>
                             {displayValue}
                           </TableCell>
                         );

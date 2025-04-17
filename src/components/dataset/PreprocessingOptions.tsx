@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -20,8 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Sparkles, Info } from 'lucide-react';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertCircle, Sparkles } from 'lucide-react';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
 type BalanceStrategy = 'undersample' | 'smote' | 'skip';
@@ -31,9 +30,7 @@ const PreprocessingOptions: React.FC = () => {
     datasetId, 
     taskType,
     updateState,
-    columnsToKeep,
-    overview,
-    targetColumn
+    columnsToKeep
   } = useDataset();
   
   const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
@@ -43,24 +40,6 @@ const PreprocessingOptions: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
-  
-  // Extract numerical features from overview
-  const numericalFeatures = overview?.numerical_features || [];
-  
-  // Determine if there are numerical features to normalize
-  const hasNumericalToNormalize = columnsToKeep && 
-    numericalFeatures.some(f => columnsToKeep.includes(f));
-    
-  // Check if dataset has numerical features for SMOTE
-  const hasNumericalForSmote = columnsToKeep && 
-    numericalFeatures.some(f => columnsToKeep.includes(f));
-    
-  // Reset balancing strategy if SMOTE is selected but no numerical features
-  useEffect(() => {
-    if (balanceStrategy === 'smote' && !hasNumericalForSmote) {
-      setBalanceStrategy('skip');
-    }
-  }, [balanceStrategy, hasNumericalForSmote]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -84,12 +63,11 @@ const PreprocessingOptions: React.FC = () => {
         balanceStrategy
       );
       
-      // Update context with response data without altering tab navigation
+      // Update context with response data
       updateState({
         datasetId: response.dataset_id,
         processedFileUrl: response.processed_file_url,
-        overview: response.overview,
-        processingStage: 'processed' // Mark as processed but don't affect tab access
+        overview: response.overview
       });
       
       setSuccess(response.message || 'Data preprocessing completed successfully');
@@ -109,12 +87,9 @@ const PreprocessingOptions: React.FC = () => {
   return (
     <Card className="w-full mt-6">
       <CardHeader>
-        <CardTitle className="text-xl text-primary flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Advanced Preprocessing
-        </CardTitle>
+        <CardTitle className="text-xl text-primary">Preprocess Dataset</CardTitle>
         <CardDescription>
-          Fine-tune your dataset with normalization and class balancing
+          Apply normalization and balancing techniques to prepare your data for modeling
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -134,52 +109,23 @@ const PreprocessingOptions: React.FC = () => {
 
         <div className="space-y-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium">Normalization</h4>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[250px]">
-                    <p className="text-sm">
-                      Normalization scales your numerical features to make them comparable in magnitude
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            
-            <TooltipProvider>
-              <Tooltip open={!hasNumericalToNormalize ? undefined : false}>
-                <TooltipTrigger asChild>
-                  <div className="relative">
-                    <Select
-                      value={normalizationMethod}
-                      onValueChange={(value) => setNormalizationMethod(value as NormalizationMethod)}
-                      disabled={isLoading || !hasNumericalToNormalize}
-                    >
-                      <SelectTrigger className={`w-full ${!hasNumericalToNormalize ? 'opacity-70' : ''}`}>
-                        <SelectValue placeholder="Select normalization method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minmax">Min-Max Scaling</SelectItem>
-                        <SelectItem value="standard">Standard Scaling (Z-score)</SelectItem>
-                        <SelectItem value="robust">Robust Scaling</SelectItem>
-                        <SelectItem value="log">Log Transformation</SelectItem>
-                        <SelectItem value="skip">Skip Normalization</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[250px]">
-                  <p className="text-sm text-amber-700">
-                    Normalization is disabled because no numerical features are selected.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
+            <h4 className="font-medium mb-2">Normalization</h4>
+            <Select
+              value={normalizationMethod}
+              onValueChange={(value) => setNormalizationMethod(value as NormalizationMethod)}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select normalization method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minmax">Min-Max Scaling</SelectItem>
+                <SelectItem value="standard">Standard Scaling (Z-score)</SelectItem>
+                <SelectItem value="robust">Robust Scaling</SelectItem>
+                <SelectItem value="log">Log Transformation</SelectItem>
+                <SelectItem value="skip">Skip Normalization</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-gray-500 mt-1">
               {normalizationMethod === 'minmax' && 'Scales features to a range of [0,1]'}
               {normalizationMethod === 'standard' && 'Transforms features to have mean=0 and variance=1'}
@@ -192,71 +138,21 @@ const PreprocessingOptions: React.FC = () => {
           <Separator />
           
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium">Balance Classes</h4>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[250px]">
-                    <p className="text-sm">
-                      {isClassification 
-                        ? "Class balancing makes sure all target classes are equally represented"
-                        : "Class balancing is only applicable for classification tasks"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            
-            <TooltipProvider>
-              <Tooltip open={!isClassification ? undefined : false}>
-                <TooltipTrigger asChild>
-                  <div className="relative">
-                    <Select
-                      value={balanceStrategy}
-                      onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
-                      disabled={isLoading || !isClassification}
-                    >
-                      <SelectTrigger className={`w-full ${!isClassification ? 'opacity-70' : ''}`}>
-                        <SelectValue placeholder="Select balance strategy" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="undersample">Undersampling</SelectItem>
-                        <TooltipProvider>
-                          <Tooltip open={balanceStrategy === 'smote' && !hasNumericalForSmote ? undefined : false}>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <SelectItem 
-                                  value="smote" 
-                                  disabled={!hasNumericalForSmote}
-                                  className={!hasNumericalForSmote ? 'opacity-50' : ''}
-                                >
-                                  SMOTE (Synthetic Minority Over-sampling)
-                                </SelectItem>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-[250px]">
-                              <p className="text-sm text-amber-700">
-                                SMOTE requires numerical features. It can't be applied if none are selected.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <SelectItem value="skip">Skip Balancing</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[250px]">
-                  <p className="text-sm text-amber-700">
-                    Balancing is only supported for classification tasks, not regression.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
+            <h4 className="font-medium mb-2">Balance Classes {!isClassification && '(Not Applicable for Regression)'}</h4>
+            <Select
+              value={balanceStrategy}
+              onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
+              disabled={isLoading || !isClassification}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select balance strategy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="undersample">Undersampling</SelectItem>
+                <SelectItem value="smote">SMOTE (Synthetic Minority Over-sampling)</SelectItem>
+                <SelectItem value="skip">Skip Balancing</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-gray-500 mt-1">
               {balanceStrategy === 'undersample' && 'Reduces samples from majority classes to match minority class'}
               {balanceStrategy === 'smote' && 'Creates synthetic samples for minority classes (requires numerical features)'}

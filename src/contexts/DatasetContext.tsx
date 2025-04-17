@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -132,7 +131,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
     
     // Only update to final stage if we have the required data and are currently in cleaned stage
-    // This prevents overriding the stage when it's already set to 'final' or processed
+    // This prevents overriding the stage when it's already set to 'final' or another value
     if (datasetId && targetColumn && columnsToKeep && processingStage === 'cleaned') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
@@ -172,13 +171,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const updateState = (newState: Partial<DatasetContextState>) => {
     console.log('Updating dataset state with:', newState);
     setState(prev => {
-      // Don't accidentally overwrite the processingStage if it's already set to 'processed'
-      // This ensures that preprocess doesn't reset the stage to a lower level
-      if (prev.processingStage === 'processed' && newState.processingStage && newState.processingStage !== 'processed') {
-        const { processingStage, ...rest } = newState;
-        return { ...prev, ...rest };
-      }
-      
       // Make a single state update instead of multiple individual updates
       return { ...prev, ...newState };
     });
