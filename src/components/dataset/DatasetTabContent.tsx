@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { datasetApi } from '@/lib/api';
+import TaskTypeSelector from '@/components/dataset/feature-importance/TaskTypeSelector';
 
 interface TabContentProps {
   activeTab: string;
@@ -41,7 +41,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   formatTaskType,
 }) => {
   // Get the featureImportance data from the DatasetContext
-  const { featureImportance, overview, previewColumns, setTargetColumn, updateState } = useDataset();
+  const { featureImportance, overview, previewColumns, setTargetColumn } = useDataset();
   
   // Check if dataset has no missing values initially
   const hasNoMissingValues = overview && 
@@ -55,9 +55,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       ? previewColumns.filter(col => col !== targetColumn)
       : [])
   );
-
-  // State for task type detection loading
-  const [isDetectingTaskType, setIsDetectingTaskType] = useState(false);
   
   // Update selected features when columns to keep changes
   useEffect(() => {
@@ -96,44 +93,12 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       : previewColumns;
   };
 
-  // Handle target column change and detect task type
-  const handleTargetColumnChange = async (value: string) => {
-    if (!value || !datasetId) return;
-    
-    try {
-      setIsDetectingTaskType(true);
-      
-      // Update the target column first
-      setTargetColumn(value);
-      
-      // Call the API to detect task type
-      const response = await datasetApi.detectTaskType(datasetId, value);
-      
-      // Extract task type from response
-      let detectedTaskType = null;
-      
-      if (typeof response === 'string') {
-        detectedTaskType = response.trim().toLowerCase();
-      } else if (typeof response === 'object' && response.task_type) {
-        detectedTaskType = response.task_type.toString().toLowerCase();
-      }
-      
-      // Update context with task type
-      if (detectedTaskType) {
-        updateState({
-          targetColumn: value,
-          taskType: detectedTaskType
-        });
-      }
-      
-      // Update selected features to exclude the new target column
-      if (previewColumns) {
-        setSelectedFeatures(previewColumns.filter(col => col !== value));
-      }
-    } catch (error) {
-      console.error('Error detecting task type:', error);
-    } finally {
-      setIsDetectingTaskType(false);
+  // Handle target column change
+  const handleTargetColumnChange = (value: string) => {
+    setTargetColumn(value);
+    // Update selected features to exclude the new target column
+    if (previewColumns) {
+      setSelectedFeatures(previewColumns.filter(col => col !== value));
     }
   };
 
@@ -250,18 +215,14 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   </TooltipProvider>
                 </label>
                 <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted text-sm flex items-center">
-                  {isDetectingTaskType ? (
-                    <span className="text-gray-400">Detecting task type...</span>
-                  ) : (
-                    taskType ? formatTaskType(taskType) : "Not determined yet"
-                  )}
+                  {taskType ? formatTaskType(taskType) : "Not determined yet"}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        {/* Feature Selector Component without duplicate target selection */}
+        {/* Feature Selector Component with clear layout */}
         <FeatureSelector 
           selectedFeatures={selectedFeatures}
           availableFeatures={getAvailableFeatures()}
@@ -270,7 +231,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onClearAll={handleClearAll}
         />
         
-        {/* Feature Analyzer Component */}
+        {/* Feature Analyzer Component - with "Analyze" button and loading states */}
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         
         {/* Feature Importance Chart - Only shown if data available */}
@@ -278,9 +239,9 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           <>
             <FeatureImportanceChart featureImportance={featureImportance} />
             
-            {/* Save & Continue button below the chart */}
+            {/* Save & Continue button moved below the chart */}
             <div className="flex justify-end mt-6">
-              <SaveDatasetButton onSuccess={goToNextTab} />
+              <SaveDatasetButton />
             </div>
           </>
         ) : (
@@ -291,6 +252,19 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
             ) : (
               <p className="text-sm text-gray-500">Select a target column first, then analyze feature importance.</p>
             )}
+          </div>
+        )}
+        
+        {/* Show Next button if processing stage is final */}
+        {processingStage === 'final' && (
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={goToNextTab} 
+              className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white"
+            >
+              Next: Preprocess Dataset
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </TabsContent>

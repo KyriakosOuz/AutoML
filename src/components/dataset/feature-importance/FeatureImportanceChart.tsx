@@ -78,7 +78,7 @@ const FeatureImportanceChart: React.FC<FeatureImportanceChartProps> = ({ feature
       </CardHeader>
       
       <CardContent>
-        <div className="h-full w-full bg-white rounded-lg p-4 border border-gray-200" 
+        <div className={`h-[${chartHeight}px] w-full bg-white rounded-lg p-4 border border-gray-200`} 
              style={{ height: `${chartHeight}px` }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
