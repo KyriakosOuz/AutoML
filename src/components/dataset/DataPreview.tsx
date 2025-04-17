@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -27,8 +26,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 
 type PreviewStage = 'raw' | 'cleaned' | 'final' | 'processed' | 'latest';
+type DataPreviewProps = {
+  highlightTargetColumn?: string | null;
+};
 
-const DataPreview: React.FC = () => {
+const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const { 
     datasetId, 
     previewData, 
@@ -36,7 +38,8 @@ const DataPreview: React.FC = () => {
     setPreviewData, 
     setPreviewColumns,
     overview,
-    processingStage
+    processingStage,
+    targetColumn
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -88,13 +91,11 @@ const DataPreview: React.FC = () => {
     }
   };
 
-  // Determine which stages are available based on processing status
   const hasRawData = !!datasetId;
   const hasCleanedData = processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
   const hasFinalData = processingStage === 'final' || processingStage === 'processed';
   const hasProcessedData = processingStage === 'processed';
 
-  // Auto-select the most advanced stage based on processing stage
   useEffect(() => {
     if (processingStage) {
       console.log('Processing stage changed:', processingStage);
@@ -112,7 +113,6 @@ const DataPreview: React.FC = () => {
     }
   }, [processingStage]);
 
-  // Initial load of preview data when component mounts or dataset/stage changes
   useEffect(() => {
     if (datasetId) {
       console.log('DatasetId or stage changed - fetching preview');
@@ -172,14 +172,12 @@ const DataPreview: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Current stage indicator */}
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Info className="h-4 w-4" />
             <span>Viewing: <span className="font-medium">{renderStageLabel(stage)}</span></span>
           </div>
           
-          {/* Loading indicator */}
           {isLoadingPreview && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -191,7 +189,6 @@ const DataPreview: React.FC = () => {
           )}
         </div>
         
-        {/* Error alert */}
         {previewError && (
           <Alert variant="destructive" className="mb-4">
             <XCircle className="h-4 w-4" />
@@ -200,7 +197,6 @@ const DataPreview: React.FC = () => {
           </Alert>
         )}
         
-        {/* Success message when data is loaded */}
         {!isLoadingPreview && !previewError && previewData && previewData.length > 0 && (
           <Alert className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-500" />
@@ -211,14 +207,9 @@ const DataPreview: React.FC = () => {
           </Alert>
         )}
         
-        {/* Table with data or loading skeleton */}
         {!previewData || isLoadingPreview ? (
           <div className="space-y-2">
             <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
           </div>
         ) : previewColumns && previewColumns.length > 0 ? (
           <div className="overflow-auto max-h-[400px] rounded-md border">
@@ -227,7 +218,16 @@ const DataPreview: React.FC = () => {
                 <TableRow>
                   <TableHead className="w-[50px] text-center">#</TableHead>
                   {previewColumns.map((column) => (
-                    <TableHead key={column}>{column}</TableHead>
+                    <TableHead 
+                      key={column} 
+                      className={
+                        highlightTargetColumn === column || column === targetColumn 
+                          ? 'bg-purple-50 text-purple-700 font-bold' 
+                          : ''
+                      }
+                    >
+                      {column}
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -244,7 +244,14 @@ const DataPreview: React.FC = () => {
                           String(value);
                         
                         return (
-                          <TableCell key={`${rowIndex}-${column}`}>
+                          <TableCell 
+                            key={`${rowIndex}-${column}`}
+                            className={
+                              highlightTargetColumn === column || column === targetColumn 
+                                ? 'bg-purple-50 text-purple-700' 
+                                : ''
+                            }
+                          >
                             {displayValue}
                           </TableCell>
                         );
@@ -257,26 +264,6 @@ const DataPreview: React.FC = () => {
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="h-6 w-6 text-amber-500" />
                         <p>Data structure invalid. Please refresh the preview.</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={fetchPreview} 
-                          className="mt-2"
-                        >
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-                
-                {Array.isArray(previewData) && previewData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={previewColumns.length + 1} className="text-center text-gray-500 py-8">
-                      <div className="flex flex-col items-center gap-2">
-                        <Info className="h-6 w-6 text-blue-500" />
-                        <p>No data available for this stage</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -302,7 +289,6 @@ const DataPreview: React.FC = () => {
           </div>
         )}
         
-        {/* Dataset overview information */}
         {overview && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm text-gray-600 dark:text-gray-300 border">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
