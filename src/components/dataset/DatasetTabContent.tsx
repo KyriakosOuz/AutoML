@@ -1,24 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, Info } from 'lucide-react';
+import { ArrowRight, PlayCircle, Info, AlertCircle, BarChart } from 'lucide-react';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
 import FeatureImportanceChart from '@/components/dataset/feature-importance/FeatureImportanceChart';
 import FeatureSelector from '@/components/dataset/feature-importance/FeatureSelector';
-import FeatureAnalyzer from '@/components/dataset/feature-importance/FeatureAnalyzer';
 import SaveDatasetButton from '@/components/dataset/feature-importance/SaveDatasetButton';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { TabsContent } from '@/components/ui/tabs';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useState, useEffect } from 'react';
 import { datasetApi } from '@/lib/api';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface TabContentProps {
   activeTab: string;
@@ -42,7 +42,17 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   formatTaskType,
 }) => {
   // Get the featureImportance data from the DatasetContext
-  const { featureImportance, overview, previewColumns, setTargetColumn, setTaskType } = useDataset();
+  const { 
+    featureImportance, 
+    overview, 
+    previewColumns, 
+    setTargetColumn, 
+    setTaskType, 
+    setFeatureImportance,
+    updateState 
+  } = useDataset();
+  
+  const { toast } = useToast();
   
   // Check if dataset has no missing values initially
   const hasNoMissingValues = overview && 
@@ -60,9 +70,9 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   // State for tracking feature save status
   const [featuresAreSaved, setFeaturesAreSaved] = useState<boolean>(!!processingStage && processingStage === 'final');
   
-  // State for loading task type
-  const [isLoadingTaskType, setIsLoadingTaskType] = useState<boolean>(false);
-  const [taskTypeError, setTaskTypeError] = useState<string | null>(null);
+  // State for analyzing features
+  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState<boolean>(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
   
   // Update selected features when columns to keep changes
   useEffect(() => {
@@ -72,6 +82,64 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
     }
   }, [columnsToKeep, previewColumns, targetColumn]);
+  
+  // Feature analysis function
+  const analyzeFeatures = async () => {
+    if (!datasetId || !targetColumn) {
+      setFeatureError('Dataset ID and target column are required');
+      return;
+    }
+
+    if (selectedFeatures.length === 0) {
+      setFeatureError('Please select at least one feature to analyze');
+      return;
+    }
+
+    try {
+      setIsAnalyzingFeatures(true);
+      setFeatureError(null);
+
+      // First, detect the task type
+      const taskTypeResponse = await datasetApi.detectTaskType(datasetId, targetColumn);
+      
+      // Check and set task type
+      if (taskTypeResponse.task_type) {
+        setTaskType(taskTypeResponse.task_type);
+      } else {
+        throw new Error("Could not determine task type");
+      }
+      
+      // Then get feature importance
+      const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
+
+      const importanceData = response?.data?.feature_importance || [];
+
+      if (!importanceData.length) {
+        throw new Error('No feature importance data returned from API');
+      }
+
+      const filtered = importanceData.filter((f: any) => selectedFeatures.includes(f.feature));
+      const sorted = filtered.sort((a: any, b: any) => b.importance - a.importance);
+
+      // Update feature importance in context
+      setFeatureImportance(sorted);
+
+      toast({
+        title: "Success",
+        description: "Feature importance calculated successfully",
+      });
+    } catch (err) {
+      console.error('Error analyzing features:', err);
+      setFeatureError(err instanceof Error ? err.message : 'Failed to analyze features');
+      toast({
+        title: "Error analyzing features",
+        description: err instanceof Error ? err.message : 'An unexpected error occurred',
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzingFeatures(false);
+    }
+  };
   
   // Functions to handle feature selection
   const handleFeatureToggle = (column: string) => {
@@ -117,38 +185,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     
     // Reset save state when target column is changed
     setFeaturesAreSaved(false);
-    
-    // Reset task type detection error
-    setTaskTypeError(null);
-    
-    // Only proceed with API call if we have a dataset ID
-    if (datasetId) {
-      setIsLoadingTaskType(true);
-      try {
-        const response = await datasetApi.detectTaskType(datasetId, value);
-        
-        // Extract task type from response
-        let detectedTaskType = null;
-        
-        if (response && typeof response === 'object' && response.task_type) {
-          detectedTaskType = response.task_type;
-        } else if (response && typeof response === 'object' && response.data && response.data.task_type) {
-          detectedTaskType = response.data.task_type;
-        } else if (typeof response === 'string') {
-          detectedTaskType = response.trim();
-        }
-        
-        console.log('Detected task type:', detectedTaskType);
-        
-        // Update task type in context
-        setTaskType(detectedTaskType);
-      } catch (error) {
-        console.error('Error detecting task type:', error);
-        setTaskTypeError(error instanceof Error ? error.message : 'Failed to detect task type');
-      } finally {
-        setIsLoadingTaskType(false);
-      }
-    }
   };
 
   // Handler for when save is complete
@@ -269,10 +305,10 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   </TooltipProvider>
                 </label>
                 <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm flex items-center">
-                  {isLoadingTaskType ? (
+                  {isAnalyzingFeatures ? (
                     "Detecting task type..."
-                  ) : taskTypeError ? (
-                    <span className="text-destructive">{taskTypeError}</span>
+                  ) : featureError ? (
+                    <span className="text-destructive">{featureError}</span>
                   ) : taskType ? (
                     <Badge variant="outline" className="bg-primary/10 text-primary">
                       {formatTaskType(taskType)}
@@ -295,8 +331,26 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onClearAll={handleClearAll}
         />
         
-        {/* Feature Analyzer Component - with "Analyze" button and loading states */}
-        <FeatureAnalyzer selectedFeatures={selectedFeatures} />
+        {/* Feature Analysis Button */}
+        <div className="flex justify-center mt-6 mb-6">
+          {featureError && (
+            <Alert variant="destructive" className="mb-4 w-full">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{featureError}</AlertDescription>
+            </Alert>
+          )}
+          
+          <Button 
+            onClick={analyzeFeatures}
+            disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
+            size="lg"
+            className="bg-primary hover:bg-primary/90"
+          >
+            <BarChart className="mr-2 h-5 w-5" />
+            {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
+          </Button>
+        </div>
         
         {/* Feature Importance Chart - Only shown if data available */}
         {featureImportance && featureImportance.length > 0 ? (
@@ -351,12 +405,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
     </>
   );
-};
-
-// Helper function to check if dataset has no missing values
-const hasNoMissingValues = (overview: any) => {
-  return overview && 
-    (!overview.total_missing_values || overview.total_missing_values === 0);
 };
 
 export default DatasetTabContent;

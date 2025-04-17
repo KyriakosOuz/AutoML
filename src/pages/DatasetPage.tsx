@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { DatasetProvider } from '@/contexts/DatasetContext';
 import DatasetPageContent from '@/components/dataset/DatasetPageContent';
 
@@ -17,7 +17,7 @@ const formatTaskType = (type: string | null): string => {
 const DatasetPage: React.FC = () => {
   return (
     <DatasetProvider>
-      <DatasetPageContent formatTaskType={formatTaskType} />
+      <DatasetPageContent />
     </DatasetProvider>
   );
 };
