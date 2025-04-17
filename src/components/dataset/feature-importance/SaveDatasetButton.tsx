@@ -6,11 +6,18 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Save, ArrowRight } from 'lucide-react';
 
-const SaveDatasetButton: React.FC = () => {
+interface SaveDatasetButtonProps {
+  selectedFeatures: string[];
+  onSaveComplete: () => void;
+}
+
+const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({ 
+  selectedFeatures,
+  onSaveComplete
+}) => {
   const { 
     datasetId, 
     targetColumn, 
-    columnsToKeep,
     updateState
   } = useDataset();
   
@@ -18,7 +25,7 @@ const SaveDatasetButton: React.FC = () => {
   const { toast } = useToast();
 
   const saveDataset = async () => {
-    if (!datasetId || !targetColumn || !columnsToKeep || !columnsToKeep.length) {
+    if (!datasetId || !targetColumn || !selectedFeatures.length) {
       toast({
         title: "Error",
         description: "Dataset ID, target column, and features are required",
@@ -34,7 +41,7 @@ const SaveDatasetButton: React.FC = () => {
       const response = await datasetApi.saveDataset(
         datasetId, 
         targetColumn,
-        columnsToKeep
+        selectedFeatures
       );
       
       // Update context with response data
@@ -53,6 +60,9 @@ const SaveDatasetButton: React.FC = () => {
         duration: 3000,
       });
       
+      // Call the callback function after successful save
+      onSaveComplete();
+      
     } catch (error) {
       console.error('Error saving dataset:', error);
       toast({
@@ -68,7 +78,7 @@ const SaveDatasetButton: React.FC = () => {
   return (
     <Button 
       onClick={saveDataset} 
-      disabled={isLoading || !targetColumn}
+      disabled={isLoading || !targetColumn || selectedFeatures.length === 0}
       variant="default"
       size="lg"
       className="bg-black hover:bg-gray-800 text-white"
@@ -78,8 +88,7 @@ const SaveDatasetButton: React.FC = () => {
       ) : (
         <>
           <Save className="h-4 w-4 mr-2" />
-          Save & Continue
-          <ArrowRight className="h-4 w-4 ml-2" />
+          Save
         </>
       )}
     </Button>

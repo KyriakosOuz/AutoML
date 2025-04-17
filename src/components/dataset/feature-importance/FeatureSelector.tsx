@@ -11,13 +11,8 @@ import {
   Button 
 } from '@/components/ui/button';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Filter, Check, CheckCircle, TargetIcon } from 'lucide-react';
+  Check, CheckCircle, Filter
+} from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface FeatureSelectorProps {
@@ -35,11 +30,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   onSelectAll,
   onClearAll
 }) => {
-  const { targetColumn, setTargetColumn, previewColumns } = useDataset();
-  
-  const handleTargetColumnChange = (value: string) => {
-    setTargetColumn(value);
-  };
+  const { targetColumn } = useDataset();
   
   return (
     <Card className="mt-6">
@@ -51,41 +42,14 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
               Select which features to use for analysis and modeling
             </p>
           </div>
-          
-          {/* Target Column Selector - Always visible, just disabled if already selected */}
-          <div className="w-full md:w-64">
-            <Select 
-              value={targetColumn || ""} 
-              onValueChange={handleTargetColumnChange}
-              disabled={!previewColumns || previewColumns.length === 0}
-            >
-              <SelectTrigger className="w-full">
-                <div className="flex items-center gap-2">
-                  <TargetIcon className="h-4 w-4 text-purple-500" />
-                  <SelectValue placeholder="Select target column" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {previewColumns && previewColumns.map(column => (
-                  <SelectItem key={column} value={column}>
-                    {column}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Target column is what your model will predict
-            </p>
-          </div>
         </div>
       </CardHeader>
       
       <CardContent>
-        {!targetColumn && previewColumns && previewColumns.length > 0 && (
+        {!targetColumn && (
           <div className="mb-4 border border-orange-200 bg-orange-50 p-3 rounded-md">
             <p className="text-sm text-orange-700 flex items-center gap-2">
-              <TargetIcon className="h-4 w-4" />
-              Please select a target column before selecting features
+              Please select a target column in the Data Target section above before selecting features
             </p>
           </div>
         )}
