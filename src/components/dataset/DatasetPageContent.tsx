@@ -7,6 +7,7 @@ import { Tabs } from '@/components/ui/tabs';
 import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
+import { datasetApi } from '@/lib/api';
 
 const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -17,19 +18,48 @@ const DatasetPageContent: React.FC = () => {
     overview, 
     processingStage, 
     columnsToKeep,
-    featureImportance 
+    featureImportance,
+    setFeatureImportance
   } = useDataset();
   
   const [activeTab, setActiveTab] = useState<string>("upload");
   const { toast } = useToast();
   
   const [hasInitializedTabs, setHasInitializedTabs] = useState(false);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
   
   const getActiveStep = () => {
     if (!datasetId) return 0;
     if (!targetColumn) return 1;
     if (!taskType) return 2;
     return 3;
+  };
+
+  // Load feature importance data when entering the features tab
+  const loadFeatureImportanceData = async () => {
+    if (!datasetId || !targetColumn || loadingFeatures || (featureImportance && featureImportance.length > 0)) {
+      return;
+    }
+    
+    try {
+      setLoadingFeatures(true);
+      
+      // Fetch feature importance data from API
+      const response = await datasetApi.getFeatureImportance(datasetId, targetColumn);
+      
+      if (response && response.feature_importance) {
+        setFeatureImportance(response.feature_importance);
+      }
+    } catch (error) {
+      console.error('Error loading feature importance data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load feature importance data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingFeatures(false);
+    }
   };
 
   useEffect(() => {
@@ -47,14 +77,22 @@ const DatasetPageContent: React.FC = () => {
     }
   }, [datasetId, targetColumn, taskType, hasInitializedTabs, columnsToKeep]);
 
+  // When active tab changes to features, load feature importance data
+  useEffect(() => {
+    if (activeTab === "features") {
+      loadFeatureImportanceData();
+    }
+  }, [activeTab, datasetId, targetColumn]);
+
   // Handle tab access control based on processing stage
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
     if (tabName === "features") {
       // Enable features tab if there are no missing values initially or after processing
-      // Also ensure that we have feature importance data loaded
-      return !!datasetId && (processingStage === 'cleaned' || (!!overview && (!overview.total_missing_values || overview.total_missing_values === 0)));
+      const hasNoMissingValues = overview && 
+        (!overview.total_missing_values || overview.total_missing_values === 0);
+      return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
     }
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
@@ -86,6 +124,8 @@ const DatasetPageContent: React.FC = () => {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
+      // Ensure we load feature importance data when navigating to features tab
+      loadFeatureImportanceData();
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }

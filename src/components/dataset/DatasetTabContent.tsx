@@ -34,7 +34,11 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   formatTaskType,
 }) => {
   // Get the featureImportance data from the DatasetContext
-  const { featureImportance } = useDataset();
+  const { featureImportance, overview } = useDataset();
+  
+  // Check if dataset has no missing values initially
+  const hasNoMissingValues = overview && 
+    (!overview.total_missing_values || overview.total_missing_values === 0);
   
   return (
     <>
@@ -60,7 +64,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         <MissingValueHandler />
         <DataPreview />
         {/* Show Next button if either there are no missing values initially or after processing */}
-        {(processingStage === 'cleaned' || (datasetId && !processingStage)) && (
+        {(processingStage === 'cleaned' || (datasetId && hasNoMissingValues)) && (
           <div className="flex justify-end mt-4">
             <Button 
               onClick={goToNextTab} 
@@ -74,8 +78,10 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        {/* Pass the featureImportance prop to the FeatureImportanceChart component */}
-        {featureImportance && <FeatureImportanceChart featureImportance={featureImportance} />}
+        {/* Show feature importance chart */}
+        {featureImportance && featureImportance.length > 0 && (
+          <FeatureImportanceChart featureImportance={featureImportance} />
+        )}
         <FeatureSelector />
         {processingStage === 'final' && (
           <div className="flex justify-end mt-6">
