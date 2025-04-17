@@ -40,6 +40,11 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   const hasNoMissingValues = overview && 
     (!overview.total_missing_values || overview.total_missing_values === 0);
   
+  // Add console log to debug feature importance data
+  console.log('Current tab:', activeTab);
+  console.log('Feature importance data:', featureImportance);
+  console.log('Target column:', targetColumn);
+  
   return (
     <>
       <TabsContent value="upload" className="pt-4">
@@ -78,9 +83,14 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        {/* Show feature importance chart */}
-        {featureImportance && featureImportance.length > 0 && (
+        {/* Show feature importance chart if data is available */}
+        {featureImportance && featureImportance.length > 0 ? (
           <FeatureImportanceChart featureImportance={featureImportance} />
+        ) : (
+          <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center">
+            <p className="text-gray-600 mb-4">No feature importance data available yet.</p>
+            <p className="text-sm text-gray-500">Select a target column and analyze feature importance to view this chart.</p>
+          </div>
         )}
         <FeatureSelector />
         {processingStage === 'final' && (
