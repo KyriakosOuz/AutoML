@@ -11,9 +11,9 @@ import {
   Button 
 } from '@/components/ui/button';
 import { 
-  Check, CheckCircle, Filter
+  Check, CheckCircle, Filter, BarChart2
 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 
 interface FeatureSelectorProps {
   selectedFeatures: string[];
@@ -125,6 +125,22 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Card Footer with the Analyze button */}
+      {targetColumn && selectedFeatures.length > 0 && (
+        <CardFooter className="pt-3 pb-4 border-t border-gray-100">
+          <Button 
+            className="w-full"
+            variant="default"
+            size="default"
+            form="analyze-form"
+            type="submit"
+          >
+            <BarChart2 className="h-4 w-4 mr-2" />
+            Analyze Feature Importance
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };

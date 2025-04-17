@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { DatasetProvider } from '@/contexts/DatasetContext';
 import DatasetPageContent from '@/components/dataset/DatasetPageContent';
 
