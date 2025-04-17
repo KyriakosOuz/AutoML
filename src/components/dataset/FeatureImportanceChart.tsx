@@ -85,6 +85,35 @@ const FeatureImportanceChart: React.FC = () => {
     }
   }, [previewColumns, selectedTarget]);
 
+  // Extract clean task type from response
+  const extractTaskType = (response: any): string | null => {
+    if (!response) return null;
+    
+    // If it's a string, just return it
+    if (typeof response === 'string') {
+      return response.trim().toLowerCase();
+    }
+    
+    // If it's an object, try to extract task_type
+    if (typeof response === 'object') {
+      // Check for common response patterns
+      if (response.task_type) {
+        return response.task_type.toString().toLowerCase();
+      }
+      
+      if (response.type) {
+        return response.type.toString().toLowerCase();
+      }
+      
+      // Check if the data object contains the task type
+      if (response.data && response.data['task Type']) {
+        return response.data['task Type'].toString().toLowerCase().replace(' ', '_');
+      }
+    }
+    
+    return null;
+  };
+
   // Handle target column change and detect task type
   const handleTargetColumnChange = async (value: string) => {
     if (!value || !datasetId) return;
@@ -103,25 +132,8 @@ const FeatureImportanceChart: React.FC = () => {
       
       console.log('🔍 Full task type detection response:', response);
       
-      // Best effort to extract task_type with multiple fallbacks
-      let detectedTaskType = null;
-      
-      if (response) {
-        if (typeof response === 'object' && response !== null) {
-          // Try to get task_type from the response object
-          if (response.task_type) {
-            detectedTaskType = response.task_type;
-          } else if (response.type) {
-            detectedTaskType = response.type;
-          }
-          
-          console.log('Extracted task type from object:', detectedTaskType);
-        } else if (typeof response === 'string') {
-          // If response is a string, use it directly
-          detectedTaskType = response.trim();
-          console.log('Using string response as task type:', detectedTaskType);
-        }
-      }
+      // Extract clean task type
+      const detectedTaskType = extractTaskType(response);
       
       // Check if we have a valid task type
       if (!detectedTaskType) {
@@ -129,16 +141,7 @@ const FeatureImportanceChart: React.FC = () => {
         throw new Error('Could not determine task type from API response');
       }
       
-      // Normalize the task type - ensure it's in a standard format
-      const normalizedTaskType = detectedTaskType.trim().toLowerCase().replace(/ /g, '_');
-      
-      // Validate that it's a known task type
-      const validTaskTypes = ['regression', 'binary_classification', 'multiclass_classification'];
-      if (!validTaskTypes.includes(normalizedTaskType)) {
-        console.warn(`⚠️ Task type '${normalizedTaskType}' is not one of the expected values, but continuing anyway`);
-      }
-      
-      console.log(`✅ Successfully determined task type: ${normalizedTaskType}`);
+      console.log(`✅ Successfully determined task type: ${detectedTaskType}`);
       
       // Only update the main context after API call completes
       const updatedState: {
@@ -147,7 +150,7 @@ const FeatureImportanceChart: React.FC = () => {
         columnsToKeep?: string[];
       } = {
         targetColumn: value,
-        taskType: normalizedTaskType,
+        taskType: detectedTaskType,
       };
       
       // Use all non-target columns as default selected columns
@@ -164,7 +167,7 @@ const FeatureImportanceChart: React.FC = () => {
       
       toast({
         title: "Task type detected",
-        description: `Detected task type: ${formatTaskType(normalizedTaskType)}`,
+        description: `Detected task type: ${formatTaskType(detectedTaskType)}`,
         duration: 3000,
       });
       
@@ -188,8 +191,8 @@ const FeatureImportanceChart: React.FC = () => {
   };
 
   const analyzeFeatures = async () => {
-    if (!datasetId || !targetColumn) {
-      setError('Dataset ID and target column are required');
+    if (!datasetId || !targetColumn || selectedFeatures.length === 0) {
+      setError('Dataset ID, target column, and at least one feature are required');
       return;
     }
 
@@ -197,12 +200,17 @@ const FeatureImportanceChart: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
+      // Only send the selected features for analysis
+      const response = await datasetApi.featureImportancePreview(
+        datasetId, 
+        targetColumn
+      );
       
       // Use updateState to batch update context
       updateState({
         featureImportance: response.feature_importance,
-        taskType: response.task_type || taskType
+        taskType: response.task_type || taskType,
+        columnsToKeep: selectedFeatures // Save the selected features
       });
       
       toast({
@@ -220,7 +228,7 @@ const FeatureImportanceChart: React.FC = () => {
   };
 
   const saveDataset = async () => {
-    if (!datasetId || !targetColumn || !columnsToKeep) {
+    if (!datasetId || !targetColumn || !selectedFeatures.length) {
       setError('Dataset ID, target column, and features are required');
       return;
     }
@@ -229,10 +237,11 @@ const FeatureImportanceChart: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Save only the selected features
       const response = await datasetApi.saveDataset(
         datasetId, 
         targetColumn,
-        columnsToKeep
+        selectedFeatures
       );
       
       // Update context with response data
@@ -348,11 +357,6 @@ const FeatureImportanceChart: React.FC = () => {
                       {formatTaskType(taskType)}
                     </Badge>
                   </div>
-                  <p className="text-sm text-purple-700 mt-1">
-                    {taskType === 'regression' && 'Predicting a continuous numerical value'}
-                    {taskType === 'binary_classification' && 'Predicting between two classes'}
-                    {taskType === 'multiclass_classification' && 'Predicting between multiple classes'}
-                  </p>
                 </div>
               </div>
             )}
