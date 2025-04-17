@@ -56,9 +56,14 @@ const DatasetPageContent: React.FC = () => {
     if (tabName === "features") {
       const hasNoMissingValues = overview && 
         (!overview.total_missing_values || overview.total_missing_values === 0);
-      return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
+      
+      // Allow features tab access during 'cleaned' OR 'final' processing stages
+      return !!datasetId && ((processingStage === 'cleaned' || processingStage === 'final') || hasNoMissingValues);
     }
-    if (tabName === "preprocess") return !!datasetId;
+    if (tabName === "preprocess") {
+      // Allow preprocess tab to be enabled when there's a dataset, target column and features selected
+      return !!datasetId && !!targetColumn && !!columnsToKeep && columnsToKeep.length > 0;
+    }
     return false;
   };
 
@@ -71,6 +76,10 @@ const DatasetPageContent: React.FC = () => {
         message = "Please upload a dataset first";
       } else if (value === "features" && !isTabEnabled("features")) {
         message = "Please process missing values first";
+      } else if (value === "preprocess" && !targetColumn) {
+        message = "Please select a target column first";
+      } else if (value === "preprocess" && (!columnsToKeep || columnsToKeep.length === 0)) {
+        message = "Please select and save features first";
       }
       
       toast({
@@ -86,7 +95,7 @@ const DatasetPageContent: React.FC = () => {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-    } else if (activeTab === "features") {
+    } else if (activeTab === "features" && isTabEnabled("preprocess")) {
       setActiveTab("preprocess");
     }
   };

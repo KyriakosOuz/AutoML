@@ -54,7 +54,7 @@ const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({
         columnsToKeep: response.columns_to_keep,
         targetColumn: response.target_column,
         overview: response.overview,
-        processingStage: 'final'
+        processingStage: 'final' // This indicates features are saved but shouldn't affect tab access
       });
       
       toast({
