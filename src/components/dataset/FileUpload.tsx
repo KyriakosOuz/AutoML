@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UploadCloud, X, AlertCircle } from 'lucide-react';
+import { UploadCloud, X, AlertCircle, ExternalLink } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -15,6 +16,7 @@ const FileUpload: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [customMissingSymbol, setCustomMissingSymbol] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const { toast } = useToast();
   
   const { 
     updateState, 
@@ -64,6 +66,10 @@ const FileUpload: React.FC = () => {
     
     setSelectedFile(file);
     setError(null);
+    toast({
+      title: "File selected",
+      description: `Selected file: ${file.name}`,
+    });
   };
 
   const handleUploadClick = async () => {
@@ -122,6 +128,11 @@ const FileUpload: React.FC = () => {
         fileInputRef.current.value = '';
       }
       
+      toast({
+        title: "Upload successful",
+        description: "Your dataset has been uploaded successfully",
+      });
+      
       setTimeout(() => {
         setUploadProgress(0);
       }, 1000);
@@ -129,6 +140,11 @@ const FileUpload: React.FC = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setError(error instanceof Error ? error.message : 'Failed to upload dataset');
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : 'Failed to upload dataset',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -139,6 +155,12 @@ const FileUpload: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Function to open file upload in a new tab - this is a workaround for iframe limitations
+  const openInNewTab = () => {
+    const currentUrl = window.location.href;
+    window.open(currentUrl, '_blank');
   };
 
   return (
@@ -203,6 +225,18 @@ const FileUpload: React.FC = () => {
               </p>
             </div>
           )}
+        </div>
+        
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openInNewTab}
+            className="flex items-center gap-1"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in New Tab
+          </Button>
         </div>
         
         {uploadProgress > 0 && (
