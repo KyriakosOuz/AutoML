@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -76,29 +75,15 @@ const PreprocessingOptions: React.FC = () => {
         balanceStrategy
       );
       
-      // Properly extract data from the response structure
-      // The API might return data in a nested structure
-      const responseData = response.data || response;
-      
-      // Only update fields that exist in the response
-      const updates: any = { processingStage: 'processed' };
-      
-      if (responseData.dataset_id) {
-        updates.datasetId = responseData.dataset_id;
-      }
-      
-      if (responseData.processed_file_url) {
-        updates.processedFileUrl = responseData.processed_file_url;
-      }
-      
-      if (responseData.overview) {
-        updates.overview = responseData.overview;
-      }
-      
-      updateState(updates);
+      // CRITICAL FIX: Just update the processingStage to 'processed'
+      // This preserves all other state data and prevents tab navigation from breaking
+      updateState({
+        processingStage: 'processed'
+      });
       
       // Extract message from the appropriate location in the response
-      const message = responseData.message || (response.message || 'Data preprocessing completed successfully');
+      const responseData = response.data || response;
+      const message = responseData.message || response.message || 'Data preprocessing completed successfully';
       setSuccess(message);
       
     } catch (error) {
