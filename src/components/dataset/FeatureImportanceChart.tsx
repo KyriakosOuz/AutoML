@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -63,7 +63,8 @@ const FeatureImportanceChart: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(targetColumn);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(columnsToKeep || []);
+  const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
   
   // Format task type for display
   const formatTaskType = (type: string | null): string => {
@@ -74,6 +75,15 @@ const FeatureImportanceChart: React.FC = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
+
+  // Update available features when target column changes
+  useEffect(() => {
+    if (previewColumns && selectedTarget) {
+      setAvailableFeatures(previewColumns.filter(col => col !== selectedTarget));
+    } else {
+      setAvailableFeatures([]);
+    }
+  }, [previewColumns, selectedTarget]);
 
   // Handle target column change and detect task type
   const handleTargetColumnChange = async (value: string) => {
@@ -260,9 +270,6 @@ const FeatureImportanceChart: React.FC = () => {
     return null;
   }
 
-  // Get available features (excluding target column)
-  const availableFeatures = previewColumns.filter(col => col !== selectedTarget);
-
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
       <CardHeader className="bg-gradient-to-r from-gray-50 to-white">
@@ -351,8 +358,8 @@ const FeatureImportanceChart: React.FC = () => {
             )}
           </div>
 
-          {/* Step 2: Feature Selection */}
-          {selectedTarget && taskType && !isDetectingTaskType && (
+          {/* Step 2: Feature Selection - Only show after target column is selected */}
+          {selectedTarget && taskType && !isDetectingTaskType && availableFeatures.length > 0 && (
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
               <h3 className="font-medium mb-3 flex items-center gap-2">
                 <Filter className="h-4 w-4 text-purple-600" />
