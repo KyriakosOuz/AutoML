@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Database, LogOut } from 'lucide-react';
+import { Database, LogOut, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Steps, Step } from '@/components/ui/steps';
@@ -62,9 +62,9 @@ const DatasetHeader: React.FC<DatasetHeaderProps> = ({
           status={!datasetId ? "current" : "complete"} 
         />
         <Step 
-          title="Target" 
-          description="Selection" 
-          icon={<Workflow className="h-5 w-5" />} 
+          title="Handle" 
+          description="Dataset" 
+          icon={datasetId && !targetColumn ? <Workflow className="h-5 w-5" /> : <Check className="h-5 w-5" />} 
           status={datasetId && !targetColumn ? "current" : datasetId && targetColumn ? "complete" : "pending"} 
         />
         <Step 

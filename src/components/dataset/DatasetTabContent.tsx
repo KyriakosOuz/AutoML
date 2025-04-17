@@ -228,20 +228,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       case 'regression':
         return "Regression: Predicting a continuous numerical value";
       default:
-        return `${type.replace('_', ' ').split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ')}: Predicting values based on input features`;
+        return `${formatTaskType(type)}: Predicting values based on input features`;
     }
-  };
-
-  const formatTaskType = (type: string | null): string => {
-    if (!type) return "Unknown";
-    
-    return type
-      .replace('_', ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   return (
