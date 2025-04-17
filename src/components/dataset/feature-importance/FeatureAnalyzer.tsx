@@ -54,8 +54,13 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       
       console.log('Feature importance response:', response);
       
-      // Extract feature importance data from response
-      const importanceData = response.feature_importance || [];
+      // Check if we have a valid response first
+      if (!response || !response.data) {
+        throw new Error('Invalid response from API');
+      }
+      
+      // Extract feature importance data from response - properly navigate to data.feature_importance
+      const importanceData = response.data.feature_importance || [];
       
       if (!importanceData || importanceData.length === 0) {
         throw new Error('No feature importance data returned from API');
@@ -85,11 +90,11 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       // The API may return either task_type directly or as part of a nested object
       let detectedTaskType = taskType;
       
-      if (response.task_type) {
-        detectedTaskType = response.task_type;
-      } else if (typeof response === 'string' && 
-                (response.includes('classification') || response.includes('regression'))) {
-        detectedTaskType = response.trim();
+      if (response.data.task_type) {
+        detectedTaskType = response.data.task_type;
+      } else if (typeof response.data === 'string' && 
+                (response.data.includes('classification') || response.data.includes('regression'))) {
+        detectedTaskType = response.data.trim();
       }
       
       // Update context with the sorted and filtered data
