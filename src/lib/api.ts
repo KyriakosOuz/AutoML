@@ -153,7 +153,7 @@ export const datasetApi = {
       dataset_id: datasetId,
       target_column: targetColumn
     }, true).then(response => {
-      console.log('Raw task type response:', response);
+      console.log('✅ Raw task type response:', response);
       
       // Handle potential response formats
       if (!response) {
@@ -167,6 +167,16 @@ export const datasetApi = {
           return JSON.parse(response);
         } catch {
           // If it can't be parsed as JSON, create a standard format
+          return { task_type: response };
+        }
+      }
+      
+      // If response is not an object or doesn't have task_type, try to infer it
+      if (typeof response !== 'object' || (!response.task_type && !response.type)) {
+        console.warn('⚠️ Unexpected task type response format:', response);
+        
+        // If response is a primitive value (like a string), use it as the task_type
+        if (typeof response === 'string') {
           return { task_type: response };
         }
       }

@@ -76,7 +76,7 @@ const FeatureImportanceChart: React.FC = () => {
       // Call the API to detect task type
       const response = await datasetApi.detectTaskType(datasetId, value);
       
-      console.log('Task type detection response:', response);
+      console.log('✅ detectTaskType success:', response);
       
       // Enhanced debug logging to identify the issue
       console.log('Response type:', typeof response);
@@ -96,11 +96,20 @@ const FeatureImportanceChart: React.FC = () => {
         } else if (response.type) {
           detectedTaskType = response.type;
         }
+      } else if (typeof response === 'string') {
+        // If the response is just a string, use it directly
+        detectedTaskType = response;
       }
       
       if (!detectedTaskType) {
-        console.error('Could not find task type in response:', response);
+        console.error('⚠️ Could not find task type in response:', response);
         throw new Error('Could not determine task type from response');
+      }
+      
+      // Validate that the task type is one of the expected values
+      const validTaskTypes = ['regression', 'binary_classification', 'multiclass_classification'];
+      if (!validTaskTypes.includes(detectedTaskType)) {
+        console.warn(`⚠️ Unexpected task type value: ${detectedTaskType}, but will try to continue`);
       }
       
       // Only update the main context after API call completes
@@ -126,9 +135,12 @@ const FeatureImportanceChart: React.FC = () => {
       // Reset feature importance when target column changes
       setFeatureImportance(null);
       
+      // Safely handle the task type display with fallback for empty/null
+      const displayTaskType = detectedTaskType ? detectedTaskType.replace(/_/g, ' ') : 'unknown';
+      
       toast({
         title: "Task type detected",
-        description: `Detected task type: ${detectedTaskType.replace(/_/g, ' ')}`,
+        description: `Detected task type: ${displayTaskType}`,
         duration: 3000,
       });
       
