@@ -40,7 +40,9 @@ import {
   YAxis,
   CartesianGrid,
   Cell,
-  LabelList
+  LabelList,
+  Tooltip as RechartsTooltip,
+  Legend
 } from 'recharts';
 
 const FeatureImportanceChart: React.FC = () => {
@@ -66,7 +68,7 @@ const FeatureImportanceChart: React.FC = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(columnsToKeep || []);
   const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
   
-  // Format task type for display
+  // Format task type for better display
   const formatTaskType = (type: string | null): string => {
     if (!type) return '';
     
@@ -89,25 +91,33 @@ const FeatureImportanceChart: React.FC = () => {
   const extractTaskType = (response: any): string | null => {
     if (!response) return null;
     
-    // If it's a string, just return it
+    // Handle string response
     if (typeof response === 'string') {
       return response.trim().toLowerCase();
     }
     
-    // If it's an object, try to extract task_type
+    // Handle object response
     if (typeof response === 'object') {
-      // Check for common response patterns
+      // Try to find task_type in the response object
       if (response.task_type) {
         return response.task_type.toString().toLowerCase();
       }
       
+      // Alternative field names
       if (response.type) {
         return response.type.toString().toLowerCase();
       }
       
-      // Check if the data object contains the task type
-      if (response.data && response.data['task Type']) {
-        return response.data['task Type'].toString().toLowerCase().replace(' ', '_');
+      // Check for nested data structure
+      if (response.data && typeof response.data === 'object') {
+        // Look for 'task Type' or similar in a case-insensitive way
+        const keys = Object.keys(response.data);
+        const taskTypeKey = keys.find(key => 
+          key.toLowerCase().includes('task') && key.toLowerCase().includes('type'));
+        
+        if (taskTypeKey && response.data[taskTypeKey]) {
+          return response.data[taskTypeKey].toString().toLowerCase().replace(' ', '_');
+        }
       }
     }
     
@@ -157,6 +167,7 @@ const FeatureImportanceChart: React.FC = () => {
       if (previewColumns) {
         const defaultColumns = previewColumns.filter(col => col !== value);
         updatedState.columnsToKeep = defaultColumns;
+        setSelectedFeatures(defaultColumns);
       }
       
       // Apply all updates together
@@ -191,8 +202,13 @@ const FeatureImportanceChart: React.FC = () => {
   };
 
   const analyzeFeatures = async () => {
-    if (!datasetId || !targetColumn || selectedFeatures.length === 0) {
-      setError('Dataset ID, target column, and at least one feature are required');
+    if (!datasetId || !targetColumn) {
+      setError('Dataset ID and target column are required');
+      return;
+    }
+    
+    if (selectedFeatures.length === 0) {
+      setError('Please select at least one feature to analyze');
       return;
     }
 
@@ -200,15 +216,28 @@ const FeatureImportanceChart: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      // Only send the selected features for analysis
+      // Call the API with the selected features and target column
       const response = await datasetApi.featureImportancePreview(
         datasetId, 
         targetColumn
       );
       
-      // Use updateState to batch update context
+      // Extract feature importance data from response
+      const importanceData = response.feature_importance || [];
+      
+      // Filter feature importance data to show only selected features
+      const filteredImportance = importanceData.filter(
+        (item: any) => selectedFeatures.includes(item.feature)
+      );
+      
+      // Sort by importance in descending order
+      const sortedImportance = [...filteredImportance].sort(
+        (a: any, b: any) => b.importance - a.importance
+      );
+      
+      // Update context with the sorted and filtered data
       updateState({
-        featureImportance: response.feature_importance,
+        featureImportance: sortedImportance,
         taskType: response.task_type || taskType,
         columnsToKeep: selectedFeatures // Save the selected features
       });
@@ -237,7 +266,7 @@ const FeatureImportanceChart: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      // Save only the selected features
+      // Save the selected features
       const response = await datasetApi.saveDataset(
         datasetId, 
         targetColumn,
@@ -269,10 +298,42 @@ const FeatureImportanceChart: React.FC = () => {
   };
 
   // Set colors for feature bars based on importance
-  const getBarColor = (importance: number) => {
-    if (importance > 0.5) return '#8B5CF6'; // High importance - purple
-    if (importance > 0.2) return '#A78BFA'; // Medium importance - lighter purple
-    return '#C4B5FD'; // Low importance - lightest purple
+  const getBarColor = (importance: number, index: number) => {
+    const baseColors = [
+      '#8B5CF6', // Purple
+      '#6366F1', // Indigo
+      '#3B82F6', // Blue
+      '#0EA5E9', // Light blue
+      '#14B8A6', // Teal
+    ];
+    
+    // Use the index to get different colors for different features
+    const baseColor = baseColors[index % baseColors.length];
+    
+    // Adjust opacity based on importance
+    const opacity = 0.3 + (importance * 0.7);
+    
+    // Convert hex to rgba
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
+    
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  // Custom tooltip component for the chart
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-md shadow-md">
+          <p className="font-medium text-sm">{payload[0].payload.feature}</p>
+          <p className="text-purple-600 font-mono">
+            {(payload[0].value * 100).toFixed(2)}% importance
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   if (!datasetId || !previewColumns) {
@@ -419,6 +480,7 @@ const FeatureImportanceChart: React.FC = () => {
                   disabled={isLoading || !targetColumn || selectedFeatures.length === 0}
                   variant="default"
                   size="lg"
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
@@ -431,7 +493,7 @@ const FeatureImportanceChart: React.FC = () => {
           {isLoading ? (
             <div className="space-y-4 mt-6">
               <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-[300px] w-full rounded-lg" />
+              <Skeleton className="h-[350px] w-full rounded-lg" />
             </div>
           ) : featureImportance && featureImportance.length > 0 ? (
             <div className="space-y-3 mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
@@ -444,12 +506,12 @@ const FeatureImportanceChart: React.FC = () => {
                 </p>
               </div>
               
-              <div className="h-[350px] w-full bg-white rounded-lg p-4 border border-gray-200">
+              <div className="h-[400px] w-full bg-white rounded-lg p-4 border border-gray-200">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={featureImportance}
                     layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    margin={{ top: 20, right: 50, left: 140, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                     <XAxis 
@@ -460,22 +522,28 @@ const FeatureImportanceChart: React.FC = () => {
                     <YAxis 
                       type="category" 
                       dataKey="feature" 
-                      width={120}
+                      width={130}
                       tick={{ fontSize: 12 }}
                     />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Legend />
                     <Bar 
                       dataKey="importance" 
+                      name="Importance Score"
                       radius={[0, 4, 4, 0]}
-                      barSize={20}
+                      barSize={24}
                     >
                       {featureImportance.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getBarColor(entry.importance)} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={getBarColor(entry.importance, index)} 
+                        />
                       ))}
                       <LabelList 
                         dataKey="importance" 
                         position="right" 
-                        formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
-                        style={{ fill: '#666', fontSize: 12, fontWeight: 500 }}
+                        formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
+                        style={{ fill: '#6B7280', fontSize: 12, fontWeight: 600 }}
                       />
                     </Bar>
                   </BarChart>
@@ -493,6 +561,7 @@ const FeatureImportanceChart: React.FC = () => {
             disabled={isLoading || !targetColumn}
             variant="default"
             size="lg"
+            className="bg-purple-600 hover:bg-purple-700"
           >
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? 'Saving...' : 'Save & Continue'}
