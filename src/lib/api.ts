@@ -97,7 +97,16 @@ const apiRequest = async (
       return responseData;
     } catch (parseError) {
       console.error('Error parsing JSON response:', parseError);
-      return { error: 'Invalid JSON response', text: await response.text() };
+      // Try to get the plain text response if JSON parsing fails
+      const textResponse = await response.text();
+      console.log('Raw text response:', textResponse);
+      
+      // If the text is just the task type as a string, return it in a structured format
+      if (textResponse) {
+        return { task_type: textResponse.trim() };
+      }
+      
+      return { error: 'Invalid JSON response', text: textResponse };
     }
   } catch (error) {
     console.error('API request error:', error);
@@ -155,33 +164,54 @@ export const datasetApi = {
     }, true).then(response => {
       console.log('✅ Raw task type response:', response);
       
-      // Handle potential response formats
+      // First, check if we have a valid response
       if (!response) {
         throw new Error('Empty response from task type detection');
       }
       
-      // Ensure we return a properly structured response
+      // Most robust handling - accept string or object responses
       if (typeof response === 'string') {
-        try {
-          // Try to parse if it's a string
-          return JSON.parse(response);
-        } catch {
-          // If it can't be parsed as JSON, create a standard format
-          return { task_type: response };
-        }
+        // The response is just a plain string - wrap it in our expected format
+        const taskType = response.trim();
+        console.log(`Detected task type as string: "${taskType}"`);
+        return { task_type: taskType };
       }
       
-      // If response is not an object or doesn't have task_type, try to infer it
-      if (typeof response !== 'object' || (!response.task_type && !response.type)) {
-        console.warn('⚠️ Unexpected task type response format:', response);
+      if (typeof response === 'object') {
+        // Normal case - response is already an object
+        if (response.task_type) {
+          return response;
+        }
         
-        // If response is a primitive value (like a string), use it as the task_type
-        if (typeof response === 'string') {
-          return { task_type: response };
+        // Alternative field name
+        if (response.type) {
+          return { task_type: response.type };
+        }
+        
+        // If it has no recognized field but has a specific structure we can interpret
+        // Add additional logic here if needed
+        
+        // Last resort - check if JSON stringifying and parsing reveals the task type
+        try {
+          const serialized = JSON.stringify(response);
+          console.log('Serialized response:', serialized);
+          
+          // If the response itself is just the task type
+          if (typeof serialized === 'string' && 
+              (serialized.includes('regression') || 
+               serialized.includes('classification'))) {
+            const extractedType = serialized.replace(/["\\]/g, '').trim();
+            console.log(`Extracted type from serialized: ${extractedType}`);
+            return { task_type: extractedType };
+          }
+        } catch (e) {
+          console.error('Error serializing response:', e);
         }
       }
       
-      return response;
+      // If we couldn't determine the task type from the response
+      console.error('Failed to extract task type from response:', response);
+      throw new Error('Could not determine task type from response');
     });
   },
   

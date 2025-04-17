@@ -76,51 +76,53 @@ const FeatureImportanceChart: React.FC = () => {
       // Call the API to detect task type
       const response = await datasetApi.detectTaskType(datasetId, value);
       
-      console.log('✅ detectTaskType success:', response);
+      console.log('🔍 Full task type detection response:', response);
       
-      // Enhanced debug logging to identify the issue
-      console.log('Response type:', typeof response);
-      console.log('Response keys:', response ? Object.keys(response) : 'No response');
-      console.log('Task type value:', response?.task_type);
-      
-      // More robust response validation
-      if (!response) {
-        throw new Error('No response received from task type detection');
-      }
-      
-      // Extract task type with more forgiving approach
+      // Best effort to extract task_type with multiple fallbacks
       let detectedTaskType = null;
-      if (typeof response === 'object') {
-        if (response.task_type) {
-          detectedTaskType = response.task_type;
-        } else if (response.type) {
-          detectedTaskType = response.type;
+      
+      if (response) {
+        if (typeof response === 'object' && response !== null) {
+          // Try to get task_type from the response object
+          if (response.task_type) {
+            detectedTaskType = response.task_type;
+          } else if (response.type) {
+            detectedTaskType = response.type;
+          }
+          
+          console.log('Extracted task type from object:', detectedTaskType);
+        } else if (typeof response === 'string') {
+          // If response is a string, use it directly
+          detectedTaskType = response.trim();
+          console.log('Using string response as task type:', detectedTaskType);
         }
-      } else if (typeof response === 'string') {
-        // If the response is just a string, use it directly
-        detectedTaskType = response;
       }
       
+      // Check if we have a valid task type
       if (!detectedTaskType) {
-        console.error('⚠️ Could not find task type in response:', response);
-        throw new Error('Could not determine task type from response');
+        console.error('❌ Could not extract task type from response:', response);
+        throw new Error('Could not determine task type from API response');
       }
       
-      // Validate that the task type is one of the expected values
+      // Normalize the task type - ensure it's in a standard format
+      const normalizedTaskType = detectedTaskType.trim().toLowerCase().replace(/ /g, '_');
+      
+      // Validate that it's a known task type
       const validTaskTypes = ['regression', 'binary_classification', 'multiclass_classification'];
-      if (!validTaskTypes.includes(detectedTaskType)) {
-        console.warn(`⚠️ Unexpected task type value: ${detectedTaskType}, but will try to continue`);
+      if (!validTaskTypes.includes(normalizedTaskType)) {
+        console.warn(`⚠️ Task type '${normalizedTaskType}' is not one of the expected values, but continuing anyway`);
       }
+      
+      console.log(`✅ Successfully determined task type: ${normalizedTaskType}`);
       
       // Only update the main context after API call completes
-      // This prevents unwanted tab navigation
       const updatedState: {
         targetColumn: string;
         taskType: string;
         columnsToKeep?: string[];
       } = {
         targetColumn: value,
-        taskType: detectedTaskType,
+        taskType: normalizedTaskType,
       };
       
       // Use all non-target columns as default selected columns
@@ -135,8 +137,8 @@ const FeatureImportanceChart: React.FC = () => {
       // Reset feature importance when target column changes
       setFeatureImportance(null);
       
-      // Safely handle the task type display with fallback for empty/null
-      const displayTaskType = detectedTaskType ? detectedTaskType.replace(/_/g, ' ') : 'unknown';
+      // Create a user-friendly display of the task type
+      const displayTaskType = normalizedTaskType.replace(/_/g, ' ');
       
       toast({
         title: "Task type detected",
@@ -145,7 +147,7 @@ const FeatureImportanceChart: React.FC = () => {
       });
       
     } catch (error) {
-      console.error('Error detecting task type:', error);
+      console.error('❌ Error detecting task type:', error);
       setError(error instanceof Error ? error.message : 'Failed to detect task type');
       setSelectedTarget(targetColumn); // Reset on error
     } finally {
