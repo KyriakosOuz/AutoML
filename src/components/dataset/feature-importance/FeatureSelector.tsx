@@ -11,7 +11,7 @@ import {
   Button 
 } from '@/components/ui/button';
 import { 
-  Check, CheckCircle, Filter
+  BarChart, Check, CheckCircle, Filter
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -21,6 +21,8 @@ interface FeatureSelectorProps {
   onFeatureToggle: (column: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
+  onAnalyzeFeatures?: () => void;
+  isAnalyzing?: boolean;
 }
 
 const FeatureSelector: React.FC<FeatureSelectorProps> = ({
@@ -28,7 +30,9 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   availableFeatures,
   onFeatureToggle,
   onSelectAll,
-  onClearAll
+  onClearAll,
+  onAnalyzeFeatures,
+  isAnalyzing = false
 }) => {
   const { targetColumn } = useDataset();
   
@@ -61,7 +65,7 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
                 <Filter className="h-4 w-4 text-purple-600" />
                 Features to Analyze
               </h4>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -76,6 +80,17 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
                 >
                   Clear All
                 </Button>
+                {onAnalyzeFeatures && (
+                  <Button 
+                    onClick={onAnalyzeFeatures}
+                    disabled={isAnalyzing || !targetColumn || selectedFeatures.length === 0}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <BarChart className="mr-2 h-4 w-4" />
+                    {isAnalyzing ? "Analyzing..." : "Analyze Importance"}
+                  </Button>
+                )}
               </div>
             </div>
             

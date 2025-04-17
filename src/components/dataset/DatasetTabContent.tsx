@@ -294,25 +294,13 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                 </Select>
               </div>
               
-              <div className="flex justify-center">
-                {featureError && (
-                  <Alert variant="destructive" className="mb-4 w-full">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{featureError}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <Button 
-                  onClick={analyzeFeatures}
-                  disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  <BarChart className="mr-2 h-5 w-5" />
-                  {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
-                </Button>
-              </div>
+              {featureError && (
+                <Alert variant="destructive" className="mb-4 w-full">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{featureError}</AlertDescription>
+                </Alert>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -323,6 +311,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onFeatureToggle={handleFeatureToggle}
           onSelectAll={handleSelectAll}
           onClearAll={handleClearAll}
+          onAnalyzeFeatures={analyzeFeatures}
+          isAnalyzing={isAnalyzingFeatures}
         />
         
         {featureImportance && featureImportance.length > 0 ? (
@@ -351,7 +341,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center mt-6">
             <p className="text-gray-600 mb-4">No feature importance data available yet.</p>
             {targetColumn ? (
-              <p className="text-sm text-gray-500">Select features above and click "Analyze Feature Importance" to view this chart.</p>
+              <p className="text-sm text-gray-500">Select features above and click "Analyze Importance" to view this chart.</p>
             ) : (
               <p className="text-sm text-gray-500">Select a target column first, then analyze feature importance.</p>
             )}

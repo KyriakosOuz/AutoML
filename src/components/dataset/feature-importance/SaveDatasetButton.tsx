@@ -24,7 +24,10 @@ const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const saveDataset = async () => {
+  const saveDataset = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent default action to stop any form submissions or other events
+    e.preventDefault();
+    
     if (!datasetId || !targetColumn || !selectedFeatures.length) {
       toast({
         title: "Error",
