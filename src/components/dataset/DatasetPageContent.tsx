@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,7 +34,6 @@ const DatasetPageContent: React.FC = () => {
     return 3;
   };
 
-  // Load feature importance data when entering the features tab
   const loadFeatureImportanceData = async () => {
     if (!datasetId || !targetColumn || loadingFeatures || (featureImportance && featureImportance.length > 0)) {
       return;
@@ -44,8 +42,7 @@ const DatasetPageContent: React.FC = () => {
     try {
       setLoadingFeatures(true);
       
-      // Fetch feature importance data from API
-      const response = await datasetApi.getFeatureImportance(datasetId, targetColumn);
+      const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
       
       if (response && response.feature_importance) {
         setFeatureImportance(response.feature_importance);
@@ -77,19 +74,16 @@ const DatasetPageContent: React.FC = () => {
     }
   }, [datasetId, targetColumn, taskType, hasInitializedTabs, columnsToKeep]);
 
-  // When active tab changes to features, load feature importance data
   useEffect(() => {
     if (activeTab === "features") {
       loadFeatureImportanceData();
     }
   }, [activeTab, datasetId, targetColumn]);
 
-  // Handle tab access control based on processing stage
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
     if (tabName === "features") {
-      // Enable features tab if there are no missing values initially or after processing
       const hasNoMissingValues = overview && 
         (!overview.total_missing_values || overview.total_missing_values === 0);
       return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
@@ -124,14 +118,12 @@ const DatasetPageContent: React.FC = () => {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-      // Ensure we load feature importance data when navigating to features tab
       loadFeatureImportanceData();
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
   };
 
-  // Format task type for display
   const formatTaskType = (type: string | null): string => {
     if (!type) return '';
     
