@@ -57,6 +57,7 @@ const DatasetPageContent = () => {
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
+    // Fix the type comparison here - we need to check the string value properly
     if (tabName === "features") return !!datasetId && processingStage === 'cleaned';
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
@@ -69,7 +70,7 @@ const DatasetPageContent = () => {
       let message = "You need to complete previous steps first:";
       if (value === "explore" && !datasetId) {
         message = "Please upload a dataset first";
-      } else if (value === "features" && !processingStage || processingStage !== 'cleaned') {
+      } else if (value === "features" && (!processingStage || processingStage !== 'cleaned')) {
         message = "Please process missing values first";
       } else if (value === "preprocess" && processingStage !== 'final') {
         message = "Please complete feature selection first";
@@ -139,7 +140,7 @@ const DatasetPageContent = () => {
             </p>
           </div>
           
-          <Steps active={getActiveStep()} className="mb-8">
+          <Steps active={getActiveStep()}>
             <Step 
               title="Upload" 
               description="Dataset" 
