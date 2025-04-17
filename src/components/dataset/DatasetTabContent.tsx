@@ -133,16 +133,10 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           </div>
         )}
         
-        {/* Feature Selector Component */}
-        <FeatureSelector 
-          selectedFeatures={selectedFeatures}
-          availableFeatures={getAvailableFeatures()}
-          onFeatureToggle={handleFeatureToggle}
-          onSelectAll={handleSelectAll}
-          onClearAll={handleClearAll}
-        />
+        {/* Use the correct FeatureSelector from src/components/dataset/FeatureSelector.tsx */}
+        <FeatureSelector />
         
-        {/* Feature Analyzer Component - This is what analyzes and loads feature importance data */}
+        {/* Feature Analyzer Component - This analyzes and loads feature importance data */}
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         
         {processingStage === 'final' && (
