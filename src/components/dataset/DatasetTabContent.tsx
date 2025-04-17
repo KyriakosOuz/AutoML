@@ -1,7 +1,28 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, BarChart3 } from 'lucide-react';
+import { ArrowRight, PlayCircle, BarChart3, Info } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from '@/components/ui/badge';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
@@ -59,6 +80,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   );
   
   const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState(false);
+  const [taskTypeError, setTaskTypeError] = useState<string | null>(null);
+  const [isLoadingTaskType, setIsLoadingTaskType] = useState<boolean>(false);
 
   const analyzeFeatures = async () => {
     if (!datasetId || !targetColumn) {
@@ -327,6 +350,19 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onSelectAll={handleSelectAll}
           onClearAll={handleClearAll}
         />
+        
+        <div className="flex justify-center mt-6 mb-6">
+          <Button 
+            onClick={analyzeFeatures} 
+            disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
+            variant="default"
+            size="lg"
+            className="bg-black hover:bg-gray-800"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
+          </Button>
+        </div>
         
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         

@@ -1,8 +1,13 @@
+
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertCircle, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { BarChart3 } from 'lucide-react';
 
 interface FeatureAnalyzerProps {
   selectedFeatures: string[];
@@ -121,19 +126,6 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
-        <div className="flex justify-center">
-          <Button 
-            onClick={analyzeFeatures} 
-            disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
-            variant="default"
-            size="lg"
-            className="bg-black hover:bg-gray-800"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
-          </Button>
-        </div>
         
         {isLoading && isAnalyzingFeatures && (
           <div className="space-y-4 mt-6">
