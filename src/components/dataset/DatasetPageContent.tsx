@@ -16,7 +16,8 @@ const DatasetPageContent: React.FC = () => {
     taskType, 
     overview, 
     processingStage, 
-    columnsToKeep 
+    columnsToKeep,
+    featureImportance 
   } = useDataset();
   
   const [activeTab, setActiveTab] = useState<string>("upload");
@@ -52,6 +53,7 @@ const DatasetPageContent: React.FC = () => {
     if (tabName === "explore") return !!datasetId;
     if (tabName === "features") {
       // Enable features tab if there are no missing values initially or after processing
+      // Also ensure that we have feature importance data loaded
       return !!datasetId && (processingStage === 'cleaned' || (!!overview && (!overview.total_missing_values || overview.total_missing_values === 0)));
     }
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';

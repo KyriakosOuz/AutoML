@@ -71,7 +71,7 @@ const SaveDatasetButton: React.FC = () => {
       disabled={isLoading || !targetColumn}
       variant="default"
       size="lg"
-      className="bg-primary hover:bg-primary/90"
+      className="bg-black hover:bg-gray-800 text-white"
     >
       <Save className="h-4 w-4 mr-2" />
       {isLoading ? 'Saving...' : 'Save & Continue'}

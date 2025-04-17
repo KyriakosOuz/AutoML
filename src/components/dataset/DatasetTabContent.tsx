@@ -46,7 +46,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
             <div className="flex justify-end mt-4">
               <Button 
                 onClick={goToNextTab} 
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+                className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white"
               >
                 Next: Explore Data
                 <ArrowRight className="h-4 w-4" />
@@ -64,7 +64,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           <div className="flex justify-end mt-4">
             <Button 
               onClick={goToNextTab} 
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+              className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white"
             >
               Next: Feature Selection
               <ArrowRight className="h-4 w-4" />
@@ -81,7 +81,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           <div className="flex justify-end mt-6">
             <Button 
               onClick={goToNextTab} 
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+              className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white"
             >
               Next: Preprocess Dataset
               <ArrowRight className="h-4 w-4" />
@@ -96,7 +96,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         {datasetId && targetColumn && taskType && (
           <div className="flex justify-end mt-8">
             <Link to="/training">
-              <Button size="lg" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700">
+              <Button size="lg" className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white">
                 <PlayCircle className="h-5 w-5" />
                 Next: Train Model
                 <ArrowRight className="h-4 w-4 ml-1" />
