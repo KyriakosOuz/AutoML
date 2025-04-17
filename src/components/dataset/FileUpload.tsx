@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UploadCloud, X, AlertCircle } from 'lucide-react';
+import { UploadCloud, X, AlertCircle, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FileUpload: React.FC = () => {
@@ -20,7 +21,8 @@ const FileUpload: React.FC = () => {
   const { 
     updateState, 
     setIsLoading, 
-    setError, 
+    setError,
+    resetState,
     isLoading, 
     error,
   } = useDataset();
@@ -156,13 +158,35 @@ const FileUpload: React.FC = () => {
     }
   };
 
+  const handleStartOver = () => {
+    resetState();
+    toast({
+      title: "Dataset Reset",
+      description: "All dataset processing has been reset. You can now start over.",
+      duration: 3000,
+    });
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
-        <CardDescription>
-          Upload a CSV file to start analyzing and processing your dataset
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
+            <CardDescription>
+              Upload a CSV file to start analyzing and processing your dataset
+            </CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleStartOver}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Start Over
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {error && (
@@ -247,11 +271,19 @@ const FileUpload: React.FC = () => {
           </p>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <Button 
+          onClick={handleStartOver} 
+          variant="outline"
+          className="w-full sm:w-auto flex items-center gap-2"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Start Over
+        </Button>
         <Button 
           onClick={handleUploadClick} 
           disabled={!selectedFile || isLoading}
-          className="w-full"
+          className="w-full sm:w-auto"
         >
           {isLoading ? 'Uploading...' : 'Upload Dataset'}
         </Button>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import FileUpload from '@/components/dataset/FileUpload';
@@ -119,7 +120,7 @@ const DatasetPageContent = () => {
               AutoML Web App
             </Link>
             <div className="flex items-center gap-4">
-              {datasetId && <StartOverButton />}
+              <StartOverButton />
               <div className="text-sm text-gray-600 hidden md:block">
                 {user?.email}
               </div>

@@ -14,14 +14,12 @@ const StartOverButton = () => {
   const { toast } = useToast();
   
   const handleStartOver = () => {
-    if (window.confirm('Are you sure you want to start over? This will reset all your dataset processing.')) {
-      resetState();
-      toast({
-        title: "Process Reset",
-        description: "All dataset processing has been reset. You can now upload a new dataset.",
-        duration: 3000,
-      });
-    }
+    resetState();
+    toast({
+      title: "Process Reset",
+      description: "All dataset processing has been reset. You can now upload a new dataset.",
+      duration: 3000,
+    });
   };
   
   return (
