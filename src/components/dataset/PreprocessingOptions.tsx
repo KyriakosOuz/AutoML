@@ -79,7 +79,8 @@ const PreprocessingOptions: React.FC = () => {
       updateState({
         datasetId: response.dataset_id,
         processedFileUrl: response.processed_file_url,
-        overview: response.overview
+        overview: response.overview,
+        processingStage: 'processed' // Set to processed to trigger the "Continue to Training" button
       });
       
       setSuccess(response.message || 'Data preprocessing completed successfully');
