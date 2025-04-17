@@ -164,18 +164,17 @@ export const datasetApi = {
     }, true).then(response => {
       console.log('DetectTaskType raw response:', response);
       
-      // Normalized handling
-      const detectedTaskType =
-        response?.task_type ||
-        response?.data?.task_type ||
-        (typeof response === 'string' ? response.trim() : null);
+      // Normalized handling - return a consistent structure
+      const taskType = response?.task_type || 
+                        response?.data?.task_type || 
+                        (typeof response === 'string' ? response.trim() : null);
       
-      if (!detectedTaskType) {
+      if (!taskType) {
         throw new Error("Could not determine task type from response");
       }
       
-      // Return a normalized response object
-      return { task_type: detectedTaskType };
+      // Return a normalized response object with only task_type
+      return { task_type: taskType };
     });
   },
   

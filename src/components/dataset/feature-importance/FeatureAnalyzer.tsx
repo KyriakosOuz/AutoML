@@ -14,7 +14,7 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({
   return (
     <div className="mb-6">
       <div className="mt-4 text-center text-sm text-gray-500">
-        This will calculate the importance of each selected feature in predicting the target variable
+        Select the features above and analyze their importance in predicting the target variable
       </div>
     </div>
   );
