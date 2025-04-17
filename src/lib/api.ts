@@ -162,56 +162,20 @@ export const datasetApi = {
       dataset_id: datasetId,
       target_column: targetColumn
     }, true).then(response => {
-      console.log('✅ Raw task type response:', response);
+      console.log('DetectTaskType raw response:', response);
       
-      // First, check if we have a valid response
-      if (!response) {
-        throw new Error('Empty response from task type detection');
+      // Normalized handling
+      const detectedTaskType =
+        response?.task_type ||
+        response?.data?.task_type ||
+        (typeof response === 'string' ? response.trim() : null);
+      
+      if (!detectedTaskType) {
+        throw new Error("Could not determine task type from response");
       }
       
-      // Most robust handling - accept string or object responses
-      if (typeof response === 'string') {
-        // The response is just a plain string - wrap it in our expected format
-        const taskType = response.trim();
-        console.log(`Detected task type as string: "${taskType}"`);
-        return { task_type: taskType };
-      }
-      
-      if (typeof response === 'object') {
-        // Normal case - response is already an object
-        if (response.task_type) {
-          return response;
-        }
-        
-        // Alternative field name
-        if (response.type) {
-          return { task_type: response.type };
-        }
-        
-        // If it has no recognized field but has a specific structure we can interpret
-        // Add additional logic here if needed
-        
-        // Last resort - check if JSON stringifying and parsing reveals the task type
-        try {
-          const serialized = JSON.stringify(response);
-          console.log('Serialized response:', serialized);
-          
-          // If the response itself is just the task type
-          if (typeof serialized === 'string' && 
-              (serialized.includes('regression') || 
-               serialized.includes('classification'))) {
-            const extractedType = serialized.replace(/["\\]/g, '').trim();
-            console.log(`Extracted type from serialized: ${extractedType}`);
-            return { task_type: extractedType };
-          }
-        } catch (e) {
-          console.error('Error serializing response:', e);
-        }
-      }
-      
-      // If we couldn't determine the task type from the response
-      console.error('Failed to extract task type from response:', response);
-      throw new Error('Could not determine task type from response');
+      // Return a normalized response object
+      return { task_type: detectedTaskType };
     });
   },
   

@@ -1,153 +1,99 @@
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, BarChart3 } from 'lucide-react';
+import { BarChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface FeatureAnalyzerProps {
   selectedFeatures: string[];
 }
 
-const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) => {
-  const { 
-    datasetId, 
-    targetColumn,
-    taskType,
-    updateState
-  } = useDataset();
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({
+  selectedFeatures
+}) => {
+  const { datasetId, targetColumn, setFeatureImportance, setTaskType } = useDataset();
   const { toast } = useToast();
-
-  const analyzeFeatures = async () => {
-    if (!datasetId || !targetColumn) {
-      setError('Dataset ID and target column are required');
+  
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [taskTypeError, setTaskTypeError] = useState<string | null>(null);
+  
+  const handleAnalyzeFeatures = async () => {
+    if (!datasetId || !targetColumn || selectedFeatures.length === 0) {
+      toast({
+        title: "Cannot analyze features",
+        description: "Please select a target column and at least one feature to analyze",
+        variant: "destructive"
+      });
       return;
     }
     
-    if (selectedFeatures.length === 0) {
-      setError('Please select at least one feature to analyze');
-      return;
-    }
-
+    setIsAnalyzing(true);
+    setTaskTypeError(null);
+    
     try {
-      setIsLoading(true);
-      setIsAnalyzingFeatures(true);
-      setError(null);
+      // First, detect the task type
+      const taskTypeResponse = await datasetApi.detectTaskType(datasetId, targetColumn);
       
-      console.log('Analyzing features for dataset:', datasetId);
-      console.log('Target column:', targetColumn);
-      console.log('Selected features:', selectedFeatures);
-      
-      // Call the API with the selected features and target column
-      const response = await datasetApi.featureImportancePreview(
-        datasetId, 
-        targetColumn
-      );
-      
-      console.log('Feature importance response:', response);
-      
-      // Check if we have a valid response first
-      if (!response || !response.data) {
-        throw new Error('Invalid response from API');
+      if (!taskTypeResponse.task_type) {
+        throw new Error("Could not determine task type");
       }
       
-      // Extract feature importance data from response - properly navigate to data.feature_importance
-      const importanceData = response.data.feature_importance || [];
+      // Update the task type in the context
+      setTaskType(taskTypeResponse.task_type);
       
-      if (!importanceData || importanceData.length === 0) {
-        throw new Error('No feature importance data returned from API');
+      // Then get feature importance
+      const featureImportanceResponse = await datasetApi.featureImportancePreview(datasetId, targetColumn);
+      
+      // Update feature importance in context
+      if (featureImportanceResponse?.data?.feature_importance) {
+        setFeatureImportance(featureImportanceResponse.data.feature_importance);
+      } else {
+        throw new Error("No feature importance data received");
       }
-      
-      // Filter feature importance data to show only selected features
-      const filteredImportance = importanceData.filter(
-        (item: any) => selectedFeatures.includes(item.feature)
-      );
-      
-      // If we still have no data after filtering
-      if (filteredImportance.length === 0) {
-        throw new Error('No feature importance data available for selected features');
-      }
-      
-      // Sort by importance in descending order
-      const sortedImportance = [...filteredImportance].sort(
-        (a: any, b: any) => b.importance - a.importance
-      );
-      
-      console.log('Processed importance data:', sortedImportance);
-      
-      // Determine task type if it's not already set
-      // The API may return either task_type directly or as part of a nested object
-      let detectedTaskType = taskType;
-      
-      if (response.data.task_type) {
-        detectedTaskType = response.data.task_type;
-      } else if (typeof response.data === 'string' && 
-                (response.data.includes('classification') || response.data.includes('regression'))) {
-        detectedTaskType = response.data.trim();
-      }
-      
-      // Update context with the sorted and filtered data
-      updateState({
-        featureImportance: sortedImportance,
-        taskType: detectedTaskType || taskType,
-        columnsToKeep: selectedFeatures // Save the selected features
-      });
       
       toast({
-        title: "Feature importance analyzed",
-        description: "Feature importance analysis completed successfully",
-        duration: 3000,
+        title: "Success",
+        description: "Feature importance calculated successfully",
       });
-      
     } catch (error) {
       console.error('Error analyzing features:', error);
-      setError(error instanceof Error ? error.message : 'Failed to analyze features');
+      setTaskTypeError(error instanceof Error ? error.message : 'Failed to analyze features');
+      toast({
+        title: "Error analyzing features",
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: "destructive"
+      });
     } finally {
-      setIsLoading(false);
-      setIsAnalyzingFeatures(false);
+      setIsAnalyzing(false);
     }
   };
-
+  
   return (
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="flex justify-center">
-          <Button 
-            onClick={analyzeFeatures} 
-            disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
-            variant="default"
-            size="lg"
-            className="bg-black hover:bg-gray-800"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
-          </Button>
+    <div className="mb-6">
+      <div className="flex justify-center">
+        <Button 
+          onClick={handleAnalyzeFeatures}
+          disabled={isAnalyzing || !targetColumn || selectedFeatures.length === 0}
+          size="lg"
+          className="bg-primary hover:bg-primary/90"
+        >
+          <BarChart className="mr-2 h-5 w-5" />
+          {isAnalyzing ? "Analyzing..." : "Analyze Feature Importance"}
+        </Button>
+      </div>
+      
+      {taskTypeError && (
+        <div className="mt-2 text-center text-red-500 text-sm">
+          {taskTypeError}
         </div>
-        
-        {isLoading && isAnalyzingFeatures && (
-          <div className="space-y-4 mt-6">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-[350px] w-full rounded-lg" />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+      
+      <div className="mt-4 text-center text-sm text-gray-500">
+        This will calculate the importance of each selected feature in predicting the target variable
+      </div>
+    </div>
   );
 };
 
