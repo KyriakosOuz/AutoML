@@ -52,11 +52,7 @@ const DatasetPageContent: React.FC<{formatTaskType: (type: string | null) => str
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
-    if (tabName === "features") {
-      const hasNoMissingValues = overview && 
-        (!overview.total_missing_values || overview.total_missing_values === 0);
-      return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
-    }
+    if (tabName === "features") return !!datasetId;
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
   };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       try {
         const response = await datasetApi.detectTaskType(datasetId, value);
         let detectedTaskType = null;
+        
+        // Extract task type from response
         if (response && typeof response === 'object' && response.task_type) {
           detectedTaskType = response.task_type;
         } else if (response && typeof response === 'object' && response.data && response.data.task_type) {
@@ -109,6 +112,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         } else if (typeof response === 'string') {
           detectedTaskType = response.trim();
         }
+        
+        // Validate task type
         const validTaskTypes = ['binary_classification', 'multiclass_classification', 'regression'];
         if (detectedTaskType && validTaskTypes.includes(detectedTaskType)) {
           console.log('Detected task type:', detectedTaskType);
@@ -145,14 +150,10 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     }
   };
   
-  const handleUploadSuccess = () => {
-    goToNextTab();
-  };
-  
   return (
     <>
       <TabsContent value="upload" className="pt-4">
-        <FileUpload />
+        <FileUpload onUploadSuccess={goToNextTab} />
         {datasetId && (
           <>
             <DataPreview />
@@ -170,7 +171,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="explore" className="pt-4">
-        <MissingValueHandler />
+        <MissingValueHandler onComplete={goToNextTab} />
         <DataPreview />
         {(processingStage === 'cleaned' || (datasetId && hasNoMissingValues(overview))) && (
           <div className="flex justify-end mt-4">
