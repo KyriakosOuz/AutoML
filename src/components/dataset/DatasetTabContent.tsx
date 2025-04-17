@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, Info } from 'lucide-react';
+import { ArrowRight, PlayCircle, BarChart3 } from 'lucide-react';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
@@ -14,11 +13,7 @@ import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { TabsContent } from '@/components/ui/tabs';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface TabContentProps {
   activeTab: string;
@@ -41,7 +36,16 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   goToNextTab,
   formatTaskType,
 }) => {
-  const { featureImportance, overview, previewColumns, setTargetColumn, setTaskType } = useDataset();
+  const { 
+    featureImportance, 
+    overview, 
+    previewColumns, 
+    setTargetColumn, 
+    setTaskType, 
+    updateState 
+  } = useDataset();
+  
+  const { toast } = useToast();
   
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
     columnsToKeep || 
@@ -50,19 +54,77 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       : [])
   );
   
-  const [featuresAreSaved, setFeaturesAreSaved] = useState<boolean>(!!processingStage && processingStage === 'final');
+  const [featuresAreSaved, setFeaturesAreSaved] = useState<boolean>(
+    !!processingStage && processingStage === 'final'
+  );
   
-  const [isLoadingTaskType, setIsLoadingTaskType] = useState<boolean>(false);
-  const [taskTypeError, setTaskTypeError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    if (columnsToKeep) {
-      setSelectedFeatures(columnsToKeep);
-    } else if (previewColumns && targetColumn) {
-      setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
+  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState(false);
+
+  const analyzeFeatures = async () => {
+    if (!datasetId || !targetColumn) {
+      toast({
+        title: "Error",
+        description: "Dataset ID and target column are required",
+        variant: "destructive"
+      });
+      return;
     }
-  }, [columnsToKeep, previewColumns, targetColumn]);
-  
+    
+    if (selectedFeatures.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one feature to analyze",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsAnalyzingFeatures(true);
+      
+      const response = await datasetApi.featureImportancePreview(
+        datasetId, 
+        targetColumn
+      );
+      
+      const importanceData = response.data.feature_importance || [];
+      
+      if (!importanceData || importanceData.length === 0) {
+        throw new Error('No feature importance data returned from API');
+      }
+      
+      const filteredImportance = importanceData.filter(
+        (item: any) => selectedFeatures.includes(item.feature)
+      );
+      
+      const sortedImportance = [...filteredImportance].sort(
+        (a: any, b: any) => b.importance - a.importance
+      );
+      
+      updateState({
+        featureImportance: sortedImportance,
+        taskType: response.data.task_type || taskType,
+        columnsToKeep: selectedFeatures
+      });
+      
+      toast({
+        title: "Feature importance analyzed",
+        description: "Feature importance analysis completed successfully",
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error analyzing features:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to analyze features',
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzingFeatures(false);
+    }
+  };
+
   const handleFeatureToggle = (column: string) => {
     setSelectedFeatures(prev => 
       prev.includes(column)
@@ -104,7 +166,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         const response = await datasetApi.detectTaskType(datasetId, value);
         let detectedTaskType = null;
         
-        // Extract task type from response
         if (response && typeof response === 'object' && response.task_type) {
           detectedTaskType = response.task_type;
         } else if (response && typeof response === 'object' && response.data && response.data.task_type) {
@@ -113,7 +174,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           detectedTaskType = response.trim();
         }
         
-        // Validate task type
         const validTaskTypes = ['binary_classification', 'multiclass_classification', 'regression'];
         if (detectedTaskType && validTaskTypes.includes(detectedTaskType)) {
           console.log('Detected task type:', detectedTaskType);
