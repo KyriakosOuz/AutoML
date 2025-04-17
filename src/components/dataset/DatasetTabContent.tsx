@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -194,6 +193,27 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   };
   
   const isPreprocessTabReady = datasetId && targetColumn && taskType && columnsToKeep && columnsToKeep.length > 0;
+
+  const navigateToUploadTab = () => {
+    const tabTrigger = document.querySelector('[data-value="upload"]');
+    if (tabTrigger && tabTrigger instanceof HTMLElement) {
+      tabTrigger.click();
+    }
+  };
+
+  const navigateToFeaturesTab = () => {
+    const tabTrigger = document.querySelector('[data-value="features"]');
+    if (tabTrigger && tabTrigger instanceof HTMLElement) {
+      tabTrigger.click();
+    }
+  };
+
+  const navigateToExploreTab = () => {
+    const tabTrigger = document.querySelector('[data-value="explore"]');
+    if (tabTrigger && tabTrigger instanceof HTMLElement) {
+      tabTrigger.click();
+    }
+  };
   
   return (
     <>
@@ -425,7 +445,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   <p className="text-sm text-gray-500 max-w-md mx-auto">
                     Please upload a dataset in the "Upload" tab before proceeding to preprocessing.
                   </p>
-                  <Button variant="outline" onClick={() => document.querySelector('[data-value="upload"]')?.click()}>
+                  <Button variant="outline" onClick={navigateToUploadTab}>
                     Go to Upload Tab
                   </Button>
                 </div>
@@ -436,7 +456,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   <p className="text-sm text-gray-500 max-w-md mx-auto">
                     Please select a target column and analyze feature importance in the "Features" tab.
                   </p>
-                  <Button variant="outline" onClick={() => document.querySelector('[data-value="features"]')?.click()}>
+                  <Button variant="outline" onClick={navigateToFeaturesTab}>
                     Go to Features Tab
                   </Button>
                 </div>
@@ -447,7 +467,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   <p className="text-sm text-gray-500 max-w-md mx-auto">
                     Please select and save features in the "Features" tab before proceeding to preprocessing.
                   </p>
-                  <Button variant="outline" onClick={() => document.querySelector('[data-value="features"]')?.click()}>
+                  <Button variant="outline" onClick={navigateToFeaturesTab}>
                     Go to Features Tab
                   </Button>
                 </div>
