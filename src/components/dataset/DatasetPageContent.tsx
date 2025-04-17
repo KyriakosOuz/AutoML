@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, PlayCircle, Info } from 'lucide-react';
@@ -10,7 +11,7 @@ import FeatureSelector from '@/components/dataset/feature-importance/FeatureSele
 import FeatureAnalyzer from '@/components/dataset/feature-importance/FeatureAnalyzer';
 import SaveDatasetButton from '@/components/dataset/feature-importance/SaveDatasetButton';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
-import { TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useState, useEffect } from 'react';
 import { datasetApi } from '@/lib/api';
@@ -19,19 +20,13 @@ import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/comp
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import DatasetHeader from '@/components/dataset/DatasetHeader';
+import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
+import DatasetTabContent from '@/components/dataset/DatasetTabContent';
 
 interface DatasetPageContentProps {
-  formatTaskType: (type: string | null) => string;
-}
-
-interface TabContentProps {
-  activeTab: string;
-  datasetId: string | null;
-  targetColumn: string | null;
-  taskType: string | null;
-  processingStage: string | null;
-  columnsToKeep: string[] | null;
-  goToNextTab: () => void;
   formatTaskType: (type: string | null) => string;
 }
 
