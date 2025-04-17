@@ -22,11 +22,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { 
   AlertCircle, 
   BarChart3, 
   HelpCircle,
-  Save
+  Save,
+  Filter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -60,6 +63,17 @@ const FeatureImportanceChart: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(targetColumn);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  
+  // Format task type for display
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return '';
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   // Handle target column change and detect task type
   const handleTargetColumnChange = async (value: string) => {
@@ -70,6 +84,7 @@ const FeatureImportanceChart: React.FC = () => {
       setSelectedTarget(value);
       setIsDetectingTaskType(true);
       setError(null);
+      setSelectedFeatures([]);
       
       console.log(`Detecting task type for dataset ${datasetId} with target column ${value}`);
       
@@ -137,12 +152,9 @@ const FeatureImportanceChart: React.FC = () => {
       // Reset feature importance when target column changes
       setFeatureImportance(null);
       
-      // Create a user-friendly display of the task type
-      const displayTaskType = normalizedTaskType.replace(/_/g, ' ');
-      
       toast({
         title: "Task type detected",
-        description: `Detected task type: ${displayTaskType}`,
+        description: `Detected task type: ${formatTaskType(normalizedTaskType)}`,
         duration: 3000,
       });
       
@@ -153,6 +165,16 @@ const FeatureImportanceChart: React.FC = () => {
     } finally {
       setIsDetectingTaskType(false);
     }
+  };
+
+  const toggleFeature = (column: string) => {
+    setSelectedFeatures(prev => {
+      if (prev.includes(column)) {
+        return prev.filter(col => col !== column);
+      } else {
+        return [...prev, column];
+      }
+    });
   };
 
   const analyzeFeatures = async () => {
@@ -238,6 +260,9 @@ const FeatureImportanceChart: React.FC = () => {
     return null;
   }
 
+  // Get available features (excluding target column)
+  const availableFeatures = previewColumns.filter(col => col !== selectedTarget);
+
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
       <CardHeader className="bg-gradient-to-r from-gray-50 to-white">
@@ -313,7 +338,7 @@ const FeatureImportanceChart: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-purple-800">Detected Task Type</h4>
                     <Badge className="capitalize bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
-                      {taskType ? taskType.replace(/_/g, ' ') : ''}
+                      {formatTaskType(taskType)}
                     </Badge>
                   </div>
                   <p className="text-sm text-purple-700 mt-1">
@@ -326,20 +351,68 @@ const FeatureImportanceChart: React.FC = () => {
             )}
           </div>
 
-          {/* Step 2: Analyze Feature Importance */}
+          {/* Step 2: Feature Selection */}
           {selectedTarget && taskType && !isDetectingTaskType && (
-            <div className="mt-4 flex justify-center">
-              {!featureImportance ? (
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-purple-600" />
+                Step 2: Select Features to Analyze
+              </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Select columns you want to use as features for your model. These will be analyzed for importance.
+              </p>
+              
+              <div className="max-h-[200px] overflow-y-auto border border-gray-200 rounded-lg bg-white p-2">
+                {availableFeatures.map(column => (
+                  <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <Checkbox 
+                      id={`feature-${column}`}
+                      checked={selectedFeatures.includes(column)}
+                      onCheckedChange={() => toggleFeature(column)}
+                    />
+                    <Label 
+                      htmlFor={`feature-${column}`}
+                      className="cursor-pointer flex-1"
+                    >
+                      {column}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-between mt-3">
+                <p className="text-sm text-gray-500">
+                  {selectedFeatures.length} of {availableFeatures.length} features selected
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedFeatures(availableFeatures)}
+                  >
+                    Select All
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedFeatures([])}
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex justify-center">
                 <Button 
                   onClick={analyzeFeatures} 
-                  disabled={isLoading || !targetColumn}
+                  disabled={isLoading || !targetColumn || selectedFeatures.length === 0}
                   variant="default"
                   size="lg"
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
                 </Button>
-              ) : null}
+              </div>
             </div>
           )}
 
@@ -351,7 +424,7 @@ const FeatureImportanceChart: React.FC = () => {
             </div>
           ) : featureImportance && featureImportance.length > 0 ? (
             <div className="space-y-3 mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-medium mb-3">Step 2: Feature Importance Analysis</h3>
+              <h3 className="font-medium mb-3">Step 3: Feature Importance Analysis</h3>
               
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-800">Feature Importance</h4>
