@@ -42,7 +42,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
             <div className="flex justify-end mt-4">
               <Button 
                 onClick={goToNextTab} 
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
               >
                 Next: Explore Data
                 <ArrowRight className="h-4 w-4" />
@@ -55,13 +55,14 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       <TabsContent value="explore" className="pt-4">
         <MissingValueHandler />
         <DataPreview />
-        {processingStage === 'cleaned' && (
+        {/* Show Next button if either there are no missing values initially or after processing */}
+        {(processingStage === 'cleaned' || (datasetId && !processingStage)) && (
           <div className="flex justify-end mt-4">
             <Button 
               onClick={goToNextTab} 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
             >
-              Next: Select Features
+              Next: Feature Selection
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -70,32 +71,16 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       
       <TabsContent value="features" className="pt-4">
         <FeatureImportanceChart />
-        {targetColumn && taskType && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-6">
-            <h4 className="font-medium text-blue-800 mb-2">Selected Target & Task Type</h4>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <div className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-md flex items-center">
-                <span className="font-medium mr-1">Target:</span> {targetColumn}
-              </div>
-              <div className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-md flex items-center">
-                <span className="font-medium mr-1">Task Type:</span> {formatTaskType(taskType)}
-              </div>
-            </div>
-          </div>
-        )}
         <FeatureSelector />
         {processingStage === 'final' && (
-          <div className="mt-6">
-            <DataPreview />
-            <div className="flex justify-end mt-6">
-              <Button 
-                onClick={goToNextTab} 
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-              >
-                Continue to Preprocessing
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={goToNextTab} 
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+            >
+              Next: Preprocess Dataset
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </TabsContent>
@@ -108,7 +93,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
             <Link to="/training">
               <Button size="lg" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700">
                 <PlayCircle className="h-5 w-5" />
-                Continue to Model Training
+                Next: Train Model
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>

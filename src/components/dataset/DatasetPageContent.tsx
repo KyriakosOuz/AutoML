@@ -50,7 +50,10 @@ const DatasetPageContent: React.FC = () => {
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
-    if (tabName === "features") return !!datasetId && processingStage === 'cleaned';
+    if (tabName === "features") {
+      // Enable features tab if there are no missing values initially or after processing
+      return !!datasetId && (processingStage === 'cleaned' || (!!overview && (!overview.total_missing_values || overview.total_missing_values === 0)));
+    }
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
   };
@@ -62,7 +65,7 @@ const DatasetPageContent: React.FC = () => {
       let message = "You need to complete previous steps first:";
       if (value === "explore" && !datasetId) {
         message = "Please upload a dataset first";
-      } else if (value === "features" && (!processingStage || processingStage !== 'cleaned')) {
+      } else if (value === "features" && !isTabEnabled("features")) {
         message = "Please process missing values first";
       } else if (value === "preprocess" && processingStage !== 'final') {
         message = "Please complete feature selection first";
@@ -79,7 +82,7 @@ const DatasetPageContent: React.FC = () => {
   const goToNextTab = () => {
     if (activeTab === "upload" && datasetId) {
       setActiveTab("explore");
-    } else if (activeTab === "explore" && processingStage === 'cleaned') {
+    } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
