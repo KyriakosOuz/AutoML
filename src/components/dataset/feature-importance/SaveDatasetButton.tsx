@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Save, ArrowRight } from 'lucide-react';
 
-const SaveDatasetButton: React.FC = () => {
+interface SaveDatasetButtonProps {
+  onSuccess?: () => void;
+}
+
+const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({ onSuccess }) => {
   const { 
     datasetId, 
     targetColumn, 
@@ -52,6 +56,11 @@ const SaveDatasetButton: React.FC = () => {
         description: "Selected features have been saved successfully.",
         duration: 3000,
       });
+      
+      // Call the onSuccess callback to navigate to the preprocess tab
+      if (onSuccess) {
+        onSuccess();
+      }
       
     } catch (error) {
       console.error('Error saving dataset:', error);
