@@ -62,11 +62,13 @@ const FeatureImportanceChart: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isDetectingTaskType, setIsDetectingTaskType] = useState(false);
+  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(targetColumn);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(columnsToKeep || []);
   const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
+  const [rawTaskTypeData, setRawTaskTypeData] = useState<string | null>(null);
   
   // Format task type for better display
   const formatTaskType = (type: string | null): string => {
@@ -89,10 +91,26 @@ const FeatureImportanceChart: React.FC = () => {
 
   // Extract clean task type from response
   const extractTaskType = (response: any): string | null => {
+    console.log("Extracting task type from:", response);
+    
     if (!response) return null;
+    
+    // Save the raw response for display purposes
+    if (typeof response === 'string') {
+      setRawTaskTypeData(response);
+    } else {
+      setRawTaskTypeData(JSON.stringify(response));
+    }
     
     // Handle string response
     if (typeof response === 'string') {
+      // Check if the string contains "classification" or "regression"
+      const lcResponse = response.toLowerCase();
+      if (lcResponse.includes('classification')) {
+        return 'classification';
+      } else if (lcResponse.includes('regression')) {
+        return 'regression';
+      }
       return response.trim().toLowerCase();
     }
     
@@ -100,24 +118,35 @@ const FeatureImportanceChart: React.FC = () => {
     if (typeof response === 'object') {
       // Try to find task_type in the response object
       if (response.task_type) {
-        return response.task_type.toString().toLowerCase();
-      }
-      
-      // Alternative field names
-      if (response.type) {
-        return response.type.toString().toLowerCase();
-      }
-      
-      // Check for nested data structure
-      if (response.data && typeof response.data === 'object') {
-        // Look for 'task Type' or similar in a case-insensitive way
-        const keys = Object.keys(response.data);
-        const taskTypeKey = keys.find(key => 
-          key.toLowerCase().includes('task') && key.toLowerCase().includes('type'));
-        
-        if (taskTypeKey && response.data[taskTypeKey]) {
-          return response.data[taskTypeKey].toString().toLowerCase().replace(' ', '_');
+        const taskTypeStr = response.task_type.toString().toLowerCase();
+        if (taskTypeStr.includes('classification')) {
+          return 'classification';
+        } else if (taskTypeStr.includes('regression')) {
+          return 'regression';
         }
+        return taskTypeStr;
+      }
+      
+      // Try to determine based on Data field with Task Type
+      if (response.Data && typeof response.Data === 'object') {
+        const dataObj = response.Data;
+        if (dataObj['Task Type'] && typeof dataObj['Task Type'] === 'string') {
+          const typeStr = dataObj['Task Type'].toLowerCase();
+          if (typeStr.includes('classification')) {
+            return 'classification';
+          } else if (typeStr.includes('regression')) {
+            return 'regression';
+          }
+          return typeStr;
+        }
+      }
+      
+      // Check if the response itself contains the key terms
+      const jsonStr = JSON.stringify(response).toLowerCase();
+      if (jsonStr.includes('classification')) {
+        return 'classification';
+      } else if (jsonStr.includes('regression')) {
+        return 'regression';
       }
     }
     
@@ -214,7 +243,12 @@ const FeatureImportanceChart: React.FC = () => {
 
     try {
       setIsLoading(true);
+      setIsAnalyzingFeatures(true);
       setError(null);
+      
+      console.log('Analyzing features for dataset:', datasetId);
+      console.log('Target column:', targetColumn);
+      console.log('Selected features:', selectedFeatures);
       
       // Call the API with the selected features and target column
       const response = await datasetApi.featureImportancePreview(
@@ -222,8 +256,14 @@ const FeatureImportanceChart: React.FC = () => {
         targetColumn
       );
       
+      console.log('Feature importance response:', response);
+      
       // Extract feature importance data from response
       const importanceData = response.feature_importance || [];
+      
+      if (!importanceData || importanceData.length === 0) {
+        throw new Error('No feature importance data returned from API');
+      }
       
       // Filter feature importance data to show only selected features
       const filteredImportance = importanceData.filter(
@@ -234,6 +274,8 @@ const FeatureImportanceChart: React.FC = () => {
       const sortedImportance = [...filteredImportance].sort(
         (a: any, b: any) => b.importance - a.importance
       );
+      
+      console.log('Processed importance data:', sortedImportance);
       
       // Update context with the sorted and filtered data
       updateState({
@@ -253,6 +295,7 @@ const FeatureImportanceChart: React.FC = () => {
       setError(error instanceof Error ? error.message : 'Failed to analyze features');
     } finally {
       setIsLoading(false);
+      setIsAnalyzingFeatures(false);
     }
   };
 
@@ -412,11 +455,18 @@ const FeatureImportanceChart: React.FC = () => {
             {selectedTarget && taskType && !isDetectingTaskType && (
               <div className="mt-3">
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2">
                     <h4 className="font-medium text-purple-800">Detected Task Type</h4>
-                    <Badge className="capitalize bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
+                    <Badge className="capitalize w-fit bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
                       {formatTaskType(taskType)}
                     </Badge>
+                    
+                    {rawTaskTypeData && (
+                      <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200 overflow-auto max-h-24">
+                        <p className="font-medium mb-1">API Response:</p>
+                        <code className="text-xs break-all whitespace-pre-wrap">{rawTaskTypeData}</code>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -477,20 +527,20 @@ const FeatureImportanceChart: React.FC = () => {
               <div className="mt-4 flex justify-center">
                 <Button 
                   onClick={analyzeFeatures} 
-                  disabled={isLoading || !targetColumn || selectedFeatures.length === 0}
+                  disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
                   variant="default"
                   size="lg"
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Analyzing...' : 'Analyze Feature Importance'}
+                  {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
                 </Button>
               </div>
             </div>
           )}
 
           {/* Feature importance chart */}
-          {isLoading ? (
+          {isLoading && isAnalyzingFeatures ? (
             <div className="space-y-4 mt-6">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-[350px] w-full rounded-lg" />
