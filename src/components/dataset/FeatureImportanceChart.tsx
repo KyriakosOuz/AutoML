@@ -68,7 +68,6 @@ const FeatureImportanceChart: React.FC = () => {
   const { toast } = useToast();
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(columnsToKeep || []);
   const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
-  // Removed rawTaskTypeData state since we're not displaying it anymore
   
   // Format task type for better display
   const formatTaskType = (type: string | null): string => {
@@ -268,11 +267,14 @@ const FeatureImportanceChart: React.FC = () => {
         (a: any, b: any) => b.importance - a.importance
       );
       
-      console.log('Processed importance data:', sortedImportance);
+      // Limit to top 10 features for better visualization
+      const topImportance = sortedImportance.slice(0, 10);
+      
+      console.log('Processed importance data:', topImportance);
       
       // Update context with the sorted and filtered data
       updateState({
-        featureImportance: sortedImportance,
+        featureImportance: topImportance,
         taskType: response.task_type || taskType,
         columnsToKeep: selectedFeatures // Save the selected features
       });
@@ -453,8 +455,6 @@ const FeatureImportanceChart: React.FC = () => {
                     <Badge className="capitalize w-fit bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300">
                       {formatTaskType(taskType)}
                     </Badge>
-                    
-                    {/* Removed API Response display */}
                   </div>
                 </div>
               </div>
