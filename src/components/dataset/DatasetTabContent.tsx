@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -60,13 +61,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
     }
   }, [columnsToKeep, previewColumns, targetColumn]);
-  
-  // Add console log to debug feature importance data
-  console.log('Current tab:', activeTab);
-  console.log('Feature importance data:', featureImportance);
-  console.log('Target column:', targetColumn);
-  console.log('Preview columns:', previewColumns);
-  console.log('Selected features:', selectedFeatures);
   
   // Functions to handle feature selection
   const handleFeatureToggle = (column: string) => {
@@ -134,8 +128,16 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        {/* Show user guidance alert */}
-        {!featureImportance || featureImportance.length === 0 ? (
+        {/* Show guidance based on whether target column is selected */}
+        {!targetColumn ? (
+          <Alert className="mb-4 bg-orange-50 border-orange-200">
+            <Info className="h-5 w-5 text-orange-500" />
+            <AlertDescription className="text-orange-700">
+              Please select a target column first using the dropdown below.
+              The target column is what your model will predict.
+            </AlertDescription>
+          </Alert>
+        ) : !featureImportance || featureImportance.length === 0 ? (
           <Alert className="mb-4 bg-blue-50 border-blue-200">
             <Info className="h-5 w-5 text-blue-500" />
             <AlertDescription className="text-blue-700">
@@ -155,7 +157,11 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         ) : (
           <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center">
             <p className="text-gray-600 mb-4">No feature importance data available yet.</p>
-            <p className="text-sm text-gray-500">Select features below and click "Analyze Feature Importance" to view this chart.</p>
+            {targetColumn ? (
+              <p className="text-sm text-gray-500">Select features below and click "Analyze Feature Importance" to view this chart.</p>
+            ) : (
+              <p className="text-sm text-gray-500">Select a target column first, then analyze feature importance.</p>
+            )}
           </div>
         )}
         

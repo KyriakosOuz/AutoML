@@ -10,7 +10,14 @@ import {
 import { 
   Button 
 } from '@/components/ui/button';
-import { Filter, Check, CheckCircle } from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Filter, Check, CheckCircle, TargetIcon } from 'lucide-react';
 
 interface FeatureSelectorProps {
   selectedFeatures: string[];
@@ -27,10 +34,40 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   onSelectAll,
   onClearAll
 }) => {
-  const { targetColumn } = useDataset();
+  const { targetColumn, setTargetColumn, previewColumns } = useDataset();
+  
+  const handleTargetColumnChange = (value: string) => {
+    setTargetColumn(value);
+  };
   
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 mt-6">
+      {/* Target Column Selector */}
+      {!targetColumn && previewColumns && previewColumns.length > 0 && (
+        <div className="mb-4 border border-orange-200 bg-orange-50 p-3 rounded-md">
+          <h3 className="font-medium mb-2 flex items-center gap-2 text-orange-800">
+            <TargetIcon className="h-4 w-4" />
+            Select Target Column First
+          </h3>
+          <p className="text-sm text-orange-700 mb-3">
+            You need to select a target column before analyzing feature importance.
+          </p>
+          <Select onValueChange={handleTargetColumnChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select target column" />
+            </SelectTrigger>
+            <SelectContent>
+              {previewColumns.map(column => (
+                <SelectItem key={column} value={column}>
+                  {column}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      
+      {/* Feature Selection */}
       <h3 className="font-medium mb-3 flex items-center gap-2">
         <Filter className="h-4 w-4 text-purple-600" />
         Step 1: Select Features to Analyze
