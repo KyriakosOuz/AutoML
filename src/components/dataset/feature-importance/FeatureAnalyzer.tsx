@@ -4,11 +4,10 @@ import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, BarChart3, ArrowRight } from 'lucide-react';
+import { AlertCircle, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import SaveDatasetButton from './SaveDatasetButton';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface FeatureAnalyzerProps {
   selectedFeatures: string[];
@@ -19,7 +18,6 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
     datasetId, 
     targetColumn,
     taskType,
-    featureImportance,
     updateState
   } = useDataset();
   
@@ -83,10 +81,7 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
         (a: any, b: any) => b.importance - a.importance
       );
       
-      // Limit to top 10 features for better visualization
-      const topImportance = sortedImportance.slice(0, 10);
-      
-      console.log('Processed importance data:', topImportance);
+      console.log('Processed importance data:', sortedImportance);
       
       // Determine task type if it's not already set
       // The API may return either task_type directly or as part of a nested object
@@ -101,7 +96,7 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       
       // Update context with the sorted and filtered data
       updateState({
-        featureImportance: topImportance,
+        featureImportance: sortedImportance,
         taskType: detectedTaskType || taskType,
         columnsToKeep: selectedFeatures // Save the selected features
       });
@@ -152,12 +147,6 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
           </div>
         )}
       </CardContent>
-      
-      {featureImportance && featureImportance.length > 0 && (
-        <CardFooter className="flex justify-end pt-2">
-          <SaveDatasetButton />
-        </CardFooter>
-      )}
     </Card>
   );
 };

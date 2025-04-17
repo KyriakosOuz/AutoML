@@ -1,19 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle } from 'lucide-react';
+import { ArrowRight, PlayCircle, Info } from 'lucide-react';
 import FileUpload from '@/components/dataset/FileUpload';
 import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
 import FeatureImportanceChart from '@/components/dataset/feature-importance/FeatureImportanceChart';
 import FeatureSelector from '@/components/dataset/feature-importance/FeatureSelector';
 import FeatureAnalyzer from '@/components/dataset/feature-importance/FeatureAnalyzer';
+import SaveDatasetButton from '@/components/dataset/feature-importance/SaveDatasetButton';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { TabsContent } from '@/components/ui/tabs';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import TaskTypeSelector from '@/components/dataset/feature-importance/TaskTypeSelector';
 
 interface TabContentProps {
   activeTab: string;
@@ -37,7 +41,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   formatTaskType,
 }) => {
   // Get the featureImportance data from the DatasetContext
-  const { featureImportance, overview, previewColumns } = useDataset();
+  const { featureImportance, overview, previewColumns, setTargetColumn } = useDataset();
   
   // Check if dataset has no missing values initially
   const hasNoMissingValues = overview && 
@@ -88,6 +92,31 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       ? previewColumns.filter(col => col !== targetColumn)
       : previewColumns;
   };
+
+  // Handle target column change
+  const handleTargetColumnChange = (value: string) => {
+    setTargetColumn(value);
+    // Update selected features to exclude the new target column
+    if (previewColumns) {
+      setSelectedFeatures(previewColumns.filter(col => col !== value));
+    }
+  };
+
+  // Get tooltip content based on task type
+  const getTaskTypeTooltip = (type: string | null) => {
+    if (!type) return "Select a target column to determine the task type";
+    
+    switch(type) {
+      case 'binary_classification':
+        return "Binary Classification: Predicting one of two possible outcomes (e.g. yes/no, true/false)";
+      case 'multiclass_classification':
+        return "Multiclass Classification: Predicting one of three or more possible outcomes";
+      case 'regression':
+        return "Regression: Predicting a continuous numerical value";
+      default:
+        return `${formatTaskType(type)}: Predicting values based on input features`;
+    }
+  };
   
   return (
     <>
@@ -127,16 +156,71 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        {/* Show guidance if needed */}
-        {!targetColumn && (
-          <Alert className="mb-4 bg-orange-50 border-orange-200">
-            <Info className="h-5 w-5 text-orange-500" />
-            <AlertDescription className="text-orange-700">
-              Select a target column using the dropdown in the Feature Selection card below.
-              The target column is what your model will predict.
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Target Selection and Task Type Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Data Target & Task Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Target Column Selector */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Target Column
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="w-[200px] text-xs">
+                          The target column is what your model will predict based on the other features
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </label>
+                <Select 
+                  value={targetColumn || ""} 
+                  onValueChange={handleTargetColumnChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {previewColumns?.map(column => (
+                      <SelectItem key={column} value={column}>
+                        {column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Task Type Display */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Task Type
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="w-[250px] text-xs">
+                          {getTaskTypeTooltip(taskType)}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </label>
+                <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted text-sm flex items-center">
+                  {taskType ? formatTaskType(taskType) : "Not determined yet"}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
         {/* Feature Selector Component with clear layout */}
         <FeatureSelector 
@@ -152,7 +236,14 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         
         {/* Feature Importance Chart - Only shown if data available */}
         {featureImportance && featureImportance.length > 0 ? (
-          <FeatureImportanceChart featureImportance={featureImportance} />
+          <>
+            <FeatureImportanceChart featureImportance={featureImportance} />
+            
+            {/* Save & Continue button moved below the chart */}
+            <div className="flex justify-end mt-6">
+              <SaveDatasetButton />
+            </div>
+          </>
         ) : (
           <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center mt-6">
             <p className="text-gray-600 mb-4">No feature importance data available yet.</p>

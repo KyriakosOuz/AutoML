@@ -64,6 +64,10 @@ const FeatureImportanceChart: React.FC<FeatureImportanceChartProps> = ({ feature
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   };
 
+  // Calculate the chart height based on the number of features
+  // Each feature row needs about 40px of height, plus margins
+  const chartHeight = Math.max(500, featureImportance.length * 40 + 100);
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -74,7 +78,8 @@ const FeatureImportanceChart: React.FC<FeatureImportanceChartProps> = ({ feature
       </CardHeader>
       
       <CardContent>
-        <div className="h-[500px] w-full bg-white rounded-lg p-4 border border-gray-200">
+        <div className={`h-[${chartHeight}px] w-full bg-white rounded-lg p-4 border border-gray-200`} 
+             style={{ height: `${chartHeight}px` }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={featureImportance}
