@@ -66,6 +66,11 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
         (item: any) => selectedFeatures.includes(item.feature)
       );
       
+      // If we still have no data after filtering
+      if (filteredImportance.length === 0) {
+        throw new Error('No feature importance data available for selected features');
+      }
+      
       // Sort by importance in descending order
       const sortedImportance = [...filteredImportance].sort(
         (a: any, b: any) => b.importance - a.importance
@@ -76,10 +81,21 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       
       console.log('Processed importance data:', topImportance);
       
+      // Determine task type if it's not already set
+      // The API may return either task_type directly or as part of a nested object
+      let detectedTaskType = taskType;
+      
+      if (response.task_type) {
+        detectedTaskType = response.task_type;
+      } else if (typeof response === 'string' && 
+                (response.includes('classification') || response.includes('regression'))) {
+        detectedTaskType = response.trim();
+      }
+      
       // Update context with the sorted and filtered data
       updateState({
         featureImportance: topImportance,
-        taskType: response.task_type || taskType,
+        taskType: detectedTaskType || taskType,
         columnsToKeep: selectedFeatures // Save the selected features
       });
       
@@ -114,7 +130,7 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
           disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
           variant="default"
           size="lg"
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-black hover:bg-gray-800"
         >
           <BarChart3 className="h-4 w-4 mr-2" />
           {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
