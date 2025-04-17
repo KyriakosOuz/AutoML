@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, PlayCircle, Info } from 'lucide-react';
@@ -44,11 +45,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   // Get the featureImportance data from the DatasetContext
   const { featureImportance, overview, previewColumns, setTargetColumn, setTaskType } = useDataset();
   
-  // Check if dataset has no missing values initially
-  const hasNoMissingValues = overview && 
-    (!overview.total_missing_values || overview.total_missing_values === 0);
-  
-  // State for tracking selected features in the feature selector
+  // Local state for selected features and save status
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
     // Initialize with columns to keep if available, otherwise all columns except target
     columnsToKeep || 
@@ -57,7 +54,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       : [])
   );
   
-  // State for tracking feature save status
   const [featuresAreSaved, setFeaturesAreSaved] = useState<boolean>(!!processingStage && processingStage === 'final');
   
   // State for loading task type
@@ -138,10 +134,16 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           detectedTaskType = response.trim();
         }
         
-        console.log('Detected task type:', detectedTaskType);
-        
-        // Update task type in context
-        setTaskType(detectedTaskType);
+        // Validate the task type - only accept specific values
+        const validTaskTypes = ['binary_classification', 'multiclass_classification', 'regression'];
+        if (detectedTaskType && validTaskTypes.includes(detectedTaskType)) {
+          console.log('Detected task type:', detectedTaskType);
+          setTaskType(detectedTaskType);
+        } else {
+          // Handle invalid task type
+          console.error('Invalid task type received:', detectedTaskType);
+          setTaskTypeError(`Invalid task type: ${detectedTaskType}. Expected one of: binary_classification, multiclass_classification, regression`);
+        }
       } catch (error) {
         console.error('Error detecting task type:', error);
         setTaskTypeError(error instanceof Error ? error.message : 'Failed to detect task type');
@@ -172,6 +174,11 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     }
   };
   
+  // Handle successful file upload
+  const handleUploadSuccess = () => {
+    goToNextTab();
+  };
+  
   return (
     <>
       <TabsContent value="upload" className="pt-4">
@@ -196,7 +203,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         <MissingValueHandler />
         <DataPreview />
         {/* Show Next button if either there are no missing values initially or after processing */}
-        {(processingStage === 'cleaned' || (datasetId && hasNoMissingValues)) && (
+        {(processingStage === 'cleaned' || (datasetId && hasNoMissingValues(overview))) && (
           <div className="flex justify-end mt-4">
             <Button 
               onClick={goToNextTab} 
@@ -295,7 +302,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onClearAll={handleClearAll}
         />
         
-        {/* Feature Analyzer Component - with "Analyze" button and loading states */}
+        {/* Feature Analyzer Component */}
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         
         {/* Feature Importance Chart - Only shown if data available */}

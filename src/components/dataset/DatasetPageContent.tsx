@@ -7,9 +7,8 @@ import { Tabs } from '@/components/ui/tabs';
 import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
-import { datasetApi } from '@/lib/api';
 
-const DatasetPageContent: React.FC = () => {
+const DatasetPageContent: React.FC<{formatTaskType: (type: string | null) => string}> = ({ formatTaskType }) => {
   const { user, signOut } = useAuth();
   const { 
     datasetId, 
@@ -91,19 +90,6 @@ const DatasetPageContent: React.FC = () => {
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
-  };
-
-  const formatTaskType = (type: string | null): string => {
-    if (!type) return '';
-    
-    if (type === 'binary_classification') return 'Binary Classification';
-    if (type === 'multiclass_classification') return 'Multiclass Classification';
-    if (type === 'regression') return 'Regression';
-    
-    return type
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   return (
