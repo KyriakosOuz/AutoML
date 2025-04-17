@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, BarChart3, Info } from 'lucide-react';
+import { ArrowRight, PlayCircle, Info } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -78,96 +79,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     !!processingStage && processingStage === 'final'
   );
   
-  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = useState(false);
-  const [taskTypeError, setTaskTypeError] = useState<string | null>(null);
   const [isLoadingTaskType, setIsLoadingTaskType] = useState<boolean>(false);
 
-  const analyzeFeatures = async () => {
-    if (!datasetId || !targetColumn) {
-      toast({
-        title: "Error",
-        description: "Dataset ID and target column are required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (selectedFeatures.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one feature to analyze",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setIsAnalyzingFeatures(true);
-      
-      const response = await datasetApi.featureImportancePreview(
-        datasetId, 
-        targetColumn
-      );
-      
-      const importanceData = response.data.feature_importance || [];
-      
-      if (!importanceData || importanceData.length === 0) {
-        throw new Error('No feature importance data returned from API');
-      }
-      
-      const filteredImportance = importanceData.filter(
-        (item: any) => selectedFeatures.includes(item.feature)
-      );
-      
-      const sortedImportance = [...filteredImportance].sort(
-        (a: any, b: any) => b.importance - a.importance
-      );
-      
-      updateState({
-        featureImportance: sortedImportance,
-        taskType: response.data.task_type || taskType,
-        columnsToKeep: selectedFeatures
-      });
-      
-      toast({
-        title: "Feature importance analyzed",
-        description: "Feature importance analysis completed successfully",
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      console.error('Error analyzing features:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to analyze features',
-        variant: "destructive"
-      });
-    } finally {
-      setIsAnalyzingFeatures(false);
-    }
-  };
-
-  const handleFeatureToggle = (column: string) => {
-    setSelectedFeatures(prev => 
-      prev.includes(column)
-        ? prev.filter(f => f !== column)
-        : [...prev, column]
-    );
-    setFeaturesAreSaved(false);
-  };
-
-  const handleSelectAll = () => {
-    if (previewColumns && targetColumn) {
-      setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
-    }
-    setFeaturesAreSaved(false);
-  };
-
-  const handleClearAll = () => {
-    setSelectedFeatures([]);
-    setFeaturesAreSaved(false);
-  };
-  
   const getAvailableFeatures = () => {
     if (!previewColumns) return [];
     return targetColumn
@@ -175,42 +88,12 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       : previewColumns;
   };
 
-  const handleTargetColumnChange = async (value: string) => {
+  const handleTargetColumnChange = (value: string) => {
     setTargetColumn(value);
     if (previewColumns) {
       setSelectedFeatures(prev => prev.filter(col => col !== value));
     }
     setFeaturesAreSaved(false);
-    setTaskTypeError(null);
-    if (datasetId) {
-      setIsLoadingTaskType(true);
-      try {
-        const response = await datasetApi.detectTaskType(datasetId, value);
-        let detectedTaskType = null;
-        
-        if (response && typeof response === 'object' && response.task_type) {
-          detectedTaskType = response.task_type;
-        } else if (response && typeof response === 'object' && response.data && response.data.task_type) {
-          detectedTaskType = response.data.task_type;
-        } else if (typeof response === 'string') {
-          detectedTaskType = response.trim();
-        }
-        
-        const validTaskTypes = ['binary_classification', 'multiclass_classification', 'regression'];
-        if (detectedTaskType && validTaskTypes.includes(detectedTaskType)) {
-          console.log('Detected task type:', detectedTaskType);
-          setTaskType(detectedTaskType);
-        } else {
-          console.error('Invalid task type received:', detectedTaskType);
-          setTaskTypeError(`Invalid task type: ${detectedTaskType}. Expected one of: binary_classification, multiclass_classification, regression`);
-        }
-      } catch (error) {
-        console.error('Error detecting task type:', error);
-        setTaskTypeError(error instanceof Error ? error.message : 'Failed to detect task type');
-      } finally {
-        setIsLoadingTaskType(false);
-      }
-    }
   };
 
   const handleSaveComplete = () => {
@@ -327,8 +210,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                 <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm flex items-center">
                   {isLoadingTaskType ? (
                     "Detecting task type..."
-                  ) : taskTypeError ? (
-                    <span className="text-destructive">{taskTypeError}</span>
                   ) : taskType ? (
                     <Badge variant="outline" className="bg-primary/10 text-primary">
                       {formatTaskType(taskType)}
@@ -345,23 +226,25 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         <FeatureSelector 
           selectedFeatures={selectedFeatures}
           availableFeatures={getAvailableFeatures()}
-          onFeatureToggle={handleFeatureToggle}
-          onSelectAll={handleSelectAll}
-          onClearAll={handleClearAll}
+          onFeatureToggle={(column) => {
+            setSelectedFeatures(prev => 
+              prev.includes(column)
+                ? prev.filter(f => f !== column)
+                : [...prev, column]
+            );
+            setFeaturesAreSaved(false);
+          }}
+          onSelectAll={() => {
+            if (previewColumns && targetColumn) {
+              setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
+            }
+            setFeaturesAreSaved(false);
+          }}
+          onClearAll={() => {
+            setSelectedFeatures([]);
+            setFeaturesAreSaved(false);
+          }}
         />
-        
-        <div className="flex justify-center mt-6 mb-6">
-          <Button 
-            onClick={analyzeFeatures} 
-            disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
-            variant="default"
-            size="lg"
-            className="bg-black hover:bg-gray-800"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
-          </Button>
-        </div>
         
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         

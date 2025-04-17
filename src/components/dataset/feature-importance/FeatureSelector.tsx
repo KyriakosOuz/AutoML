@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
+import { datasetApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Checkbox 
 } from '@/components/ui/checkbox';
@@ -11,7 +13,7 @@ import {
   Button 
 } from '@/components/ui/button';
 import { 
-  Check, CheckCircle, Filter
+  Check, CheckCircle, Filter, BarChart3
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -30,7 +32,80 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   onSelectAll,
   onClearAll
 }) => {
-  const { targetColumn } = useDataset();
+  const { 
+    datasetId,
+    targetColumn,
+    taskType,
+    updateState
+  } = useDataset();
+  
+  const { toast } = useToast();
+  const [isAnalyzingFeatures, setIsAnalyzingFeatures] = React.useState(false);
+
+  const analyzeFeatures = async () => {
+    if (!datasetId || !targetColumn) {
+      toast({
+        title: "Error",
+        description: "Dataset ID and target column are required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (selectedFeatures.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one feature to analyze",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsAnalyzingFeatures(true);
+      
+      const response = await datasetApi.featureImportancePreview(
+        datasetId, 
+        targetColumn
+      );
+      
+      const importanceData = response.data.feature_importance || [];
+      
+      if (!importanceData || importanceData.length === 0) {
+        throw new Error('No feature importance data returned from API');
+      }
+      
+      const filteredImportance = importanceData.filter(
+        (item: any) => selectedFeatures.includes(item.feature)
+      );
+      
+      const sortedImportance = [...filteredImportance].sort(
+        (a: any, b: any) => b.importance - a.importance
+      );
+      
+      updateState({
+        featureImportance: sortedImportance,
+        taskType: response.data.task_type || taskType,
+        columnsToKeep: selectedFeatures
+      });
+      
+      toast({
+        title: "Feature importance analyzed",
+        description: "Feature importance analysis completed successfully",
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('Error analyzing features:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to analyze features',
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzingFeatures(false);
+    }
+  };
   
   return (
     <Card className="mt-6">
@@ -112,6 +187,19 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
               <p className="text-sm text-gray-500">
                 {selectedFeatures.length} of {availableFeatures.length} features selected
               </p>
+            </div>
+            
+            <div className="flex justify-center mt-6">
+              <Button 
+                onClick={analyzeFeatures} 
+                disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
+                variant="default"
+                size="lg"
+                className="bg-black hover:bg-gray-800"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
+              </Button>
             </div>
           </>
         )}
