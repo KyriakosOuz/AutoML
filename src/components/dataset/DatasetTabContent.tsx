@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -229,10 +228,22 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       case 'regression':
         return "Regression: Predicting a continuous numerical value";
       default:
-        return `${formatTaskType(type)}: Predicting values based on input features`;
+        return `${type.replace('_', ' ').split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ')}: Predicting values based on input features`;
     }
   };
-  
+
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return "Unknown";
+    
+    return type
+      .replace('_', ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <>
       <TabsContent value="upload" className="pt-4">
