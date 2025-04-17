@@ -4,9 +4,11 @@ import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, BarChart3 } from 'lucide-react';
+import { AlertCircle, BarChart3, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import SaveDatasetButton from './SaveDatasetButton';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 interface FeatureAnalyzerProps {
   selectedFeatures: string[];
@@ -17,7 +19,7 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
     datasetId, 
     targetColumn,
     taskType,
-    setFeatureImportance,
+    featureImportance,
     updateState
   } = useDataset();
   
@@ -120,35 +122,43 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
   };
 
   return (
-    <div>
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="mt-4 flex justify-center">
-        <Button 
-          onClick={analyzeFeatures} 
-          disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
-          variant="default"
-          size="lg"
-          className="bg-black hover:bg-gray-800"
-        >
-          <BarChart3 className="h-4 w-4 mr-2" />
-          {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
-        </Button>
-      </div>
-      
-      {isLoading && isAnalyzingFeatures && (
-        <div className="space-y-4 mt-6">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-[350px] w-full rounded-lg" />
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="flex justify-center">
+          <Button 
+            onClick={analyzeFeatures} 
+            disabled={isLoading || !targetColumn || selectedFeatures.length === 0 || isAnalyzingFeatures}
+            variant="default"
+            size="lg"
+            className="bg-black hover:bg-gray-800"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {isAnalyzingFeatures ? 'Analyzing...' : 'Analyze Feature Importance'}
+          </Button>
         </div>
+        
+        {isLoading && isAnalyzingFeatures && (
+          <div className="space-y-4 mt-6">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-[350px] w-full rounded-lg" />
+          </div>
+        )}
+      </CardContent>
+      
+      {featureImportance && featureImportance.length > 0 && (
+        <CardFooter className="flex justify-end pt-2">
+          <SaveDatasetButton />
+        </CardFooter>
       )}
-    </div>
+    </Card>
   );
 };
 

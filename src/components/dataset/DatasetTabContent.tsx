@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -128,44 +127,18 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        {/* Show guidance based on whether target column is selected */}
-        {!targetColumn ? (
+        {/* Show guidance if needed */}
+        {!targetColumn && (
           <Alert className="mb-4 bg-orange-50 border-orange-200">
             <Info className="h-5 w-5 text-orange-500" />
             <AlertDescription className="text-orange-700">
-              Please select a target column first using the dropdown below.
+              Select a target column using the dropdown in the Feature Selection card below.
               The target column is what your model will predict.
             </AlertDescription>
           </Alert>
-        ) : !featureImportance || featureImportance.length === 0 ? (
-          <Alert className="mb-4 bg-blue-50 border-blue-200">
-            <Info className="h-5 w-5 text-blue-500" />
-            <AlertDescription className="text-blue-700">
-              Follow these steps to analyze feature importance:
-              <ol className="list-decimal ml-5 mt-2">
-                <li>Select features you want to analyze using the selector below</li>
-                <li>Click the "Analyze Feature Importance" button</li>
-                <li>Review the resulting chart to understand which features are most important</li>
-              </ol>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        
-        {/* Show feature importance chart if data is available */}
-        {featureImportance && featureImportance.length > 0 ? (
-          <FeatureImportanceChart featureImportance={featureImportance} />
-        ) : (
-          <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center">
-            <p className="text-gray-600 mb-4">No feature importance data available yet.</p>
-            {targetColumn ? (
-              <p className="text-sm text-gray-500">Select features below and click "Analyze Feature Importance" to view this chart.</p>
-            ) : (
-              <p className="text-sm text-gray-500">Select a target column first, then analyze feature importance.</p>
-            )}
-          </div>
         )}
         
-        {/* Feature Selector Component that uses props now */}
+        {/* Feature Selector Component with clear layout */}
         <FeatureSelector 
           selectedFeatures={selectedFeatures}
           availableFeatures={getAvailableFeatures()}
@@ -174,9 +147,24 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onClearAll={handleClearAll}
         />
         
-        {/* Feature Analyzer Component - This analyzes and loads feature importance data */}
+        {/* Feature Analyzer Component - with "Analyze" button and loading states */}
         <FeatureAnalyzer selectedFeatures={selectedFeatures} />
         
+        {/* Feature Importance Chart - Only shown if data available */}
+        {featureImportance && featureImportance.length > 0 ? (
+          <FeatureImportanceChart featureImportance={featureImportance} />
+        ) : (
+          <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center mt-6">
+            <p className="text-gray-600 mb-4">No feature importance data available yet.</p>
+            {targetColumn ? (
+              <p className="text-sm text-gray-500">Select features above and click "Analyze Feature Importance" to view this chart.</p>
+            ) : (
+              <p className="text-sm text-gray-500">Select a target column first, then analyze feature importance.</p>
+            )}
+          </div>
+        )}
+        
+        {/* Show Next button if processing stage is final */}
         {processingStage === 'final' && (
           <div className="flex justify-end mt-6">
             <Button 

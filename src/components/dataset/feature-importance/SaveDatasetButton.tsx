@@ -4,7 +4,7 @@ import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Save, ArrowRight } from 'lucide-react';
 
 const SaveDatasetButton: React.FC = () => {
   const { 
@@ -73,8 +73,15 @@ const SaveDatasetButton: React.FC = () => {
       size="lg"
       className="bg-black hover:bg-gray-800 text-white"
     >
-      <Save className="h-4 w-4 mr-2" />
-      {isLoading ? 'Saving...' : 'Save & Continue'}
+      {isLoading ? (
+        <>Saving...</>
+      ) : (
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          Save & Continue
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </>
+      )}
     </Button>
   );
 };

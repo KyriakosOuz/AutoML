@@ -13,6 +13,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend
 } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -64,60 +65,60 @@ const FeatureImportanceChart: React.FC<FeatureImportanceChartProps> = ({ feature
   };
 
   return (
-    <div className="space-y-3 mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-      <h3 className="font-medium mb-3">Step 3: Feature Importance Analysis</h3>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Feature Importance Analysis</CardTitle>
+        <CardDescription>
+          Higher importance scores indicate features with greater predictive power
+        </CardDescription>
+      </CardHeader>
       
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium text-gray-800">Feature Importance</h4>
-        <p className="text-xs text-gray-500">
-          Higher values indicate more important features
-        </p>
-      </div>
-      
-      <div className="h-[400px] w-full bg-white rounded-lg p-4 border border-gray-200">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={featureImportance}
-            layout="vertical"
-            margin={{ top: 20, right: 50, left: 140, bottom: 20 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-            <XAxis 
-              type="number" 
-              domain={[0, 1]} 
-              tickFormatter={(value) => `${Math.round(value * 100)}%`} 
-            />
-            <YAxis 
-              type="category" 
-              dataKey="feature" 
-              width={130}
-              tick={{ fontSize: 12 }}
-            />
-            <RechartsTooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar 
-              dataKey="importance" 
-              name="Importance Score"
-              radius={[0, 4, 4, 0]}
-              barSize={24}
+      <CardContent>
+        <div className="h-[500px] w-full bg-white rounded-lg p-4 border border-gray-200">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={featureImportance}
+              layout="vertical"
+              margin={{ top: 20, right: 50, left: 140, bottom: 20 }}
             >
-              {featureImportance.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={getBarColor(entry.importance, index)} 
-                />
-              ))}
-              <LabelList 
-                dataKey="importance" 
-                position="right" 
-                formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
-                style={{ fill: '#6B7280', fontSize: 12, fontWeight: 600 }}
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+              <XAxis 
+                type="number" 
+                domain={[0, 1]} 
+                tickFormatter={(value) => `${Math.round(value * 100)}%`} 
               />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+              <YAxis 
+                type="category" 
+                dataKey="feature" 
+                width={130}
+                tick={{ fontSize: 13 }}
+              />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar 
+                dataKey="importance" 
+                name="Importance Score"
+                radius={[0, 4, 4, 0]}
+                barSize={28}
+              >
+                {featureImportance.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={getBarColor(entry.importance, index)} 
+                  />
+                ))}
+                <LabelList 
+                  dataKey="importance" 
+                  position="right" 
+                  formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
+                  style={{ fill: '#6B7280', fontSize: 13, fontWeight: 600 }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
