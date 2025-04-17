@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import FileUpload from '@/components/dataset/FileUpload';
@@ -20,14 +19,12 @@ const StartOverButton = () => {
   const { toast } = useToast();
   
   const handleStartOver = () => {
-    if (window.confirm('Are you sure you want to start over? This will reset all your dataset processing.')) {
-      resetState();
-      toast({
-        title: "Dataset Reset",
-        description: "All dataset processing has been reset. You can now upload a new dataset.",
-        duration: 3000,
-      });
-    }
+    resetState();
+    toast({
+      title: "Dataset Reset",
+      description: "All dataset processing has been reset. You can now start over.",
+      duration: 3000,
+    });
   };
   
   return (
@@ -49,10 +46,8 @@ const DatasetPageContent = () => {
   const [activeTab, setActiveTab] = useState<string>("upload");
   const { toast } = useToast();
   
-  // Prevent automatic tab switching except for initial load
   const [hasInitializedTabs, setHasInitializedTabs] = useState(false);
   
-  // Determine the current active step
   const getActiveStep = () => {
     if (!datasetId) return 0;
     if (!targetColumn) return 1;
@@ -60,7 +55,6 @@ const DatasetPageContent = () => {
     return 3;
   };
 
-  // Initialize tabs only once based on data state
   useEffect(() => {
     if (!hasInitializedTabs) {
       if (!datasetId) {
@@ -76,7 +70,6 @@ const DatasetPageContent = () => {
     }
   }, [datasetId, targetColumn, taskType, hasInitializedTabs]);
 
-  // Check if a tab should be enabled
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
@@ -85,12 +78,10 @@ const DatasetPageContent = () => {
     return false;
   };
 
-  // Handle tab change with validation
   const handleTabChange = (value: string) => {
     if (isTabEnabled(value)) {
       setActiveTab(value);
     } else {
-      // Show toast message explaining why the tab is disabled
       let message = "You need to complete previous steps first:";
       if (value === "explore" && !datasetId) {
         message = "Please upload a dataset first";
@@ -108,7 +99,6 @@ const DatasetPageContent = () => {
     }
   };
 
-  // Navigate to next tab
   const goToNextTab = () => {
     if (activeTab === "upload" && datasetId) {
       setActiveTab("explore");
