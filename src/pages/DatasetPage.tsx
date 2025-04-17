@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import FileUpload from '@/components/dataset/FileUpload';
@@ -14,32 +13,6 @@ import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Steps, Step } from '@/components/ui/steps';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-const StartOverButton = () => {
-  const { resetState } = useDataset();
-  const { toast } = useToast();
-  
-  const handleStartOver = () => {
-    resetState();
-    toast({
-      title: "Dataset Reset",
-      description: "All dataset processing has been reset. You can now start over.",
-      duration: 3000,
-    });
-  };
-  
-  return (
-    <Button 
-      variant="outline" 
-      size="sm"
-      onClick={handleStartOver}
-      className="flex items-center gap-2"
-    >
-      <RotateCcw className="h-4 w-4" />
-      Start Over
-    </Button>
-  );
-};
 
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
@@ -120,7 +93,6 @@ const DatasetPageContent = () => {
               AutoML Web App
             </Link>
             <div className="flex items-center gap-4">
-              <StartOverButton />
               <div className="text-sm text-gray-600 hidden md:block">
                 {user?.email}
               </div>
