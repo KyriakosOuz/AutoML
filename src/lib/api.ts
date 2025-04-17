@@ -69,17 +69,36 @@ const apiRequest = async (
   }
 
   try {
+    console.log(`Making API request to ${url}`);
     const response = await fetch(url, options);
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
+      const errorText = await response.text();
+      let errorDetail;
+      
+      try {
+        // Try to parse as JSON
+        const errorData = JSON.parse(errorText);
+        errorDetail = errorData?.detail || errorData?.message;
+      } catch {
+        // If not JSON, use the text directly
+        errorDetail = errorText;
+      }
+      
       throw new Error(
-        errorData?.detail || `API request failed with status ${response.status}`
+        errorDetail || `API request failed with status ${response.status}`
       );
     }
     
-    const responseData = await response.json();
-    return responseData;
+    // Try to parse response as JSON, but handle gracefully if not JSON
+    try {
+      const responseData = await response.json();
+      console.log('API response data:', responseData);
+      return responseData;
+    } catch (parseError) {
+      console.error('Error parsing JSON response:', parseError);
+      return { error: 'Invalid JSON response', text: await response.text() };
+    }
   } catch (error) {
     console.error('API request error:', error);
     throw error;
@@ -133,7 +152,27 @@ export const datasetApi = {
     return apiRequest(`${DATASET_API_PREFIX}/detect-task-type/`, 'POST', {
       dataset_id: datasetId,
       target_column: targetColumn
-    }, true);
+    }, true).then(response => {
+      console.log('Raw task type response:', response);
+      
+      // Handle potential response formats
+      if (!response) {
+        throw new Error('Empty response from task type detection');
+      }
+      
+      // Ensure we return a properly structured response
+      if (typeof response === 'string') {
+        try {
+          // Try to parse if it's a string
+          return JSON.parse(response);
+        } catch {
+          // If it can't be parsed as JSON, create a standard format
+          return { task_type: response };
+        }
+      }
+      
+      return response;
+    });
   },
   
   // Save Dataset (Features + Target)

@@ -78,9 +78,29 @@ const FeatureImportanceChart: React.FC = () => {
       
       console.log('Task type detection response:', response);
       
-      // Safety check for response and task_type
-      if (!response || typeof response.task_type === 'undefined') {
-        throw new Error('Invalid response from task type detection');
+      // Enhanced debug logging to identify the issue
+      console.log('Response type:', typeof response);
+      console.log('Response keys:', response ? Object.keys(response) : 'No response');
+      console.log('Task type value:', response?.task_type);
+      
+      // More robust response validation
+      if (!response) {
+        throw new Error('No response received from task type detection');
+      }
+      
+      // Extract task type with more forgiving approach
+      let detectedTaskType = null;
+      if (typeof response === 'object') {
+        if (response.task_type) {
+          detectedTaskType = response.task_type;
+        } else if (response.type) {
+          detectedTaskType = response.type;
+        }
+      }
+      
+      if (!detectedTaskType) {
+        console.error('Could not find task type in response:', response);
+        throw new Error('Could not determine task type from response');
       }
       
       // Only update the main context after API call completes
@@ -91,7 +111,7 @@ const FeatureImportanceChart: React.FC = () => {
         columnsToKeep?: string[];
       } = {
         targetColumn: value,
-        taskType: response.task_type,
+        taskType: detectedTaskType,
       };
       
       // Use all non-target columns as default selected columns
@@ -108,7 +128,7 @@ const FeatureImportanceChart: React.FC = () => {
       
       toast({
         title: "Task type detected",
-        description: `Detected task type: ${response.task_type.replace('_', ' ')}`,
+        description: `Detected task type: ${detectedTaskType.replace(/_/g, ' ')}`,
         duration: 3000,
       });
       
