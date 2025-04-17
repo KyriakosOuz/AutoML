@@ -94,6 +94,24 @@ const DataPreview: React.FC = () => {
   const hasFinalData = processingStage === 'final' || processingStage === 'processed';
   const hasProcessedData = processingStage === 'processed';
 
+  // Auto-select the most advanced stage based on processing stage
+  useEffect(() => {
+    if (processingStage) {
+      console.log('Processing stage changed:', processingStage);
+      
+      if (processingStage === 'final' && stage !== 'final') {
+        console.log('Setting stage to final');
+        setStage('final');
+      } else if (processingStage === 'cleaned' && stage === 'raw') {
+        console.log('Setting stage to cleaned');
+        setStage('cleaned');
+      } else if (processingStage === 'raw' && stage !== 'raw') {
+        console.log('Setting stage to raw');
+        setStage('raw');
+      }
+    }
+  }, [processingStage]);
+
   // Initial load of preview data when component mounts or dataset/stage changes
   useEffect(() => {
     if (datasetId) {
@@ -101,26 +119,6 @@ const DataPreview: React.FC = () => {
       fetchPreview();
     }
   }, [datasetId, stage]);
-
-  // Set the default stage based on the latest available processing stage
-  // This is separate from the fetch to prevent duplicate API calls
-  useEffect(() => {
-    if (!initialLoadComplete) return;
-    
-    console.log('Processing stage changed:', processingStage);
-    if (processingStage) {
-      // Only change the stage if the new stage is more advanced than the current one
-      // or if we're explicitly at the raw stage and cleaned is now available
-      if (processingStage === 'cleaned' && stage === 'raw') {
-        console.log('Setting stage to cleaned because processing stage changed');
-        setStage('cleaned');
-      } else if ((processingStage === 'final' || processingStage === 'processed') && 
-                 (stage === 'raw' || stage === 'cleaned')) {
-        console.log('Setting stage to match processing stage:', processingStage);
-        setStage(processingStage);
-      }
-    }
-  }, [processingStage, initialLoadComplete]);
 
   if (!datasetId) {
     return null;

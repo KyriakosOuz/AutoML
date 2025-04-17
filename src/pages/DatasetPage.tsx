@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import FileUpload from '@/components/dataset/FileUpload';
@@ -8,7 +9,7 @@ import FeatureSelector from '@/components/dataset/FeatureSelector';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, RotateCcw, PlayCircle, Database, FileSpreadsheet, Workflow, Sliders, ArrowRight } from 'lucide-react';
+import { LogOut, ArrowRight, Database, FileSpreadsheet, Workflow, Sliders, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Steps, Step } from '@/components/ui/steps';
@@ -16,7 +17,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DatasetPageContent = () => {
   const { user, signOut } = useAuth();
-  const { datasetId, targetColumn, taskType, overview, processingStage } = useDataset();
+  const { 
+    datasetId, 
+    targetColumn, 
+    taskType, 
+    overview, 
+    processingStage, 
+    columnsToKeep 
+  } = useDataset();
+  
   const [activeTab, setActiveTab] = useState<string>("upload");
   const { toast } = useToast();
   
@@ -35,20 +44,21 @@ const DatasetPageContent = () => {
         setActiveTab("upload");
       } else if (datasetId && !targetColumn) {
         setActiveTab("explore");
-      } else if (targetColumn && !taskType) {
+      } else if (targetColumn && !columnsToKeep) {
         setActiveTab("features");
-      } else if (taskType) {
+      } else if (columnsToKeep) {
         setActiveTab("preprocess");
       }
       setHasInitializedTabs(true);
     }
-  }, [datasetId, targetColumn, taskType, hasInitializedTabs]);
+  }, [datasetId, targetColumn, taskType, hasInitializedTabs, columnsToKeep]);
 
+  // Handle tab access control based on processing stage
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
-    if (tabName === "features") return !!datasetId;
-    if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType;
+    if (tabName === "features") return !!datasetId && processingStage === 'cleaned';
+    if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
   };
 
@@ -59,10 +69,10 @@ const DatasetPageContent = () => {
       let message = "You need to complete previous steps first:";
       if (value === "explore" && !datasetId) {
         message = "Please upload a dataset first";
-      } else if (value === "features" && !datasetId) {
-        message = "Please upload a dataset first";
-      } else if (value === "preprocess" && (!datasetId || !targetColumn || !taskType)) {
-        message = "Please complete target selection and feature selection first";
+      } else if (value === "features" && !processingStage || processingStage !== 'cleaned') {
+        message = "Please process missing values first";
+      } else if (value === "preprocess" && processingStage !== 'final') {
+        message = "Please complete feature selection first";
       }
       
       toast({
@@ -76,11 +86,25 @@ const DatasetPageContent = () => {
   const goToNextTab = () => {
     if (activeTab === "upload" && datasetId) {
       setActiveTab("explore");
-    } else if (activeTab === "explore" && datasetId) {
+    } else if (activeTab === "explore" && processingStage === 'cleaned') {
       setActiveTab("features");
-    } else if (activeTab === "features" && datasetId && targetColumn && taskType) {
+    } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
+  };
+
+  // Format task type for display
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return '';
+    
+    if (type === 'binary_classification') return 'Binary Classification';
+    if (type === 'multiclass_classification') return 'Multiclass Classification';
+    if (type === 'regression') return 'Regression';
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
@@ -132,13 +156,13 @@ const DatasetPageContent = () => {
               title="Feature" 
               description="Selection" 
               icon={<Sliders className="h-5 w-5" />} 
-              status={targetColumn && !taskType ? "current" : targetColumn && taskType ? "complete" : "pending"} 
+              status={targetColumn && !columnsToKeep ? "current" : targetColumn && columnsToKeep ? "complete" : "pending"} 
             />
             <Step 
               title="Preprocessing" 
               description="Options" 
               icon={<PlayCircle className="h-5 w-5" />}
-              status={taskType ? "current" : "pending"} 
+              status={columnsToKeep ? "current" : "pending"} 
             />
           </Steps>
         </header>
@@ -173,29 +197,47 @@ const DatasetPageContent = () => {
             <TabsContent value="explore" className="pt-4">
               <MissingValueHandler />
               <DataPreview />
-              <div className="flex justify-end mt-4">
-                <Button 
-                  onClick={goToNextTab} 
-                  className="flex items-center gap-2"
-                >
-                  Next: Select Features
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="features" className="pt-4">
-              <FeatureImportanceChart />
-              {targetColumn && taskType && <DataPreview />}
-              {targetColumn && taskType && (
+              {processingStage === 'cleaned' && (
                 <div className="flex justify-end mt-4">
                   <Button 
                     onClick={goToNextTab} 
                     className="flex items-center gap-2"
                   >
-                    Next: Preprocess Data
+                    Next: Select Features
                     <ArrowRight className="h-4 w-4" />
                   </Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="features" className="pt-4">
+              <FeatureImportanceChart />
+              {targetColumn && taskType && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-6">
+                  <h4 className="font-medium text-blue-800 mb-2">Selected Target & Task Type</h4>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-md flex items-center">
+                      <span className="font-medium mr-1">Target:</span> {targetColumn}
+                    </div>
+                    <div className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-md flex items-center">
+                      <span className="font-medium mr-1">Task Type:</span> {formatTaskType(taskType)}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <FeatureSelector />
+              {processingStage === 'final' && (
+                <div className="mt-6">
+                  <DataPreview />
+                  <div className="flex justify-end mt-6">
+                    <Button 
+                      onClick={goToNextTab} 
+                      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      Continue to Preprocessing
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </TabsContent>
@@ -206,7 +248,7 @@ const DatasetPageContent = () => {
               {datasetId && targetColumn && taskType && (
                 <div className="flex justify-end mt-8">
                   <Link to="/training">
-                    <Button size="lg" className="flex items-center gap-2">
+                    <Button size="lg" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700">
                       <PlayCircle className="h-5 w-5" />
                       Continue to Model Training
                       <ArrowRight className="h-4 w-4 ml-1" />

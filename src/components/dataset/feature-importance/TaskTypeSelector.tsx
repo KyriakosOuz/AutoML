@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -27,7 +26,7 @@ const extractTaskType = (response: any): string | null => {
     // Check if the string contains "classification" or "regression"
     const lcResponse = response.toLowerCase();
     if (lcResponse.includes('classification')) {
-      return 'classification';
+      return lcResponse.includes('binary') ? 'binary_classification' : 'multiclass_classification';
     } else if (lcResponse.includes('regression')) {
       return 'regression';
     }
@@ -40,7 +39,7 @@ const extractTaskType = (response: any): string | null => {
     if (response.task_type) {
       const taskTypeStr = response.task_type.toString().toLowerCase();
       if (taskTypeStr.includes('classification')) {
-        return 'classification';
+        return taskTypeStr.includes('binary') ? 'binary_classification' : 'multiclass_classification';
       } else if (taskTypeStr.includes('regression')) {
         return 'regression';
       }
@@ -53,7 +52,7 @@ const extractTaskType = (response: any): string | null => {
       if (dataObj['Task Type'] && typeof dataObj['Task Type'] === 'string') {
         const typeStr = dataObj['Task Type'].toLowerCase();
         if (typeStr.includes('classification')) {
-          return 'classification';
+          return typeStr.includes('binary') ? 'binary_classification' : 'multiclass_classification';
         } else if (typeStr.includes('regression')) {
           return 'regression';
         }
@@ -64,7 +63,7 @@ const extractTaskType = (response: any): string | null => {
     // Check if the response itself contains the key terms
     const jsonStr = JSON.stringify(response).toLowerCase();
     if (jsonStr.includes('classification')) {
-      return 'classification';
+      return jsonStr.includes('binary') ? 'binary_classification' : 'multiclass_classification';
     } else if (jsonStr.includes('regression')) {
       return 'regression';
     }
@@ -76,6 +75,10 @@ const extractTaskType = (response: any): string | null => {
 // Format task type for better display
 const formatTaskType = (type: string | null): string => {
   if (!type) return '';
+  
+  if (type === 'binary_classification') return 'Binary Classification';
+  if (type === 'multiclass_classification') return 'Multiclass Classification';
+  if (type === 'regression') return 'Regression';
   
   return type
     .split('_')

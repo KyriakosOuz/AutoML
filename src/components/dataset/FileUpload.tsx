@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -58,7 +57,6 @@ const FileUpload: React.FC = () => {
   };
 
   const handleFileSelect = (file: File) => {
-    // Check if file is a CSV
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       setError('Please upload a CSV file');
       setSelectedFile(null);
@@ -83,7 +81,6 @@ const FileUpload: React.FC = () => {
       setIsLoading(true);
       setUploadProgress(10);
       
-      // Simulate progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -96,7 +93,6 @@ const FileUpload: React.FC = () => {
       
       console.log('Uploading file:', selectedFile.name);
       
-      // Call API to upload dataset
       const response = await datasetApi.uploadDataset(
         selectedFile, 
         customMissingSymbol || undefined
@@ -107,24 +103,20 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
-      // Access the data property from the response
       const data = response.data || response;
 
-      // Make sure we're working with the correct structure
       const overview = data.overview || {};
       const numericalFeatures = overview.numerical_features || [];
       const categoricalFeatures = overview.categorical_features || [];
       
-      // Update context with response data - using fresh state update to prevent state reset
       updateState({
         datasetId: data.dataset_id,
         fileUrl: data.file_url,
         overview: overview,
         previewColumns: [...numericalFeatures, ...categoricalFeatures],
-        processingStage: 'raw', // Explicitly set processing stage
+        processingStage: 'raw',
       });
       
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -170,23 +162,10 @@ const FileUpload: React.FC = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
-            <CardDescription>
-              Upload a CSV file to start analyzing and processing your dataset
-            </CardDescription>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleStartOver}
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Start Over
-          </Button>
-        </div>
+        <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
+        <CardDescription>
+          Upload a CSV file to start analyzing and processing your dataset
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
