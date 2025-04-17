@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +18,8 @@ const DatasetPageContent: React.FC = () => {
     processingStage, 
     columnsToKeep,
     featureImportance,
-    setFeatureImportance
+    setFeatureImportance,
+    previewColumns,
   } = useDataset();
   
   const [activeTab, setActiveTab] = useState<string>("upload");
@@ -41,45 +41,12 @@ const DatasetPageContent: React.FC = () => {
       return;
     }
     
-    // Skip if already loading or if we already have data
     if (loadingFeatures || (featureImportance && featureImportance.length > 0)) {
       console.log('Skipping feature importance load: already loading or have data');
       return;
     }
     
-    try {
-      console.log('Loading feature importance data...');
-      setLoadingFeatures(true);
-      
-      const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
-      console.log('Feature importance API response:', response);
-      
-      if (response && response.data && response.data.feature_importance) {
-        // For API response with nested data structure
-        setFeatureImportance(response.data.feature_importance);
-        console.log('Feature importance set from nested data:', response.data.feature_importance);
-      } else if (response && response.feature_importance) {
-        // For API response with direct data structure
-        setFeatureImportance(response.feature_importance);
-        console.log('Feature importance set from direct data:', response.feature_importance);
-      } else {
-        console.error('Invalid feature importance data format:', response);
-        toast({
-          title: "Warning",
-          description: "Feature importance data format is unexpected",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error loading feature importance data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load feature importance data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingFeatures(false);
-    }
+    console.log('Tab changed to features - ready for feature importance analysis');
   };
 
   useEffect(() => {
@@ -102,13 +69,6 @@ const DatasetPageContent: React.FC = () => {
       loadFeatureImportanceData();
     }
   }, [activeTab, datasetId, targetColumn]);
-
-  // Add an effect to reload feature importance if needed when target column changes
-  useEffect(() => {
-    if (targetColumn && activeTab === "features" && (!featureImportance || featureImportance.length === 0)) {
-      loadFeatureImportanceData();
-    }
-  }, [targetColumn]);
 
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;

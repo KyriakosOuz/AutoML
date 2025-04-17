@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,11 @@ import DataPreview from '@/components/dataset/DataPreview';
 import MissingValueHandler from '@/components/dataset/MissingValueHandler';
 import FeatureImportanceChart from '@/components/dataset/FeatureImportanceChart';
 import FeatureSelector from '@/components/dataset/FeatureSelector';
+import FeatureAnalyzer from '@/components/dataset/feature-importance/FeatureAnalyzer';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { TabsContent } from '@/components/ui/tabs';
 import { useDataset } from '@/contexts/DatasetContext';
+import { useState } from 'react';
 
 interface TabContentProps {
   activeTab: string;
@@ -34,16 +35,55 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   formatTaskType,
 }) => {
   // Get the featureImportance data from the DatasetContext
-  const { featureImportance, overview } = useDataset();
+  const { featureImportance, overview, previewColumns } = useDataset();
   
   // Check if dataset has no missing values initially
   const hasNoMissingValues = overview && 
     (!overview.total_missing_values || overview.total_missing_values === 0);
   
+  // State for tracking selected features in the feature selector
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    // Initialize with columns to keep if available, otherwise all columns except target
+    columnsToKeep || 
+    (previewColumns && targetColumn 
+      ? previewColumns.filter(col => col !== targetColumn)
+      : [])
+  );
+  
   // Add console log to debug feature importance data
   console.log('Current tab:', activeTab);
   console.log('Feature importance data:', featureImportance);
   console.log('Target column:', targetColumn);
+  console.log('Preview columns:', previewColumns);
+  console.log('Selected features:', selectedFeatures);
+  
+  // Functions to handle feature selection
+  const handleFeatureToggle = (column: string) => {
+    setSelectedFeatures(prev => 
+      prev.includes(column)
+        ? prev.filter(f => f !== column)
+        : [...prev, column]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (previewColumns && targetColumn) {
+      // Select all columns except the target column
+      setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
+    }
+  };
+
+  const handleClearAll = () => {
+    setSelectedFeatures([]);
+  };
+  
+  // Function to get available features (all columns except target column)
+  const getAvailableFeatures = () => {
+    if (!previewColumns) return [];
+    return targetColumn
+      ? previewColumns.filter(col => col !== targetColumn)
+      : previewColumns;
+  };
   
   return (
     <>
@@ -92,7 +132,19 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
             <p className="text-sm text-gray-500">Select a target column and analyze feature importance to view this chart.</p>
           </div>
         )}
-        <FeatureSelector />
+        
+        {/* Feature Selector Component */}
+        <FeatureSelector 
+          selectedFeatures={selectedFeatures}
+          availableFeatures={getAvailableFeatures()}
+          onFeatureToggle={handleFeatureToggle}
+          onSelectAll={handleSelectAll}
+          onClearAll={handleClearAll}
+        />
+        
+        {/* Feature Analyzer Component - This is what analyzes and loads feature importance data */}
+        <FeatureAnalyzer selectedFeatures={selectedFeatures} />
+        
         {processingStage === 'final' && (
           <div className="flex justify-end mt-6">
             <Button 
