@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +19,6 @@ const DatasetPageContent: React.FC = () => {
     processingStage, 
     columnsToKeep,
     featureImportance,
-    setFeatureImportance,
     previewColumns,
   } = useDataset();
   
@@ -26,7 +26,6 @@ const DatasetPageContent: React.FC = () => {
   const { toast } = useToast();
   
   const [hasInitializedTabs, setHasInitializedTabs] = useState(false);
-  const [loadingFeatures, setLoadingFeatures] = useState(false);
   
   const getActiveStep = () => {
     if (!datasetId) return 0;
@@ -35,20 +34,7 @@ const DatasetPageContent: React.FC = () => {
     return 3;
   };
 
-  const loadFeatureImportanceData = async () => {
-    if (!datasetId || !targetColumn) {
-      console.log('Cannot load feature importance: missing datasetId or targetColumn');
-      return;
-    }
-    
-    if (loadingFeatures || (featureImportance && featureImportance.length > 0)) {
-      console.log('Skipping feature importance load: already loading or have data');
-      return;
-    }
-    
-    console.log('Tab changed to features - ready for feature importance analysis');
-  };
-
+  // Initialize tabs based on data state
   useEffect(() => {
     if (!hasInitializedTabs) {
       if (!datasetId) {
@@ -63,12 +49,6 @@ const DatasetPageContent: React.FC = () => {
       setHasInitializedTabs(true);
     }
   }, [datasetId, targetColumn, taskType, hasInitializedTabs, columnsToKeep]);
-
-  useEffect(() => {
-    if (activeTab === "features") {
-      loadFeatureImportanceData();
-    }
-  }, [activeTab, datasetId, targetColumn]);
 
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
@@ -108,7 +88,6 @@ const DatasetPageContent: React.FC = () => {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-      loadFeatureImportanceData();
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }

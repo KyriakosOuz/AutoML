@@ -10,7 +10,7 @@ import {
 import { 
   Button 
 } from '@/components/ui/button';
-import { Filter } from 'lucide-react';
+import { Filter, Check, CheckCircle } from 'lucide-react';
 
 interface FeatureSelectorProps {
   selectedFeatures: string[];
@@ -27,32 +27,43 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
   onSelectAll,
   onClearAll
 }) => {
+  const { targetColumn } = useDataset();
+  
   return (
-    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 mt-6">
       <h3 className="font-medium mb-3 flex items-center gap-2">
         <Filter className="h-4 w-4 text-purple-600" />
-        Step 2: Select Features to Analyze
+        Step 1: Select Features to Analyze
       </h3>
       <p className="text-sm text-gray-600 mb-3">
         Select columns you want to use as features for your model. These will be analyzed for importance.
       </p>
       
       <div className="max-h-[200px] overflow-y-auto border border-gray-200 rounded-lg bg-white p-2">
-        {availableFeatures.map(column => (
-          <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-            <Checkbox 
-              id={`feature-${column}`}
-              checked={selectedFeatures.includes(column)}
-              onCheckedChange={() => onFeatureToggle(column)}
-            />
-            <Label 
-              htmlFor={`feature-${column}`}
-              className="cursor-pointer flex-1"
-            >
-              {column}
-            </Label>
+        {availableFeatures.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            No features available. Please make sure you've selected a target column.
           </div>
-        ))}
+        ) : (
+          availableFeatures.map(column => (
+            <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+              <Checkbox 
+                id={`feature-${column}`}
+                checked={selectedFeatures.includes(column)}
+                onCheckedChange={() => onFeatureToggle(column)}
+              />
+              <Label 
+                htmlFor={`feature-${column}`}
+                className="cursor-pointer flex-1"
+              >
+                {column}
+              </Label>
+              {selectedFeatures.includes(column) && (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              )}
+            </div>
+          ))
+        )}
       </div>
       
       <div className="flex justify-between mt-3">
@@ -76,6 +87,15 @@ const FeatureSelector: React.FC<FeatureSelectorProps> = ({
           </Button>
         </div>
       </div>
+      
+      {targetColumn && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded">
+          <p className="text-sm text-blue-700 flex items-center">
+            <Check className="h-4 w-4 mr-2" />
+            Target column: <span className="font-medium ml-1">{targetColumn}</span>
+          </p>
+        </div>
+      )}
     </div>
   );
 };
