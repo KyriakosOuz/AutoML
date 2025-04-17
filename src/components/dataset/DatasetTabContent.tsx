@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface TabContentProps {
   activeTab: string;
@@ -127,7 +128,16 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         const response = await datasetApi.detectTaskType(datasetId, value);
         
         // Extract task type from response
-        let detectedTaskType = response?.task_type || null;
+        let detectedTaskType = null;
+        
+        if (response && typeof response === 'object' && response.task_type) {
+          detectedTaskType = response.task_type;
+        } else if (response && typeof response === 'object' && response.data && response.data.task_type) {
+          detectedTaskType = response.data.task_type;
+        } else if (typeof response === 'string') {
+          detectedTaskType = response.trim();
+        }
+        
         console.log('Detected task type:', detectedTaskType);
         
         // Update task type in context
@@ -264,7 +274,9 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                   ) : taskTypeError ? (
                     <span className="text-destructive">{taskTypeError}</span>
                   ) : taskType ? (
-                    formatTaskType(taskType)
+                    <Badge variant="outline" className="bg-primary/10 text-primary">
+                      {formatTaskType(taskType)}
+                    </Badge>
                   ) : (
                     "Not determined yet"
                   )}
