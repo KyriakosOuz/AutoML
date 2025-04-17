@@ -10,6 +10,7 @@ import FeatureImportanceChart from '@/components/dataset/FeatureImportanceChart'
 import FeatureSelector from '@/components/dataset/FeatureSelector';
 import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
 import { TabsContent } from '@/components/ui/tabs';
+import { useDataset } from '@/contexts/DatasetContext';
 
 interface TabContentProps {
   activeTab: string;
@@ -32,6 +33,9 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   goToNextTab,
   formatTaskType,
 }) => {
+  // Get the featureImportance data from the DatasetContext
+  const { featureImportance } = useDataset();
+  
   return (
     <>
       <TabsContent value="upload" className="pt-4">
@@ -70,7 +74,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="features" className="pt-4">
-        <FeatureImportanceChart />
+        {/* Pass the featureImportance prop to the FeatureImportanceChart component */}
+        {featureImportance && <FeatureImportanceChart featureImportance={featureImportance} />}
         <FeatureSelector />
         {processingStage === 'final' && (
           <div className="flex justify-end mt-6">
