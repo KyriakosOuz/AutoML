@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   const { 
     featureImportance, 
     overview, 
+    previewData,
     previewColumns, 
     setTargetColumn, 
     setTaskType, 
@@ -99,7 +101,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
 
-      const importanceData = response?.data?.feature_importance || [];
+      const importanceData = response?.feature_importance || [];
 
       if (!importanceData.length) {
         throw new Error('No feature importance data returned from API');
@@ -230,73 +232,51 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       <TabsContent value="features" className="pt-4">
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Data Target & Task Type</CardTitle>
+            <CardTitle className="flex justify-between items-center">
+              <span>Data Target Selection</span>
+              <Button 
+                onClick={analyzeFeatures}
+                disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+              >
+                <BarChart className="mr-2 h-4 w-4" />
+                {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Target Column
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[200px] text-xs">
-                          The target column is what your model will predict based on the other features
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <Select 
-                  value={targetColumn || ""} 
-                  onValueChange={handleTargetColumnChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target column" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {previewColumns?.map(column => (
-                      <SelectItem key={column} value={column}>
-                        {column}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Task Type
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[250px] text-xs">
-                          {getTaskTypeTooltip(taskType)}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm flex items-center">
-                  {isAnalyzingFeatures ? (
-                    "Detecting task type..."
-                  ) : featureError ? (
-                    <span className="text-destructive">{featureError}</span>
-                  ) : taskType ? (
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {formatTaskType(taskType)}
-                    </Badge>
-                  ) : (
-                    "Not determined yet"
-                  )}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Target Column
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 inline ml-1 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="w-[200px] text-xs">
+                        The target column is what your model will predict based on the other features
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </label>
+              <Select 
+                value={targetColumn || ""} 
+                onValueChange={handleTargetColumnChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {previewColumns?.map(column => (
+                    <SelectItem key={column} value={column}>
+                      {column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -309,25 +289,34 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           onClearAll={handleClearAll}
         />
         
-        <div className="flex justify-center mt-6 mb-6">
-          {featureError && (
-            <Alert variant="destructive" className="mb-4 w-full">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{featureError}</AlertDescription>
-            </Alert>
-          )}
-          
-          <Button 
-            onClick={analyzeFeatures}
-            disabled={isAnalyzingFeatures || !targetColumn || selectedFeatures.length === 0}
-            size="lg"
-            className="bg-primary hover:bg-primary/90"
-          >
-            <BarChart className="mr-2 h-5 w-5" />
-            {isAnalyzingFeatures ? "Analyzing..." : "Analyze Feature Importance"}
-          </Button>
-        </div>
+        {featureError && (
+          <Alert variant="destructive" className="mb-4 w-full mt-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{featureError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {taskType && (
+          <div className="mt-4 mb-4 flex items-center">
+            <span className="text-sm font-medium mr-2">Detected Task Type:</span>
+            <Badge variant="outline" className="bg-primary/10 text-primary">
+              {formatTaskType(taskType)}
+            </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 ml-1 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="w-[250px] text-xs">
+                    {getTaskTypeTooltip(taskType)}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
         
         {featureImportance && featureImportance.length > 0 ? (
           <>
@@ -341,7 +330,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
               
               <Button 
                 onClick={goToNextTab}
-                disabled={!featuresAreSaved}
                 variant="outline"
                 size="lg"
                 className="border-black text-black hover:bg-black hover:text-white"
@@ -364,9 +352,12 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="preprocess" className="pt-4">
+        {/* Always show PreprocessingOptions, regardless of state */}
         <PreprocessingOptions />
         <DataPreview />
-        {datasetId && targetColumn && taskType && (
+        
+        {/* Show the button as long as we have datasetId */}
+        {datasetId && (
           <div className="flex justify-end mt-8">
             <Link to="/training">
               <Button size="lg" className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white">

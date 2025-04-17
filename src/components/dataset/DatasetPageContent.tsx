@@ -71,7 +71,7 @@ const DatasetPageContent: React.FC = () => {
         message = "Please upload a dataset first";
       } else if (value === "features" && !isTabEnabled("features")) {
         message = "Please process missing values first";
-      } else if (value === "preprocess" && processingStage !== 'final') {
+      } else if (value === "preprocess" && !isTabEnabled("preprocess")) {
         message = "Please complete feature selection first";
       }
       
@@ -84,11 +84,14 @@ const DatasetPageContent: React.FC = () => {
   };
 
   const goToNextTab = () => {
+    // Changed this function to not force disabling previous tabs
     if (activeTab === "upload" && datasetId) {
       setActiveTab("explore");
     } else if (activeTab === "explore" && isTabEnabled("features")) {
       setActiveTab("features");
-    } else if (activeTab === "features" && processingStage === 'final') {
+    } else if (activeTab === "features") {
+      // Removed the processingStage condition to allow moving to preprocess
+      // even if feature selection is not fully complete
       setActiveTab("preprocess");
     }
   };
@@ -130,7 +133,6 @@ const DatasetPageContent: React.FC = () => {
               processingStage={processingStage}
               columnsToKeep={columnsToKeep}
               goToNextTab={goToNextTab}
-              formatTaskType={formatTaskType}
             />
           </Tabs>
         </div>
