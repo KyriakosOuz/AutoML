@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UploadCloud, X, AlertCircle, ExternalLink } from 'lucide-react';
+import { UploadCloud, X, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const FileUpload: React.FC = () => {
@@ -157,12 +156,6 @@ const FileUpload: React.FC = () => {
     }
   };
 
-  // Function to open file upload in a new tab - this is a workaround for iframe limitations
-  const openInNewTab = () => {
-    const currentUrl = window.location.href;
-    window.open(currentUrl, '_blank');
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -225,18 +218,6 @@ const FileUpload: React.FC = () => {
               </p>
             </div>
           )}
-        </div>
-        
-        <div className="flex justify-end mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openInNewTab}
-            className="flex items-center gap-1"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open in New Tab
-          </Button>
         </div>
         
         {uploadProgress > 0 && (
