@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
 
-      const importanceData = response?.data?.feature_importance || [];
+      const importanceData = response?.feature_importance || [];
 
       if (!importanceData.length) {
         throw new Error('No feature importance data returned from API');
@@ -175,21 +176,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
-
-  const getTaskTypeTooltip = (type: string | null) => {
-    if (!type) return "Select a target column to determine the task type";
-    
-    switch(type) {
-      case 'binary_classification':
-        return "Binary Classification: Predicting one of two possible outcomes (e.g. yes/no, true/false)";
-      case 'multiclass_classification':
-        return "Multiclass Classification: Predicting one of three or more possible outcomes";
-      case 'regression':
-        return "Regression: Predicting a continuous numerical value";
-      default:
-        return `${formatTaskType(type)}: Predicting values based on input features`;
-    }
-  };
   
   return (
     <>
@@ -230,73 +216,40 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       <TabsContent value="features" className="pt-4">
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Data Target & Task Type</CardTitle>
+            <CardTitle>Data Target</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Target Column
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[200px] text-xs">
-                          The target column is what your model will predict based on the other features
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <Select 
-                  value={targetColumn || ""} 
-                  onValueChange={handleTargetColumnChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target column" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {previewColumns?.map(column => (
-                      <SelectItem key={column} value={column}>
-                        {column}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Task Type
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[250px] text-xs">
-                          {getTaskTypeTooltip(taskType)}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm flex items-center">
-                  {isAnalyzingFeatures ? (
-                    "Detecting task type..."
-                  ) : featureError ? (
-                    <span className="text-destructive">{featureError}</span>
-                  ) : taskType ? (
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {formatTaskType(taskType)}
-                    </Badge>
-                  ) : (
-                    "Not determined yet"
-                  )}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Target Column
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 inline ml-1 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="w-[200px] text-xs">
+                        The target column is what your model will predict based on the other features
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </label>
+              <Select 
+                value={targetColumn || ""} 
+                onValueChange={handleTargetColumnChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {previewColumns?.map(column => (
+                    <SelectItem key={column} value={column}>
+                      {column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
