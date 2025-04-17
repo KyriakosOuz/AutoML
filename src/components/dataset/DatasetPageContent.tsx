@@ -1,36 +1,15 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, PlayCircle, Info } from 'lucide-react';
-import FileUpload from '@/components/dataset/FileUpload';
-import DataPreview from '@/components/dataset/DataPreview';
-import MissingValueHandler from '@/components/dataset/MissingValueHandler';
-import FeatureImportanceChart from '@/components/dataset/feature-importance/FeatureImportanceChart';
-import FeatureSelector from '@/components/dataset/feature-importance/FeatureSelector';
-import FeatureAnalyzer from '@/components/dataset/feature-importance/FeatureAnalyzer';
-import SaveDatasetButton from '@/components/dataset/feature-importance/SaveDatasetButton';
-import PreprocessingOptions from '@/components/dataset/PreprocessingOptions';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { useState, useEffect } from 'react';
-import { datasetApi } from '@/lib/api';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs } from '@/components/ui/tabs';
 import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
+import { datasetApi } from '@/lib/api';
 
-interface DatasetPageContentProps {
-  formatTaskType: (type: string | null) => string;
-}
-
-const DatasetPageContent: React.FC<DatasetPageContentProps> = ({ formatTaskType }) => {
+const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
   const { 
     datasetId, 
@@ -112,6 +91,19 @@ const DatasetPageContent: React.FC<DatasetPageContentProps> = ({ formatTaskType 
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
+  };
+
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return '';
+    
+    if (type === 'binary_classification') return 'Binary Classification';
+    if (type === 'multiclass_classification') return 'Multiclass Classification';
+    if (type === 'regression') return 'Regression';
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
