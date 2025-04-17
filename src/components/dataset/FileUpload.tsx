@@ -1,186 +1,270 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UploadCloud, X, AlertCircle, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Upload, File, X } from 'lucide-react';
 
-interface FileUploadProps {
-  onUploadSuccess?: () => void;
-}
-
-const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
-  const { 
-    setDatasetId, 
-    setFileUrl, 
-    setOverview,
-    setPreviewData,
-    setPreviewColumns,
-    setIsLoading,
-    setError,
-    setProcessingStage
-  } = useDataset();
-  
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const { toast } = useToast();
+const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [customMissingSymbol, setCustomMissingSymbol] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const { toast } = useToast();
+  
+  const { 
+    updateState, 
+    setIsLoading, 
+    setError,
+    resetState,
+    isLoading, 
+    error,
+  } = useDataset();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // Check for CSV files
-      if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
-        setUploadError('Only CSV files are supported.');
-        setFile(null);
-        return;
-      }
-      
-      setFile(selectedFile);
-      setUploadError(null);
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      handleFileSelect(file);
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) {
-      setUploadError('Please select a file to upload.');
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      handleFileSelect(file);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      setSelectedFile(null);
+      return;
+    }
+    
+    setSelectedFile(file);
+    setError(null);
+    toast({
+      title: "File selected",
+      description: `Selected file: ${file.name}`,
+    });
+  };
+
+  const handleUploadClick = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first');
       return;
     }
 
     try {
-      setUploading(true);
-      setUploadError(null);
       setIsLoading(true);
+      setUploadProgress(10);
       
-      // Upload the file
-      const response = await datasetApi.uploadDataset(file);
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 300);
+      
+      console.log('Uploading file:', selectedFile.name);
+      
+      const response = await datasetApi.uploadDataset(
+        selectedFile, 
+        customMissingSymbol || undefined
+      );
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
       console.log('Upload response:', response);
       
-      // Extract data from response
-      if (response && response.data) {
-        // Update context with response data
-        setDatasetId(response.data.dataset_id);
-        setFileUrl(response.data.file_url);
-        setOverview(response.data.overview);
-        setProcessingStage('raw');
-        
-        // Get preview data
-        const previewResponse = await datasetApi.previewDataset(response.data.dataset_id);
-        
-        if (previewResponse && previewResponse.data) {
-          setPreviewData(previewResponse.data.preview);
-          setPreviewColumns(previewResponse.data.columns);
-        }
-        
-        setUploadSuccess(true);
-        toast({
-          title: "Upload Successful",
-          description: "Your dataset has been uploaded successfully.",
-          duration: 3000,
-        });
-        
-        // Call onUploadSuccess callback if provided
-        if (onUploadSuccess) {
-          onUploadSuccess();
-        }
-      } else {
-        throw new Error('Invalid response from server');
+      const data = response.data || response;
+
+      const overview = data.overview || {};
+      const numericalFeatures = overview.numerical_features || [];
+      const categoricalFeatures = overview.categorical_features || [];
+      
+      updateState({
+        datasetId: data.dataset_id,
+        fileUrl: data.file_url,
+        overview: overview,
+        previewColumns: [...numericalFeatures, ...categoricalFeatures],
+        processingStage: 'raw',
+      });
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
+      
+      toast({
+        title: "Upload successful",
+        description: "Your dataset has been uploaded successfully",
+      });
+      
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 1000);
+      
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload file');
+      setError(error instanceof Error ? error.message : 'Failed to upload dataset');
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : 'Failed to upload file',
         variant: "destructive",
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : 'Failed to upload dataset',
       });
     } finally {
-      setUploading(false);
       setIsLoading(false);
     }
   };
 
-  const resetFileInput = () => {
-    setFile(null);
-    setUploadSuccess(false);
-    setUploadError(null);
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
+  const handleStartOver = () => {
+    resetState();
+    toast({
+      title: "Dataset Reset",
+      description: "All dataset processing has been reset. You can now start over.",
+      duration: 3000,
+    });
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl text-primary">Upload Dataset</CardTitle>
+        <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
         <CardDescription>
-          Upload your CSV file to start the data analysis process
+          Upload a CSV file to start analyzing and processing your dataset
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {uploadError && (
+        {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{uploadError}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         
-        <div className="space-y-4">
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="dataset-file">Dataset File (CSV)</Label>
-            <div className="flex gap-2">
-              <Input
-                ref={fileInputRef}
-                id="dataset-file"
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="flex-1"
-                disabled={uploading}
-              />
-              {file && (
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={resetFileInput}
-                  disabled={uploading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+        <div
+          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer mb-4 transition-colors
+            ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}
+            ${isLoading ? 'opacity-50 pointer-events-none' : ''}
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            type="file"
+            className="hidden"
+            accept=".csv"
+            ref={fileInputRef}
+            onChange={handleFileInputChange}
+            disabled={isLoading}
+          />
           
-          {file && (
-            <div className="flex items-center space-x-2 text-sm">
-              <File className="h-4 w-4 text-primary" />
-              <span>{file.name}</span>
-              <span className="text-gray-500">({(file.size / 1024).toFixed(2)} KB)</span>
+          <UploadCloud className="h-12 w-12 mx-auto mb-2 text-primary/60" />
+          
+          {selectedFile ? (
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-medium">{selectedFile.name}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearSelectedFile();
+                }}
+                className="rounded-full bg-gray-200 p-1 hover:bg-gray-300"
+                disabled={isLoading}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">
+                Drag and drop your CSV file here
+              </p>
+              <p className="text-xs text-gray-500">
+                or click to browse your files
+              </p>
             </div>
           )}
         </div>
+        
+        {uploadProgress > 0 && (
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div 
+              className="bg-primary h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        )}
+        
+        <div className="mb-4">
+          <Label htmlFor="missing-symbol" className="text-sm font-medium">
+            Custom Missing Value Symbol (Optional)
+          </Label>
+          <Input
+            id="missing-symbol"
+            type="text"
+            placeholder="e.g., NA, ?, -"
+            value={customMissingSymbol}
+            onChange={(e) => setCustomMissingSymbol(e.target.value)}
+            className="mt-1"
+            disabled={isLoading}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            If your dataset uses specific symbols to represent missing values, enter them here
+          </p>
+        </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
         <Button 
-          onClick={handleUpload} 
-          disabled={!file || uploading}
-          className="w-full"
+          onClick={handleStartOver} 
+          variant="outline"
+          className="w-full sm:w-auto flex items-center gap-2"
         >
-          {uploading ? (
-            <>Uploading...</>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Dataset
-            </>
-          )}
+          <RotateCcw className="h-4 w-4" />
+          Start Over
+        </Button>
+        <Button 
+          onClick={handleUploadClick} 
+          disabled={!selectedFile || isLoading}
+          className="w-full sm:w-auto"
+        >
+          {isLoading ? 'Uploading...' : 'Upload Dataset'}
         </Button>
       </CardFooter>
     </Card>

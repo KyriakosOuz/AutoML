@@ -2,231 +2,298 @@
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle,
+  CardFooter 
+} from '@/components/ui/card';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import { Wand2, AlertCircle, Info, CheckCircle2, BadgeAlert } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { AlertCircle, Milestone } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
-type ImputationStrategy = 'mean' | 'median' | 'mode' | 'drop' | 'hot_deck' | 'skip';
+type ImputationStrategy = 'mean' | 'median' | 'mode' | 'hot_deck' | 'drop' | 'skip';
 
-interface MissingValueHandlerProps {
-  onComplete?: () => void;
-}
-
-const MissingValueHandler: React.FC<MissingValueHandlerProps> = ({ onComplete }) => {
+const MissingValueHandler: React.FC = () => {
+  const [strategy, setStrategy] = useState<ImputationStrategy>('mode');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  
   const { 
     datasetId, 
     overview, 
-    updateState
+    updateState,
+    processingStage,
+    setProcessingStage,
+    previewData,
+    setPreviewData,
+    previewColumns,
+    setPreviewColumns
   } = useDataset();
+
+  // Detect if there are missing values
+  const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
   
-  const [missingStrategy, setMissingStrategy] = useState<ImputationStrategy>('mean');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const { toast } = useToast();
-  
-  const hasMissingValues = overview && overview.total_missing_values && overview.total_missing_values > 0;
-  
-  useEffect(() => {
-    // Reset success message when the selected strategy changes
-    setSuccess(null);
-  }, [missingStrategy]);
-  
-  const getMissingValueStats = () => {
-    if (!overview || !overview.missing_values_count) {
-      return [];
-    }
+  // Show which columns have missing values
+  const missingValueColumns = overview?.missing_values_count ? 
+    Object.entries(overview.missing_values_count)
+      .filter(([_, count]) => count > 0)
+      .map(([column, count]) => ({ column, count, percentage: (count / (overview.num_rows || 1)) * 100 }))
+      .sort((a, b) => b.count - a.count) : 
+    [];
+
+  const totalRows = overview?.num_rows || 0;
+  const totalMissingCells = overview?.total_missing_values || 0;
+  const totalCells = totalRows * (overview?.num_columns || 0);
+  const overallMissingPercentage = totalCells > 0 ? (totalMissingCells / totalCells) * 100 : 0;
+
+  // Function to refresh data preview after handling missing values
+  const refreshDataPreview = async () => {
+    if (!datasetId) return;
     
-    // Create an array of [column, count] pairs and sort by count in descending order
-    return Object.entries(overview.missing_values_count)
-      .filter(([_, count]) => count > 0) // Only include columns with missing values
-      .sort((a, b) => b[1] - a[1]); // Sort by count (descending)
+    try {
+      console.log('Refreshing data preview for cleaned data');
+      const response = await datasetApi.previewDataset(datasetId, 'cleaned');
+      console.log('Preview refresh response:', response);
+      
+      if (response && response.data) {
+        setPreviewData(response.data.preview || []);
+        setPreviewColumns(response.data.columns || []);
+      } else {
+        setPreviewData(response.preview || []);
+        setPreviewColumns(response.columns || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing data preview:', error);
+    }
   };
-  
-  const getMissingPercentage = (count: number) => {
-    if (!overview || !overview.num_rows || overview.num_rows === 0) return 0;
-    return (count / overview.num_rows) * 100;
-  };
-  
-  const handleProcessMissingValues = async () => {
+
+  const handleProcessMissingValues = async (e: React.FormEvent) => {
+    // Prevent default to avoid any navigation
+    e.preventDefault();
+    
     if (!datasetId) {
       setError('No dataset selected');
       return;
     }
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      setSuccess(null);
+      
+      console.log('Processing missing values with strategy:', strategy);
       
       const response = await datasetApi.handleMissingValues(
-        datasetId,
-        missingStrategy
+        datasetId, 
+        strategy
       );
       
-      // Update context with response data
-      updateState({
-        datasetId: response.dataset_id,
-        processingStage: 'cleaned',
-        overview: response.overview,
-        fileUrl: response.file_url
-      });
+      console.log('Missing values processing response:', response);
       
-      setSuccess('Missing values handled successfully.');
+      // Create a consolidated update with the correct property structure
+      // This matches the DatasetContextState interface properties
+      const newState: Partial<{
+        overview: any;
+        processingStage: string;
+        datasetId?: string;
+        fileUrl?: string;
+      }> = {
+        overview: response.overview,
+        processingStage: 'cleaned'
+      };
+      
+      // Only update these if they exist in the response
+      if (response.dataset_id) {
+        newState.datasetId = response.dataset_id;
+      }
+      
+      if (response.file_url) {
+        newState.fileUrl = response.file_url;
+      }
+      
+      // Update context with consolidated state changes
+      updateState(newState);
+      
+      // Refresh the data preview with cleaned data
+      await refreshDataPreview();
       
       toast({
-        title: "Process Complete",
-        description: missingStrategy === 'skip' 
-          ? "No processing applied (skip strategy)" 
-          : `Missing values handled using ${missingStrategy} strategy`,
+        title: "Missing values processed",
+        description: `Successfully handled missing values using ${strategy} strategy.`,
         duration: 3000,
       });
-
-      // Call onComplete callback if provided
-      if (onComplete) {
-        onComplete();
-      }
       
     } catch (error) {
       console.error('Error handling missing values:', error);
       setError(error instanceof Error ? error.message : 'Failed to process missing values');
-      toast({
-        title: "Processing Failed",
-        description: error instanceof Error ? error.message : 'Failed to process missing values',
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const getStrategyDescription = (strategy: ImputationStrategy): string => {
-    switch(strategy) {
-      case 'mean':
-        return 'Replace missing values with the mean of each column (numerical only)';
-      case 'median':
-        return 'Replace missing values with the median of each column (numerical only)';
-      case 'mode':
-        return 'Replace missing values with the most common value in each column';
-      case 'drop':
-        return 'Remove rows containing any missing values';
-      case 'hot_deck':
-        return 'Replace missing values with values from similar rows';
-      case 'skip':
-        return 'Skip processing missing values for now';
-      default:
-        return 'Select a strategy to handle missing values';
-    }
-  };
-  
+
   if (!datasetId || !overview) {
     return null;
   }
-  
-  const missingValueStats = getMissingValueStats();
-  const totalMissingCount = overview.total_missing_values || 0;
-  
-  // If there are no missing values, show a simpler card
-  if (!hasMissingValues) {
-    return (
-      <Card className="w-full mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center text-green-600 gap-2">
-            <Milestone className="h-5 w-5" />
-            Missing Values Check
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert className="bg-green-50 text-green-800 border-green-200">
-            <AlertDescription className="text-green-800">
-              No missing values detected in your dataset. You may proceed to the next step.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-  
+
   return (
-    <Card className="w-full mt-6">
-      <CardHeader>
-        <CardTitle className="text-xl text-primary">Handle Missing Values</CardTitle>
+    <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
+      <CardHeader className="bg-gradient-to-r from-gray-50 to-white">
+        <CardTitle className="flex items-center gap-2 text-xl text-primary">
+          <BadgeAlert className="h-5 w-5" />
+          Missing Values Analysis
+        </CardTitle>
         <CardDescription>
-          {totalMissingCount > 0 
-            ? `Your dataset has ${totalMissingCount} missing values (${(totalMissingCount / (overview.num_rows * overview.num_columns) * 100).toFixed(2)}% of all cells)`
-            : 'Your dataset has no missing values'}
+          {hasMissingValues 
+            ? `Your dataset has ${overview?.total_missing_values} missing values that need to be handled` 
+            : processingStage === 'cleaned' 
+              ? 'Missing values have been successfully handled'
+              : `Your dataset doesn't have missing values`}
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="space-y-6">
+      <CardContent className="pt-4">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
-        {success && (
-          <Alert className="bg-green-50 text-green-800 border-green-200">
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
-          </Alert>
-        )}
-        
-        {missingValueStats.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Columns with Missing Values</h3>
-            <div className="space-y-2">
-              {missingValueStats.map(([column, count]) => (
-                <div key={column} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">{column}</span>
-                    <span className="text-gray-500">
-                      {count} missing ({getMissingPercentage(count).toFixed(1)}%)
-                    </span>
-                  </div>
-                  <Progress value={getMissingPercentage(count)} />
+
+        {hasMissingValues ? (
+          <div className="space-y-4">
+            <Alert variant={overallMissingPercentage > 20 ? "destructive" : "warning"} className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Missing Data Summary</AlertTitle>
+              <AlertDescription className="flex flex-col gap-2">
+                <p>
+                  Your dataset has <strong>{totalMissingCells}</strong> missing values out of <strong>{totalCells}</strong> cells ({overallMissingPercentage.toFixed(2)}% of data is missing).
+                </p>
+                <div className="w-full mt-1">
+                  <Progress value={overallMissingPercentage} className="h-2" />
+                  <p className="text-xs text-right mt-1">{overallMissingPercentage.toFixed(2)}% missing</p>
                 </div>
-              ))}
+              </AlertDescription>
+            </Alert>
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Column</TableHead>
+                    <TableHead>Missing Values</TableHead>
+                    <TableHead>Percentage</TableHead>
+                    <TableHead>Severity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {missingValueColumns.map(({ column, count, percentage }) => (
+                    <TableRow key={column}>
+                      <TableCell className="font-medium">{column}</TableCell>
+                      <TableCell>{count}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Progress value={percentage} className="h-2 w-24" />
+                          <span>{percentage.toFixed(1)}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {percentage > 50 ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            High
+                          </span>
+                        ) : percentage > 20 ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            Medium
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Low
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 mt-4">
+              <h4 className="text-sm font-medium mb-3">Select a strategy to handle missing values:</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Select
+                    value={strategy}
+                    onValueChange={(value) => setStrategy(value as ImputationStrategy)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger id="strategy">
+                      <SelectValue placeholder="Select strategy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mean">Mean (for numerical values)</SelectItem>
+                      <SelectItem value="median">Median (for numerical values)</SelectItem>
+                      <SelectItem value="mode">Mode (most frequent value)</SelectItem>
+                      <SelectItem value="hot_deck">Hot Deck (random sampling)</SelectItem>
+                      <SelectItem value="drop">Drop rows with missing values</SelectItem>
+                      <SelectItem value="skip">Skip (keep missing values)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="bg-white p-3 rounded-md border border-gray-200">
+                  <h5 className="text-xs font-medium text-gray-700 mb-1">Strategy Description</h5>
+                  <p className="text-xs text-gray-600">
+                    {strategy === 'mean' && 'Replace missing values with the mean (average) of each column. Only works with numerical data.'}
+                    {strategy === 'median' && 'Replace missing values with the median (middle value) of each column. Only works with numerical data.'}
+                    {strategy === 'mode' && 'Replace missing values with the most frequent value in each column. Works with both numerical and categorical data.'}
+                    {strategy === 'hot_deck' && 'Replace missing values with randomly selected values from the same column. Maintains the natural distribution of data.'}
+                    {strategy === 'drop' && 'Remove all rows that contain any missing values. This may significantly reduce your dataset size.'}
+                    {strategy === 'skip' && 'Keep missing values as they are. Some machine learning algorithms cannot handle missing values.'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
+        ) : (
+          <Alert variant="success" className="bg-green-50 border-green-200 text-green-800">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <AlertTitle>All Data Is Complete</AlertTitle>
+            <AlertDescription>
+              {processingStage === 'cleaned' 
+                ? 'Your dataset has been successfully processed. All missing values have been handled.'
+                : 'Your dataset has no missing values.'}
+            </AlertDescription>
+          </Alert>
         )}
-        
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium">Select Processing Strategy</h3>
-          <Select
-            value={missingStrategy}
-            onValueChange={(value) => setMissingStrategy(value as ImputationStrategy)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select strategy" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mean">Mean Imputation</SelectItem>
-              <SelectItem value="median">Median Imputation</SelectItem>
-              <SelectItem value="mode">Mode Imputation</SelectItem>
-              <SelectItem value="drop">Drop Rows</SelectItem>
-              <SelectItem value="hot_deck">Hot Deck Imputation</SelectItem>
-              <SelectItem value="skip">Skip (No Processing)</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-gray-500">
-            {getStrategyDescription(missingStrategy)}
-          </p>
-        </div>
       </CardContent>
-      
-      <CardFooter>
+      <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
         <Button 
           onClick={handleProcessMissingValues} 
-          disabled={isLoading}
-          className="w-full"
+          disabled={isLoading || !hasMissingValues}
+          variant="default"
+          size="lg"
+          type="button"
         >
+          <Wand2 className="h-4 w-4 mr-2" />
           {isLoading ? 'Processing...' : 'Process Missing Values'}
         </Button>
       </CardFooter>

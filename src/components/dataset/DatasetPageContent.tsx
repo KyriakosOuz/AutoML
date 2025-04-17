@@ -7,8 +7,9 @@ import { Tabs } from '@/components/ui/tabs';
 import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
+import { datasetApi } from '@/lib/api';
 
-const DatasetPageContent: React.FC<{formatTaskType: (type: string | null) => string}> = ({ formatTaskType }) => {
+const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
   const { 
     datasetId, 
@@ -52,7 +53,11 @@ const DatasetPageContent: React.FC<{formatTaskType: (type: string | null) => str
   const isTabEnabled = (tabName: string): boolean => {
     if (tabName === "upload") return true;
     if (tabName === "explore") return !!datasetId;
-    if (tabName === "features") return !!datasetId;
+    if (tabName === "features") {
+      const hasNoMissingValues = overview && 
+        (!overview.total_missing_values || overview.total_missing_values === 0);
+      return !!datasetId && (processingStage === 'cleaned' || hasNoMissingValues);
+    }
     if (tabName === "preprocess") return !!datasetId && !!targetColumn && !!taskType && processingStage === 'final';
     return false;
   };
@@ -86,6 +91,19 @@ const DatasetPageContent: React.FC<{formatTaskType: (type: string | null) => str
     } else if (activeTab === "features" && processingStage === 'final') {
       setActiveTab("preprocess");
     }
+  };
+
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return '';
+    
+    if (type === 'binary_classification') return 'Binary Classification';
+    if (type === 'multiclass_classification') return 'Multiclass Classification';
+    if (type === 'regression') return 'Regression';
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
