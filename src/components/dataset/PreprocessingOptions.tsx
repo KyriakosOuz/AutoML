@@ -76,14 +76,30 @@ const PreprocessingOptions: React.FC = () => {
         balanceStrategy
       );
       
-      updateState({
-        datasetId: response.dataset_id,
-        processedFileUrl: response.processed_file_url,
-        overview: response.overview,
-        processingStage: 'processed' // Set to processed to trigger the "Continue to Training" button
-      });
+      // Properly extract data from the response structure
+      // The API might return data in a nested structure
+      const responseData = response.data || response;
       
-      setSuccess(response.message || 'Data preprocessing completed successfully');
+      // Only update fields that exist in the response
+      const updates: any = { processingStage: 'processed' };
+      
+      if (responseData.dataset_id) {
+        updates.datasetId = responseData.dataset_id;
+      }
+      
+      if (responseData.processed_file_url) {
+        updates.processedFileUrl = responseData.processed_file_url;
+      }
+      
+      if (responseData.overview) {
+        updates.overview = responseData.overview;
+      }
+      
+      updateState(updates);
+      
+      // Extract message from the appropriate location in the response
+      const message = responseData.message || (response.message || 'Data preprocessing completed successfully');
+      setSuccess(message);
       
     } catch (error) {
       console.error('Error preprocessing dataset:', error);
