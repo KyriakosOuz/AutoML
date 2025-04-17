@@ -68,7 +68,7 @@ const FeatureImportanceChart: React.FC = () => {
   const { toast } = useToast();
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(columnsToKeep || []);
   const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
-  const [rawTaskTypeData, setRawTaskTypeData] = useState<string | null>(null);
+  // Removed rawTaskTypeData state since we're not displaying it anymore
   
   // Format task type for better display
   const formatTaskType = (type: string | null): string => {
@@ -94,13 +94,6 @@ const FeatureImportanceChart: React.FC = () => {
     console.log("Extracting task type from:", response);
     
     if (!response) return null;
-    
-    // Save the raw response for display purposes
-    if (typeof response === 'string') {
-      setRawTaskTypeData(response);
-    } else {
-      setRawTaskTypeData(JSON.stringify(response));
-    }
     
     // Handle string response
     if (typeof response === 'string') {
@@ -461,12 +454,7 @@ const FeatureImportanceChart: React.FC = () => {
                       {formatTaskType(taskType)}
                     </Badge>
                     
-                    {rawTaskTypeData && (
-                      <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200 overflow-auto max-h-24">
-                        <p className="font-medium mb-1">API Response:</p>
-                        <code className="text-xs break-all whitespace-pre-wrap">{rawTaskTypeData}</code>
-                      </div>
-                    )}
+                    {/* Removed API Response display */}
                   </div>
                 </div>
               </div>
