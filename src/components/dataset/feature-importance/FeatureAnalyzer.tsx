@@ -1,13 +1,12 @@
-
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertCircle, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, AlertCircle } from 'lucide-react';
 
 interface FeatureAnalyzerProps {
   selectedFeatures: string[];
@@ -46,7 +45,6 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       console.log('Target column:', targetColumn);
       console.log('Selected features:', selectedFeatures);
       
-      // Call the API with the selected features and target column
       const response = await datasetApi.featureImportancePreview(
         datasetId, 
         targetColumn
@@ -54,37 +52,30 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
       
       console.log('Feature importance response:', response);
       
-      // Check if we have a valid response first
       if (!response || !response.data) {
         throw new Error('Invalid response from API');
       }
       
-      // Extract feature importance data from response - properly navigate to data.feature_importance
       const importanceData = response.data.feature_importance || [];
       
       if (!importanceData || importanceData.length === 0) {
         throw new Error('No feature importance data returned from API');
       }
       
-      // Filter feature importance data to show only selected features
       const filteredImportance = importanceData.filter(
         (item: any) => selectedFeatures.includes(item.feature)
       );
       
-      // If we still have no data after filtering
       if (filteredImportance.length === 0) {
         throw new Error('No feature importance data available for selected features');
       }
       
-      // Sort by importance in descending order
       const sortedImportance = [...filteredImportance].sort(
         (a: any, b: any) => b.importance - a.importance
       );
       
       console.log('Processed importance data:', sortedImportance);
       
-      // Determine task type if it's not already set
-      // The API may return either task_type directly or as part of a nested object
       let detectedTaskType = taskType;
       
       if (response.data.task_type) {
@@ -94,11 +85,10 @@ const FeatureAnalyzer: React.FC<FeatureAnalyzerProps> = ({ selectedFeatures }) =
         detectedTaskType = response.data.trim();
       }
       
-      // Update context with the sorted and filtered data
       updateState({
         featureImportance: sortedImportance,
         taskType: detectedTaskType || taskType,
-        columnsToKeep: selectedFeatures // Save the selected features
+        columnsToKeep: selectedFeatures
       });
       
       toast({
