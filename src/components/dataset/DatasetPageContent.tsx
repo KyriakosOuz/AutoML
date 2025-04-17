@@ -93,6 +93,19 @@ const DatasetPageContent: React.FC = () => {
     }
   };
 
+  const formatTaskType = (type: string | null): string => {
+    if (!type) return '';
+    
+    if (type === 'binary_classification') return 'Binary Classification';
+    if (type === 'multiclass_classification') return 'Multiclass Classification';
+    if (type === 'regression') return 'Regression';
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container max-w-5xl mx-auto px-4">
@@ -117,6 +130,7 @@ const DatasetPageContent: React.FC = () => {
               processingStage={processingStage}
               columnsToKeep={columnsToKeep}
               goToNextTab={goToNextTab}
+              formatTaskType={formatTaskType}
             />
           </Tabs>
         </div>
