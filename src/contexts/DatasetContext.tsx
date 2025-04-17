@@ -130,6 +130,8 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
+    // Only update to final stage if we have the required data and are currently in cleaned stage
+    // This prevents overriding the stage when it's already set to 'final' or another value
     if (datasetId && targetColumn && columnsToKeep && processingStage === 'cleaned') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));

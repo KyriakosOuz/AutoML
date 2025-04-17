@@ -134,19 +134,28 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
         ? prev.filter(f => f !== column)
         : [...prev, column]
     );
-    setFeaturesAreSaved(false);
+    
+    if (columnsToKeep && column) {
+      setFeaturesAreSaved(false);
+    }
   };
 
   const handleSelectAll = () => {
     if (previewColumns && targetColumn) {
       setSelectedFeatures(previewColumns.filter(col => col !== targetColumn));
     }
-    setFeaturesAreSaved(false);
+    
+    if (columnsToKeep) {
+      setFeaturesAreSaved(false);
+    }
   };
 
   const handleClearAll = () => {
     setSelectedFeatures([]);
-    setFeaturesAreSaved(false);
+    
+    if (columnsToKeep && columnsToKeep.length > 0) {
+      setFeaturesAreSaved(false);
+    }
   };
   
   const getAvailableFeatures = () => {
@@ -161,11 +170,31 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     if (previewColumns) {
       setSelectedFeatures(prev => prev.filter(col => col !== value));
     }
+    
     setFeaturesAreSaved(false);
   };
 
   const handleSaveComplete = () => {
-    setFeaturesAreSaved(true);
+    if (datasetId) {
+      datasetApi.previewDataset(datasetId, 'final')
+        .then(response => {
+          if (response) {
+            updateState({
+              columnsToKeep: selectedFeatures,
+              processingStage: 'final'
+            });
+            setFeaturesAreSaved(true);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching updated dataset:', error);
+          toast({
+            title: "Error",
+            description: "Failed to update dataset preview",
+            variant: "destructive",
+          });
+        });
+    }
   };
 
   const formatTaskType = (type: string | null): string => {

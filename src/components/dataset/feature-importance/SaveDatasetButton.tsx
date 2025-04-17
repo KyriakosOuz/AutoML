@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, ArrowRight } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 interface SaveDatasetButtonProps {
   selectedFeatures: string[];
@@ -17,8 +16,7 @@ const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({
 }) => {
   const { 
     datasetId, 
-    targetColumn, 
-    updateState
+    targetColumn
   } = useDataset();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -47,24 +45,18 @@ const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({
         selectedFeatures
       );
       
-      // Update context with response data
-      updateState({
-        datasetId: response.dataset_id,
-        fileUrl: response.file_url,
-        columnsToKeep: response.columns_to_keep,
-        targetColumn: response.target_column,
-        overview: response.overview,
-        processingStage: 'final' // This indicates features are saved but shouldn't affect tab access
-      });
-      
-      toast({
-        title: "Features saved",
-        description: "Selected features have been saved successfully.",
-        duration: 3000,
-      });
-      
-      // Call the callback function after successful save
-      onSaveComplete();
+      // Only update what is returned by the API, keep the existing state for other properties
+      if (response) {
+        // Notify success
+        toast({
+          title: "Features saved",
+          description: "Selected features have been saved successfully.",
+          duration: 3000,
+        });
+        
+        // Call the callback function after successful save
+        onSaveComplete();
+      }
       
     } catch (error) {
       console.error('Error saving dataset:', error);
