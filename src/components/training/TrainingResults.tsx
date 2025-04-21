@@ -21,25 +21,34 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
     return null;
   }
   
-  const { metrics, taskType, trainingTimeSec, completedAt } = result;
+  // Add safeguards against undefined values
+  const { metrics = {}, taskType = '', trainingTimeSec = 0, completedAt = '' } = result;
   const isClassification = taskType?.includes('classification');
   
   // Format a metric value for display
-  const formatMetric = (value: number) => {
+  const formatMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
     return (value * 100).toFixed(2) + '%';
   };
   
   // For regression metrics that shouldn't be formatted as percentages
-  const formatRegressionMetric = (value: number) => {
+  const formatRegressionMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
     return value.toFixed(4);
   };
   
-  const getMetricColor = (value: number) => {
+  const getMetricColor = (value: number | undefined) => {
+    if (value === undefined) return 'text-gray-400';
     if (value >= 0.9) return 'text-green-600';
     if (value >= 0.7) return 'text-emerald-600';
     if (value >= 0.5) return 'text-amber-600';
     return 'text-red-600';
   };
+  
+  // Format training time safely
+  const formattedTrainingTime = trainingTimeSec !== undefined 
+    ? trainingTimeSec.toFixed(1) 
+    : 'N/A';
   
   return (
     <Card className="w-full mt-6 rounded-2xl shadow-lg">
@@ -50,8 +59,8 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
         </CardTitle>
         <CardDescription>
           {type === 'automl' 
-            ? `AutoML training with ${(automlResult?.engine || '').toUpperCase()} completed in ${trainingTimeSec.toFixed(1)} seconds` 
-            : `Custom ${customResult?.selectedAlgorithm} model trained in ${trainingTimeSec.toFixed(1)} seconds`}
+            ? `AutoML training with ${(automlResult?.engine || '').toUpperCase()} completed in ${formattedTrainingTime} seconds` 
+            : `Custom ${customResult?.selectedAlgorithm || ''} model trained in ${formattedTrainingTime} seconds`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -76,7 +85,7 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                           {formatMetric(metrics.accuracy)}
                         </span>
                       </div>
-                      <Progress value={metrics.accuracy * 100} className="h-2" />
+                      <Progress value={metrics.accuracy !== undefined ? metrics.accuracy * 100 : 0} className="h-2" />
                     </div>
                   )}
                   
@@ -88,7 +97,7 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                           {formatMetric(metrics.f1_score)}
                         </span>
                       </div>
-                      <Progress value={metrics.f1_score * 100} className="h-2" />
+                      <Progress value={metrics.f1_score !== undefined ? metrics.f1_score * 100 : 0} className="h-2" />
                     </div>
                   )}
                   
@@ -100,7 +109,7 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                           {formatMetric(metrics.precision)}
                         </span>
                       </div>
-                      <Progress value={metrics.precision * 100} className="h-2" />
+                      <Progress value={metrics.precision !== undefined ? metrics.precision * 100 : 0} className="h-2" />
                     </div>
                   )}
                   
@@ -112,7 +121,7 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                           {formatMetric(metrics.recall)}
                         </span>
                       </div>
-                      <Progress value={metrics.recall * 100} className="h-2" />
+                      <Progress value={metrics.recall !== undefined ? metrics.recall * 100 : 0} className="h-2" />
                     </div>
                   )}
                 </>
@@ -127,7 +136,7 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                           {formatRegressionMetric(metrics.r2_score)}
                         </span>
                       </div>
-                      <Progress value={Math.max(0, metrics.r2_score * 100)} className="h-2" />
+                      <Progress value={metrics.r2_score !== undefined ? Math.max(0, metrics.r2_score * 100) : 0} className="h-2" />
                     </div>
                   )}
                   
@@ -173,12 +182,12 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                   <Clock className="h-4 w-4 mr-1" />
                   Training Time:
                 </span>
-                <span className="font-medium">{trainingTimeSec.toFixed(1)} seconds</span>
+                <span className="font-medium">{formattedTrainingTime} seconds</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>Completed At:</span>
                 <span className="font-medium">
-                  {new Date(completedAt).toLocaleString()}
+                  {completedAt ? new Date(completedAt).toLocaleString() : 'N/A'}
                 </span>
               </div>
             </div>
@@ -225,7 +234,9 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                             : formatRegressionMetric(model.metric_value)
                           }
                         </td>
-                        <td className="px-4 py-2 text-right">{model.training_time.toFixed(1)}s</td>
+                        <td className="px-4 py-2 text-right">
+                          {model.training_time !== undefined ? model.training_time.toFixed(1) : 'N/A'}s
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -245,10 +256,10 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
                   <h4 className="font-medium mb-2">Model Information</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>Algorithm:</div>
-                    <div className="font-medium">{customResult.selectedAlgorithm}</div>
+                    <div className="font-medium">{customResult.selectedAlgorithm || 'N/A'}</div>
                     
                     <div>Task Type:</div>
-                    <div className="font-medium">{customResult.taskType.replace('_', ' ')}</div>
+                    <div className="font-medium">{customResult.taskType ? customResult.taskType.replace('_', ' ') : 'N/A'}</div>
                     
                     <div>Model Format:</div>
                     <div className="font-medium">{customResult.modelFormat || 'pkl'}</div>
