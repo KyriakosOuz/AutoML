@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -12,11 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Beaker, HelpCircle, Play, Settings } from 'lucide-react';
+import { AlertCircle, Beaker, HelpCircle, Play } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const AutoMLTraining: React.FC = () => {
-  const { datasetId, targetColumn } = useDataset();
+  const { datasetId, targetColumn, taskType } = useDataset();
   const { 
     isTraining, 
     setIsTraining,
@@ -27,12 +26,13 @@ const AutoMLTraining: React.FC = () => {
     setError
   } = useTraining();
   const { toast } = useToast();
+  const [experimentName, setExperimentName] = useState('');
   
   const handleTrainModel = async () => {
-    if (!datasetId || !targetColumn) {
+    if (!datasetId || !targetColumn || !taskType) {
       toast({
-        title: "Missing data",
-        description: "Dataset ID or target column not found",
+        title: "Missing Required Fields",
+        description: "Dataset ID, target column, and task type are required",
         variant: "destructive"
       });
       return;
@@ -52,10 +52,14 @@ const AutoMLTraining: React.FC = () => {
       
       const response = await trainingApi.automlTrain(
         datasetId,
+        taskType,
         automlEngine,
         testSize,
         stratify,
-        randomSeed
+        randomSeed,
+        experimentName,
+        true, // enableVisualization
+        true  // storeModel
       );
       
       // Format the response to match our context state
@@ -79,15 +83,26 @@ const AutoMLTraining: React.FC = () => {
       });
     } catch (error) {
       console.error('AutoML training error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to train model');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to train model';
+      setError(errorMessage);
       toast({
         title: "Training Failed",
-        description: error instanceof Error ? error.message : 'Failed to train model',
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsTraining(false);
     }
+  };
+  
+  const isFormValid = () => {
+    return !!(
+      datasetId &&
+      taskType &&
+      automlParameters.automlEngine &&
+      automlParameters.testSize >= 0.1 &&
+      automlParameters.testSize <= 0.5
+    );
   };
   
   return (
@@ -103,10 +118,16 @@ const AutoMLTraining: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* AutoML Engine Selection */}
+          <Alert className="bg-secondary/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Fields marked with * are required
+            </AlertDescription>
+          </Alert>
+
           <div className="space-y-2">
             <Label htmlFor="automl-engine" className="flex items-center gap-2">
-              AutoML Engine
+              AutoML Engine *
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -136,23 +157,45 @@ const AutoMLTraining: React.FC = () => {
             </Select>
           </div>
           
-          {/* Test Size Slider */}
+          <div className="space-y-2">
+            <Label htmlFor="experiment-name" className="flex items-center gap-2">
+              Experiment Name
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Optional name to identify this training experiment</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <Input
+              id="experiment-name"
+              value={experimentName}
+              onChange={(e) => setExperimentName(e.target.value)}
+              placeholder="Enter experiment name (optional)"
+              disabled={isTraining}
+            />
+          </div>
+          
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                Test Set Split
+                Test Set Split *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Percentage of data used for testing model performance. 0.2 means 20% test, 80% train.</p>
+                      <p>Percentage of data used for testing model performance (20% recommended)</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <span className="text-sm font-medium">{automlParameters.testSize * 100}%</span>
+              <span className="text-sm font-medium">{(automlParameters.testSize * 100).toFixed(0)}%</span>
             </div>
             <Slider
               id="test-size"
@@ -166,23 +209,22 @@ const AutoMLTraining: React.FC = () => {
             />
           </div>
           
-          {/* Stratify Option */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="stratify" className="flex items-center gap-2">
-                Stratify Split
+                Stratify Split *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Maintain the same distribution of target classes in both training and test sets.</p>
+                      <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <p className="text-xs text-muted-foreground">Maintains class balance in train/test sets</p>
+              <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
             </div>
             <Switch
               id="stratify"
@@ -193,17 +235,16 @@ const AutoMLTraining: React.FC = () => {
             />
           </div>
           
-          {/* Random Seed */}
           <div className="space-y-2">
             <Label htmlFor="random-seed" className="flex items-center gap-2">
-              Random Seed
+              Random Seed *
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Set for reproducible results. Using the same seed will produce the same train/test split.</p>
+                    <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -221,10 +262,9 @@ const AutoMLTraining: React.FC = () => {
             <p className="text-xs text-muted-foreground">For reproducible results</p>
           </div>
           
-          {/* Training Button */}
           <Button
             onClick={handleTrainModel}
-            disabled={isTraining || !datasetId}
+            disabled={isTraining || !isFormValid()}
             className="w-full mt-4"
             size="lg"
           >
@@ -244,7 +284,6 @@ const AutoMLTraining: React.FC = () => {
             )}
           </Button>
           
-          {/* Note about training time */}
           <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
             <p className="flex items-center gap-2">
               <Settings className="h-4 w-4" />

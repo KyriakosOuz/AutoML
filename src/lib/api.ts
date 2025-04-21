@@ -210,18 +210,29 @@ export const trainingApi = {
   // AutoML training
   automlTrain: (
     datasetId: string,
+    taskType: string,
     automlEngine: 'mljar' | 'h2o',
     testSize: number,
     stratify: boolean,
-    randomSeed: number
+    randomSeed: number,
+    experimentName?: string,
+    enableVisualization: boolean = true,
+    storeModel: boolean = true
   ) => {
-    return apiRequest(`${TRAINING_API_PREFIX}/automl/`, 'POST', {
-      dataset_id: datasetId,
-      automl_engine: automlEngine,
-      test_size: testSize,
-      stratify,
-      random_seed: randomSeed
-    });
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('task_type', taskType);
+    formData.append('automl_engine', automlEngine);
+    formData.append('test_size', testSize.toString());
+    formData.append('stratify', stratify.toString());
+    formData.append('random_seed', randomSeed.toString());
+    if (experimentName) {
+      formData.append('experiment_name', experimentName);
+    }
+    formData.append('enable_visualization', enableVisualization.toString());
+    formData.append('store_model', storeModel.toString());
+
+    return apiRequest(`${TRAINING_API_PREFIX}/automl/`, 'POST', formData, true);
   },
   
   // Custom model training
@@ -247,7 +258,14 @@ export const trainingApi = {
   
   // Get available algorithms for current task type
   getAvailableAlgorithms: (taskType: string) => {
-    return apiRequest(`${TRAINING_API_PREFIX}/algorithms/?task_type=${taskType}`, 'GET');
+    if (!taskType) {
+      throw new Error('Task type is required');
+    }
+    return apiRequest(`${TRAINING_API_PREFIX}/algorithms/?task_type=${taskType}`, 'GET')
+      .then(response => {
+        // Ensure we return the algorithms array from the response
+        return response?.algorithms || [];
+      });
   },
   
   // Get default hyperparameters for an algorithm
