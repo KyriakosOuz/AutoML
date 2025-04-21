@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -267,8 +268,9 @@ const CustomTraining: React.FC = () => {
                   <TooltipContent>
                     <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                   </TooltipContent>
-                </TooltipProvider>
-              </Label>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
             <Input
               id="random-seed"
               type="number"

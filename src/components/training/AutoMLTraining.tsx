@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -202,7 +203,7 @@ const AutoMLTraining: React.FC = () => {
                       <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                     </TooltipContent>
                   </Tooltip>
-                </Tooltip>
+                </TooltipProvider>
               </Label>
               <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
             </div>
