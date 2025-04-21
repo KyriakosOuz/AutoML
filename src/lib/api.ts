@@ -1,9 +1,13 @@
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  ExperimentResults,  // Add this import
+  TaskType 
+} from '@/types/training';
 
 // Define the TaskType type since it can't be imported from '@/types/dataset'
-export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
+// export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 
 // Define the Dataset type
 export interface Dataset {
