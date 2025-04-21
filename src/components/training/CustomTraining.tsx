@@ -39,6 +39,14 @@ const CustomTraining: React.FC = () => {
   const [isLoadingResults, setIsLoadingResults] = useState(false);
 
   useEffect(() => {
+    return () => {
+      setExperimentId(null);
+      setExperimentResults(null);
+      setIsLoadingResults(false);
+    };
+  }, []);
+
+  useEffect(() => {
     if (taskType) {
       setIsLoadingAlgorithms(true);
       trainingApi.getAvailableAlgorithms(taskType)
@@ -73,7 +81,7 @@ const CustomTraining: React.FC = () => {
   useEffect(() => {
     let pollInterval: number | null = null;
     let attempts = 0;
-    const MAX_FETCH_ATTEMPTS = 12; 
+    const MAX_FETCH_ATTEMPTS = 12;
 
     const pollResults = async () => {
       if (!experimentId || experimentId.length < 20) {
@@ -84,11 +92,9 @@ const CustomTraining: React.FC = () => {
         return;
       }
 
-      console.log("🔁 Polling experiment:", experimentId);
+      console.log("🧠 Polling experiment ID:", experimentId);
 
       try {
-        if (!experimentId) return;
-
         const results = await trainingApi.getExperimentResults(experimentId);
         const status = results?.status;
 
@@ -131,13 +137,16 @@ const CustomTraining: React.FC = () => {
 
     if (experimentId && !experimentResults) {
       setIsLoadingResults(true);
-      pollInterval = window.setInterval(pollResults, 5000); // every 5 seconds
-      pollResults(); // initial call
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+      pollInterval = window.setInterval(pollResults, 5000);
+      pollResults(); // Initial call
     }
 
     return () => {
       if (pollInterval) {
-        window.clearInterval(pollInterval);
+        clearInterval(pollInterval);
       }
     };
   }, [experimentId, experimentResults, toast]);
@@ -176,21 +185,13 @@ const CustomTraining: React.FC = () => {
   }, [customParameters.algorithm]);
 
   const handleTrainModel = async () => {
-    if (!datasetId || !targetColumn || !taskType || !customParameters.algorithm) {
-      toast({
-        title: "Missing Required Fields",
-        description: "Dataset ID, target column, task type, and algorithm are required",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
+      setExperimentId(null);
+      setExperimentResults(null);
+      setIsLoadingResults(false);
       setIsTraining(true);
       setError(null);
       setLastTrainingType('custom');
-      setExperimentId(null);
-      setExperimentResults(null);
 
       const { 
         algorithm, 
@@ -225,7 +226,6 @@ const CustomTraining: React.FC = () => {
       formData.append('store_model', 'true');
 
       const response = await trainingApi.customTrain(formData);
-      
       const respExperimentId = response?.data?.data?.experiment_id;
       
       console.log("🚀 Training started with ID:", respExperimentId);
@@ -237,10 +237,7 @@ const CustomTraining: React.FC = () => {
           description: `Custom training with ${algorithm} has been submitted. Fetching results...`,
         });
       } else {
-        toast({
-          title: "Training Initiated",
-          description: `Custom training with ${algorithm} has started. Results will be available soon.`,
-        });
+        throw new Error('No experiment ID returned from server');
       }
     } catch (error) {
       console.error('Custom training error:', error);
