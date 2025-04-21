@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -255,11 +254,13 @@ export const trainingApi = {
     datasetId: string,
     taskType: string,
     algorithm: string,
+    useDefaultHyperparams: boolean,
     hyperparameters: Record<string, any>,
     testSize: number,
     stratify: boolean,
     randomSeed: number,
     enableAnalytics: boolean,
+    enableVisualization: boolean = true,
     experimentName?: string,
     storeModel: boolean = true
   ) => {
@@ -268,13 +269,17 @@ export const trainingApi = {
     formData.append('dataset_id', datasetId);
     formData.append('task_type', taskType);
     formData.append('algorithm', algorithm);
-    formData.append('use_default_hyperparams', 'false'); // Always sending custom hyperparams
-    formData.append('hyperparameters', JSON.stringify(hyperparameters));
+    formData.append('use_default_hyperparams', useDefaultHyperparams.toString());
+    
+    if (!useDefaultHyperparams) {
+      formData.append('hyperparameters', JSON.stringify(hyperparameters));
+    }
+    
     formData.append('test_size', testSize.toString());
     formData.append('stratify', stratify.toString());
     formData.append('random_seed', randomSeed.toString());
     formData.append('advanced_analytics', enableAnalytics.toString());
-    formData.append('enable_visualization', 'true');
+    formData.append('enable_visualization', enableVisualization.toString());
     
     // Handle optional parameters
     if (experimentName) {
@@ -310,5 +315,13 @@ export const trainingApi = {
   // Get training results by experiment ID
   getTrainingResults: (experimentId: string) => {
     return apiRequest(`${TRAINING_API_PREFIX}/results/${experimentId}`, 'GET');
+  },
+
+  // Get experiment results with visualizations
+  getExperimentResults: (experimentId: string) => {
+    return apiRequest(`/experiments/experiment-results/${experimentId}`, 'GET')
+      .then(response => {
+        return response?.experiment_results || null;
+      });
   }
 };

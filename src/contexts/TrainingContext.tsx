@@ -1,54 +1,17 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-// Types
-export type TrainingEngine = 'mljar' | 'h2o';
-export type Algorithm = string;
-export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
-
-export interface TrainingParameters {
-  testSize: number;
-  stratify: boolean;
-  randomSeed: number;
-}
-
-export interface AutoMLParameters extends TrainingParameters {
-  automlEngine: TrainingEngine;
-}
-
-export interface CustomTrainingParameters extends TrainingParameters {
-  algorithm: Algorithm;
-  hyperparameters: Record<string, any>;
-  enableAnalytics: boolean;
-}
-
-export interface Metrics {
-  [key: string]: number;
-}
-
-export interface TrainingResult {
-  experimentId: string;
-  taskType: TaskType;
-  target: string;
-  metrics: Metrics;
-  modelPath: string;
-  completedAt: string;
-  trainingTimeSec: number;
-}
-
-export interface AutoMLResult extends TrainingResult {
-  engine: TrainingEngine;
-  leaderboard?: Array<{
-    model: string;
-    metric_value: number;
-    training_time: number;
-  }>;
-}
-
-export interface CustomTrainingResult extends TrainingResult {
-  selectedAlgorithm: Algorithm;
-  modelFormat: string;
-}
+import { 
+  TrainingEngine, 
+  Algorithm, 
+  TaskType, 
+  TrainingParameters, 
+  AutoMLParameters, 
+  CustomTrainingParameters, 
+  AutoMLResult, 
+  CustomTrainingResult, 
+  Metrics,
+  HyperParameters
+} from '@/types/training';
 
 export interface TrainingContextProps {
   // Training state
@@ -86,6 +49,8 @@ const defaultCustomParameters: CustomTrainingParameters = {
   stratify: true,
   randomSeed: 42,
   enableAnalytics: true,
+  useDefaultHyperparameters: true,
+  enableVisualization: true
 };
 
 // Create context

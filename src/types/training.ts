@@ -5,7 +5,7 @@ export interface HyperParameters {
   [key: string]: HyperParameter;
 }
 
-export type TrainingEngine = 'mljar' | 'h2o';
+export type TrainingEngine = 'mljar' | 'h2o' | 'custom';
 export type Algorithm = string;
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 
@@ -22,11 +22,13 @@ export interface AutoMLParameters extends TrainingParameters {
 export interface CustomTrainingParameters extends TrainingParameters {
   algorithm: Algorithm;
   hyperparameters: HyperParameters;
+  useDefaultHyperparameters: boolean; 
   enableAnalytics: boolean;
+  enableVisualization: boolean;
 }
 
 export interface Metrics {
-  [key: string]: number;
+  [key: string]: any;
 }
 
 export interface TrainingResult {
@@ -53,4 +55,23 @@ export interface AutoMLResult extends TrainingResult {
 export interface CustomTrainingResult extends TrainingResult {
   selectedAlgorithm: Algorithm;
   modelFormat: string;
+  files?: Array<{
+    file_type: string;
+    file_url: string;
+  }>;
+  experimentName?: string;
+}
+
+export interface ExperimentResults {
+  id: string;
+  experiment_name: string;
+  target_column: string;
+  task_type: TaskType;
+  automl_engine: TrainingEngine;
+  metrics: Metrics;
+  files: Array<{
+    file_type: string;
+    file_url: string;
+  }>;
+  algorithm?: string;
 }
