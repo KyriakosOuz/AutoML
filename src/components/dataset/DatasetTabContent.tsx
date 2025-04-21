@@ -30,6 +30,30 @@ interface TabContentProps {
   goToNextTab: () => void;
 }
 
+const formatTaskType = (type: string | null): string => {
+  if (!type) return "Unknown";
+  
+  return type
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const getTaskTypeTooltip = (type: string | null) => {
+  if (!type) return "Select a target column to determine the task type";
+  
+  switch(type) {
+    case 'binary_classification':
+      return "Binary Classification: Predicting one of two possible outcomes (e.g. yes/no, true/false)";
+    case 'multiclass_classification':
+      return "Multiclass Classification: Predicting one of three or more possible outcomes";
+    case 'regression':
+      return "Regression: Predicting a continuous numerical value";
+    default:
+      return `${formatTaskType(type)}: Predicting values based on input features`;
+  }
+};
+
 const DatasetTabContent: React.FC<TabContentProps> = ({
   activeTab,
   datasetId,
@@ -193,30 +217,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     }
   };
 
-  const formatTaskType = (type: string | null): string => {
-    if (!type) return "Unknown";
-    
-    return type
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  const getTaskTypeTooltip = (type: string | null) => {
-    if (!type) return "Select a target column to determine the task type";
-    
-    switch(type) {
-      case 'binary_classification':
-        return "Binary Classification: Predicting one of two possible outcomes (e.g. yes/no, true/false)";
-      case 'multiclass_classification':
-        return "Multiclass Classification: Predicting one of three or more possible outcomes";
-      case 'regression':
-        return "Regression: Predicting a continuous numerical value";
-      default:
-        return `${formatTaskType(type)}: Predicting values based on input features`;
-    }
-  };
-  
   const isPreprocessTabReady = datasetId && targetColumn && taskType && columnsToKeep && columnsToKeep.length > 0;
 
   const navigateToUploadTab = () => {
@@ -287,20 +287,39 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Target Column
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 inline ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-[200px] text-xs">
-                          The target column is what your model will predict based on the other features
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <label className="text-sm font-medium flex items-center justify-between">
+                  <span>
+                    Target Column
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 inline ml-1 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">
+                            The target column is what your model will predict based on the other features
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </span>
+                  {taskType && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge 
+                            variant="outline" 
+                            className="bg-blue-50 text-blue-800 hover:bg-blue-100 cursor-help"
+                          >
+                            {formatTaskType(taskType)}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[250px]">
+                          <p>{getTaskTypeTooltip(taskType)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </label>
                 <Select 
                   value={targetColumn || ""} 
