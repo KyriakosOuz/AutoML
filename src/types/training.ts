@@ -1,80 +1,22 @@
+export type TrainingEngine = 'mljar' | 'autokeras';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 
-export type TrainingEngine = 'mljar' | 'h2o';
-
-export interface Algorithm {
-  name: string;
-  description: string;
-  supportedTasks: TaskType[];
-}
-
-export interface HyperParameter {
-  name: string;
-  type: 'number' | 'string' | 'boolean' | 'select';
-  default: any;
-  description?: string;
-  options?: string[] | number[];
-  min?: number;
-  max?: number;
-  step?: number;
-}
-
-// HyperParameters is a simple key-value record, not consisting of HyperParameter objects
-export interface HyperParameters {
-  [key: string]: any;
-}
-
-export interface Metrics {
-  accuracy?: number;
-  precision?: number;
-  recall?: number;
-  f1_score?: number;
-  r2_score?: number;
-  mae?: number;
-  mse?: number;
-  rmse?: number;
-  classification_report?: any;
-  [key: string]: any;
-}
-
-export interface TrainingParameters {
+export interface AutoMLParameters {
+  automlEngine: TrainingEngine;
   testSize: number;
   stratify: boolean;
   randomSeed: number;
 }
 
-export interface AutoMLParameters extends TrainingParameters {
-  automlEngine: TrainingEngine;
-}
-
-export interface CustomTrainingParameters extends TrainingParameters {
+export interface CustomTrainingParameters {
   algorithm: string;
-  hyperparameters: HyperParameters;
-  useDefaultHyperparameters: boolean;
+  hyperparameters: Record<string, any>;
+  testSize: number;
+  stratify: boolean;
+  randomSeed: number;
   enableAnalytics: boolean;
+  useDefaultHyperparameters: boolean;
   enableVisualization: boolean;
-}
-
-export interface ExperimentResults {
-  id?: string;
-  experiment_name?: string;
-  target_column?: string;
-  task_type?: string;
-  metrics: Record<string, any>;
-  model_path: string;
-  completed_at: string;
-  training_time_sec: number;
-  selected_algorithm?: string;
-  model_format?: string;
-  leaderboard?: any[];
-  files?: any[];
-  algorithm?: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  training_results?: {
-    error_message?: string;
-    [key: string]: any;
-  };
-  [key: string]: any;
 }
 
 export interface AutoMLResult {
@@ -82,7 +24,7 @@ export interface AutoMLResult {
   engine: TrainingEngine;
   taskType: TaskType;
   target: string;
-  metrics: Record<string, any>;
+  metrics: Record<string, number>;
   modelPath: string;
   completedAt: string;
   trainingTimeSec: number;
@@ -94,11 +36,38 @@ export interface CustomTrainingResult {
   experimentId: string;
   taskType: TaskType;
   target: string;
-  metrics: Record<string, any>;
+  metrics: Record<string, number>;
   modelPath: string;
   completedAt: string;
   trainingTimeSec: number;
   selectedAlgorithm: string;
   modelFormat: string;
   experimentName: string;
+}
+
+export interface ExperimentResults {
+  status: 'running' | 'completed' | 'failed';
+  error_message?: string;
+  experiment_id: string;
+  experiment_name?: string;
+  task_type: string;
+  target_column?: string;
+  metrics?: Record<string, number>;
+  model_path?: string;
+  completed_at?: string;
+  training_time_sec?: number;
+  files?: Array<{
+    file_type: string;
+    file_url: string;
+  }>;
+  model_file_url?: string;
+  report_file_url?: string;
+  training_results?: any;
+  algorithm?: string;
+  model_format?: string;
+  leaderboard?: any[];
+  selected_algorithm?: string;
+  columns_to_keep?: string[];
+  hyperparameters?: Record<string, any>;
+  message?: string;
 }
