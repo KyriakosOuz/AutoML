@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Database, LogOut, RotateCcw } from 'lucide-react';
@@ -11,7 +13,6 @@ import DatasetSummary from './DatasetSummary';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import TrainingResultsV2 from './TrainingResultsV2';
-import { TabsContent } from '@/components/ui/tabs';
 
 const StartOverButton = () => {
   const { resetState } = useDataset();
@@ -122,8 +123,13 @@ const ModelTrainingContent: React.FC = () => {
         <DatasetSummary />
         
         <div className="space-y-6 mt-8">
-          <div className="flex flex-col space-y-8">
-            <div className="overflow-hidden rounded-[0.5rem] border bg-background shadow-md md:shadow-xl">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full grid grid-cols-2 rounded-md h-12">
+              <TabsTrigger value="automl" className="text-sm font-medium">AutoML Training</TabsTrigger>
+              <TabsTrigger value="custom" className="text-sm font-medium">Custom Training</TabsTrigger>
+            </TabsList>
+            
+            <div className="overflow-hidden rounded-[0.5rem] border bg-background shadow-md md:shadow-xl mt-4">
               <TabsContent value="automl" className="space-y-4 p-6">
                 <AutoMLTraining />
               </TabsContent>
@@ -132,7 +138,7 @@ const ModelTrainingContent: React.FC = () => {
                 <CustomTraining />
               </TabsContent>
             </div>
-          </div>
+          </Tabs>
           
           {automlResult && (
             <TrainingResultsV2 
