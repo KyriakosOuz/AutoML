@@ -1,4 +1,3 @@
-
 // First, let's fix the import issues
 import { getAuthToken } from '@/contexts/AuthContext';
 
@@ -192,7 +191,7 @@ export const datasetApi = {
 
 export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
-    const response = await fetch(`${API_URL}/training/algorithms/${taskType}`, {
+    const response = await fetch(`${API_URL}/algorithms/get-algorithms/`, {
       headers: getAuthHeaders(),
     });
     
@@ -204,36 +203,8 @@ export const trainingApi = {
     return data.algorithms;
   },
 
-  automlTrain: async (
-    datasetId: string, 
-    taskType: string, 
-    automlEngine: string, 
-    testSize: number, 
-    stratify: boolean, 
-    randomSeed: number
-  ) => {
-    const response = await fetch(`${API_URL}/training/automl-train`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        dataset_id: datasetId,
-        task_type: taskType,
-        automl_engine: automlEngine,
-        test_size: testSize,
-        stratify: stratify,
-        random_seed: randomSeed,
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to start AutoML training');
-    }
-    
-    return await response.json();
-  },
-
   getAvailableHyperparameters: async (algorithm: string) => {
-    const response = await fetch(`${API_URL}/training/hyperparameters/${algorithm}`, {
+    const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
       headers: getAuthHeaders(),
     });
     
