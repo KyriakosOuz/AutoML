@@ -51,6 +51,8 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting ${automlEngine.toUpperCase()} AutoML training...`,
       });
       
+      console.log("Sending AutoML training request with taskType:", taskType);
+      
       const response = await trainingApi.automlTrain(
         datasetId,
         taskType,
@@ -58,7 +60,7 @@ const AutoMLTraining: React.FC = () => {
         testSize,
         stratify,
         randomSeed,
-        experimentName,
+        experimentName || undefined,
         true, // enableVisualization
         true  // storeModel
       );

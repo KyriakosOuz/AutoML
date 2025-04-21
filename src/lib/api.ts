@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Base API URL - configure all requests to go through this base URL
@@ -30,6 +31,7 @@ const apiRequest = async (
     Authorization: `Bearer ${token}`,
   };
 
+  // Don't manually set Content-Type for FormData; browser will do it automatically
   if (!isMultipart) {
     headers['Content-Type'] = 'application/json';
   }
@@ -42,26 +44,34 @@ const apiRequest = async (
   if (data) {
     if (isMultipart) {
       // For multipart/form-data, use FormData
-      const formData = new FormData();
-      
-      // Add all fields to FormData
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (key === 'file' && value instanceof File) {
-            formData.append(key, value);
-          } else if (Array.isArray(value)) {
-            // Handle arrays by converting to JSON string
-            formData.append(key, JSON.stringify(value));
-          } else if (typeof value === 'object') {
-            // Handle objects by converting to JSON string
-            formData.append(key, JSON.stringify(value));
-          } else {
-            formData.append(key, String(value));
+      if (!(data instanceof FormData)) {
+        // If data is not already FormData, create it
+        const formData = new FormData();
+        
+        // Add all fields to FormData
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            if (typeof value === 'boolean') {
+              // Convert boolean to string representation
+              formData.append(key, value.toString());
+            } else if (Array.isArray(value) || typeof value === 'object') {
+              // Handle arrays or objects by converting to JSON string
+              if (!(value instanceof File)) {
+                formData.append(key, JSON.stringify(value));
+              } else {
+                formData.append(key, value);
+              }
+            } else {
+              formData.append(key, String(value));
+            }
           }
-        }
-      });
-      
-      options.body = formData;
+        });
+        
+        options.body = formData;
+      } else {
+        // If data is already FormData, use it directly
+        options.body = data;
+      }
     } else {
       // For JSON requests
       options.body = JSON.stringify(data);
@@ -219,6 +229,7 @@ export const trainingApi = {
     enableVisualization: boolean = true,
     storeModel: boolean = true
   ) => {
+    // Create FormData directly
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('task_type', taskType);
@@ -226,34 +237,54 @@ export const trainingApi = {
     formData.append('test_size', testSize.toString());
     formData.append('stratify', stratify.toString());
     formData.append('random_seed', randomSeed.toString());
+    
+    // Handle optional parameters
     if (experimentName) {
       formData.append('experiment_name', experimentName);
     }
+    
     formData.append('enable_visualization', enableVisualization.toString());
     formData.append('store_model', storeModel.toString());
 
+    // Pass FormData directly to the request
     return apiRequest(`${TRAINING_API_PREFIX}/automl/`, 'POST', formData, true);
   },
   
   // Custom model training
   customTrain: (
     datasetId: string,
+    taskType: string,
     algorithm: string,
     hyperparameters: Record<string, any>,
     testSize: number,
     stratify: boolean,
     randomSeed: number,
-    enableAnalytics: boolean
+    enableAnalytics: boolean,
+    experimentName?: string,
+    storeModel: boolean = true
   ) => {
-    return apiRequest(`${TRAINING_API_PREFIX}/custom-train/`, 'POST', {
-      dataset_id: datasetId,
-      algorithm,
-      hyperparameters,
-      test_size: testSize,
-      stratify,
-      random_seed: randomSeed,
-      enable_analytics: enableAnalytics
-    });
+    // Create FormData directly
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('task_type', taskType);
+    formData.append('algorithm', algorithm);
+    formData.append('use_default_hyperparams', 'false'); // Always sending custom hyperparams
+    formData.append('hyperparameters', JSON.stringify(hyperparameters));
+    formData.append('test_size', testSize.toString());
+    formData.append('stratify', stratify.toString());
+    formData.append('random_seed', randomSeed.toString());
+    formData.append('advanced_analytics', enableAnalytics.toString());
+    formData.append('enable_visualization', 'true');
+    
+    // Handle optional parameters
+    if (experimentName) {
+      formData.append('experiment_name', experimentName);
+    }
+    
+    formData.append('store_model', storeModel.toString());
+
+    // Pass FormData directly to the request
+    return apiRequest(`${TRAINING_API_PREFIX}/custom-train/`, 'POST', formData, true);
   },
   
   // Get available algorithms for current task type
@@ -261,8 +292,11 @@ export const trainingApi = {
     if (!taskType) {
       throw new Error('Task type is required');
     }
+    
+    // Use the correct endpoint URL
     return apiRequest(`${TRAINING_API_PREFIX}/algorithms/?task_type=${taskType}`, 'GET')
       .then(response => {
+        console.log('Algorithm response:', response);
         // Ensure we return the algorithms array from the response
         return response?.algorithms || [];
       });

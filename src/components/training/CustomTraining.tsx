@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -61,6 +60,7 @@ const CustomTraining: React.FC = () => {
   const [hyperparamValues, setHyperparamValues] = useState<Record<string, any>>({});
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
   const [isLoadingHyperparams, setIsLoadingHyperparams] = useState(false);
+  const [experimentName, setExperimentName] = useState('');
   
   // Load available algorithms based on task type
   useEffect(() => {
@@ -69,8 +69,17 @@ const CustomTraining: React.FC = () => {
       
       try {
         setIsLoadingAlgorithms(true);
-        const response = await trainingApi.getAvailableAlgorithms(taskType);
-        setAlgorithms(response.algorithms);
+        console.log(`Loading algorithms for task type: ${taskType}`);
+        
+        const algorithmList = await trainingApi.getAvailableAlgorithms(taskType);
+        console.log('Received algorithms:', algorithmList);
+        
+        // Transform the algorithm list to the expected format
+        const formattedAlgorithms = Array.isArray(algorithmList) 
+          ? algorithmList.map(name => ({ name, description: "" }))
+          : [];
+        
+        setAlgorithms(formattedAlgorithms);
       } catch (error) {
         console.error('Error loading algorithms:', error);
         toast({
@@ -120,10 +129,10 @@ const CustomTraining: React.FC = () => {
   }, [customParameters.algorithm, setCustomParameters, toast]);
   
   const handleTrainModel = async () => {
-    if (!datasetId || !targetColumn || !customParameters.algorithm) {
+    if (!datasetId || !targetColumn || !customParameters.algorithm || !taskType) {
       toast({
         title: "Missing data",
-        description: "Dataset, target column or algorithm not selected",
+        description: "Dataset, target column, task type or algorithm not selected",
         variant: "destructive"
       });
       return;
@@ -148,14 +157,18 @@ const CustomTraining: React.FC = () => {
         description: `Starting ${algorithm} training...`,
       });
       
+      console.log("Sending custom training request with taskType:", taskType);
+      
       const response = await trainingApi.customTrain(
         datasetId,
+        taskType,
         algorithm,
         hyperparameters,
         testSize,
         stratify,
         randomSeed,
-        enableAnalytics
+        enableAnalytics,
+        experimentName || undefined
       );
       
       // Format the response to match our context state
@@ -222,7 +235,6 @@ const CustomTraining: React.FC = () => {
     });
   };
   
-  // Render hyperparameter controls based on type
   const renderHyperparamControl = (param: Hyperparameter) => {
     const value = hyperparamValues[param.name];
     
@@ -337,6 +349,30 @@ const CustomTraining: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          
+          {/* Experiment Name Field */}
+          <div className="space-y-2">
+            <Label htmlFor="experiment-name" className="flex items-center gap-2">
+              Experiment Name
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Optional name to identify this training experiment</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <Input
+              id="experiment-name"
+              value={experimentName}
+              onChange={(e) => setExperimentName(e.target.value)}
+              placeholder="Enter experiment name (optional)"
+              disabled={isTraining}
+            />
           </div>
           
           {/* Hyperparameters Section */}
