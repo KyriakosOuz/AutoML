@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Database, LogOut, RotateCcw, Loader } from 'lucide-react';
+import { ArrowLeft, Database, LogOut, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -189,3 +190,4 @@ const ModelTrainingContent: React.FC = () => {
 };
 
 export default ModelTrainingContent;
+
