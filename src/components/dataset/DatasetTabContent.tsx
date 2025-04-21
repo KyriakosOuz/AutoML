@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -89,18 +88,14 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
     try {
       setIsAnalyzingFeatures(true);
       setFeatureError(null);
-
-      const taskTypeResponse = await datasetApi.detectTaskType(datasetId, targetColumn);
-      
-      if (taskTypeResponse.task_type) {
-        setTaskType(taskTypeResponse.task_type);
-      } else {
-        throw new Error("Could not determine task type");
-      }
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
 
-      // The response structure has changed - it no longer has a nested data property
+      // Set task type from the response
+      if (response.task_type) {
+        setTaskType(response.task_type);
+      }
+
       const importanceData = response.feature_importance || [];
 
       if (!importanceData.length) {
