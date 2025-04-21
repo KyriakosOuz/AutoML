@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -73,7 +74,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
-    return typeof value === 'number' ? (value * 100).toFixed(2) + '%' : value.toString();
+    return typeof value === 'number' ? (value * 100).toFixed(2) + '%' : String(value);
   };
   
   // For regression metrics that shouldn't be formatted as percentages
