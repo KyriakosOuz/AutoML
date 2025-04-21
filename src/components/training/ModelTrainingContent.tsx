@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -12,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DatasetSummary from './DatasetSummary';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
-import TrainingResults from './TrainingResults';
+import TrainingResultsV2 from './TrainingResultsV2';
 
 const StartOverButton = () => {
   const { resetState } = useDataset();
@@ -50,14 +49,12 @@ const ModelTrainingContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('automl');
   const { automlResult, customResult, lastTrainingType } = useTraining();
   
-  // Set the active tab based on last training type if available
   useEffect(() => {
     if (lastTrainingType) {
       setActiveTab(lastTrainingType);
     }
   }, [lastTrainingType]);
   
-  // If no dataset is selected, prompt user to go to dataset page
   if (!datasetId || !targetColumn) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -140,13 +137,18 @@ const ModelTrainingContent: React.FC = () => {
             </TabsContent>
           </Tabs>
           
-          {/* Show training results if available */}
-          {activeTab === 'automl' && automlResult && (
-            <TrainingResults type="automl" />
+          {automlResult && (
+            <TrainingResultsV2 
+              experimentId={automlResult.experimentId}
+              onReset={resetTrainingState}
+            />
           )}
           
-          {activeTab === 'custom' && customResult && (
-            <TrainingResults type="custom" />
+          {customResult && (
+            <TrainingResultsV2 
+              experimentId={customResult.experimentId} 
+              onReset={resetTrainingState}
+            />
           )}
         </div>
         
