@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
 import { trainingApi } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -11,155 +11,55 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  AlertCircle, 
-  ChevronDown, 
-  HelpCircle, 
-  Play, 
-  RotateCcw, 
-  Settings,
-  Code
-} from 'lucide-react';
+import { AlertCircle, Beaker, HelpCircle, Play, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from '@/components/ui/accordion';
-import { ALLOWED_ALGORITHMS, generateExperimentName } from '@/lib/constants';
-
-interface AlgorithmOption {
-  name: string;
-  description: string;
-}
-
-interface Hyperparameter {
-  name: string;
-  type: 'int' | 'float' | 'boolean' | 'string' | 'categorical';
-  default: any;
-  range?: [number, number];
-  options?: string[];
-  description: string;
-}
+import { generateExperimentName } from '@/lib/constants';
+import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
+import HyperParameterEditor from './HyperParameterEditor';
 
 const CustomTraining: React.FC = () => {
   const { datasetId, targetColumn, taskType } = useDataset();
-  const { 
-    isTraining, 
+  const {
+    isTraining,
     setIsTraining,
-    customParameters, 
+    customParameters,
     setCustomParameters,
     setCustomResult,
     setLastTrainingType,
     setError
   } = useTraining();
   const { toast } = useToast();
-  
-  const [algorithms, setAlgorithms] = useState<AlgorithmOption[]>([]);
-  const [hyperparameters, setHyperparameters] = useState<Hyperparameter[]>([]);
-  const [hyperparamValues, setHyperparamValues] = useState<Record<string, any>>({});
-  const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
-  const [isLoadingHyperparams, setIsLoadingHyperparams] = useState(false);
   const [experimentName, setExperimentName] = useState('');
-  
-  useEffect(() => {
-    const loadAlgorithms = async () => {
-      if (!taskType) return;
-      
-      try {
-        setIsLoadingAlgorithms(true);
-        console.log(`Loading algorithms for task type: ${taskType}`);
-        
-        const algorithmList = ALLOWED_ALGORITHMS[taskType as keyof typeof ALLOWED_ALGORITHMS] || [];
-        console.log('Available algorithms:', algorithmList);
-        
-        const formattedAlgorithms = algorithmList.map(name => ({ name, description: "" }));
-        setAlgorithms(formattedAlgorithms);
-      } catch (error) {
-        console.error('Error setting algorithms:', error);
-        toast({
-          title: "Failed to load algorithms",
-          description: "Could not set algorithms for your task type",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoadingAlgorithms(false);
-      }
-    };
-    
-    loadAlgorithms();
-  }, [taskType, toast]);
-  
-  useEffect(() => {
-    const loadHyperparameters = async () => {
-      if (!customParameters.algorithm) return;
-      
-      try {
-        setIsLoadingHyperparams(true);
-        const response = await trainingApi.getHyperparameters(customParameters.algorithm);
-        setHyperparameters(response.hyperparameters);
-        
-        const defaultValues = response.hyperparameters.reduce((acc: Record<string, any>, param: Hyperparameter) => {
-          acc[param.name] = param.default;
-          return acc;
-        }, {});
-        
-        setHyperparamValues(defaultValues);
-        setCustomParameters({ hyperparameters: defaultValues });
-      } catch (error) {
-        console.error('Error loading hyperparameters:', error);
-        toast({
-          title: "Failed to load hyperparameters",
-          description: "Could not retrieve default hyperparameters for the selected algorithm",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoadingHyperparams(false);
-      }
-    };
-    
-    loadHyperparameters();
-  }, [customParameters.algorithm, setCustomParameters, toast]);
-  
+
   useEffect(() => {
     if (customParameters.algorithm) {
-      const newName = generateExperimentName('Custom', customParameters.algorithm);
+      const newName = generateExperimentName('Custom', customParameters.algorithm.toUpperCase());
       setExperimentName(newName);
     }
   }, [customParameters.algorithm]);
-  
+
   const handleTrainModel = async () => {
-    if (!datasetId || !targetColumn || !customParameters.algorithm || !taskType) {
+    if (!datasetId || !targetColumn || !taskType || !customParameters.algorithm) {
       toast({
-        title: "Missing data",
-        description: "Dataset, target column, task type or algorithm not selected",
+        title: "Missing Required Fields",
+        description: "Dataset ID, target column, task type, and algorithm are required",
         variant: "destructive"
       });
       return;
     }
-    
+
     try {
       setIsTraining(true);
       setError(null);
       setLastTrainingType('custom');
-      
-      const { 
-        algorithm, 
-        hyperparameters, 
-        testSize, 
-        stratify, 
-        randomSeed, 
-        enableAnalytics 
-      } = customParameters;
-      
+
+      const { algorithm, hyperparameters, testSize, stratify, randomSeed, enableAnalytics } = customParameters;
+
       toast({
         title: "Training Started",
-        description: `Starting ${algorithm} training...`,
+        description: `Starting custom training with ${algorithm}...`,
       });
-      
-      console.log("Sending custom training request with taskType:", taskType);
-      
+
       const response = await trainingApi.customTrain(
         datasetId,
         taskType,
@@ -169,186 +69,115 @@ const CustomTraining: React.FC = () => {
         stratify,
         randomSeed,
         enableAnalytics,
-        experimentName || undefined
+        experimentName || undefined,
+        true // storeModel
       );
-      
+
+      // Format the response to match our context state
       const formattedResult = {
         experimentId: response.experiment_id,
-        selectedAlgorithm: response.selected_algorithm,
         taskType: response.task_type,
-        target: response.target || targetColumn,
+        target: response.target,
         metrics: response.metrics,
         modelPath: response.model_path,
-        completedAt: response.completed_at || new Date().toISOString(),
+        completedAt: response.completed_at,
         trainingTimeSec: response.training_time_sec,
+        selectedAlgorithm: algorithm,
         modelFormat: response.model_format
       };
-      
+
       setCustomResult(formattedResult);
-      
+
       toast({
         title: "Training Complete",
-        description: `${algorithm} training completed successfully`,
+        description: `Custom training with ${algorithm} completed successfully`,
       });
     } catch (error) {
       console.error('Custom training error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to train model');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to train model';
+      setError(errorMessage);
       toast({
         title: "Training Failed",
-        description: error instanceof Error ? error.message : 'Failed to train model',
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsTraining(false);
     }
   };
-  
-  const handleHyperparamChange = (paramName: string, value: any) => {
-    const updatedValues = {
-      ...hyperparamValues,
-      [paramName]: value
-    };
-    
-    setHyperparamValues(updatedValues);
-    setCustomParameters({ hyperparameters: updatedValues });
+
+  const isFormValid = () => {
+    return !!(
+      datasetId &&
+      taskType &&
+      customParameters.algorithm &&
+      customParameters.testSize >= 0.1 &&
+      customParameters.testSize <= 0.5
+    );
   };
-  
-  const resetParameters = () => {
-    const defaultValues = hyperparameters.reduce((acc: Record<string, any>, param: Hyperparameter) => {
-      acc[param.name] = param.default;
-      return acc;
-    }, {});
-    
-    setHyperparamValues(defaultValues);
-    setCustomParameters({
-      hyperparameters: defaultValues,
-      testSize: 0.2,
-      stratify: true,
-      randomSeed: 42,
-      enableAnalytics: true,
-    });
-    
-    toast({
-      title: "Parameters Reset",
-      description: "All parameters have been reset to their default values",
-    });
-  };
-  
-  const renderHyperparamControl = (param: Hyperparameter) => {
-    const value = hyperparamValues[param.name];
-    
-    switch (param.type) {
-      case 'int':
-        return (
-          <Input
-            id={`param-${param.name}`}
-            type="number"
-            step={1}
-            min={param.range?.[0]}
-            max={param.range?.[1]}
-            value={value}
-            onChange={(e) => handleHyperparamChange(param.name, parseInt(e.target.value) || param.default)}
-            disabled={isTraining}
-          />
-        );
-      case 'float':
-        return (
-          <Input
-            id={`param-${param.name}`}
-            type="number"
-            step={0.01}
-            min={param.range?.[0]}
-            max={param.range?.[1]}
-            value={value}
-            onChange={(e) => handleHyperparamChange(param.name, parseFloat(e.target.value) || param.default)}
-            disabled={isTraining}
-          />
-        );
-      case 'boolean':
-        return (
-          <Switch
-            id={`param-${param.name}`}
-            checked={value}
-            onCheckedChange={(checked) => handleHyperparamChange(param.name, checked)}
-            disabled={isTraining}
-          />
-        );
-      case 'categorical':
-        return (
-          <Select
-            value={String(value)}
-            onValueChange={(val) => handleHyperparamChange(param.name, val)}
-            disabled={isTraining}
-          >
-            <SelectTrigger id={`param-${param.name}`}>
-              <SelectValue placeholder={`Select ${param.name}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {param.options?.map((option) => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      default:
-        return (
-          <Input
-            id={`param-${param.name}`}
-            value={value}
-            onChange={(e) => handleHyperparamChange(param.name, e.target.value)}
-            disabled={isTraining}
-          />
-        );
+
+  // Add this effect to handle algorithm selection
+  useEffect(() => {
+    if (customParameters.algorithm) {
+      const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
+      setCustomParameters({
+        hyperparameters: defaultParams
+      });
     }
-  };
-  
+  }, [customParameters.algorithm]);
+
+  const algorithms = taskType ? ALLOWED_ALGORITHMS[taskType] : [];
+
   return (
-    <Card className="w-full mt-6 rounded-2xl shadow-lg transition-all hover:shadow-xl">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl text-primary">
-          <Code className="h-5 w-5" />
-          Custom Model Training
+          <Beaker className="h-5 w-5" />
+          Custom Training
         </CardTitle>
         <CardDescription>
-          Train machine learning models with custom algorithms and hyperparameters
+          Train models with custom algorithms and hyperparameters
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          <Alert className="bg-secondary/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Fields marked with * are required
+            </AlertDescription>
+          </Alert>
+
           <div className="space-y-2">
-            <Label htmlFor="algorithm" className="flex items-center gap-2">
-              Select Algorithm
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">
-                      Choose a machine learning algorithm suitable for your {taskType?.replace('_', ' ')} task.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
+            <Label>Algorithm</Label>
             <Select
               value={customParameters.algorithm}
               onValueChange={(value) => setCustomParameters({ algorithm: value })}
-              disabled={isTraining || isLoadingAlgorithms}
+              disabled={isTraining}
             >
-              <SelectTrigger id="algorithm" className="w-full">
-                <SelectValue placeholder={isLoadingAlgorithms ? "Loading algorithms..." : "Select algorithm"} />
+              <SelectTrigger>
+                <SelectValue placeholder="Select algorithm" />
               </SelectTrigger>
               <SelectContent>
                 {algorithms.map((algo) => (
-                  <SelectItem key={algo.name} value={algo.name}>
-                    {algo.name}
+                  <SelectItem key={algo} value={algo}>
+                    {algo}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          
+
+          {customParameters.algorithm && (
+            <div className="space-y-4">
+              <Label>Hyperparameters</Label>
+              <HyperParameterEditor
+                hyperparameters={customParameters.hyperparameters}
+                onChange={(params) => setCustomParameters({ hyperparameters: params })}
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="experiment-name" className="flex items-center gap-2">
               Experiment Name
@@ -366,91 +195,28 @@ const CustomTraining: React.FC = () => {
             <Input
               id="experiment-name"
               value={experimentName}
-              onChange={(e) => setExperimentName(e.target.value)}
-              placeholder="Enter experiment name (optional)"
+              readOnly
+              className="bg-muted"
               disabled={isTraining}
             />
           </div>
-          
-          {customParameters.algorithm && (
-            <Accordion type="single" collapsible className="w-full border rounded-lg">
-              <AccordionItem value="hyperparameters">
-                <AccordionTrigger className="px-4">
-                  <span className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Hyperparameters
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  {isLoadingHyperparams ? (
-                    <div className="py-2 text-center">Loading hyperparameters...</div>
-                  ) : hyperparameters.length > 0 ? (
-                    <div className="space-y-4">
-                      {hyperparameters.map((param) => (
-                        <div key={param.name} className="grid grid-cols-1 gap-2">
-                          <div className="flex justify-between items-center">
-                            <Label 
-                              htmlFor={`param-${param.name}`}
-                              className="flex items-center gap-2"
-                            >
-                              {param.name}
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{param.description}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </Label>
-                            {renderHyperparamControl(param)}
-                          </div>
-                          {param.range && (
-                            <p className="text-xs text-muted-foreground">
-                              Range: {param.range[0]} to {param.range[1]}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={resetParameters}
-                        className="mt-4"
-                        disabled={isTraining}
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Reset to Defaults
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="py-2 text-center text-muted-foreground">
-                      No hyperparameters available for this algorithm
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          )}
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                Test Set Split
+                Test Set Split *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Percentage of data used for testing model performance. 0.2 means 20% test, 80% train.</p>
+                      <p>Percentage of data used for testing model performance (20% recommended)</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <span className="text-sm font-medium">{customParameters.testSize * 100}%</span>
+              <span className="text-sm font-medium">{(customParameters.testSize * 100).toFixed(0)}%</span>
             </div>
             <Slider
               id="test-size"
@@ -463,23 +229,23 @@ const CustomTraining: React.FC = () => {
               aria-label="Test set size"
             />
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="stratify" className="flex items-center gap-2">
-                Stratify Split
+                Stratify Split *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Maintain the same distribution of target classes in both training and test sets.</p>
+                      <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <p className="text-xs text-muted-foreground">Maintains class balance in train/test sets</p>
+              <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
             </div>
             <Switch
               id="stratify"
@@ -489,21 +255,20 @@ const CustomTraining: React.FC = () => {
               aria-label="Stratify split"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="random-seed" className="flex items-center gap-2">
-              Random Seed
+              Random Seed *
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Set for reproducible results. Using the same seed will produce the same train/test split.</p>
+                    <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                   </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
+                </TooltipProvider>
+              </Label>
             <Input
               id="random-seed"
               type="number"
@@ -514,24 +279,25 @@ const CustomTraining: React.FC = () => {
               placeholder="Enter random seed (e.g. 42)"
               aria-label="Random seed for reproducibility"
             />
+            <p className="text-xs text-muted-foreground">For reproducible results</p>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="enable-analytics" className="flex items-center gap-2">
-                Enable Advanced Analytics
+                Enable Advanced Analytics *
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Generates additional outputs like SHAP values, probability outputs, and more detailed visualizations.</p>
+                      <p>Enable advanced analytics and tracking during training</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <p className="text-xs text-muted-foreground">Adds SHAP, ROC curves, and probability outputs (may increase training time)</p>
+              <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
             </div>
             <Switch
               id="enable-analytics"
@@ -541,10 +307,10 @@ const CustomTraining: React.FC = () => {
               aria-label="Enable advanced analytics"
             />
           </div>
-          
+
           <Button
             onClick={handleTrainModel}
-            disabled={isTraining || !datasetId || !customParameters.algorithm}
+            disabled={isTraining || !isFormValid()}
             className="w-full mt-4"
             size="lg"
           >
@@ -559,10 +325,17 @@ const CustomTraining: React.FC = () => {
             ) : (
               <>
                 <Play className="mr-2 h-5 w-5" />
-                Train Custom {customParameters.algorithm} Model
+                Train Model with {customParameters.algorithm}
               </>
             )}
           </Button>
+
+          <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
+            <p className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              <span>Training might take several minutes depending on dataset size and complexity.</span>
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

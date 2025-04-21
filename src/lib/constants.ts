@@ -1,4 +1,3 @@
-
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
@@ -12,6 +11,54 @@ export const ALLOWED_ALGORITHMS = {
     "Linear Regression", "Decision Tree", "Random Forest", "XGBoost",
     "LightGBM", "CatBoost", "Neural Network", "Extra Trees"
   ]
+} as const;
+
+export const DEFAULT_HYPERPARAMETERS = {
+  "Decision Tree": {
+    max_depth: 5,
+    min_samples_split: 2
+  },
+  "Random Forest": {
+    n_estimators: 100,
+    max_depth: 7
+  },
+  "XGBoost": {
+    n_estimators: 100,
+    learning_rate: 0.1,
+    max_depth: 6
+  },
+  "LightGBM": {
+    n_estimators: 100,
+    learning_rate: 0.1,
+    num_leaves: 31,
+    max_depth: -1
+  },
+  "CatBoost": {
+    iterations: 100,
+    depth: 6,
+    learning_rate: 0.1
+  },
+  "Neural Network": {
+    hidden_layer_sizes: [64, 32],
+    activation: "relu",
+    solver: "adam",
+    alpha: 0.0001
+  },
+  "Extra Trees": {
+    n_estimators: 100,
+    max_depth: 7,
+    min_samples_split: 2
+  },
+  "Nearest Neighbors": {
+    n_neighbors: 5,
+    metric: "minkowski",
+    weights: "uniform"
+  },
+  "Linear": {
+    fit_intercept: true,
+    normalize: false
+  },
+  "Baseline": {}
 } as const;
 
 export const generateExperimentName = (prefix: string, identifier: string): string => {

@@ -128,13 +128,6 @@ const AutoMLTraining: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <Alert className="bg-secondary/50">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Fields marked with * are required
-            </AlertDescription>
-          </Alert>
-
           <div className="space-y-2">
             <Label htmlFor="automl-engine" className="flex items-center gap-2">
               AutoML Engine
@@ -168,44 +161,21 @@ const AutoMLTraining: React.FC = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="experiment-name" className="flex items-center gap-2">
-              Experiment Name
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Optional name to identify this training experiment</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
+            <Label htmlFor="experiment-name">Experiment Name</Label>
             <Input
               id="experiment-name"
               value={experimentName}
-              readOnly
-              className="bg-muted"
+              onChange={(e) => setExperimentName(e.target.value)}
               disabled={isTraining}
             />
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                Test Set Split *
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Percentage of data used for testing model performance (20% recommended)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </Label>
-              <span className="text-sm font-medium">{(automlParameters.testSize * 100).toFixed(0)}%</span>
+              <Label>Test Set Split</Label>
+              <span className="text-sm font-medium">
+                {(automlParameters.testSize * 100).toFixed(0)}%
+              </span>
             </div>
             <Slider
               id="test-size"
@@ -222,7 +192,7 @@ const AutoMLTraining: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="stratify" className="flex items-center gap-2">
-                Stratify Split *
+                Stratify Split
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -232,7 +202,7 @@ const AutoMLTraining: React.FC = () => {
                       <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
+                </Tooltip>
               </Label>
               <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
             </div>
@@ -247,7 +217,7 @@ const AutoMLTraining: React.FC = () => {
           
           <div className="space-y-2">
             <Label htmlFor="random-seed" className="flex items-center gap-2">
-              Random Seed *
+              Random Seed
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
