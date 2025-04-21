@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +13,8 @@ import {
   Layers,
   Settings,
   Activity,
-  Microscope
+  Microscope,
+  Loader
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -22,6 +22,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/comp
 import { trainingApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentResults } from '@/types/training';
+import { useTraining } from '@/contexts/TrainingContext';
 
 export interface TrainingResultsV2Props {
   experimentId: string;
@@ -29,64 +30,48 @@ export interface TrainingResultsV2Props {
 }
 
 const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onReset }) => {
-  const [loading, setLoading] = useState(true);
-  const [results, setResults] = useState<ExperimentResults | null>(null);
-  const [activeTab, setActiveTab] = useState('metrics');
+  const { isLoadingResults, experimentResults } = useTraining();
+  const [activeTab, setActiveTab] = useState<string>('metrics');
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Format task type for display
+  const formatTaskType = (type: string) => {
+    if (!type) return "Unknown";
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
   
-  // Poll for experiment results
-  useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>;
-    let fetchCount = 0;
-    const MAX_FETCH_ATTEMPTS = 60; // 5 minutes at 5-second intervals
-    
-    const fetchResults = async () => {
-      try {
-        fetchCount++;
-        const data = await trainingApi.getExperimentResults(experimentId);
-        
-        if (data.status === 'completed') {
-          setResults(data);
-          setLoading(false);
-          clearInterval(intervalId);
-        } else if (data.status === 'failed') {
-          setError(data.training_results?.error_message || 'Training failed');
-          setLoading(false);
-          clearInterval(intervalId);
-          
-          toast({
-            title: "Training Failed",
-            description: data.training_results?.error_message || "The experiment failed to complete.",
-            variant: "destructive"
-          });
-        } else if (fetchCount >= MAX_FETCH_ATTEMPTS) {
-          setError('Polling timeout - please check the experiment status later');
-          setLoading(false);
-          clearInterval(intervalId);
-        }
-      } catch (err) {
-        console.error('Error fetching experiment results:', err);
-        if (fetchCount >= MAX_FETCH_ATTEMPTS) {
-          setError('Failed to load experiment results');
-          setLoading(false);
-          clearInterval(intervalId);
-        }
-      }
-    };
-    
-    // Initial fetch
-    fetchResults();
-    
-    // Poll every 5 seconds
-    intervalId = setInterval(fetchResults, 5000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [experimentId, toast]);
+  // Format a metric value for display
+  const formatMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
+    return (value * 100).toFixed(2) + '%';
+  };
   
-  if (loading) {
+  // For regression metrics that shouldn't be formatted as percentages
+  const formatRegressionMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
+    return value.toFixed(4);
+  };
+  
+  const getMetricColor = (value: number | undefined) => {
+    if (value === undefined) return 'text-gray-400';
+    if (value >= 0.9) return 'text-green-600';
+    if (value >= 0.7) return 'text-emerald-600';
+    if (value >= 0.5) return 'text-amber-600';
+    return 'text-red-600';
+  };
+  
+  // Group files by type
+  const filesByType = files.reduce((acc, file) => {
+    const type = file.file_type;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(file);
+    return acc;
+  }, {} as Record<string, typeof files>);
+  
+  if (isLoadingResults || !experimentResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
         <CardHeader>
@@ -101,10 +86,13 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
         <CardContent className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin">
-              <Settings className="h-12 w-12 text-primary" />
+              <Loader className="h-12 w-12 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">
               Processing your model training experiment...
+            </p>
+            <p className="text-xs font-mono text-muted-foreground">
+              Experiment ID: {experimentId}
             </p>
           </div>
         </CardContent>
@@ -141,6 +129,8 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     );
   }
   
+  const results = experimentResults;
+  
   if (!results) {
     return null;
   }
@@ -161,42 +151,6 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
   } = results;
   
   const isClassification = task_type?.includes('classification');
-  
-  // Format task type for display
-  const formatTaskType = (type: string) => {
-    if (!type) return "Unknown";
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-  
-  // Format a metric value for display
-  const formatMetric = (value: number | undefined) => {
-    if (value === undefined) return 'N/A';
-    return (value * 100).toFixed(2) + '%';
-  };
-  
-  // For regression metrics that shouldn't be formatted as percentages
-  const formatRegressionMetric = (value: number | undefined) => {
-    if (value === undefined) return 'N/A';
-    return value.toFixed(4);
-  };
-  
-  const getMetricColor = (value: number | undefined) => {
-    if (value === undefined) return 'text-gray-400';
-    if (value >= 0.9) return 'text-green-600';
-    if (value >= 0.7) return 'text-emerald-600';
-    if (value >= 0.5) return 'text-amber-600';
-    return 'text-red-600';
-  };
-  
-  // Group files by type
-  const filesByType = files.reduce((acc, file) => {
-    const type = file.file_type;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(file);
-    return acc;
-  }, {} as Record<string, typeof files>);
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">

@@ -172,13 +172,14 @@ const CustomTraining: React.FC = () => {
       
       console.log("🚀 Training started with ID:", respExperimentId);
       
-      // If we got an experiment ID, store it and start polling
+      // If we got an experiment ID, store it
       if (respExperimentId) {
+        // Set the ID so polling will start after delay
         setActiveExperimentId(respExperimentId);
         
         toast({
           title: "Training Submitted",
-          description: `Custom training with ${algorithm} has been submitted. Fetching results...`,
+          description: `Custom training with ${algorithm} has been submitted. Results will be available in a few moments...`,
         });
       } else {
         throw new Error('No experiment ID returned from server');

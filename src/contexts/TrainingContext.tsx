@@ -140,8 +140,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   // Poll for experiment results when activeExperimentId changes
   useEffect(() => {
+    let pollTimeout: number | null = null;
     let pollInterval: number | null = null;
-    const MAX_FETCH_ATTEMPTS = 60; // 5 minutes at 5-second intervals
+    const MAX_FETCH_ATTEMPTS = 80; // ~6.6 minutes with 5-second intervals
     
     const pollResults = async () => {
       // Validate experiment ID
@@ -243,11 +244,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setPollingAttempts(0);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error polling experiment results:', error);
         
-        // Increment attempts even on error
-        setPollingAttempts(prev => prev + 1);
+        // If we get a 404, it means the processing hasn't finished yet, this is normal
+        if (error.message && error.message.includes('404')) {
+          console.log('Training still in progress (404 response)');
+        } else {
+          // For other errors, increment attempts
+          setPollingAttempts(prev => prev + 1);
+        }
         
         if (pollingAttempts >= MAX_FETCH_ATTEMPTS) {
           toast({
@@ -268,21 +274,38 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     
     // Start polling if we have an active experiment ID and no results yet
     if (activeExperimentId && !experimentResults) {
-      // Initial poll immediately
-      pollResults();
+      setIsLoadingResults(true);
       
-      // Then poll at intervals
+      // Add a 3-second initial delay before starting to poll
+      console.log("🕒 Scheduling initial poll with 3-second delay for ID:", activeExperimentId);
+      
+      // Clear any existing timeout/interval to prevent duplicates
+      if (pollTimeout) {
+        window.clearTimeout(pollTimeout);
+      }
       if (pollInterval) {
-        clearInterval(pollInterval);
+        window.clearInterval(pollInterval);
       }
       
-      pollInterval = window.setInterval(pollResults, 5000);
+      // Set initial delay before first poll
+      pollTimeout = window.setTimeout(() => {
+        console.log("🚀 Starting first poll after delay for ID:", activeExperimentId);
+        
+        // Initial poll after delay
+        pollResults();
+        
+        // Then poll at intervals
+        pollInterval = window.setInterval(pollResults, 5000); // Poll every 5 seconds
+      }, 3000); // 3 second initial delay
     }
     
     // Cleanup function
     return () => {
+      if (pollTimeout) {
+        window.clearTimeout(pollTimeout);
+      }
       if (pollInterval) {
-        clearInterval(pollInterval);
+        window.clearInterval(pollInterval);
       }
     };
   }, [activeExperimentId, experimentResults, pollingAttempts, lastTrainingType, automlParameters, toast]);

@@ -5,7 +5,7 @@ import { useTraining } from '@/contexts/TrainingContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Database, LogOut, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Database, LogOut, RotateCcw, Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,16 +53,26 @@ const ModelTrainingContent: React.FC = () => {
     lastTrainingType, 
     resetTrainingState, 
     automlResult,
-    customResult
+    customResult,
+    isLoadingResults
   } = useTraining();
   
   const [activeTab, setActiveTab] = useState<string>('automl');
   
+  // Set the active tab based on last training type
   useEffect(() => {
     if (lastTrainingType) {
       setActiveTab(lastTrainingType);
     }
   }, [lastTrainingType]);
+  
+  // If activeExperimentId exists but we don't have results yet, automatically switch to results tab
+  useEffect(() => {
+    if (activeExperimentId && isLoadingResults) {
+      // User has started training - switch to results view
+      setActiveTab('results');
+    }
+  }, [activeExperimentId, isLoadingResults]);
   
   if (!datasetId || !targetColumn) {
     return (
@@ -132,9 +142,17 @@ const ModelTrainingContent: React.FC = () => {
         
         <div className="space-y-6 mt-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full grid grid-cols-2 rounded-md h-12">
+            <TabsList className="w-full grid grid-cols-3 rounded-md h-12">
               <TabsTrigger value="automl" className="text-sm font-medium">AutoML Training</TabsTrigger>
               <TabsTrigger value="custom" className="text-sm font-medium">Custom Training</TabsTrigger>
+              <TabsTrigger 
+                value="results" 
+                className="text-sm font-medium"
+                disabled={!activeExperimentId}
+              >
+                {isLoadingResults && <Loader className="h-3 w-3 mr-1 animate-spin" />}
+                Results
+              </TabsTrigger>
             </TabsList>
             
             <div className="overflow-hidden rounded-[0.5rem] border bg-background shadow-md md:shadow-xl mt-4">
@@ -145,15 +163,41 @@ const ModelTrainingContent: React.FC = () => {
               <TabsContent value="custom" className="space-y-4 p-6">
                 <CustomTraining />
               </TabsContent>
+              
+              <TabsContent value="results" className="space-y-4 p-6">
+                {activeExperimentId ? (
+                  isLoadingResults ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                      <div className="text-center">
+                        <h3 className="text-lg font-medium mb-1">Training in Progress</h3>
+                        <p className="text-muted-foreground">
+                          Model training is running in the background. Results will appear here automatically.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 font-mono">
+                          Experiment ID: {activeExperimentId}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <TrainingResultsV2 
+                      experimentId={activeExperimentId}
+                      onReset={() => resetTrainingState()}
+                    />
+                  )
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium mb-1">No Training Results</h3>
+                      <p className="text-muted-foreground">
+                        Start a training session using AutoML or Custom Training to view results.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
             </div>
           </Tabs>
-          
-          {activeExperimentId && (
-            <TrainingResultsV2 
-              experimentId={activeExperimentId}
-              onReset={() => resetTrainingState()}
-            />
-          )}
         </div>
         
         <footer className="mt-12 text-center text-sm text-gray-500">

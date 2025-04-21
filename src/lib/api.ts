@@ -307,7 +307,33 @@ export const trainingApi = {
         headers: getAuthHeaders()
       });
       
-      const data = await handleApiResponse(response);
+      if (response.status === 404) {
+        // Instead of throwing an error for 404, return a structured response
+        // indicating the experiment is still processing
+        return {
+          status: 'processing',
+          experiment_id: experimentId,
+          message: 'Training is still in progress',
+        } as unknown as ExperimentResults;
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          // Try to parse as JSON
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
+        } catch {
+          // If not JSON, use the raw text
+          errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
       return data.experiment_results || data; // Handle both response formats
     } catch (error) {
       console.error('Error fetching experiment results:', error);
