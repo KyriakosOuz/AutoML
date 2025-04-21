@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -16,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
+import CustomTrainingResults from './CustomTrainingResults'; // Add this import
 import { ExperimentResults } from '@/types/training';
 
 const CustomTraining: React.FC = () => {
