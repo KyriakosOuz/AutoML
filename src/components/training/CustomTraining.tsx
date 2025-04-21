@@ -71,24 +71,40 @@ const CustomTraining: React.FC = () => {
   }, [customParameters.algorithm, customParameters.useDefaultHyperparameters]);
 
   useEffect(() => {
-    if (experimentId) {
-      setIsLoadingResults(true);
-      trainingApi.getExperimentResults(experimentId)
-        .then(results => {
+    let pollInterval: number | null = null;
+
+    const pollResults = async () => {
+      try {
+        if (!experimentId) return;
+        
+        const results = await trainingApi.getExperimentResults(experimentId);
+        if (results) {
           setExperimentResults(results);
           setIsLoadingResults(false);
-        })
-        .catch(error => {
-          console.error('Error fetching experiment results:', error);
-          setIsLoadingResults(false);
-          toast({
-            title: "Error Fetching Results",
-            description: "Unable to fetch experiment results. Please try again later.",
-            variant: "destructive"
-          });
-        });
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling experiment results:', error);
+      }
+    };
+
+    if (experimentId && !experimentResults) {
+      setIsLoadingResults(true);
+      // Poll every 5 seconds
+      pollInterval = window.setInterval(pollResults, 5000);
+      // Initial poll
+      pollResults();
     }
-  }, [experimentId, toast]);
+
+    return () => {
+      if (pollInterval) {
+        window.clearInterval(pollInterval);
+      }
+    };
+  }, [experimentId, experimentResults]);
 
   const toggleDefaultHyperparameters = () => {
     const newValue = !customParameters.useDefaultHyperparameters;
@@ -103,6 +119,25 @@ const CustomTraining: React.FC = () => {
       });
     }
   };
+
+  useEffect(() => {
+    if (customParameters.algorithm && !customParameters.useDefaultHyperparameters) {
+      trainingApi.getAvailableHyperparameters(customParameters.algorithm)
+        .then(params => {
+          setCustomParameters({
+            hyperparameters: params
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching hyperparameters:', error);
+          // Fallback to defaults if API fails
+          const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
+          setCustomParameters({
+            hyperparameters: defaultParams
+          });
+        });
+    }
+  }, [customParameters.algorithm]);
 
   const handleTrainModel = async () => {
     if (!datasetId || !targetColumn || !taskType || !customParameters.algorithm) {
@@ -137,41 +172,28 @@ const CustomTraining: React.FC = () => {
         description: `Starting custom training with ${algorithm}...`,
       });
 
-      const response = await trainingApi.customTrain(
-        datasetId,
-        taskType as TaskType,
-        algorithm,
-        useDefaultHyperparameters,
-        hyperparameters,
-        testSize,
-        stratify,
-        randomSeed,
-        enableAnalytics,
-        enableVisualization,
-        experimentName || undefined,
-        true // storeModel
-      );
+      const formData = new FormData();
+      formData.append('dataset_id', datasetId);
+      formData.append('task_type', taskType);
+      formData.append('algorithm', algorithm);
+      formData.append('use_default_hyperparams', String(useDefaultHyperparameters));
+      if (!useDefaultHyperparameters) {
+        formData.append('hyperparameters', JSON.stringify(hyperparameters));
+      }
+      formData.append('test_size', String(testSize));
+      formData.append('stratify', String(stratify));
+      formData.append('random_seed', String(randomSeed));
+      formData.append('experiment_name', experimentName || '');
+      formData.append('enable_visualization', String(enableVisualization));
+      formData.append('advanced_analytics', String(enableAnalytics));
+      formData.append('store_model', 'true');
 
-      const respExperimentId = response?.data?.data?.experiment_id || response?.experiment_id;
+      const response = await trainingApi.customTrain(formData);
+      
+      const respExperimentId = response?.data?.data?.experiment_id;
       
       if (respExperimentId) {
         setExperimentId(respExperimentId);
-        
-        const formattedResult = {
-          experimentId: respExperimentId,
-          taskType: taskType as TaskType,
-          target: targetColumn,
-          metrics: {},
-          modelPath: '',
-          completedAt: new Date().toISOString(),
-          trainingTimeSec: 0,
-          selectedAlgorithm: algorithm,
-          modelFormat: '',
-          experimentName: experimentName
-        };
-
-        setCustomResult(formattedResult);
-
         toast({
           title: "Training Submitted",
           description: `Custom training with ${algorithm} has been submitted. Fetching results...`,
