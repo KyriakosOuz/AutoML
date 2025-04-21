@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,16 +61,6 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     if (value >= 0.5) return 'text-amber-600';
     return 'text-red-600';
   };
-  
-  // Group files by type
-  const filesByType = files.reduce((acc, file) => {
-    const type = file.file_type;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(file);
-    return acc;
-  }, {} as Record<string, typeof files>);
   
   if (isLoadingResults || !experimentResults) {
     return (
@@ -149,6 +140,16 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     model_file_url,
     report_file_url
   } = results;
+
+  // Now we can safely use the files variable since it's been declared
+  const filesByType = files.reduce((acc, file) => {
+    const type = file.file_type;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(file);
+    return acc;
+  }, {} as Record<string, typeof files>);
   
   const isClassification = task_type?.includes('classification');
   
