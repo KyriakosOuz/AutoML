@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
-  TaskType, 
-  AutoMLParameters, 
-  CustomTrainingParameters, 
-  AutoMLResult, 
+  TaskType,
+  AutoMLParameters,
+  CustomTrainingParameters,
+  AutoMLResult,
   CustomTrainingResult,
   ExperimentResults,
   ExperimentStatus
@@ -89,8 +89,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [pollingAttempts, setPollingAttempts] = useState(0);
   const [initialWaitAttempts, setInitialWaitAttempts] = useState(0);
   
+  const MAX_INITIAL_WAIT = 24; // 2 minutes (24 * 5 seconds)
   const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes with 5-second intervals
-  const MAX_INITIAL_WAIT = 20; // 20 seconds to wait for experiment to be created
+  const POLL_INTERVAL = 5000; // 5 seconds
   
   useEffect(() => {
     try {
@@ -98,7 +99,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
       
       if (savedExperimentId) {
-        console.log("���� Restored experiment ID from storage:", savedExperimentId);
+        console.log("Restored experiment ID from storage:", savedExperimentId);
         setActiveExperimentId(savedExperimentId);
         
         if (savedTrainingType) {
@@ -140,16 +141,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
       }
       
-      console.log(`🧠 Polling experiment ID (attempt ${pollingAttempts + 1}/${MAX_POLL_ATTEMPTS}):`, activeExperimentId);
-      
       try {
-        setIsLoadingResults(true);
         const results = await trainingApi.getExperimentResults(activeExperimentId);
         const status = results?.status as ExperimentStatus;
         
         setInitialWaitAttempts(0);
         
-        console.log(`[Polling] Attempt ${pollingAttempts + 1}: Status = ${status}`);
+        console.log(`🔄 [Polling] Attempt ${pollingAttempts + 1}: Status = ${status}`);
         
         switch (status) {
           case 'completed':
@@ -218,9 +216,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setPollingAttempts(prev => prev + 1);
             
             if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+              const timeoutMessage = "Training took too long to complete. Please try again or check the experiment status later.";
+              setError(timeoutMessage);
+              
               toast({
                 title: "Training Timeout",
-                description: "Training took too long to complete. Please try again or contact support if this persists.",
+                description: timeoutMessage,
                 variant: "destructive"
               });
               
@@ -241,12 +242,15 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         if (error.message && error.message.includes('404')) {
           setInitialWaitAttempts(prev => prev + 1);
-          console.log(`Waiting for experiment to be created (attempt ${initialWaitAttempts + 1}/${MAX_INITIAL_WAIT})`);
+          console.log(`⏳ Waiting for experiment to be created (attempt ${initialWaitAttempts + 1}/${MAX_INITIAL_WAIT})`);
           
           if (initialWaitAttempts >= MAX_INITIAL_WAIT) {
+            const timeoutMessage = "The experiment could not be started within the expected timeframe. Please try again or contact support if this persists.";
+            setError(timeoutMessage);
+            
             toast({
               title: "Training Failed",
-              description: "The experiment could not be started. Please try again or contact support if this persists.",
+              description: timeoutMessage,
               variant: "destructive"
             });
             
@@ -260,9 +264,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setActiveExperimentId(null);
           }
         } else {
+          const errorMessage = error.message || "Failed to retrieve training results.";
+          setError(errorMessage);
+          
           toast({
             title: "Error",
-            description: error.message || "Failed to retrieve training results.",
+            description: errorMessage,
             variant: "destructive"
           });
           
@@ -280,7 +287,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (activeExperimentId && !experimentResults) {
       setIsLoadingResults(true);
       
-      console.log("🕒 Scheduling initial poll with 3-second delay for ID:", activeExperimentId);
+      console.log("🚀 Starting polling for experiment ID:", activeExperimentId);
       
       if (pollTimeout) {
         window.clearTimeout(pollTimeout);
@@ -290,11 +297,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
       
       pollTimeout = window.setTimeout(() => {
-        console.log("🚀 Starting first poll after delay for ID:", activeExperimentId);
-        
         pollResults();
-        
-        pollInterval = window.setInterval(pollResults, 5000);
+        pollInterval = window.setInterval(pollResults, POLL_INTERVAL);
       }, 3000);
     }
     
