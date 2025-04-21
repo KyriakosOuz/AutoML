@@ -29,7 +29,8 @@ import {
   BookOpen,
   Loader,
   AlertTriangle,
-  ChevronLeft
+  ChevronLeft,
+  FileText
 } from 'lucide-react';
 import { 
   Table,

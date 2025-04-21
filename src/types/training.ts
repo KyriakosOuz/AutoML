@@ -76,4 +76,5 @@ export interface ExperimentResults {
   hyperparameters?: Record<string, any>;
   message?: string;
   id?: string; // Adding this property which is referenced in CustomTrainingResults.tsx
+  automl_engine?: string; // Add this missing property
 }
