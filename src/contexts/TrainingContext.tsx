@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
@@ -88,8 +87,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [pollingAttempts, setPollingAttempts] = useState(0);
+  const [initialWaitAttempts, setInitialWaitAttempts] = useState(0);
   
   const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes with 5-second intervals
+  const MAX_INITIAL_WAIT = 20; // 20 seconds to wait for experiment to be created
   
   useEffect(() => {
     try {
@@ -97,7 +98,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
       
       if (savedExperimentId) {
-        console.log("📋 Restored experiment ID from storage:", savedExperimentId);
+        console.log("���� Restored experiment ID from storage:", savedExperimentId);
         setActiveExperimentId(savedExperimentId);
         
         if (savedTrainingType) {
@@ -145,6 +146,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         setIsLoadingResults(true);
         const results = await trainingApi.getExperimentResults(activeExperimentId);
         const status = results?.status as ExperimentStatus;
+        
+        setInitialWaitAttempts(0);
         
         console.log(`[Polling] Attempt ${pollingAttempts + 1}: Status = ${status}`);
         
@@ -217,7 +220,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
               toast({
                 title: "Training Timeout",
-                description: "Training took too long. Please try again later.",
+                description: "Training took too long to complete. Please try again or contact support if this persists.",
                 variant: "destructive"
               });
               
@@ -237,13 +240,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         console.error('Error polling experiment results:', error);
         
         if (error.message && error.message.includes('404')) {
-          console.log('Training still in progress (404 response)');
-          setPollingAttempts(prev => prev + 1);
+          setInitialWaitAttempts(prev => prev + 1);
+          console.log(`Waiting for experiment to be created (attempt ${initialWaitAttempts + 1}/${MAX_INITIAL_WAIT})`);
           
-          if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          if (initialWaitAttempts >= MAX_INITIAL_WAIT) {
             toast({
-              title: "Training Timeout",
-              description: "Training took too long. Please try again later.",
+              title: "Training Failed",
+              description: "The experiment could not be started. Please try again or contact support if this persists.",
               variant: "destructive"
             });
             
@@ -253,6 +256,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             
             setIsLoadingResults(false);
             setPollingAttempts(0);
+            setInitialWaitAttempts(0);
+            setActiveExperimentId(null);
           }
         } else {
           toast({
@@ -267,6 +272,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           
           setIsLoadingResults(false);
           setPollingAttempts(0);
+          setInitialWaitAttempts(0);
         }
       }
     };
@@ -300,7 +306,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         window.clearInterval(pollInterval);
       }
     };
-  }, [activeExperimentId, experimentResults, pollingAttempts, lastTrainingType, automlParameters, toast]);
+  }, [activeExperimentId, experimentResults, pollingAttempts, initialWaitAttempts, lastTrainingType, automlParameters, toast]);
   
   const setAutomlEngine = (engine: TrainingEngine) => {
     setAutomlParametersState(prev => ({ ...prev, automlEngine: engine }));
