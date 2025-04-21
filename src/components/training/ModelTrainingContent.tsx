@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -46,8 +47,8 @@ const StartOverButton = () => {
 const ModelTrainingContent: React.FC = () => {
   const { user, signOut } = useAuth();
   const { datasetId, targetColumn, fileUrl, taskType } = useDataset();
+  const { automlResult, customResult, lastTrainingType, resetTrainingState } = useTraining();
   const [activeTab, setActiveTab] = useState<string>('automl');
-  const { automlResult, customResult, lastTrainingType } = useTraining();
   
   useEffect(() => {
     if (lastTrainingType) {
@@ -140,14 +141,14 @@ const ModelTrainingContent: React.FC = () => {
           {automlResult && (
             <TrainingResultsV2 
               experimentId={automlResult.experimentId}
-              onReset={resetTrainingState}
+              onReset={() => resetTrainingState()}
             />
           )}
           
           {customResult && (
             <TrainingResultsV2 
               experimentId={customResult.experimentId} 
-              onReset={resetTrainingState}
+              onReset={() => resetTrainingState()}
             />
           )}
         </div>
