@@ -40,7 +40,32 @@ const apiRequest = async (
   };
 
   if (data) {
-    options.body = isMultipart ? data : JSON.stringify(data);
+    if (isMultipart) {
+      // For multipart/form-data, use FormData
+      const formData = new FormData();
+      
+      // Add all fields to FormData
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (key === 'file' && value instanceof File) {
+            formData.append(key, value);
+          } else if (Array.isArray(value)) {
+            // Handle arrays by converting to JSON string
+            formData.append(key, JSON.stringify(value));
+          } else if (typeof value === 'object') {
+            // Handle objects by converting to JSON string
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      
+      options.body = formData;
+    } else {
+      // For JSON requests
+      options.body = JSON.stringify(data);
+    }
   }
 
   try {
@@ -182,7 +207,7 @@ export const datasetApi = {
 
 // Training API endpoints
 export const trainingApi = {
-  // AutoML training with FormData
+  // AutoML training
   automlTrain: (
     datasetId: string,
     taskType: string,
@@ -201,11 +226,9 @@ export const trainingApi = {
     formData.append('test_size', testSize.toString());
     formData.append('stratify', stratify.toString());
     formData.append('random_seed', randomSeed.toString());
-    
     if (experimentName) {
       formData.append('experiment_name', experimentName);
     }
-    
     formData.append('enable_visualization', enableVisualization.toString());
     formData.append('store_model', storeModel.toString());
 
