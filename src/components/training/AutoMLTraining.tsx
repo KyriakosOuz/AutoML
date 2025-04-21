@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -15,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Beaker, HelpCircle, Play, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
+import { TaskType } from '@/types/training';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, targetColumn, taskType } = useDataset();
@@ -63,8 +63,8 @@ const AutoMLTraining: React.FC = () => {
       
       const response = await trainingApi.automlTrain(
         datasetId,
-        taskType,
-        automlEngine,
+        taskType as TaskType,
+        automlEngine as 'mljar' | 'h2o',
         testSize,
         stratify,
         randomSeed,
@@ -73,16 +73,16 @@ const AutoMLTraining: React.FC = () => {
         true  // storeModel
       );
       
-      // Format the response to match our context state
       const formattedResult = {
         experimentId: response.experiment_id,
         engine: response.engine,
-        taskType: response.task_type,
+        taskType: response.task_type as TaskType,
         target: response.target,
         metrics: response.metrics,
         modelPath: response.model_path,
         completedAt: response.completed_at,
         trainingTimeSec: response.training_time_sec,
+        selectedAlgorithm: response.selected_algorithm || automlEngine,
         leaderboard: response.leaderboard
       };
       

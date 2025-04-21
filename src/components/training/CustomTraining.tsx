@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -18,7 +17,7 @@ import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
 import CustomTrainingResults from './CustomTrainingResults';
-import { ExperimentResults } from '@/types/training';
+import { ExperimentResults, TaskType } from '@/types/training';
 
 const CustomTraining: React.FC = () => {
   const { datasetId, targetColumn, taskType } = useDataset();
@@ -39,7 +38,6 @@ const CustomTraining: React.FC = () => {
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
 
-  // Fetch algorithms when task type changes
   useEffect(() => {
     if (taskType) {
       setIsLoadingAlgorithms(true);
@@ -51,13 +49,11 @@ const CustomTraining: React.FC = () => {
         .catch(error => {
           console.error('Error fetching algorithms:', error);
           setIsLoadingAlgorithms(false);
-          // Fallback to constants
           setAlgorithms(ALLOWED_ALGORITHMS[taskType] || []);
         });
     }
   }, [taskType]);
 
-  // Generate experiment name when algorithm changes
   useEffect(() => {
     if (customParameters.algorithm) {
       const newName = generateExperimentName('Custom', customParameters.algorithm.toUpperCase());
@@ -65,7 +61,6 @@ const CustomTraining: React.FC = () => {
     }
   }, [customParameters.algorithm]);
 
-  // Set default hyperparameters when algorithm changes
   useEffect(() => {
     if (customParameters.algorithm && customParameters.useDefaultHyperparameters) {
       const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
@@ -75,7 +70,6 @@ const CustomTraining: React.FC = () => {
     }
   }, [customParameters.algorithm, customParameters.useDefaultHyperparameters]);
 
-  // Fetch experiment results when experiment ID is available
   useEffect(() => {
     if (experimentId) {
       setIsLoadingResults(true);
@@ -102,7 +96,6 @@ const CustomTraining: React.FC = () => {
       useDefaultHyperparameters: newValue 
     });
     
-    // Reset to defaults if useDefault is turned on
     if (newValue && customParameters.algorithm) {
       const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
       setCustomParameters({
@@ -146,7 +139,7 @@ const CustomTraining: React.FC = () => {
 
       const response = await trainingApi.customTrain(
         datasetId,
-        taskType,
+        taskType as TaskType,
         algorithm,
         useDefaultHyperparameters,
         hyperparameters,
@@ -159,16 +152,14 @@ const CustomTraining: React.FC = () => {
         true // storeModel
       );
 
-      // Extract experiment ID from response
       const respExperimentId = response?.data?.data?.experiment_id || response?.experiment_id;
       
       if (respExperimentId) {
         setExperimentId(respExperimentId);
         
-        // Format the response to match our context state
         const formattedResult = {
           experimentId: respExperimentId,
-          taskType: taskType,
+          taskType: taskType as TaskType,
           target: targetColumn,
           metrics: {},
           modelPath: '',
@@ -234,7 +225,6 @@ const CustomTraining: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Algorithm Selection */}
             <div className="space-y-2">
               <Label>Algorithm</Label>
               <Select
@@ -255,7 +245,6 @@ const CustomTraining: React.FC = () => {
               </Select>
             </div>
 
-            {/* Hyperparameters Section */}
             {customParameters.algorithm && (
               <div className="space-y-4">
                 <HyperParameterEditor
@@ -269,7 +258,6 @@ const CustomTraining: React.FC = () => {
               </div>
             )}
 
-            {/* Experiment Name */}
             <div className="space-y-2">
               <Label htmlFor="experiment-name" className="flex items-center gap-2">
                 Experiment Name
@@ -293,7 +281,6 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            {/* Test Set Split */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Test Set Split</Label>
@@ -311,7 +298,6 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            {/* Stratify Split */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="stratify" className="flex items-center gap-2">
@@ -338,7 +324,6 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            {/* Random Seed */}
             <div className="space-y-2">
               <Label htmlFor="random-seed" className="flex items-center gap-2">
                 Random Seed
@@ -366,7 +351,6 @@ const CustomTraining: React.FC = () => {
               <p className="text-xs text-muted-foreground">For reproducible results</p>
             </div>
 
-            {/* Enable Analytics */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="enable-analytics" className="flex items-center gap-2">
@@ -393,7 +377,6 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            {/* Enable Visualization */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="enable-visualization" className="flex items-center gap-2">
@@ -420,7 +403,6 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            {/* Train Button and Info */}
             <Button
               onClick={handleTrainModel}
               disabled={isTraining || !isFormValid()}
@@ -450,7 +432,6 @@ const CustomTraining: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Show loading state while fetching results */}
       {isLoadingResults && (
         <div className="p-8 text-center">
           <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
@@ -458,7 +439,6 @@ const CustomTraining: React.FC = () => {
         </div>
       )}
 
-      {/* Display training results if available */}
       {experimentResults && (
         <CustomTrainingResults 
           experimentResults={experimentResults} 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -38,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ExperimentResults, TaskType } from '@/types/training';
+import { ExperimentResults } from '@/types/training';
 
 interface CustomTrainingResultsProps {
   experimentResults: ExperimentResults;
@@ -80,7 +79,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   // For regression metrics that shouldn't be formatted as percentages
   const formatRegressionMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
-    return typeof value === 'number' ? value.toFixed(4) : value.toString();
+    return typeof value === 'number' ? value.toFixed(4) : String(value);
   };
   
   const getMetricColor = (value: number | undefined) => {
@@ -322,51 +321,49 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
             )}
           </TabsContent>
           
-          {metrics.classification_report && (
-            <TabsContent value="report" className="p-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Classification Report</CardTitle>
-                  <CardDescription>
-                    Detailed metrics breakdown by class
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {typeof metrics.classification_report === 'string' ? (
-                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto">
-                      {metrics.classification_report}
-                    </pre>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Class</TableHead>
-                          <TableHead>Precision</TableHead>
-                          <TableHead>Recall</TableHead>
-                          <TableHead>F1-Score</TableHead>
-                          <TableHead>Support</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(metrics.classification_report).map(([className, values]: [string, any]) => {
-                          if (className === 'accuracy' || typeof values !== 'object') return null;
-                          return (
-                            <TableRow key={className}>
-                              <TableCell className="font-medium">{className}</TableCell>
-                              <TableCell>{formatMetric(values.precision)}</TableCell>
-                              <TableCell>{formatMetric(values.recall)}</TableCell>
-                              <TableCell>{formatMetric(values.f1_score)}</TableCell>
-                              <TableCell>{values.support}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
+          <TabsContent value="report" className="p-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Classification Report</CardTitle>
+                <CardDescription>
+                  Detailed metrics breakdown by class
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {typeof metrics.classification_report === 'string' ? (
+                  <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto">
+                    {metrics.classification_report}
+                  </pre>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Precision</TableHead>
+                        <TableHead>Recall</TableHead>
+                        <TableHead>F1-Score</TableHead>
+                        <TableHead>Support</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(metrics.classification_report || {}).map(([className, values]: [string, any]) => {
+                        if (className === 'accuracy' || typeof values !== 'object') return null;
+                        return (
+                          <TableRow key={className}>
+                            <TableCell className="font-medium">{className}</TableCell>
+                            <TableCell>{formatMetric(values.precision)}</TableCell>
+                            <TableCell>{formatMetric(values.recall)}</TableCell>
+                            <TableCell>{formatMetric(values.f1_score)}</TableCell>
+                            <TableCell>{values.support}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </CardContent>
       

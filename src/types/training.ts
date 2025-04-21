@@ -40,7 +40,6 @@ export interface TrainingResult {
   completedAt: string;
   trainingTimeSec: number;
   selectedAlgorithm: Algorithm;
-  modelFormat?: string;
 }
 
 export interface AutoMLResult extends TrainingResult {
@@ -53,7 +52,6 @@ export interface AutoMLResult extends TrainingResult {
 }
 
 export interface CustomTrainingResult extends TrainingResult {
-  selectedAlgorithm: Algorithm;
   modelFormat: string;
   files?: Array<{
     file_type: string;
@@ -66,8 +64,8 @@ export interface ExperimentResults {
   id: string;
   experiment_name: string;
   target_column: string;
-  task_type: TaskType;
-  automl_engine: TrainingEngine;
+  task_type: string;
+  automl_engine: string;
   metrics: Metrics;
   files: Array<{
     file_type: string;
