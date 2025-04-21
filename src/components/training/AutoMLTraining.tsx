@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import TrainingResults from './TrainingResults';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType } = useDataset();
@@ -34,6 +35,7 @@ const AutoMLTraining: React.FC = () => {
     setLastTrainingType,
     setError
   } = useTraining();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
   const [experimentId, setExperimentId] = useState<string | null>(null);
@@ -50,6 +52,15 @@ const AutoMLTraining: React.FC = () => {
       toast({
         title: "Missing Required Fields",
         description: "Dataset ID, task type, and AutoML engine are required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to start training",
         variant: "destructive"
       });
       return;

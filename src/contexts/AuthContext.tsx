@@ -15,11 +15,21 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Export the getAuthToken function
+// Export the getAuthToken function that uses the current session
 export const getAuthToken = () => {
+  // Get the current session from supabase
+  const session = supabase.auth.getSession().then(({ data }) => data.session);
+  
+  // If we have a session, return the access token
+  if (session) {
+    return session.then(s => s?.access_token || '');
+  }
+  
+  // Fallback to localStorage (for compatibility)
   if (typeof window !== 'undefined') {
     return localStorage.getItem('authToken') || '';
   }
+  
   return '';
 };
 
@@ -33,6 +43,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Store the token in localStorage for legacy support
+      if (session?.access_token) {
+        localStorage.setItem('authToken', session.access_token);
+      }
+      
       setLoading(false);
     });
 
@@ -40,6 +56,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Update the token in localStorage when the session changes
+      if (session?.access_token) {
+        localStorage.setItem('authToken', session.access_token);
+      } else {
+        localStorage.removeItem('authToken');
+      }
+      
       setLoading(false);
     });
 

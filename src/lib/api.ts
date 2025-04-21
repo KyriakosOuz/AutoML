@@ -1,5 +1,6 @@
 // First, let's fix the import issues
 import { getAuthToken } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define the TaskType type since it can't be imported from '@/types/dataset'
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
@@ -14,12 +15,39 @@ export interface Dataset {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const getAuthHeaders = () => {
-  const token = getAuthToken();
+// Updated getAuthHeaders function with better error handling
+const getAuthHeaders = async () => {
+  const token = await getAuthToken();
+  
+  if (!token) {
+    console.warn('No authentication token available. User may need to log in.');
+  }
+  
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+};
+
+// Helper function to handle API responses
+const handleApiResponse = async (response: Response) => {
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage;
+    
+    try {
+      // Try to parse as JSON
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
+    } catch {
+      // If not JSON, use the raw text
+      errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText}`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+  
+  return await response.json();
 };
 
 export const datasetApi = {
@@ -49,15 +77,17 @@ export const datasetApi = {
   },
 
   previewDataset: async (datasetId: string, stage: string = 'raw') => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch dataset preview');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
+        headers,
+      });
+      
+      return await handleApiResponse(response);
+    } catch (error) {
+      console.error('Error fetching dataset preview:', error);
+      throw error;
     }
-    
-    return await response.json();
   },
 
   getDatasetPreview: async (datasetId: string) => {
@@ -191,16 +221,19 @@ export const datasetApi = {
 
 export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
-    const response = await fetch(`${API_URL}/algorithms/get-algorithms/`, {
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch algorithms');
+    try {
+      // Ensure we're passing the task_type as a query parameter
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
+        headers,
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.algorithms;
+    } catch (error) {
+      console.error('Error fetching algorithms:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    return data.algorithms;
   },
 
   automlTrain: async (
@@ -211,66 +244,75 @@ export const trainingApi = {
     stratify: boolean, 
     randomSeed: number
   ) => {
-    const response = await fetch(`${API_URL}/training/automl-train`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        dataset_id: datasetId,
-        task_type: taskType,
-        automl_engine: automlEngine,
-        test_size: testSize,
-        stratify: stratify,
-        random_seed: randomSeed,
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to start AutoML training');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/training/automl-train/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          dataset_id: datasetId,
+          task_type: taskType,
+          automl_engine: automlEngine,
+          test_size: testSize,
+          stratify: stratify,
+          random_seed: randomSeed,
+        }),
+      });
+      
+      return await handleApiResponse(response);
+    } catch (error) {
+      console.error('Error starting AutoML training:', error);
+      throw error;
     }
-    
-    return await response.json();
   },
 
   getAvailableHyperparameters: async (algorithm: string) => {
-    const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch hyperparameters');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+        headers,
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.hyperparameters;
+    } catch (error) {
+      console.error('Error fetching hyperparameters:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    return data.hyperparameters;
   },
 
   customTrain: async (formData: FormData) => {
-    const response = await fetch(`${API_URL}/training/custom-train/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: formData
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to start custom training');
+    try {
+      // For FormData, we need a different approach for headers
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/training/custom-train/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // Note: Do not set 'Content-Type' for FormData
+        },
+        body: formData
+      });
+      
+      return await handleApiResponse(response);
+    } catch (error) {
+      console.error('Error starting custom training:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    return data;
   },
 
   getExperimentResults: async (experimentId: string) => {
-    const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
-      headers: getAuthHeaders()
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch experiment results');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
+        headers
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.experiment_results;
+    } catch (error) {
+      console.error('Error fetching experiment results:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    return data.experiment_results;
   }
 };
