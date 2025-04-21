@@ -47,7 +47,15 @@ const StartOverButton = () => {
 const ModelTrainingContent: React.FC = () => {
   const { user, signOut } = useAuth();
   const { datasetId, targetColumn, fileUrl, taskType } = useDataset();
-  const { automlResult, customResult, lastTrainingType, resetTrainingState } = useTraining();
+  const { 
+    activeExperimentId, 
+    experimentResults, 
+    lastTrainingType, 
+    resetTrainingState, 
+    automlResult,
+    customResult
+  } = useTraining();
+  
   const [activeTab, setActiveTab] = useState<string>('automl');
   
   useEffect(() => {
@@ -140,16 +148,9 @@ const ModelTrainingContent: React.FC = () => {
             </div>
           </Tabs>
           
-          {automlResult && (
+          {activeExperimentId && (
             <TrainingResultsV2 
-              experimentId={automlResult.experimentId}
-              onReset={() => resetTrainingState()}
-            />
-          )}
-          
-          {customResult && (
-            <TrainingResultsV2 
-              experimentId={customResult.experimentId} 
+              experimentId={activeExperimentId}
               onReset={() => resetTrainingState()}
             />
           )}

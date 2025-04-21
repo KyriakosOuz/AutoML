@@ -1,13 +1,20 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
   TaskType, 
   AutoMLParameters, 
   CustomTrainingParameters, 
   AutoMLResult, 
-  CustomTrainingResult 
+  CustomTrainingResult,
+  ExperimentResults
 } from '@/types/training';
+import { useToast } from '@/hooks/use-toast';
+import { trainingApi } from '@/lib/api';
+
+// Define localStorage keys
+const EXPERIMENT_STORAGE_KEY = 'last_experiment_id';
+const EXPERIMENT_TYPE_STORAGE_KEY = 'last_training_type';
 
 export interface TrainingContextProps {
   // Training state
@@ -18,6 +25,11 @@ export interface TrainingContextProps {
   automlResult: AutoMLResult | null;
   customResult: CustomTrainingResult | null;
   error: string | null;
+  
+  // Experiment tracking
+  activeExperimentId: string | null;
+  experimentResults: ExperimentResults | null;
+  isLoadingResults: boolean;
   
   // AutoML specific parameters
   automlEngine: TrainingEngine;
@@ -34,6 +46,11 @@ export interface TrainingContextProps {
   setCustomResult: (result: CustomTrainingResult | null) => void;
   setError: (error: string | null) => void;
   resetTrainingState: () => void;
+  
+  // Experiment management
+  setActiveExperimentId: (id: string | null) => void;
+  clearExperimentResults: () => void;
+  getExperimentResults: () => void;
   
   // AutoML specific setters
   setAutomlEngine: (engine: TrainingEngine) => void;
@@ -66,6 +83,8 @@ const TrainingContext = createContext<TrainingContextProps | undefined>(undefine
 
 // Provider component
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { toast } = useToast();
+  
   // Initialize state
   const [isTraining, setIsTraining] = useState(false);
   const [lastTrainingType, setLastTrainingType] = useState<'automl' | 'custom' | null>(null);
@@ -74,6 +93,199 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [automlResult, setAutomlResult] = useState<AutoMLResult | null>(null);
   const [customResult, setCustomResult] = useState<CustomTrainingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Experiment tracking state
+  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
+  const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [pollingAttempts, setPollingAttempts] = useState(0);
+  
+  // Load saved experiment ID from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
+      const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
+      
+      if (savedExperimentId) {
+        console.log("📋 Restored experiment ID from storage:", savedExperimentId);
+        setActiveExperimentId(savedExperimentId);
+        
+        if (savedTrainingType) {
+          setLastTrainingType(savedTrainingType);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading experiment data from localStorage:", error);
+    }
+  }, []);
+  
+  // Save experiment ID to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (activeExperimentId) {
+        localStorage.setItem(EXPERIMENT_STORAGE_KEY, activeExperimentId);
+        
+        if (lastTrainingType) {
+          localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, lastTrainingType);
+        }
+      } else {
+        // Clear if null to prevent stale data
+        localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error("Error saving experiment data to localStorage:", error);
+    }
+  }, [activeExperimentId, lastTrainingType]);
+  
+  // Poll for experiment results when activeExperimentId changes
+  useEffect(() => {
+    let pollInterval: number | null = null;
+    const MAX_FETCH_ATTEMPTS = 60; // 5 minutes at 5-second intervals
+    
+    const pollResults = async () => {
+      // Validate experiment ID
+      if (!activeExperimentId || activeExperimentId.length < 20) {
+        console.warn("⚠️ Invalid or missing experimentId for polling:", activeExperimentId);
+        if (pollInterval) {
+          window.clearInterval(pollInterval);
+        }
+        return;
+      }
+      
+      console.log(`🧠 Polling experiment ID (attempt ${pollingAttempts + 1}/${MAX_FETCH_ATTEMPTS}):`, activeExperimentId);
+      
+      try {
+        setIsLoadingResults(true);
+        const results = await trainingApi.getExperimentResults(activeExperimentId);
+        const status = results?.status;
+        
+        console.log(`[Polling] Attempt ${pollingAttempts + 1}: Status = ${status}`);
+        
+        if (status === 'completed') {
+          // Success! We have results
+          setExperimentResults(results);
+          setIsLoadingResults(false);
+          
+          // Update the appropriate result based on training type
+          if (lastTrainingType === 'automl') {
+            setAutomlResult({
+              experimentId: activeExperimentId,
+              engine: automlParameters.automlEngine,
+              taskType: results.task_type as TaskType,
+              target: results.target_column || '',
+              metrics: results.metrics || {},
+              modelPath: results.model_path || '',
+              completedAt: results.completed_at || '',
+              trainingTimeSec: results.training_time_sec || 0,
+              leaderboard: results.leaderboard || [],
+              selectedAlgorithm: results.selected_algorithm || '',
+            });
+          } else if (lastTrainingType === 'custom') {
+            setCustomResult({
+              experimentId: activeExperimentId,
+              taskType: results.task_type as TaskType,
+              target: results.target_column || '',
+              metrics: results.metrics || {},
+              modelPath: results.model_path || '',
+              completedAt: results.completed_at || '',
+              trainingTimeSec: results.training_time_sec || 0,
+              selectedAlgorithm: results.algorithm || '',
+              modelFormat: results.model_format || '',
+              experimentName: results.experiment_name || '',
+            });
+          }
+          
+          // Clear polling
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+          }
+          
+          // Show success toast
+          toast({
+            title: "Training Completed",
+            description: `Model training ${results.experiment_name ? `for ${results.experiment_name}` : ''} completed successfully.`,
+          });
+          
+          setPollingAttempts(0);
+        } else if (status === 'failed') {
+          // Training failed
+          setIsLoadingResults(false);
+          setError(results?.training_results?.error_message || "The training process failed.");
+          
+          toast({
+            title: "Training Failed",
+            description: results?.training_results?.error_message || "The training process failed.",
+            variant: "destructive"
+          });
+          
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+          }
+          
+          setPollingAttempts(0);
+        } else {
+          // Still running, increment attempts counter
+          setPollingAttempts(prev => prev + 1);
+          
+          if (pollingAttempts >= MAX_FETCH_ATTEMPTS) {
+            toast({
+              title: "Timeout",
+              description: "Training is taking longer than expected. Please check later.",
+              variant: "destructive"
+            });
+            
+            if (pollInterval) {
+              window.clearInterval(pollInterval);
+            }
+            
+            setIsLoadingResults(false);
+            setPollingAttempts(0);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling experiment results:', error);
+        
+        // Increment attempts even on error
+        setPollingAttempts(prev => prev + 1);
+        
+        if (pollingAttempts >= MAX_FETCH_ATTEMPTS) {
+          toast({
+            title: "Polling Failed",
+            description: "Failed to retrieve training results after multiple attempts.",
+            variant: "destructive"
+          });
+          
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+          }
+          
+          setIsLoadingResults(false);
+          setPollingAttempts(0);
+        }
+      }
+    };
+    
+    // Start polling if we have an active experiment ID and no results yet
+    if (activeExperimentId && !experimentResults) {
+      // Initial poll immediately
+      pollResults();
+      
+      // Then poll at intervals
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+      
+      pollInterval = window.setInterval(pollResults, 5000);
+    }
+    
+    // Cleanup function
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [activeExperimentId, experimentResults, pollingAttempts, lastTrainingType, automlParameters, toast]);
   
   // Helper functions for individual parameter updates
   const setAutomlEngine = (engine: TrainingEngine) => {
@@ -90,6 +302,30 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   const setRandomSeed = (seed: number) => {
     setAutomlParametersState(prev => ({ ...prev, randomSeed: seed }));
+  };
+  
+  // Manual experiment result fetching function
+  const getExperimentResults = async () => {
+    if (!activeExperimentId) return;
+    
+    try {
+      setIsLoadingResults(true);
+      const results = await trainingApi.getExperimentResults(activeExperimentId);
+      setExperimentResults(results);
+      setIsLoadingResults(false);
+    } catch (error) {
+      console.error('Error fetching experiment results:', error);
+      setError('Failed to fetch experiment results');
+      setIsLoadingResults(false);
+    }
+  };
+  
+  // Clear experiment results
+  const clearExperimentResults = () => {
+    setExperimentResults(null);
+    setActiveExperimentId(null);
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
   };
   
   // Helper functions
@@ -109,6 +345,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setAutomlResult(null);
     setCustomResult(null);
     setError(null);
+    setExperimentResults(null);
+    setActiveExperimentId(null);
+    setIsLoadingResults(false);
+    setPollingAttempts(0);
+    
+    // Clear localStorage
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
   };
   
   // Context value
@@ -121,12 +365,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     customResult,
     error,
     
+    // Experiment tracking
+    activeExperimentId,
+    experimentResults,
+    isLoadingResults,
+    
     // Add automl specific parameters
     automlEngine: automlParameters.automlEngine,
     testSize: automlParameters.testSize,
     stratify: automlParameters.stratify,
     randomSeed: automlParameters.randomSeed,
     
+    // Methods
     setIsTraining,
     setLastTrainingType,
     setAutomlParameters,
@@ -135,6 +385,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCustomResult,
     setError,
     resetTrainingState,
+    
+    // Experiment management
+    setActiveExperimentId,
+    clearExperimentResults,
+    getExperimentResults,
     
     // Add automl specific setters
     setAutomlEngine,
