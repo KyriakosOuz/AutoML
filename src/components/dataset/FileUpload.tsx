@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi, Dataset } from '@/lib/api';
@@ -103,8 +104,11 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
-      if ('dataset_id' in response) {
+      // Updated response handling to handle both response formats
+      if (response && 'dataset_id' in response) {
         const dataset = response as Dataset;
+        
+        // Check if overview is directly in response or nested in data
         const overview = dataset.overview || {};
         const numericalFeatures = overview.numerical_features || [];
         const categoricalFeatures = overview.categorical_features || [];
@@ -130,7 +134,41 @@ const FileUpload: React.FC = () => {
           previewColumns: [...numericalFeatures, ...categoricalFeatures],
           processingStage: 'raw',
         });
+      } else if (response && response.data && response.data.dataset_id) {
+        // Handle case where response is nested under 'data' property
+        const dataset = {
+          dataset_id: response.data.dataset_id,
+          file_url: response.data.file_url,
+          overview: response.data.overview || {}
+        };
+        
+        const overview = dataset.overview;
+        const numericalFeatures = overview.numerical_features || [];
+        const categoricalFeatures = overview.categorical_features || [];
+        
+        const datasetOverview = {
+          num_rows: overview.num_rows || 0,
+          num_columns: overview.num_columns || 0,
+          missing_values: overview.missing_values || {},
+          numerical_features: numericalFeatures,
+          categorical_features: categoricalFeatures,
+          total_missing_values: overview.total_missing_values,
+          missing_values_count: overview.missing_values_count,
+          column_names: overview.column_names,
+          unique_values_count: overview.unique_values_count,
+          data_types: overview.data_types,
+          feature_classification: overview.feature_classification
+        };
+        
+        updateState({
+          datasetId: dataset.dataset_id,
+          fileUrl: dataset.file_url,
+          overview: datasetOverview,
+          previewColumns: [...numericalFeatures, ...categoricalFeatures],
+          processingStage: 'raw',
+        });
       } else {
+        console.error('Unexpected response format:', response);
         throw new Error('Invalid response format from server');
       }
       
