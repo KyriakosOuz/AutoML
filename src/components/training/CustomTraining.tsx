@@ -27,6 +27,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { ALLOWED_ALGORITHMS, generateExperimentName } from '@/lib/constants';
 
 interface AlgorithmOption {
   name: string;
@@ -62,7 +63,6 @@ const CustomTraining: React.FC = () => {
   const [isLoadingHyperparams, setIsLoadingHyperparams] = useState(false);
   const [experimentName, setExperimentName] = useState('');
   
-  // Load available algorithms based on task type
   useEffect(() => {
     const loadAlgorithms = async () => {
       if (!taskType) return;
@@ -71,20 +71,16 @@ const CustomTraining: React.FC = () => {
         setIsLoadingAlgorithms(true);
         console.log(`Loading algorithms for task type: ${taskType}`);
         
-        const algorithmList = await trainingApi.getAvailableAlgorithms(taskType);
-        console.log('Received algorithms:', algorithmList);
+        const algorithmList = ALLOWED_ALGORITHMS[taskType as keyof typeof ALLOWED_ALGORITHMS] || [];
+        console.log('Available algorithms:', algorithmList);
         
-        // Transform the algorithm list to the expected format
-        const formattedAlgorithms = Array.isArray(algorithmList) 
-          ? algorithmList.map(name => ({ name, description: "" }))
-          : [];
-        
+        const formattedAlgorithms = algorithmList.map(name => ({ name, description: "" }));
         setAlgorithms(formattedAlgorithms);
       } catch (error) {
-        console.error('Error loading algorithms:', error);
+        console.error('Error setting algorithms:', error);
         toast({
           title: "Failed to load algorithms",
-          description: "Could not retrieve algorithms for your task type",
+          description: "Could not set algorithms for your task type",
           variant: "destructive"
         });
       } finally {
@@ -95,7 +91,6 @@ const CustomTraining: React.FC = () => {
     loadAlgorithms();
   }, [taskType, toast]);
   
-  // Load hyperparameters when algorithm changes
   useEffect(() => {
     const loadHyperparameters = async () => {
       if (!customParameters.algorithm) return;
@@ -105,7 +100,6 @@ const CustomTraining: React.FC = () => {
         const response = await trainingApi.getHyperparameters(customParameters.algorithm);
         setHyperparameters(response.hyperparameters);
         
-        // Initialize hyperparameter values with defaults
         const defaultValues = response.hyperparameters.reduce((acc: Record<string, any>, param: Hyperparameter) => {
           acc[param.name] = param.default;
           return acc;
@@ -127,6 +121,13 @@ const CustomTraining: React.FC = () => {
     
     loadHyperparameters();
   }, [customParameters.algorithm, setCustomParameters, toast]);
+  
+  useEffect(() => {
+    if (customParameters.algorithm) {
+      const newName = generateExperimentName('Custom', customParameters.algorithm);
+      setExperimentName(newName);
+    }
+  }, [customParameters.algorithm]);
   
   const handleTrainModel = async () => {
     if (!datasetId || !targetColumn || !customParameters.algorithm || !taskType) {
@@ -171,7 +172,6 @@ const CustomTraining: React.FC = () => {
         experimentName || undefined
       );
       
-      // Format the response to match our context state
       const formattedResult = {
         experimentId: response.experiment_id,
         selectedAlgorithm: response.selected_algorithm,
@@ -214,7 +214,6 @@ const CustomTraining: React.FC = () => {
   };
   
   const resetParameters = () => {
-    // Reset to default hyperparameters
     const defaultValues = hyperparameters.reduce((acc: Record<string, any>, param: Hyperparameter) => {
       acc[param.name] = param.default;
       return acc;
@@ -316,7 +315,6 @@ const CustomTraining: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Algorithm Selection */}
           <div className="space-y-2">
             <Label htmlFor="algorithm" className="flex items-center gap-2">
               Select Algorithm
@@ -351,7 +349,6 @@ const CustomTraining: React.FC = () => {
             </Select>
           </div>
           
-          {/* Experiment Name Field */}
           <div className="space-y-2">
             <Label htmlFor="experiment-name" className="flex items-center gap-2">
               Experiment Name
@@ -375,7 +372,6 @@ const CustomTraining: React.FC = () => {
             />
           </div>
           
-          {/* Hyperparameters Section */}
           {customParameters.algorithm && (
             <Accordion type="single" collapsible className="w-full border rounded-lg">
               <AccordionItem value="hyperparameters">
@@ -439,7 +435,6 @@ const CustomTraining: React.FC = () => {
             </Accordion>
           )}
           
-          {/* Test Size Slider */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
@@ -469,7 +464,6 @@ const CustomTraining: React.FC = () => {
             />
           </div>
           
-          {/* Stratify Option */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="stratify" className="flex items-center gap-2">
@@ -496,7 +490,6 @@ const CustomTraining: React.FC = () => {
             />
           </div>
           
-          {/* Random Seed */}
           <div className="space-y-2">
             <Label htmlFor="random-seed" className="flex items-center gap-2">
               Random Seed
@@ -523,7 +516,6 @@ const CustomTraining: React.FC = () => {
             />
           </div>
           
-          {/* Enable Analytics Option */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
               <Label htmlFor="enable-analytics" className="flex items-center gap-2">
@@ -550,7 +542,6 @@ const CustomTraining: React.FC = () => {
             />
           </div>
           
-          {/* Training Button */}
           <Button
             onClick={handleTrainModel}
             disabled={isTraining || !datasetId || !customParameters.algorithm}

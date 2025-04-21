@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
 import { trainingApi } from '@/lib/api';
@@ -14,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Beaker, HelpCircle, Play, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { generateExperimentName } from '@/lib/constants';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, targetColumn, taskType } = useDataset();
@@ -29,6 +29,13 @@ const AutoMLTraining: React.FC = () => {
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
   
+  useEffect(() => {
+    if (automlParameters.automlEngine) {
+      const newName = generateExperimentName('AutoML', automlParameters.automlEngine.toUpperCase());
+      setExperimentName(newName);
+    }
+  }, [automlParameters.automlEngine]);
+
   const handleTrainModel = async () => {
     if (!datasetId || !targetColumn || !taskType) {
       toast({
@@ -130,7 +137,7 @@ const AutoMLTraining: React.FC = () => {
 
           <div className="space-y-2">
             <Label htmlFor="automl-engine" className="flex items-center gap-2">
-              AutoML Engine *
+              AutoML Engine
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -177,8 +184,8 @@ const AutoMLTraining: React.FC = () => {
             <Input
               id="experiment-name"
               value={experimentName}
-              onChange={(e) => setExperimentName(e.target.value)}
-              placeholder="Enter experiment name (optional)"
+              readOnly
+              className="bg-muted"
               disabled={isTraining}
             />
           </div>
