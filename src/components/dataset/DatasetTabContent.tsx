@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,8 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
 
-      const importanceData = response?.data?.feature_importance || [];
+      // The response structure has changed - it no longer has a nested data property
+      const importanceData = response.feature_importance || [];
 
       if (!importanceData.length) {
         throw new Error('No feature importance data returned from API');
