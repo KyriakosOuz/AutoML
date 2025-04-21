@@ -1,13 +1,11 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  ExperimentResults,  // Add this import
+  ExperimentResults,
   TaskType 
 } from '@/types/training';
-
-// Define the TaskType type since it can't be imported from '@/types/dataset'
-// export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 
 // Define the Dataset type
 export interface Dataset {
@@ -15,6 +13,13 @@ export interface Dataset {
   file_url: string;
   data?: Record<string, any>[];
   overview?: Record<string, any>;
+}
+
+// Define the API response interfaces
+export interface ApiResponse<T = any> {
+  status?: string;
+  message?: string;
+  data?: T;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -55,7 +60,7 @@ const handleApiResponse = async (response: Response) => {
 };
 
 export const datasetApi = {
-  uploadDataset: async (file: File, customMissingSymbol?: string): Promise<Dataset> => {
+  uploadDataset: async (file: File, customMissingSymbol?: string): Promise<Dataset | ApiResponse<Dataset>> => {
     const formData = new FormData();
     formData.append('file', file);
     

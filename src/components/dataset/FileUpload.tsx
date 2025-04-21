@@ -134,7 +134,7 @@ const FileUpload: React.FC = () => {
           previewColumns: [...numericalFeatures, ...categoricalFeatures],
           processingStage: 'raw',
         });
-      } else if (response && response.data && response.data.dataset_id) {
+      } else if (response && response.data && typeof response.data === 'object' && 'dataset_id' in response.data) {
         // Handle case where response is nested under 'data' property
         const dataset = {
           dataset_id: response.data.dataset_id,
