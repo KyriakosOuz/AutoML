@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { HyperParameters } from '@/types/training';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface HyperParameterEditorProps {
   hyperparameters: HyperParameters;
@@ -22,8 +23,6 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
 
   const handleParamChange = (key: string, value: string) => {
     const updatedParams = { ...localParams };
-
-    // Convert the value based on the original type
     const originalValue = hyperparameters[key];
     let convertedValue: string | number | boolean | number[];
 
@@ -49,16 +48,22 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
   const renderInput = (key: string, value: string | number | boolean | number[]) => {
     if (typeof value === 'boolean') {
       return (
-        <Switch
-          checked={value}
-          onCheckedChange={(checked) => handleParamChange(key, String(checked))}
-        />
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={value}
+            onCheckedChange={(checked) => handleParamChange(key, String(checked))}
+          />
+          <span className="text-sm text-muted-foreground">
+            {value ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
       );
     }
 
     if (Array.isArray(value)) {
       return (
         <Input
+          className="font-mono text-sm"
           value={JSON.stringify(value)}
           onChange={(e) => handleParamChange(key, e.target.value)}
           placeholder="[value1, value2, ...]"
@@ -71,17 +76,24 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
         type={typeof value === 'number' ? 'number' : 'text'}
         value={value}
         onChange={(e) => handleParamChange(key, e.target.value)}
+        className={typeof value === 'number' ? 'font-mono' : ''}
       />
     );
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       {Object.entries(localParams).map(([key, value]) => (
-        <div key={key} className="grid gap-2">
-          <Label className="capitalize">{key.replace(/_/g, ' ')}</Label>
-          {renderInput(key, value)}
-        </div>
+        <Card key={key} className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium capitalize">
+                {key.split('_').join(' ')}
+              </Label>
+              {renderInput(key, value)}
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
