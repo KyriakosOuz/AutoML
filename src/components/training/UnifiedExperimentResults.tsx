@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -51,6 +50,8 @@ interface UnifiedExperimentResultsProps {
   onBack?: () => void;
 }
 
+const TIMEOUT_DURATION = 60000; // 60 seconds in milliseconds
+
 const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({ 
   onReset,
   onBack
@@ -58,8 +59,32 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
   const { toast } = useToast();
   const { activeExperimentId, experimentResults, isLoadingResults, error } = useTraining();
   const [activeTab, setActiveTab] = useState('metrics');
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
-  if (isLoadingResults || !experimentResults) {
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (isLoadingResults) {
+      // Set timeout after 60 seconds
+      timeoutId = setTimeout(() => {
+        setHasTimedOut(true);
+        toast({
+          title: "Training Timeout",
+          description: "The training process is taking longer than expected. You can wait or try again.",
+          variant: "destructive",
+        });
+      }, TIMEOUT_DURATION);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isLoadingResults, toast]);
+
+  // Show loading state with retry option if timed out
+  if (isLoadingResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
         <CardHeader>
@@ -68,7 +93,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
             Training Experiment
           </CardTitle>
           <CardDescription>
-            Loading experiment results...
+            {hasTimedOut ? "Training is taking longer than expected" : "Loading experiment results..."}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-12">
@@ -77,8 +102,21 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
               <Loader className="h-12 w-12 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Processing your model training experiment...
+              {hasTimedOut 
+                ? "The training process is still running but taking longer than expected"
+                : "Processing your model training experiment..."
+              }
             </p>
+            {hasTimedOut && (
+              <Button 
+                variant="outline" 
+                onClick={onReset}
+                className="mt-4"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            )}
             {activeExperimentId && (
               <p className="text-xs font-mono text-muted-foreground">
                 Experiment ID: {activeExperimentId}
@@ -89,8 +127,10 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
       </Card>
     );
   }
-  
-  if (error) {
+
+  // Show error state
+  if (error || (experimentResults?.status === 'failed')) {
+    const errorMessage = error || experimentResults?.error_message || "The training process failed.";
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
         <CardHeader>
@@ -104,7 +144,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
         </CardHeader>
         <CardContent>
           <div className="bg-destructive/10 p-4 rounded-md">
-            <p className="text-destructive">{error}</p>
+            <p className="text-destructive">{errorMessage}</p>
           </div>
           <Button 
             variant="outline" 
@@ -119,10 +159,12 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     );
   }
 
-  if (!experimentResults) {
+  // Only show results if we have them and status is completed
+  if (!experimentResults || experimentResults.status !== 'completed') {
     return null;
   }
 
+  // Keep the rest of the existing results rendering code
   const {
     experiment_name,
     task_type,
@@ -615,7 +657,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Full Report</CardTitle>
                     <CardDescription>View the complete analysis report</CardDescription>
-                  </CardHeader>
+                  CardHeader>
                   <CardContent className="flex justify-center pb-6">
                     <Button asChild>
                       <a href={report_file_url} target="_blank" rel="noopener noreferrer">
