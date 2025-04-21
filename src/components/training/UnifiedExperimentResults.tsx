@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -156,6 +157,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     );
   }
 
+  // Only show results if we have them and status is completed or success
   if (!experimentResults || (experimentResults.status !== 'completed' && experimentResults.status !== 'success')) {
     return null;
   }
@@ -204,6 +206,8 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
   const isClassification = task_type ? task_type.includes('classification') : false;
   const isAutoML = automl_engine === 'mljar' || automl_engine === 'h2o';
   
+  // If experiment is still running, show loading state
+  // This line has been fixed to handle the properly typed status check
   if (status === 'running') {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
