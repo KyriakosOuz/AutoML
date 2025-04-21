@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -298,14 +297,14 @@ export const trainingApi = {
     }
   },
 
-  getExperimentResults: async (experimentId: string) => {
+  getExperimentResults: async (experimentId: string): Promise<ExperimentResults> => {
     try {
       const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
         headers: getAuthHeaders()
       });
       
       const data = await handleApiResponse(response);
-      return data.experiment_results;
+      return data.experiment_results || data; // Handle both response formats
     } catch (error) {
       console.error('Error fetching experiment results:', error);
       throw error;

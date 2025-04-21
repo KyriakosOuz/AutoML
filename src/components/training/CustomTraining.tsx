@@ -72,19 +72,47 @@ const CustomTraining: React.FC = () => {
 
   useEffect(() => {
     let pollInterval: number | null = null;
+    let attempts = 0;
+    const maxAttempts = 12; // 12 * 5s = 60 seconds timeout
 
     const pollResults = async () => {
       try {
         if (!experimentId) return;
-        
+
         const results = await trainingApi.getExperimentResults(experimentId);
-        if (results) {
+        const status = results?.status;
+
+        console.log(`[Polling] Attempt ${attempts + 1}: Status = ${status}`);
+
+        if (status === 'completed') {
           setExperimentResults(results);
           setIsLoadingResults(false);
           if (pollInterval) {
             window.clearInterval(pollInterval);
-            pollInterval = null;
           }
+        } else if (status === 'failed') {
+          toast({
+            title: "Training Failed",
+            description: results?.training_results?.error_message || "The training process failed.",
+            variant: "destructive"
+          });
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+          }
+          setIsLoadingResults(false);
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          toast({
+            title: "Timeout",
+            description: "Training is taking longer than expected. Please check later.",
+            variant: "destructive"
+          });
+          if (pollInterval) {
+            window.clearInterval(pollInterval);
+          }
+          setIsLoadingResults(false);
         }
       } catch (error) {
         console.error('Error polling experiment results:', error);
@@ -93,10 +121,8 @@ const CustomTraining: React.FC = () => {
 
     if (experimentId && !experimentResults) {
       setIsLoadingResults(true);
-      // Poll every 5 seconds
-      pollInterval = window.setInterval(pollResults, 5000);
-      // Initial poll
-      pollResults();
+      pollInterval = window.setInterval(pollResults, 5000); // every 5 seconds
+      pollResults(); // initial call
     }
 
     return () => {
@@ -104,7 +130,7 @@ const CustomTraining: React.FC = () => {
         window.clearInterval(pollInterval);
       }
     };
-  }, [experimentId, experimentResults]);
+  }, [experimentId, experimentResults, toast]);
 
   const toggleDefaultHyperparameters = () => {
     const newValue = !customParameters.useDefaultHyperparameters;

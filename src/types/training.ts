@@ -1,4 +1,3 @@
-
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 
 export type TrainingEngine = 'mljar' | 'h2o';
@@ -70,6 +69,11 @@ export interface ExperimentResults {
   leaderboard?: any[];
   files?: any[];
   algorithm?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  training_results?: {
+    error_message?: string;
+    [key: string]: any;
+  };
   [key: string]: any;
 }
 
