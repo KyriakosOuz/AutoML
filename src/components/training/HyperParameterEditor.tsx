@@ -25,7 +25,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
 
     // Convert the value based on the original type
     const originalValue = hyperparameters[key];
-    let convertedValue: HyperParameter;
+    let convertedValue: string | number | boolean | number[];
 
     if (typeof originalValue === 'boolean') {
       convertedValue = value === 'true';
@@ -46,7 +46,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
     onChange(updatedParams);
   };
 
-  const renderInput = (key: string, value: HyperParameter) => {
+  const renderInput = (key: string, value: string | number | boolean | number[]) => {
     if (typeof value === 'boolean') {
       return (
         <Switch
