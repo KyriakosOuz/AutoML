@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,7 +64,7 @@ export const datasetApi = {
     formData.append('file', file);
     
     if (customMissingSymbol) {
-      formData.append('missing_symbol', customMissingSymbol);
+      formData.append('custom_missing_symbol', customMissingSymbol);
     }
     
     const token = getAuthToken();
@@ -78,142 +77,98 @@ export const datasetApi = {
       body: formData,
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to upload dataset');
-    }
-    
-    return await response.json();
+    return await handleApiResponse(response);
   },
 
   previewDataset: async (datasetId: string, stage: string = 'raw') => {
-    try {
-      const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
-        headers: getAuthHeaders(),
-      });
-      
-      return await handleApiResponse(response);
-    } catch (error) {
-      console.error('Error fetching dataset preview:', error);
-      throw error;
-    }
-  },
-
-  getDatasetPreview: async (datasetId: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/preview`, {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('stage', stage);
+    
+    const response = await fetch(`${API_URL}/dataset/preview-data/`, {
+      method: 'POST',
       headers: getAuthHeaders(),
+      body: formData
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch dataset preview');
-    }
-    
-    return await response.json();
+    return await handleApiResponse(response);
   },
 
-  analyzeDataset: async (datasetId: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/analyze`, {
-      headers: getAuthHeaders(),
-    });
+  handleMissingValues: async (datasetId: string, strategy: string, customMissingSymbol?: string) => {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('strategy', strategy);
     
-    if (!response.ok) {
-      throw new Error('Failed to analyze dataset');
+    if (customMissingSymbol) {
+      formData.append('custom_missing_symbol', customMissingSymbol);
     }
     
-    return await response.json();
+    const response = await fetch(`${API_URL}/dataset/handle-dataset/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData
+    });
+    
+    return await handleApiResponse(response);
   },
 
   detectTaskType: async (datasetId: string, targetColumn: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/detect_task_type`, {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('target_column', targetColumn);
+    
+    const response = await fetch(`${API_URL}/dataset/detect-task-type/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ target_column: targetColumn }),
+      body: formData
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to detect task type');
-    }
-    
-    return await response.json();
+    return await handleApiResponse(response);
   },
 
   featureImportancePreview: async (datasetId: string, targetColumn: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance_preview`, {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('target_column', targetColumn);
+    
+    const response = await fetch(`${API_URL}/dataset/feature-importance-preview/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ target_column: targetColumn }),
+      body: formData
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to calculate feature importance');
-    }
-    
-    return await response.json();
-  },
-
-  handleMissingValues: async (datasetId: string, strategy: string, fillValue?: any) => {
-    const payload: any = { strategy };
-    if (fillValue !== undefined) {
-      payload.fill_value = fillValue;
-    }
-    
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/handle_missing_values`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to handle missing values');
-    }
-    
-    return await response.json();
-  },
-
-  preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/preprocess`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        normalization_method: normalizationMethod,
-        balance_strategy: balanceStrategy
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to preprocess dataset');
-    }
-    
-    return await response.json();
-  },
-
-  setTargetColumn: async (datasetId: string, targetColumn: string, taskType: TaskType) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/set_target`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ target_column: targetColumn, task_type: taskType }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to set target column');
-    }
-    
-    return await response.json();
+    return await handleApiResponse(response);
   },
 
   saveDataset: async (datasetId: string, targetColumn: string, columnsToKeep: string[]) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/save`, {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('target_column', targetColumn);
+    formData.append('columns_to_keep', JSON.stringify(columnsToKeep));
+    
+    const response = await fetch(`${API_URL}/dataset/save-dataset/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ target_column: targetColumn, columns_to_keep: columnsToKeep }),
+      body: formData
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to save dataset');
-    }
-    
-    return await response.json();
+    return await handleApiResponse(response);
   },
 
+  preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string) => {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('normalization_method', normalizationMethod);
+    formData.append('balance_strategy', balanceStrategy);
+    
+    const response = await fetch(`${API_URL}/dataset/data-preprocess/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData
+    });
+    
+    return await handleApiResponse(response);
+  },
   getFeatureImportance: async (datasetId: string) => {
     const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance`, {
       headers: getAuthHeaders(),
