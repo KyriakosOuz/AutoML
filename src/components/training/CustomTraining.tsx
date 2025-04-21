@@ -73,9 +73,19 @@ const CustomTraining: React.FC = () => {
   useEffect(() => {
     let pollInterval: number | null = null;
     let attempts = 0;
-    const maxAttempts = 12; // 12 * 5s = 60 seconds timeout
+    const MAX_FETCH_ATTEMPTS = 12; 
 
     const pollResults = async () => {
+      if (!experimentId || experimentId.length < 20) {
+        console.warn("⚠️ Invalid or missing experimentId for polling:", experimentId);
+        if (pollInterval) {
+          window.clearInterval(pollInterval);
+        }
+        return;
+      }
+
+      console.log("🔁 Polling experiment:", experimentId);
+
       try {
         if (!experimentId) return;
 
@@ -103,7 +113,7 @@ const CustomTraining: React.FC = () => {
         }
 
         attempts++;
-        if (attempts >= maxAttempts) {
+        if (attempts >= MAX_FETCH_ATTEMPTS) {
           toast({
             title: "Timeout",
             description: "Training is taking longer than expected. Please check later.",
@@ -217,6 +227,8 @@ const CustomTraining: React.FC = () => {
       const response = await trainingApi.customTrain(formData);
       
       const respExperimentId = response?.data?.data?.experiment_id;
+      
+      console.log("🚀 Training started with ID:", respExperimentId);
       
       if (respExperimentId) {
         setExperimentId(respExperimentId);
