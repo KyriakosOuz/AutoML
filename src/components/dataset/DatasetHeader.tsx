@@ -5,7 +5,7 @@ import { Database, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Steps, Step } from '@/components/ui/steps';
-import { FileSpreadsheet, Workflow, Sliders, PlayCircle } from 'lucide-react';
+import { FileSpreadsheet, Table, Sliders, PlayCircle } from 'lucide-react';
 
 interface DatasetHeaderProps {
   user: any;
@@ -62,9 +62,9 @@ const DatasetHeader: React.FC<DatasetHeaderProps> = ({
           status={!datasetId ? "current" : "complete"} 
         />
         <Step 
-          title="Target" 
-          description="Selection" 
-          icon={<Workflow className="h-5 w-5" />} 
+          title="Dataset" 
+          description="Handle" 
+          icon={<Table className="h-5 w-5" />} 
           status={datasetId && !targetColumn ? "current" : datasetId && targetColumn ? "complete" : "pending"} 
         />
         <Step 

@@ -115,7 +115,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
       
       const response = await datasetApi.featureImportancePreview(datasetId, targetColumn);
 
-      // Set task type from the response
       if (response.task_type) {
         setTaskType(response.task_type);
       }
@@ -414,9 +413,9 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
                     <AlertDescription className="text-blue-600">
                       <p className="mb-2">You are about to prepare your data for machine learning training with:</p>
                       <ul className="list-disc list-inside space-y-1 text-sm">
-                        <li>Target column: <Badge className="ml-1 bg-primary/20 text-primary">{targetColumn}</Badge></li>
-                        <li>Task type: <Badge className="ml-1 bg-primary/20 text-primary">{formatTaskType(taskType)}</Badge></li>
-                        <li>Selected features: <Badge className="ml-1 bg-primary/20 text-primary">{columnsToKeep?.length || 0}</Badge></li>
+                        <li>Target column: <Badge className="ml-1 bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors">{targetColumn}</Badge></li>
+                        <li>Task type: <Badge className="ml-1 bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors">{formatTaskType(taskType)}</Badge></li>
+                        <li>Selected features: <Badge className="ml-1 bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors">{columnsToKeep?.length || 0}</Badge></li>
                       </ul>
                     </AlertDescription>
                   </Alert>
