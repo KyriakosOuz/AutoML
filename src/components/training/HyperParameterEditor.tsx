@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { HyperParameter, HyperParameters } from '@/types/training';
+import { HyperParameters } from '@/types/training';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

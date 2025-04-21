@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -60,7 +59,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   const [activeTab, setActiveTab] = useState('metrics');
 
   const { 
-    id, 
+    experiment_id, 
     experiment_name, 
     target_column, 
     task_type, 
@@ -71,13 +70,11 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
 
   const isClassification = task_type?.includes('classification');
   
-  // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return typeof value === 'number' ? (value * 100).toFixed(2) + '%' : String(value);
   };
   
-  // For regression metrics that shouldn't be formatted as percentages
   const formatRegressionMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return typeof value === 'number' ? value.toFixed(4) : String(value);
@@ -91,7 +88,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     return 'text-red-600';
   };
 
-  // Group files by type
   const filesByType = files.reduce((acc, file) => {
     const type = file.file_type;
     if (!acc[type]) {
@@ -116,7 +112,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
         <CardDescription>
           Target: <span className="font-medium">{target_column}</span> • 
           Task: <span className="font-medium">{task_type.replace(/_/g, ' ')}</span> • 
-          ID: <span className="font-mono text-xs">{id}</span>
+          ID: <span className="font-mono text-xs">{experiment_id}</span>
         </CardDescription>
       </CardHeader>
       
@@ -141,7 +137,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
           
           <TabsContent value="metrics" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {/* Classification metrics */}
               {isClassification && (
                 <>
                   {metrics.accuracy !== undefined && (
@@ -198,7 +193,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 </>
               )}
               
-              {/* Regression metrics */}
               {!isClassification && (
                 <>
                   {metrics.r2_score !== undefined && (
@@ -375,7 +369,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
         </Button>
         
         <Button variant="outline" asChild>
-          <a href={`/models/${id}`} target="_blank" rel="noopener noreferrer">
+          <a href={`/models/${experiment_id}`} target="_blank" rel="noopener noreferrer">
             <BookOpen className="h-4 w-4 mr-2" />
             View Full Report
           </a>

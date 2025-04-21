@@ -1,5 +1,7 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
+export type ExperimentStatus = 'running' | 'completed' | 'failed';
 
 export interface AutoMLParameters {
   automlEngine: TrainingEngine;
@@ -18,6 +20,9 @@ export interface CustomTrainingParameters {
   useDefaultHyperparameters: boolean;
   enableVisualization: boolean;
 }
+
+export type HyperParameter = string | number | boolean | string[] | number[];
+export type HyperParameters = Record<string, HyperParameter>;
 
 export interface AutoMLResult {
   experimentId: string;
@@ -46,7 +51,7 @@ export interface CustomTrainingResult {
 }
 
 export interface ExperimentResults {
-  status: 'running' | 'completed' | 'failed';
+  status: ExperimentStatus;
   error_message?: string;
   experiment_id: string;
   experiment_name?: string;
@@ -70,4 +75,5 @@ export interface ExperimentResults {
   columns_to_keep?: string[];
   hyperparameters?: Record<string, any>;
   message?: string;
+  id?: string; // Adding this property which is referenced in CustomTrainingResults.tsx
 }
