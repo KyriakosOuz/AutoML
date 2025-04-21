@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
@@ -6,7 +7,8 @@ import {
   CustomTrainingParameters, 
   AutoMLResult, 
   CustomTrainingResult,
-  ExperimentResults
+  ExperimentResults,
+  ExperimentStatus
 } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
