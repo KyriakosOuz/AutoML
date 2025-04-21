@@ -1,6 +1,6 @@
 
 // First, let's fix the import issues
-import { AuthContext } from '@/contexts/AuthContext';
+import { getAuthToken } from '@/contexts/AuthContext';
 
 // Define the TaskType type since it can't be imported from '@/types/dataset'
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
@@ -13,16 +13,7 @@ export interface Dataset {
   overview?: Record<string, any>;
 }
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  // If we're in a browser environment, try to get the token from local storage
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('authToken') || '';
-  }
-  return '';
-};
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getAuthHeaders = () => {
   const token = getAuthToken();
@@ -58,7 +49,6 @@ export const datasetApi = {
     return await response.json();
   },
 
-  // Add the previewDataset method
   previewDataset: async (datasetId: string, stage: string = 'raw') => {
     const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
       headers: getAuthHeaders(),
@@ -95,7 +85,6 @@ export const datasetApi = {
     return await response.json();
   },
 
-  // Add detectTaskType method
   detectTaskType: async (datasetId: string, targetColumn: string) => {
     const response = await fetch(`${API_URL}/datasets/${datasetId}/detect_task_type`, {
       method: 'POST',
@@ -110,7 +99,6 @@ export const datasetApi = {
     return await response.json();
   },
 
-  // Add featureImportancePreview method
   featureImportancePreview: async (datasetId: string, targetColumn: string) => {
     const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance_preview`, {
       method: 'POST',
@@ -125,7 +113,6 @@ export const datasetApi = {
     return await response.json();
   },
 
-  // Add handleMissingValues method
   handleMissingValues: async (datasetId: string, strategy: string, fillValue?: any) => {
     const payload: any = { strategy };
     if (fillValue !== undefined) {
@@ -145,7 +132,6 @@ export const datasetApi = {
     return await response.json();
   },
 
-  // Add preprocessDataset method
   preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string) => {
     const response = await fetch(`${API_URL}/datasets/${datasetId}/preprocess`, {
       method: 'POST',
@@ -218,7 +204,6 @@ export const trainingApi = {
     return data.algorithms;
   },
 
-  // Fix the automlTrain function to match expected parameters
   automlTrain: async (
     datasetId: string, 
     taskType: string, 
@@ -263,7 +248,9 @@ export const trainingApi = {
   customTrain: async (formData: FormData) => {
     const response = await fetch(`${API_URL}/training/custom-train/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
       body: formData
     });
     

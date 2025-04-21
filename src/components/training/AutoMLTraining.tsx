@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -16,6 +17,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import TrainingResults from './TrainingResults';
+
+interface TrainingResultsProps {
+  experimentId: string;
+  onReset?: () => void;
+}
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType } = useDataset();
@@ -65,14 +71,14 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
+      // Call the API with the correct parameters
       const response = await trainingApi.automlTrain(
         datasetId,
         taskType,
-        automlEngine, // 'mljar' or 'h2o', not 'custom'
+        automlEngine,
         testSize,
         stratify,
         randomSeed
-        // Remove any additional parameters that shouldn't be here
       );
 
       const respExperimentId = response?.data?.experiment_id;
@@ -267,7 +273,10 @@ const AutoMLTraining: React.FC = () => {
       </Card>
 
       {experimentId && (
-        <TrainingResults experimentId={experimentId} />
+        <TrainingResults 
+          experimentId={experimentId} 
+          onReset={() => setExperimentId(null)}
+        />
       )}
     </div>
   );

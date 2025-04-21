@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { datasetApi } from '@/lib/api';
+import { datasetApi, Dataset } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -103,19 +104,23 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
-      const data = response.data || response;
-
-      const overview = data.overview || {};
-      const numericalFeatures = overview.numerical_features || [];
-      const categoricalFeatures = overview.categorical_features || [];
-      
-      updateState({
-        datasetId: data.dataset_id,
-        fileUrl: data.file_url,
-        overview: overview,
-        previewColumns: [...numericalFeatures, ...categoricalFeatures],
-        processingStage: 'raw',
-      });
+      // Make sure we handle the response properly
+      if ('dataset_id' in response) {
+        const dataset = response as Dataset;
+        const overview = dataset.overview || {};
+        const numericalFeatures = overview.numerical_features || [];
+        const categoricalFeatures = overview.categorical_features || [];
+        
+        updateState({
+          datasetId: dataset.dataset_id,
+          fileUrl: dataset.file_url,
+          overview: overview,
+          previewColumns: [...numericalFeatures, ...categoricalFeatures],
+          processingStage: 'raw',
+        });
+      } else {
+        throw new Error('Invalid response format from server');
+      }
       
       if (fileInputRef.current) {
         fileInputRef.current.value = '';

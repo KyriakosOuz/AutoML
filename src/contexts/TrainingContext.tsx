@@ -2,15 +2,11 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { 
   TrainingEngine, 
-  Algorithm, 
   TaskType, 
-  TrainingParameters, 
   AutoMLParameters, 
   CustomTrainingParameters, 
   AutoMLResult, 
-  CustomTrainingResult, 
-  Metrics,
-  HyperParameters
+  CustomTrainingResult 
 } from '@/types/training';
 
 export interface TrainingContextProps {
@@ -23,6 +19,12 @@ export interface TrainingContextProps {
   customResult: CustomTrainingResult | null;
   error: string | null;
   
+  // AutoML specific parameters
+  automlEngine: TrainingEngine;
+  testSize: number;
+  stratify: boolean;
+  randomSeed: number;
+  
   // Methods
   setIsTraining: (isTraining: boolean) => void;
   setLastTrainingType: (type: 'automl' | 'custom' | null) => void;
@@ -32,6 +34,12 @@ export interface TrainingContextProps {
   setCustomResult: (result: CustomTrainingResult | null) => void;
   setError: (error: string | null) => void;
   resetTrainingState: () => void;
+  
+  // AutoML specific setters
+  setAutomlEngine: (engine: TrainingEngine) => void;
+  setTestSize: (size: number) => void;
+  setStratify: (stratify: boolean) => void;
+  setRandomSeed: (seed: number) => void;
 }
 
 // Default parameter values
@@ -67,6 +75,23 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [customResult, setCustomResult] = useState<CustomTrainingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Helper functions for individual parameter updates
+  const setAutomlEngine = (engine: TrainingEngine) => {
+    setAutomlParametersState(prev => ({ ...prev, automlEngine: engine }));
+  };
+  
+  const setTestSize = (size: number) => {
+    setAutomlParametersState(prev => ({ ...prev, testSize: size }));
+  };
+  
+  const setStratify = (stratify: boolean) => {
+    setAutomlParametersState(prev => ({ ...prev, stratify }));
+  };
+  
+  const setRandomSeed = (seed: number) => {
+    setAutomlParametersState(prev => ({ ...prev, randomSeed: seed }));
+  };
+  
   // Helper functions
   const setAutomlParameters = (params: Partial<AutoMLParameters>) => {
     setAutomlParametersState(prev => ({ ...prev, ...params }));
@@ -96,6 +121,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     customResult,
     error,
     
+    // Add automl specific parameters
+    automlEngine: automlParameters.automlEngine,
+    testSize: automlParameters.testSize,
+    stratify: automlParameters.stratify,
+    randomSeed: automlParameters.randomSeed,
+    
     setIsTraining,
     setLastTrainingType,
     setAutomlParameters,
@@ -104,6 +135,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCustomResult,
     setError,
     resetTrainingState,
+    
+    // Add automl specific setters
+    setAutomlEngine,
+    setTestSize,
+    setStratify,
+    setRandomSeed,
   };
   
   return (
