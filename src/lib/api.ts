@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -92,7 +91,6 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Remove Content-Type header for FormData
       },
       body: formData
     });
@@ -117,7 +115,6 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Important: Do not set Content-Type for FormData
       },
       body: formData
     });
@@ -136,7 +133,6 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Remove Content-Type header for FormData
       },
       body: formData
     });
@@ -155,12 +151,25 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Remove Content-Type header for FormData
       },
       body: formData
     });
     
-    return await handleApiResponse(response);
+    const data = await handleApiResponse(response);
+    
+    // Handle both direct response and nested data
+    const featureImportance = data.feature_importance || (data.data && data.data.feature_importance);
+    const taskType = data.task_type || (data.data && data.data.task_type);
+    
+    if (!featureImportance || !taskType) {
+      throw new Error('Invalid response format from feature importance analysis');
+    }
+    
+    return {
+      feature_importance: featureImportance,
+      task_type: taskType,
+      target_column: targetColumn,
+    };
   },
 
   saveDataset: async (datasetId: string, targetColumn: string, columnsToKeep: string[]) => {
@@ -175,7 +184,6 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Remove Content-Type header for FormData
       },
       body: formData
     });
@@ -195,7 +203,6 @@ export const datasetApi = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Remove Content-Type header for FormData
       },
       body: formData
     });
