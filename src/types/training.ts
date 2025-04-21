@@ -1,7 +1,6 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
-export type ExperimentStatus = 'running' | 'completed' | 'failed';
+export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success';
 
 export interface AutoMLParameters {
   automlEngine: TrainingEngine;

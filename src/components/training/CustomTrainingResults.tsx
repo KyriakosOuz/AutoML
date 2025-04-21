@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -62,13 +63,14 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     experiment_id, 
     experiment_name, 
     target_column, 
-    task_type, 
+    task_type = '', // Provide default value to prevent undefined
     metrics = {}, 
     files = [],
     algorithm
   } = experimentResults;
 
-  const isClassification = task_type?.includes('classification');
+  // Check if task_type exists before using it
+  const isClassification = task_type ? task_type.includes('classification') : false;
   
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
@@ -97,6 +99,9 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     return acc;
   }, {} as Record<string, typeof files>);
 
+  // Format task type for display with null check
+  const formattedTaskType = task_type ? task_type.replace(/_/g, ' ') : 'unknown task';
+
   return (
     <Card className="shadow-lg border-primary/10">
       <CardHeader className="bg-primary/5 border-b border-primary/10">
@@ -106,12 +111,12 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
             <CardTitle>{experiment_name || 'Custom Training Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="px-3 py-1">
-            {algorithm || task_type.replace(/_/g, ' ')}
+            {algorithm || formattedTaskType}
           </Badge>
         </div>
         <CardDescription>
           Target: <span className="font-medium">{target_column}</span> • 
-          Task: <span className="font-medium">{task_type.replace(/_/g, ' ')}</span> • 
+          Task: <span className="font-medium">{formattedTaskType}</span> • 
           ID: <span className="font-mono text-xs">{experiment_id}</span>
         </CardDescription>
       </CardHeader>

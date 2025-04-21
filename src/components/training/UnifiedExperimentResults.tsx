@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -66,7 +65,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     let timeoutId: NodeJS.Timeout;
 
     if (isLoadingResults) {
-      // Set timeout after 60 seconds
       timeoutId = setTimeout(() => {
         setHasTimedOut(true);
         toast({
@@ -84,7 +82,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     };
   }, [isLoadingResults, toast]);
 
-  // Show loading state with retry option if timed out
   if (isLoadingResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -129,7 +126,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     );
   }
 
-  // Show error state
   if (error || (experimentResults?.status === 'failed')) {
     const errorMessage = error || experimentResults?.error_message || "The training process failed.";
     return (
@@ -160,15 +156,13 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     );
   }
 
-  // Only show results if we have them and status is completed
-  if (!experimentResults || experimentResults.status !== 'completed') {
+  if (!experimentResults || (experimentResults.status !== 'completed' && experimentResults.status !== 'success')) {
     return null;
   }
 
-  // Keep the rest of the existing results rendering code
   const {
     experiment_name,
-    task_type,
+    task_type = '',
     target_column,
     metrics = {},
     files = [],
@@ -184,19 +178,16 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     status
   } = experimentResults;
 
-  // Format task type for display
   const formatTaskType = (type: string) => {
     if (!type) return "Unknown";
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
   
-  // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return (value * 100).toFixed(2) + '%';
   };
   
-  // For regression metrics that shouldn't be formatted as percentages
   const formatRegressionMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return value.toFixed(4);
@@ -210,10 +201,9 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     return 'text-red-600';
   };
 
-  const isClassification = task_type?.includes('classification');
+  const isClassification = task_type ? task_type.includes('classification') : false;
   const isAutoML = automl_engine === 'mljar' || automl_engine === 'h2o';
   
-  // If experiment is still running, show loading state
   if (status === 'running') {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -242,7 +232,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
       </Card>
     );
   }
-  
+
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -253,7 +243,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
           </div>
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {algorithm || (isAutoML ? automl_engine?.toUpperCase() : task_type?.replace(/_/g, ' '))}
+            {algorithm || (isAutoML ? automl_engine?.toUpperCase() : (task_type ? task_type.replace(/_/g, ' ') : 'Unknown'))}
           </Badge>
         </div>
         
@@ -263,7 +253,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
           </span>
           
           <span className="inline-flex items-center">
-            Target: <span className="font-semibold ml-1">{target_column}</span>
+            Target: <span className="font-semibold ml-1">{target_column || 'N/A'}</span>
           </span>
           
           {training_time_sec && (
@@ -311,7 +301,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
           <TabsContent value="metrics" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isClassification ? (
-                // Classification metrics
                 <>
                   {metrics.accuracy !== undefined && (
                     <Card className="shadow-sm">
@@ -366,7 +355,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
                   )}
                 </>
               ) : (
-                // Regression metrics
                 <>
                   {metrics.r2_score !== undefined && (
                     <Card className="shadow-sm">
