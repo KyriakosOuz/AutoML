@@ -1,5 +1,26 @@
-import { getAuthToken } from '@/contexts/AuthContext';
-import { Dataset, TaskType } from '@/types/dataset';
+
+// First, let's fix the import issues
+import { AuthContext } from '@/contexts/AuthContext';
+
+// Define the TaskType type since it can't be imported from '@/types/dataset'
+export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
+
+// Define the Dataset type
+export interface Dataset {
+  dataset_id: string;
+  file_url: string;
+  data?: Record<string, any>[];
+  overview?: Record<string, any>;
+}
+
+// Helper function to get auth token
+const getAuthToken = () => {
+  // If we're in a browser environment, try to get the token from local storage
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken') || '';
+  }
+  return '';
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -12,9 +33,13 @@ const getAuthHeaders = () => {
 };
 
 export const datasetApi = {
-  uploadDataset: async (file: File): Promise<Dataset> => {
+  uploadDataset: async (file: File, customMissingSymbol?: string): Promise<Dataset> => {
     const formData = new FormData();
     formData.append('file', file);
+    
+    if (customMissingSymbol) {
+      formData.append('missing_symbol', customMissingSymbol);
+    }
     
     const token = getAuthToken();
     
@@ -28,6 +53,19 @@ export const datasetApi = {
     
     if (!response.ok) {
       throw new Error('Failed to upload dataset');
+    }
+    
+    return await response.json();
+  },
+
+  // Add the previewDataset method
+  previewDataset: async (datasetId: string, stage: string = 'raw') => {
+    const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch dataset preview');
     }
     
     return await response.json();
@@ -52,6 +90,74 @@ export const datasetApi = {
     
     if (!response.ok) {
       throw new Error('Failed to analyze dataset');
+    }
+    
+    return await response.json();
+  },
+
+  // Add detectTaskType method
+  detectTaskType: async (datasetId: string, targetColumn: string) => {
+    const response = await fetch(`${API_URL}/datasets/${datasetId}/detect_task_type`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ target_column: targetColumn }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to detect task type');
+    }
+    
+    return await response.json();
+  },
+
+  // Add featureImportancePreview method
+  featureImportancePreview: async (datasetId: string, targetColumn: string) => {
+    const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance_preview`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ target_column: targetColumn }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to calculate feature importance');
+    }
+    
+    return await response.json();
+  },
+
+  // Add handleMissingValues method
+  handleMissingValues: async (datasetId: string, strategy: string, fillValue?: any) => {
+    const payload: any = { strategy };
+    if (fillValue !== undefined) {
+      payload.fill_value = fillValue;
+    }
+    
+    const response = await fetch(`${API_URL}/datasets/${datasetId}/handle_missing_values`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to handle missing values');
+    }
+    
+    return await response.json();
+  },
+
+  // Add preprocessDataset method
+  preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string) => {
+    const response = await fetch(`${API_URL}/datasets/${datasetId}/preprocess`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        normalization_method: normalizationMethod,
+        balance_strategy: balanceStrategy
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to preprocess dataset');
     }
     
     return await response.json();
@@ -112,7 +218,15 @@ export const trainingApi = {
     return data.algorithms;
   },
 
-  automlTrain: async (datasetId: string, taskType: string, automlEngine: string, testSize: number, stratify: boolean, randomSeed: number) => {
+  // Fix the automlTrain function to match expected parameters
+  automlTrain: async (
+    datasetId: string, 
+    taskType: string, 
+    automlEngine: string, 
+    testSize: number, 
+    stratify: boolean, 
+    randomSeed: number
+  ) => {
     const response = await fetch(`${API_URL}/training/automl-train`, {
       method: 'POST',
       headers: getAuthHeaders(),
