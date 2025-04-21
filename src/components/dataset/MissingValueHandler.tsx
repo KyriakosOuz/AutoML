@@ -118,17 +118,17 @@ const MissingValueHandler: React.FC = () => {
         datasetId?: string;
         fileUrl?: string;
       }> = {
-        overview: response.overview,
+        overview: response.overview || (response.data && response.data.overview),
         processingStage: 'cleaned'
       };
       
       // Only update these if they exist in the response
-      if (response.dataset_id) {
-        newState.datasetId = response.dataset_id;
+      if (response.dataset_id || (response.data && response.data.dataset_id)) {
+        newState.datasetId = response.dataset_id || (response.data && response.data.dataset_id);
       }
       
-      if (response.file_url) {
-        newState.fileUrl = response.file_url;
+      if (response.file_url || (response.data && response.data.file_url)) {
+        newState.fileUrl = response.file_url || (response.data && response.data.file_url);
       }
       
       // Update context with consolidated state changes
@@ -146,6 +146,12 @@ const MissingValueHandler: React.FC = () => {
     } catch (error) {
       console.error('Error handling missing values:', error);
       setError(error instanceof Error ? error.message : 'Failed to process missing values');
+      
+      toast({
+        title: "Error processing missing values",
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

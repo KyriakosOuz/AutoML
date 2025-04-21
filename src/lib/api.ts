@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,9 +86,14 @@ export const datasetApi = {
     formData.append('dataset_id', datasetId);
     formData.append('stage', stage);
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/preview-data/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Remove Content-Type header for FormData
+      },
       body: formData
     });
     
@@ -95,6 +101,8 @@ export const datasetApi = {
   },
 
   handleMissingValues: async (datasetId: string, strategy: string, customMissingSymbol?: string) => {
+    console.log('Calling handleMissingValues with:', { datasetId, strategy, customMissingSymbol });
+    
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('strategy', strategy);
@@ -103,9 +111,14 @@ export const datasetApi = {
       formData.append('custom_missing_symbol', customMissingSymbol);
     }
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/handle-dataset/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Important: Do not set Content-Type for FormData
+      },
       body: formData
     });
     
@@ -117,9 +130,14 @@ export const datasetApi = {
     formData.append('dataset_id', datasetId);
     formData.append('target_column', targetColumn);
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/detect-task-type/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Remove Content-Type header for FormData
+      },
       body: formData
     });
     
@@ -131,9 +149,14 @@ export const datasetApi = {
     formData.append('dataset_id', datasetId);
     formData.append('target_column', targetColumn);
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/feature-importance-preview/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Remove Content-Type header for FormData
+      },
       body: formData
     });
     
@@ -146,9 +169,14 @@ export const datasetApi = {
     formData.append('target_column', targetColumn);
     formData.append('columns_to_keep', JSON.stringify(columnsToKeep));
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/save-dataset/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Remove Content-Type header for FormData
+      },
       body: formData
     });
     
@@ -161,9 +189,14 @@ export const datasetApi = {
     formData.append('normalization_method', normalizationMethod);
     formData.append('balance_strategy', balanceStrategy);
     
+    const token = getAuthToken();
+    
     const response = await fetch(`${API_URL}/dataset/data-preprocess/`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Remove Content-Type header for FormData
+      },
       body: formData
     });
     
