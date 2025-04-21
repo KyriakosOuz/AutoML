@@ -1,4 +1,5 @@
-// First, let's fix the import issues
+
+// Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,9 +16,9 @@ export interface Dataset {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Updated getAuthHeaders function with better error handling
-const getAuthHeaders = async () => {
-  const token = await getAuthToken();
+// Updated getAuthHeaders function that returns a regular object, not a Promise
+const getAuthHeaders = () => {
+  const token = getAuthToken();
   
   if (!token) {
     console.warn('No authentication token available. User may need to log in.');
@@ -78,9 +79,8 @@ export const datasetApi = {
 
   previewDataset: async (datasetId: string, stage: string = 'raw') => {
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(`${API_URL}/datasets/${datasetId}/preview?stage=${stage}`, {
-        headers,
+        headers: getAuthHeaders(),
       });
       
       return await handleApiResponse(response);
@@ -223,9 +223,8 @@ export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
     try {
       // Ensure we're passing the task_type as a query parameter
-      const headers = await getAuthHeaders();
       const response = await fetch(`${API_URL}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
-        headers,
+        headers: getAuthHeaders(),
       });
       
       const data = await handleApiResponse(response);
@@ -245,10 +244,9 @@ export const trainingApi = {
     randomSeed: number
   ) => {
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(`${API_URL}/training/automl-train/`, {
         method: 'POST',
-        headers,
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           dataset_id: datasetId,
           task_type: taskType,
@@ -268,9 +266,8 @@ export const trainingApi = {
 
   getAvailableHyperparameters: async (algorithm: string) => {
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
-        headers,
+        headers: getAuthHeaders(),
       });
       
       const data = await handleApiResponse(response);
@@ -284,7 +281,7 @@ export const trainingApi = {
   customTrain: async (formData: FormData) => {
     try {
       // For FormData, we need a different approach for headers
-      const token = await getAuthToken();
+      const token = getAuthToken();
       const response = await fetch(`${API_URL}/training/custom-train/`, {
         method: 'POST',
         headers: {
@@ -303,9 +300,8 @@ export const trainingApi = {
 
   getExperimentResults: async (experimentId: string) => {
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
-        headers
+        headers: getAuthHeaders()
       });
       
       const data = await handleApiResponse(response);

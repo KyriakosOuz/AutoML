@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,18 +14,11 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Export the getAuthToken function that uses the current session
-export const getAuthToken = () => {
-  // Get the current session from supabase
-  const session = supabase.auth.getSession().then(({ data }) => data.session);
-  
-  // If we have a session, return the access token
-  if (session) {
-    return session.then(s => s?.access_token || '');
-  }
-  
-  // Fallback to localStorage (for compatibility)
+// Export the getAuthToken function that returns a string immediately
+export const getAuthToken = (): string => {
+  // This will only work client-side
   if (typeof window !== 'undefined') {
+    // Get from localStorage (for immediate access)
     return localStorage.getItem('authToken') || '';
   }
   
@@ -44,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Store the token in localStorage for legacy support
+      // Store the token in localStorage for immediate access
       if (session?.access_token) {
         localStorage.setItem('authToken', session.access_token);
       }
