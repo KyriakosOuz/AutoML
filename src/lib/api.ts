@@ -65,7 +65,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/datasets/upload`, {
+    const response = await fetch(`${API_URL}/dataset/dataset-overview/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
