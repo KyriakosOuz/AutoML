@@ -151,6 +151,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         switch (status) {
           case 'completed':
+          case 'success':
             setExperimentResults(results);
             setIsLoadingResults(false);
             

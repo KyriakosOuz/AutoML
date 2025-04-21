@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -657,7 +658,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Full Report</CardTitle>
                     <CardDescription>View the complete analysis report</CardDescription>
-                  CardHeader>
+                  </CardHeader>
                   <CardContent className="flex justify-center pb-6">
                     <Button asChild>
                       <a href={report_file_url} target="_blank" rel="noopener noreferrer">
