@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -59,20 +58,17 @@ const ModelTrainingContent: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<string>('automl');
   
-  // Set the active tab based on last training type
   useEffect(() => {
     if (lastTrainingType) {
       setActiveTab(lastTrainingType);
     }
   }, [lastTrainingType]);
   
-  // If activeExperimentId exists but we don't have results yet, automatically switch to results tab
   useEffect(() => {
-    if (activeExperimentId && isLoadingResults) {
-      // User has started training - switch to results view
+    if (activeExperimentId) {
       setActiveTab('results');
     }
-  }, [activeExperimentId, isLoadingResults]);
+  }, [activeExperimentId]);
   
   if (!datasetId || !targetColumn) {
     return (
@@ -150,7 +146,6 @@ const ModelTrainingContent: React.FC = () => {
                 className="text-sm font-medium"
                 disabled={!activeExperimentId}
               >
-                {isLoadingResults && <Loader className="h-3 w-3 mr-1 animate-spin" />}
                 Results
               </TabsTrigger>
             </TabsList>
@@ -166,25 +161,10 @@ const ModelTrainingContent: React.FC = () => {
               
               <TabsContent value="results" className="space-y-4 p-6">
                 {activeExperimentId ? (
-                  isLoadingResults ? (
-                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                      <Loader className="h-8 w-8 animate-spin text-primary" />
-                      <div className="text-center">
-                        <h3 className="text-lg font-medium mb-1">Training in Progress</h3>
-                        <p className="text-muted-foreground">
-                          Model training is running in the background. Results will appear here automatically.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2 font-mono">
-                          Experiment ID: {activeExperimentId}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <TrainingResultsV2 
-                      experimentId={activeExperimentId}
-                      onReset={() => resetTrainingState()}
-                    />
-                  )
+                  <TrainingResultsV2 
+                    experimentId={activeExperimentId}
+                    onReset={() => resetTrainingState()}
+                  />
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 space-y-4">
                     <div className="text-center">
