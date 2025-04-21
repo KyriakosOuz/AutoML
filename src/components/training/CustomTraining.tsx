@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -229,108 +230,107 @@ const CustomTraining: React.FC = () => {
                       <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                     </TooltipContent>
                   </Tooltip>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
-            <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
+                </TooltipProvider>
+              </Label>
+              <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
+            </div>
+            <Switch
+              id="stratify"
+              checked={customParameters.stratify}
+              onCheckedChange={(checked) => setCustomParameters({ stratify: checked })}
+              disabled={isTraining}
+              aria-label="Stratify split"
+            />
           </div>
-          <Switch
-            id="stratify"
-            checked={customParameters.stratify}
-            onCheckedChange={(checked) => setCustomParameters({ stratify: checked })}
-            disabled={isTraining}
-            aria-label="Stratify split"
-          />
-        </div>
 
-        {/* Random Seed */}
-        <div className="space-y-2">
-          <Label htmlFor="random-seed" className="flex items-center gap-2">
-            Random Seed
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <Input
-            id="random-seed"
-            type="number"
-            min={0}
-            value={customParameters.randomSeed}
-            onChange={(e) => setCustomParameters({ randomSeed: parseInt(e.target.value) || 0 })}
-            disabled={isTraining}
-            placeholder="Enter random seed (e.g. 42)"
-            aria-label="Random seed for reproducibility"
-          />
-          <p className="text-xs text-muted-foreground">For reproducible results</p>
-        </div>
-
-        {/* Enable Analytics */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="enable-analytics" className="flex items-center gap-2">
-              Enable Advanced Analytics
+          {/* Random Seed */}
+          <div className="space-y-2">
+            <Label htmlFor="random-seed" className="flex items-center gap-2">
+              Random Seed
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Enable advanced analytics and tracking during training</p>
+                    <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
+            <Input
+              id="random-seed"
+              type="number"
+              min={0}
+              value={customParameters.randomSeed}
+              onChange={(e) => setCustomParameters({ randomSeed: parseInt(e.target.value) || 0 })}
+              disabled={isTraining}
+              placeholder="Enter random seed (e.g. 42)"
+              aria-label="Random seed for reproducibility"
+            />
+            <p className="text-xs text-muted-foreground">For reproducible results</p>
           </div>
-          <Switch
-            id="enable-analytics"
-            checked={customParameters.enableAnalytics}
-            onCheckedChange={(checked) => setCustomParameters({ enableAnalytics: checked })}
-            disabled={isTraining}
-            aria-label="Enable advanced analytics"
-          />
-        </div>
 
-        {/* Train Button and Info */}
-        <Button
-          onClick={handleTrainModel}
-          disabled={isTraining || !isFormValid()}
-          className="w-full mt-4"
-          size="lg"
-        >
-          {isTraining ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Training in Progress...
-            </>
-          ) : (
-            <>
-              <Play className="mr-2 h-5 w-5" />
-              Train Model with {customParameters.algorithm}
-            </>
-          )}
-        </Button>
+          {/* Enable Analytics */}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="enable-analytics" className="flex items-center gap-2">
+                Enable Advanced Analytics
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enable advanced analytics and tracking during training</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
+            </div>
+            <Switch
+              id="enable-analytics"
+              checked={customParameters.enableAnalytics}
+              onCheckedChange={(checked) => setCustomParameters({ enableAnalytics: checked })}
+              disabled={isTraining}
+              aria-label="Enable advanced analytics"
+            />
+          </div>
 
-        <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
-          <p className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span>Training might take several minutes depending on dataset size and complexity.</span>
-          </p>
+          {/* Train Button and Info */}
+          <Button
+            onClick={handleTrainModel}
+            disabled={isTraining || !isFormValid()}
+            className="w-full mt-4"
+            size="lg"
+          >
+            {isTraining ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Training in Progress...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-5 w-5" />
+                Train Model with {customParameters.algorithm}
+              </>
+            )}
+          </Button>
+
+          <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
+            <p className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              <span>Training might take several minutes depending on dataset size and complexity.</span>
+            </p>
+          </div>
         </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-}
+      </CardContent>
+    </Card>
+  );
+};
 
 export default CustomTraining;

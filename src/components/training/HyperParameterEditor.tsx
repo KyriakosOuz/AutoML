@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { HyperParameters } from '@/types/training';
+import { HyperParameter, HyperParameters } from '@/types/training';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface HyperParameterEditorProps {
@@ -24,7 +24,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
   const handleParamChange = (key: string, value: string) => {
     const updatedParams = { ...localParams };
     const originalValue = hyperparameters[key];
-    let convertedValue: string | number | boolean | number[];
+    let convertedValue: HyperParameter;
 
     if (typeof originalValue === 'boolean') {
       convertedValue = value === 'true';
@@ -45,7 +45,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
     onChange(updatedParams);
   };
 
-  const renderInput = (key: string, value: string | number | boolean | number[]) => {
+  const renderInput = (key: string, value: HyperParameter) => {
     if (typeof value === 'boolean') {
       return (
         <div className="flex items-center space-x-2">

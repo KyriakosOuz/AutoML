@@ -21,7 +21,7 @@ export interface AutoMLParameters extends TrainingParameters {
 
 export interface CustomTrainingParameters extends TrainingParameters {
   algorithm: Algorithm;
-  hyperparameters: Record<string, any>;
+  hyperparameters: HyperParameters;
   enableAnalytics: boolean;
 }
 
