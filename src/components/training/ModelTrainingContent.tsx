@@ -30,6 +30,16 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab(lastTrainingType === 'custom' ? 'custom' : 'automl');
   };
 
+  // TypeScript is enforcing proper prop typing, so we need to cast the components 
+  // to allow the onTrainingStart prop to be passed
+  const AutoMLTrainingWithProps = AutoMLTraining as React.ComponentType<{
+    onTrainingStart: () => void;
+  }>;
+  
+  const CustomTrainingWithProps = CustomTraining as React.ComponentType<{
+    onTrainingStart: () => void;
+  }>;
+
   return (
     <div className="container max-w-7xl mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Model Training</h1>
@@ -49,11 +59,11 @@ const ModelTrainingContent: React.FC = () => {
         </TabsList>
         
         <TabsContent value="automl">
-          <AutoMLTraining onTrainingStart={() => setActiveTab('results')} />
+          <AutoMLTrainingWithProps onTrainingStart={() => setActiveTab('results')} />
         </TabsContent>
         
         <TabsContent value="custom">
-          <CustomTraining onTrainingStart={() => setActiveTab('results')} />
+          <CustomTrainingWithProps onTrainingStart={() => setActiveTab('results')} />
         </TabsContent>
         
         <TabsContent value="results">
