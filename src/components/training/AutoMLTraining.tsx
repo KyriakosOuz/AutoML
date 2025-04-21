@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -17,11 +16,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import TrainingResults from './TrainingResults';
-
-interface TrainingResultsProps {
-  experimentId: string;
-  onReset?: () => void;
-}
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType } = useDataset();
@@ -71,7 +65,6 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Call the API with the correct parameters
       const response = await trainingApi.automlTrain(
         datasetId,
         taskType,
@@ -274,6 +267,7 @@ const AutoMLTraining: React.FC = () => {
 
       {experimentId && (
         <TrainingResults 
+          type="automl"
           experimentId={experimentId} 
           onReset={() => setExperimentId(null)}
         />

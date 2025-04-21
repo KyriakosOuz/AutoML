@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -39,7 +38,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
 
     const updatedParams = { ...localParams };
     const originalValue = hyperparameters[key];
-    let convertedValue: HyperParameter;
+    let convertedValue: any;
 
     if (typeof originalValue === 'boolean') {
       convertedValue = value === 'true';
@@ -74,7 +73,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
     onChange(updatedParams);
   };
 
-  const renderInput = (key: string, value: HyperParameter) => {
+  const renderInput = (key: string, value: any) => {
     if (typeof value === 'boolean') {
       return (
         <div className="flex items-center space-x-2">

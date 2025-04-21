@@ -7,11 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Download, Award, BarChart4, Clock, TrendingUp } from 'lucide-react';
 
-interface TrainingResultsProps {
-  type: 'automl' | 'custom';
+export interface TrainingResultsProps {
+  type?: 'automl' | 'custom';
+  experimentId?: string;
+  onReset?: () => void;
 }
 
-const TrainingResults: React.FC<TrainingResultsProps> = ({ type }) => {
+const TrainingResults: React.FC<TrainingResultsProps> = ({ 
+  type = 'automl',
+  experimentId,
+  onReset
+}) => {
   const { automlResult, customResult } = useTraining();
   const [activeTab, setActiveTab] = useState<string>('metrics');
   

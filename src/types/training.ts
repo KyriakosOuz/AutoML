@@ -20,6 +20,7 @@ export interface HyperParameter {
   step?: number;
 }
 
+// HyperParameters is a simple key-value record, not consisting of HyperParameter objects
 export interface HyperParameters {
   [key: string]: any;
 }

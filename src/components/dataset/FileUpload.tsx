@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi, Dataset } from '@/lib/api';
@@ -104,17 +103,30 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
-      // Make sure we handle the response properly
       if ('dataset_id' in response) {
         const dataset = response as Dataset;
         const overview = dataset.overview || {};
         const numericalFeatures = overview.numerical_features || [];
         const categoricalFeatures = overview.categorical_features || [];
         
+        const datasetOverview = {
+          num_rows: overview.num_rows || 0,
+          num_columns: overview.num_columns || 0,
+          missing_values: overview.missing_values || {},
+          numerical_features: numericalFeatures,
+          categorical_features: categoricalFeatures,
+          total_missing_values: overview.total_missing_values,
+          missing_values_count: overview.missing_values_count,
+          column_names: overview.column_names,
+          unique_values_count: overview.unique_values_count,
+          data_types: overview.data_types,
+          feature_classification: overview.feature_classification
+        };
+        
         updateState({
           datasetId: dataset.dataset_id,
           fileUrl: dataset.file_url,
-          overview: overview,
+          overview: datasetOverview,
           previewColumns: [...numericalFeatures, ...categoricalFeatures],
           processingStage: 'raw',
         });
