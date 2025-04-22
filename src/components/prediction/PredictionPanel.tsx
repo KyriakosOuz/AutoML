@@ -252,6 +252,11 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
             </div>
           ))}
           
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="extra-manual-input">Manual Input Field (example)</Label>
+            <Input id="extra-manual-input" placeholder="Extra manual input" />
+          </div>
+          
           <div className="space-y-2 mt-4 pt-4 border-t">
             <Label htmlFor="prediction">{targetColumn || 'Prediction'}</Label>
             <div className="flex items-center gap-2">
