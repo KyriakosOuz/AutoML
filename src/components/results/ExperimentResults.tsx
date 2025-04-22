@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -72,7 +73,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
       setError(null);
       
       try {
-        const response = await fetch(`/experiment-results/${experimentId}`);
+        // FIX: Use correct backend path!
+        const response = await fetch(`/experiments/experiment-results/${experimentId}`);
         
         if (!response.ok) {
           throw new Error(`Error fetching results: ${response.statusText}`);
@@ -545,3 +547,4 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
 };
 
 export default ExperimentResults;
+
