@@ -1,5 +1,5 @@
 
-export type TrainingEngine = 'mljar' | 'autokeras';
+export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
 
@@ -36,6 +36,7 @@ export interface TrainingResults {
   y_true?: number[] | string[];
   y_pred?: number[] | string[];
   y_probs?: number[][];
+  classification_report?: string | Record<string, any>;
 }
 
 export interface ExperimentResults {
@@ -49,9 +50,13 @@ export interface ExperimentResults {
   completed_at?: string;
   error_message?: string;
   training_results?: TrainingResults;
+  training_time_sec?: number;
+  metrics?: Record<string, number>;
   files?: TrainingFile[];
   algorithm?: string;
   model_format?: string;
+  model_file_url?: string;
+  report_file_url?: string;
   leaderboard?: any[];
   selected_algorithm?: string;
   columns_to_keep?: string[];
