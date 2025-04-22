@@ -28,10 +28,19 @@ export const getExperimentResults = async (
     const headers = await getAuthHeaders();
     
     // Fetch results from the canonical endpoint
-    const response = await fetch(
+    let response = await fetch(
       `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
       { headers }
     );
+
+    // On non-401, you could retry once more
+    if (!response.ok && response.status !== 401) {
+      console.warn('[API] Primary endpoint failed, retrying...');
+      response = await fetch(
+        `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
+        { headers }
+      );
+    }
 
     // Handle non-OK responses
     if (!response.ok) {
