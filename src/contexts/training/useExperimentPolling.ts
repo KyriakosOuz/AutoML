@@ -45,8 +45,8 @@ export const useExperimentPolling = ({
 
     const interval = setInterval(async () => {
       try {
-        const response = await checkStatus(experimentId);
         console.log('[TrainingContext] Status response data:', data);
+        const response = await checkStatus(experimentId);
 
         const data = response.data;
 
