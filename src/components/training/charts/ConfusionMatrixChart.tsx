@@ -1,14 +1,16 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface ConfusionMatrixChartProps {
-  matrix?: number[][];
+  matrix: number[][] | null;
   labels?: string[];
 }
 
-const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ matrix, labels = ['Negative', 'Positive'] }) => {
-  if (!matrix || matrix.length === 0) {
+const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ matrix, labels = [] }) => {
+  // Check if matrix is valid
+  if (!matrix || !Array.isArray(matrix) || matrix.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -21,81 +23,78 @@ const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ matrix, lab
     );
   }
 
-  // For binary classification, we expect a 2x2 matrix
-  // [[TN, FP], [FN, TP]]
-  const isBinary = matrix.length === 2 && matrix[0].length === 2;
-  
-  // Calculate the total predictions for color intensity scaling
-  const total = matrix.flat().reduce((sum, val) => sum + val, 0);
-  
-  // Function to determine color intensity based on value
-  const getColorIntensity = (value: number) => {
-    const normalizedValue = value / total;
-    return {
-      backgroundColor: `rgba(79, 70, 229, ${Math.min(0.1 + normalizedValue * 5, 0.9)})`,
-    };
-  };
+  // For binary classification, use default labels if none provided
+  if (labels.length === 0 && matrix.length === 2) {
+    labels = ['Negative', 'Positive'];
+  }
+
+  // Fill in missing labels with indices
+  const matrixLabels = labels.length >= matrix.length
+    ? labels.slice(0, matrix.length)
+    : Array.from({ length: matrix.length }, (_, i) => labels[i] || `Class ${i}`);
+
+  // Calculate maximum value for color intensity
+  const maxValue = Math.max(...matrix.flatMap(row => row));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Confusion Matrix</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center">
-          <div className="grid grid-cols-[auto,repeat(auto-fill,minmax(80px,1fr))] gap-1 my-4">
-            {/* Top-left empty cell */}
-            <div className="w-20 h-20 flex items-center justify-center font-bold border p-2">
-              <div className="text-xs text-muted-foreground">Actual ↓ / Predicted →</div>
-            </div>
-            
-            {/* Column headers */}
-            {labels.map((label, i) => (
-              <div key={`col-${i}`} className="w-20 h-20 flex items-center justify-center font-bold border p-2">
-                {label}
-              </div>
-            ))}
-            
-            {/* Rows */}
-            {matrix.map((row, i) => (
-              <React.Fragment key={`row-${i}`}>
-                {/* Row header */}
-                <div className="w-20 h-20 flex items-center justify-center font-bold border p-2">
-                  {labels[i]}
-                </div>
-                
-                {/* Matrix cells */}
-                {row.map((value, j) => (
-                  <div 
-                    key={`cell-${i}-${j}`} 
-                    className="w-20 h-20 flex flex-col items-center justify-center border transition-colors hover:bg-muted/50"
-                    style={getColorIntensity(value)}
-                  >
-                    <div className="text-lg font-bold">{value}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {isBinary && (
-                        <>
-                          {i === 0 && j === 0 && "TN"}
-                          {i === 0 && j === 1 && "FP"}
-                          {i === 1 && j === 0 && "FN"}
-                          {i === 1 && j === 1 && "TP"}
-                        </>
-                      )}
-                    </div>
-                  </div>
+      <CardContent className="flex justify-center">
+        <div className="overflow-x-auto">
+          <table className="min-w-max border-collapse">
+            <thead>
+              <tr>
+                <th className="p-2 border border-border bg-muted/50"></th>
+                <th className="p-2 border border-border bg-muted/50 text-center" colSpan={matrixLabels.length}>
+                  Predicted
+                </th>
+              </tr>
+              <tr>
+                <th className="p-2 border border-border bg-muted/50"></th>
+                {matrixLabels.map((label, i) => (
+                  <th key={i} className="p-2 border border-border bg-muted/50">
+                    {label}
+                  </th>
                 ))}
-              </React.Fragment>
-            ))}
-          </div>
-          
-          {isBinary && (
-            <div className="grid grid-cols-2 gap-4 text-sm mt-2 text-muted-foreground">
-              <div>TN: True Negative</div>
-              <div>FP: False Positive</div>
-              <div>FN: False Negative</div>
-              <div>TP: True Positive</div>
-            </div>
-          )}
+              </tr>
+            </thead>
+            <tbody>
+              {matrix.map((row, i) => (
+                <tr key={i}>
+                  <th className="p-2 border border-border bg-muted/50">
+                    {i === 0 && (
+                      <div className="absolute -ml-14 mt-12 transform -rotate-90">
+                        <span className="whitespace-nowrap font-normal">Actual</span>
+                      </div>
+                    )}
+                    {matrixLabels[i]}
+                  </th>
+                  {row.map((cell, j) => {
+                    // Calculate intensity based on value
+                    const intensity = maxValue > 0 ? cell / maxValue : 0;
+                    return (
+                      <td 
+                        key={j} 
+                        className={cn(
+                          "p-2 border border-border text-center font-bold",
+                          i === j ? "bg-primary/10" : ""
+                        )}
+                        style={{ 
+                          backgroundColor: i === j 
+                            ? `rgba(var(--primary), ${0.1 + intensity * 0.2})` 
+                            : `rgba(217, 119, 6, ${intensity * 0.2})`
+                        }}
+                      >
+                        {cell}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>

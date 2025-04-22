@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -206,35 +207,33 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
   const metrics = training_results?.metrics || {};
   console.log('[ExperimentResultsView] Metrics keys:', Object.keys(metrics));
+
+  // Extract arrays for visualization from metrics if they exist
+  const fpr = Array.isArray(metrics.fpr) ? metrics.fpr : [];
+  const tpr = Array.isArray(metrics.tpr) ? metrics.tpr : [];
+  const precision_curve = Array.isArray(metrics.precision_curve) ? metrics.precision_curve : [];
+  const recall_curve = Array.isArray(metrics.recall_curve) ? metrics.recall_curve : [];
+  const confusion_matrix = metrics.confusion_matrix || null;
+  const auc = typeof metrics.auc === 'number' ? metrics.auc : undefined;
+  const f1_score = typeof metrics.f1_score === 'number' ? metrics.f1_score : undefined;
   
-  if (metrics.classification_report) {
-    console.log('[ExperimentResultsView] Classification report type:', typeof metrics.classification_report);
-    if (typeof metrics.classification_report === 'object') {
-      console.log('[ExperimentResultsView] Classification report keys:', Object.keys(metrics.classification_report));
-    }
-  }
+  // Extract class labels if available
+  const class_labels = results.class_labels || [];
   
-  const y_true = training_results?.y_true || [];
-  const y_pred = training_results?.y_pred || [];
-  const y_probs = training_results?.y_probs || [];
-  
-  const fpr = metrics?.fpr || [];
-  const tpr = metrics?.tpr || [];
-  const precision = metrics?.precision_curve || [];
-  const recall = metrics?.recall_curve || [];
-  const confusion_matrix = metrics?.confusion_matrix || null;
-  const auc = metrics?.auc;
-  const f1_score = metrics?.f1_score;
-  
+  // Check if task is classification
   const isClassification = task_type ? task_type.includes('classification') : false;
   const isBinaryClassification = isClassification && task_type.includes('binary');
   
-  const hasAdvancedCharts = (fpr.length > 0 && tpr.length > 0) || 
-                           (precision.length > 0 && recall.length > 0) || 
-                           confusion_matrix;
+  // Determine if we have ROC or PR curve data available
+  const hasRocCurveData = fpr.length > 0 && tpr.length > 0;
+  const hasPrCurveData = precision_curve.length > 0 && recall_curve.length > 0;
+  const hasConfusionMatrix = Array.isArray(confusion_matrix) && confusion_matrix.length > 0;
   
-  const classificationReport =
-    metrics.classification_report &&
+  // Check if we have any advanced visualization data
+  const hasAdvancedCharts = hasRocCurveData || hasPrCurveData || hasConfusionMatrix;
+  
+  // Check for a valid classification report
+  const classificationReport = metrics.classification_report &&
     (typeof metrics.classification_report === "object" || typeof metrics.classification_report === "string")
       ? metrics.classification_report
       : null;
@@ -323,31 +322,33 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           {hasAdvancedCharts && (
             <TabsContent value="charts" className="p-6">
               <div className="space-y-8">
-                {isBinaryClassification && fpr.length > 0 && tpr.length > 0 && (
+                {isBinaryClassification && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <RocCurveChart fpr={fpr} tpr={tpr} auc={auc} />
-                    <PrecisionRecallChart precision={precision} recall={recall} f1Score={f1_score} />
+                    {hasRocCurveData && (
+                      <RocCurveChart fpr={fpr} tpr={tpr} auc={auc} />
+                    )}
+                    
+                    {hasPrCurveData && (
+                      <PrecisionRecallChart precision={precision_curve} recall={recall_curve} f1Score={f1_score} />
+                    )}
                   </div>
                 )}
                 
-                {confusion_matrix && (
+                {hasConfusionMatrix && (
                   <div className="mt-6">
                     <ConfusionMatrixChart 
                       matrix={confusion_matrix}
-                      labels={results.class_labels || (isBinaryClassification ? ['Negative', 'Positive'] : [])}
+                      labels={class_labels.length > 0 ? class_labels : (isBinaryClassification ? ['Negative', 'Positive'] : [])}
                     />
                   </div>
                 )}
                 
-                {!isBinaryClassification && Object.keys(metrics).length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Performance Metrics</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <MetricsGrid metrics={metrics} taskType={task_type} />
-                    </CardContent>
-                  </Card>
+                {!hasRocCurveData && !hasPrCurveData && !hasConfusionMatrix && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      No advanced charts available for this experiment.
+                    </p>
+                  </div>
                 )}
               </div>
             </TabsContent>

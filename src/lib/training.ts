@@ -47,9 +47,6 @@ export const getExperimentResults = async (
         throw new Error('Unauthorized: Your session has expired. Please log in again.');
       }
       const errorText = await response.text().catch(() => "");
-      if (errorText.startsWith('<!DOCTYPE')) {
-        throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
-      }
       console.error('[API] Error fetching results:', errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
       throw new Error(`Failed to fetch experiment results: ${response.status} ${response.statusText}`);
     }
@@ -57,14 +54,7 @@ export const getExperimentResults = async (
     // Always try to parse the response as JSON
     let apiResponse: any;
     const responseText = await response.text();
-    if (!responseText || responseText.trim() === '') {
-      throw new Error('Server returned an empty response');
-    }
-    // check for HTML response
-    if (responseText.startsWith('<!DOCTYPE') || responseText.startsWith('<html')) {
-      throw new Error('Server returned HTML instead of JSON. Check server configuration.');
-    }
-
+    
     try {
       apiResponse = JSON.parse(responseText);
       console.log('[API] Full API response structure:', {
@@ -82,39 +72,9 @@ export const getExperimentResults = async (
     const payload = apiResponse.data ?? apiResponse;
     console.log('[API] Unwrapped payload keys:', Object.keys(payload));
 
-    // CRITICAL FIX: Only check for hasTrainingResults if it's explicitly false
-    // Most APIs don't include hasTrainingResults when results are actually present
-    if (payload.hasTrainingResults === false) {
-      console.log('[API] Training results not ready yet according to hasTrainingResults flag');
-      return null;
-    }
-
-    // Log training results structure if present
-    if (payload.training_results) {
-      console.log('[API] Training results structure:', {
-        hasMetrics: !!payload.training_results.metrics,
-        metricsKeys: Object.keys(payload.training_results.metrics || {}),
-        hasClassificationReport: !!payload.training_results.metrics?.classification_report,
-        classificationReportType: typeof payload.training_results.metrics?.classification_report,
-        classificationReportKeys: payload.training_results.metrics?.classification_report ? 
-          Object.keys(payload.training_results.metrics.classification_report) : 'none'
-      });
-    }
-
-    // If we have actual results data (either in training_results or metrics directly)
-    // then set hasTrainingResults to true explicitly for consistency
-    if (
-      (payload.training_results && Object.keys(payload.training_results).length > 0) ||
-      (payload.metrics && Object.keys(payload.metrics).length > 0)
-    ) {
-      payload.hasTrainingResults = true;
-    }
-
-    // At this point, payload should be a full ExperimentResults
-    console.log('[API] Results data received:', payload);
-    return payload as ExperimentResults;
+    return payload;
   } catch (error) {
-    console.error('[API] Error fetching experiment results:', error);
+    console.error('[API] Error in getExperimentResults:', error);
     throw error;
   }
 };
