@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -76,7 +75,7 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      const response = await trainingApi.automlTrain(
+      const { experiment_id, experiment_name } = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
@@ -85,16 +84,13 @@ const AutoMLTraining: React.FC = () => {
         randomSeed
       );
 
-      const experimentId = response.experiment_id;
-      const experimentName = response.experiment_name;
-
-      if (experimentId) {
+      if (experiment_id) {
         setLastTrainingType('automl');
-        startPolling(experimentId);
+        startPolling(experiment_id);
         
         toast({
           title: "Training Submitted",
-          description: `AutoML training job submitted successfully.`,
+          description: `Experiment ${experiment_name} (${experiment_id}) started.`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');

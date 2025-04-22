@@ -276,27 +276,9 @@ export const trainingApi = {
         body: formData,
       });
       
-      const data = await handleApiResponse(response);
-      return {
-        experiment_id: data.experiment_id,
-        experiment_name: data.experiment_name
-      };
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('Error starting AutoML training:', error);
-      throw error;
-    }
-  },
-
-  getAvailableHyperparameters: async (algorithm: string) => {
-    try {
-      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
-        headers: getAuthHeaders(),
-      });
-      
-      const data = await handleApiResponse(response);
-      return data.hyperparameters;
-    } catch (error) {
-      console.error('Error fetching hyperparameters:', error);
       throw error;
     }
   },
@@ -312,13 +294,23 @@ export const trainingApi = {
         body: formData
       });
       
-      const data = await handleApiResponse(response);
-      return {
-        experiment_id: data.experiment_id,
-        experiment_name: data.experiment_name
-      };
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('Error starting custom training:', error);
+      throw error;
+    }
+  },
+
+  getAvailableHyperparameters: async (algorithm: string) => {
+    try {
+      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.hyperparameters;
+    } catch (error) {
+      console.error('Error fetching hyperparameters:', error);
       throw error;
     }
   },
