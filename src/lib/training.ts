@@ -150,18 +150,17 @@ export const submitManualPrediction = async (
 };
 
 // Manual prediction helper: POST with FormData and auth headers
-export async function predictManual(experimentId: string, inputs: Record<string, any>) {
-  const headers = await getAuthHeaders();
+export async function predictManual(experimentId: string, inputValues: Record<string, any>) {
   const form = new FormData();
   form.append('experiment_id', experimentId);
-  form.append('input_values', JSON.stringify(inputs));
-  const url = `${API_BASE_URL}/prediction/predict-manual/`;
+  form.append('input_values', JSON.stringify(inputValues));
+  const headers = await getAuthHeaders();
   const res = await fetch(
-    url,
+    `${API_BASE_URL}/prediction/predict-manual/`,
     { 
-      method: 'POST', 
+      method: 'POST',
       headers,
-      body: form 
+      body: form
     }
   );
   if (!res.ok) throw new Error(await res.text());
