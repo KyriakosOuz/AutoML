@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 
-// Update the Status type to include 'success' since it's used in the API
 export type Status = 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 interface StatusBadgeProps {

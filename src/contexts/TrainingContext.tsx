@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
 
@@ -10,8 +9,7 @@ import {
   CustomTrainingParameters,
   AutoMLResult,
   CustomTrainingResult,
-  ExperimentResults,
-  ExperimentStatus as TypeExperimentStatus
+  ExperimentResults
 } from '@/types/training';
 
 // Local storage keys
@@ -89,6 +87,8 @@ const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes
 
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const completedRef = useRef(false);
   
   const [isTraining, setIsTraining] = useState(false);
   const [lastTrainingType, setLastTrainingType] = useState<'automl' | 'custom' | null>(null);
@@ -141,8 +141,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [activeExperimentId, lastTrainingType]);
 
   const startPolling = async (experimentId: string) => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
+    completedRef.current = false;
+    
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
     }
 
     console.log('[TrainingContext] Starting polling for experiment:', experimentId);
@@ -152,6 +154,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setExperimentStatus('processing');
 
     const interval = setInterval(async () => {
+      if (completedRef.current) {
+        stopPolling();
+        return;
+      }
+
       try {
         const statusResponse = await trainingApi.checkStatus(experimentId);
         console.log('[TrainingContext] Status response:', {
@@ -164,6 +171,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
           console.log('[TrainingContext] Training completed successfully');
+          completedRef.current = true;
           stopPolling();
           const results = await trainingApi.getExperimentResults(experimentId);
           console.log('[TrainingContext] Retrieved results:', results);
@@ -176,6 +184,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           });
         } else if (statusResponse.status === 'failed') {
           console.error('[TrainingContext] Training failed');
+          completedRef.current = true;
           stopPolling();
           const results = await trainingApi.getExperimentResults(experimentId);
           console.error('[TrainingContext] Error details:', results.error_message);
@@ -196,19 +205,21 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
     }, POLL_INTERVAL);
 
-    setPollingInterval(interval);
+    pollingRef.current = interval;
   };
 
   const stopPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
     }
   };
 
   useEffect(() => {
     return () => {
-      stopPolling();
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
     };
   }, []);
 
