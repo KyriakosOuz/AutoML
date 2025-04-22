@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { 
@@ -110,7 +111,7 @@ export async function predictManual(
   delete (headers as any)['Content-Type'];
 
   const res = await fetch(
-    `${API_BASE_URL}/predict/predict-manual/`,
+    `${API_BASE_URL}/prediction/predict-manual/`,
     {
       method: 'POST',
       headers,
@@ -135,7 +136,7 @@ export async function predictBatchCsv(
   delete (headers as any)['Content-Type'];
 
   const res = await fetch(
-    `${API_BASE_URL}/predict/predict-csv/`,
+    `${API_BASE_URL}/prediction/predict-csv/`,
     {
       method: 'POST',
       headers,
