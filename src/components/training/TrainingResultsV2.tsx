@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,7 +22,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/comp
 import { trainingApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentResults } from '@/types/training';
-import { useTraining } from '@/contexts/TrainingContext';
+import { useTraining } from '@/contexts/training/TrainingContext';
 
 export interface TrainingResultsV2Props {
   experimentId: string;

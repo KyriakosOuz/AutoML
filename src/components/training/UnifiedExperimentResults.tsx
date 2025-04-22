@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentResults } from '@/types/training';
-import { useTraining } from '@/contexts/TrainingContext';
+import { useTraining } from '@/contexts/training/TrainingContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface UnifiedExperimentResultsProps {

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { useTraining } from '@/contexts/TrainingContext';
+import { useTraining } from '@/contexts/training/TrainingContext';
 import { trainingApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

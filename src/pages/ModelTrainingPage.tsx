@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { DatasetProvider } from '@/contexts/DatasetContext';
-import { TrainingProvider } from '@/contexts/TrainingContext';
+import { TrainingProvider } from '@/contexts/training/TrainingContext';
 import ModelTrainingContent from '@/components/training/ModelTrainingContent';
 import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
