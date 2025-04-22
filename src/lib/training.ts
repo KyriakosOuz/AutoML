@@ -26,14 +26,11 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
 
     const apiResponse = await handleApiResponse<ExperimentResults>(response);
     
-    // Extract the data property from the ApiResponse
     if (apiResponse.status === 'success' && apiResponse.data) {
       return apiResponse.data;
     }
     
-    // If no data property exists, the response itself might be the ExperimentResults
-    // This handles backward compatibility with APIs that don't follow the ApiResponse format
-    return apiResponse as unknown as ExperimentResults;
+    throw new Error('Invalid response format from experiment results endpoint');
   } catch (error) {
     console.error('[API] Error fetching experiment results:', error);
     throw error;

@@ -6,10 +6,11 @@ interface ApiResponse<T = any> {
 }
 
 interface ExperimentStatusResponse {
-  experimentId: string;
-  status: string;
+  experiment_id: string;
+  status: 'running' | 'completed' | 'failed';
+  error_message: string | null;
+  completed_at: string | null;
   hasTrainingResults: boolean;
-  error_message?: string;
 }
 
 export type { ApiResponse, ExperimentStatusResponse };

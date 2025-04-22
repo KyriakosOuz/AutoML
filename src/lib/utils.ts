@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
@@ -16,26 +15,21 @@ export const getAuthHeaders = () => {
 };
 
 export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
-  if (!response.ok) {
-    const contentType = response.headers.get('content-type');
-    
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Server returned non-JSON response:', {
-        status: response.status,
-        contentType,
-        text: text.substring(0, 200)
-      });
-      throw new Error(`Server returned non-JSON response (${response.status})`);
-    }
-    
-    const errorData = await response.json();
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  const contentType = response.headers.get('content-type');
+  
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('Server returned non-JSON response:', {
+      status: response.status,
+      contentType,
+      text: text.substring(0, 200)
+    });
+    throw new Error(`Server returned non-JSON response (${response.status})`);
   }
 
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    throw new Error('Server returned non-JSON content type');
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
 
   const jsonData = await response.json();

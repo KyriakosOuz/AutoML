@@ -59,7 +59,7 @@ export const useExperimentPolling = ({
           console.log('[TrainingContext] Training completed successfully, fetching results');
           stopPolling();
           onSuccess(experimentId);
-        } else if (data.status === 'failed' || data.error_message) {
+        } else if (data.status === 'failed') {
           console.error('[TrainingContext] Training failed:', data.error_message);
           stopPolling();
           onError(data.error_message || 'Training failed');
