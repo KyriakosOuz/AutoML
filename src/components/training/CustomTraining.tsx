@@ -21,7 +21,7 @@ import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
 
 const CustomTraining: React.FC = () => {
-  const { datasetId, targetColumn, taskType } = useDataset();
+  const { datasetId, taskType: datasetTaskType, targetColumn } = useDataset();
   const {
     isTraining,
     setIsTraining,
@@ -49,9 +49,9 @@ const CustomTraining: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (taskType) {
+    if (datasetTaskType) {
       setIsLoadingAlgorithms(true);
-      trainingApi.getAvailableAlgorithms(taskType)
+      trainingApi.getAvailableAlgorithms(datasetTaskType)
         .then(algorithms => {
           setAlgorithms(algorithms);
           setIsLoadingAlgorithms(false);
@@ -59,10 +59,10 @@ const CustomTraining: React.FC = () => {
         .catch(error => {
           console.error('Error fetching algorithms:', error);
           setIsLoadingAlgorithms(false);
-          setAlgorithms(ALLOWED_ALGORITHMS[taskType] || []);
+          setAlgorithms(ALLOWED_ALGORITHMS[datasetTaskType] || []);
         });
     }
-  }, [taskType]);
+  }, [datasetTaskType]);
 
   useEffect(() => {
     if (customParameters.algorithm) {
@@ -119,48 +119,36 @@ const CustomTraining: React.FC = () => {
       setError(null);
       setLastTrainingType('custom');
 
-      const { 
-        algorithm, 
-        hyperparameters, 
-        testSize, 
-        stratify, 
-        randomSeed, 
-        enableAnalytics, 
-        useDefaultHyperparameters,
-        enableVisualization
-      } = customParameters;
+      const formData = new FormData();
+      formData.append('dataset_id', datasetId);
+      formData.append('task_type', datasetTaskType);
+      formData.append('algorithm', customParameters.algorithm);
+      formData.append('use_default_hyperparams', String(customParameters.useDefaultHyperparameters));
+      if (!customParameters.useDefaultHyperparameters) {
+        formData.append('hyperparameters', JSON.stringify(customParameters.hyperparameters));
+      }
+      formData.append('test_size', String(customParameters.testSize));
+      formData.append('stratify', String(customParameters.stratify));
+      formData.append('random_seed', String(customParameters.randomSeed));
+      formData.append('experiment_name', experimentName || '');
+      formData.append('enable_visualization', String(customParameters.enableVisualization));
+      formData.append('advanced_analytics', String(customParameters.enableAnalytics));
+      formData.append('store_model', 'true');
 
       toast({
         title: "Training Started",
-        description: `Starting custom training with ${algorithm}...`,
+        description: `Starting custom training with ${customParameters.algorithm}...`,
       });
-
-      const formData = new FormData();
-      formData.append('dataset_id', datasetId);
-      formData.append('task_type', taskType);
-      formData.append('algorithm', algorithm);
-      formData.append('use_default_hyperparams', String(useDefaultHyperparameters));
-      if (!useDefaultHyperparameters) {
-        formData.append('hyperparameters', JSON.stringify(hyperparameters));
-      }
-      formData.append('test_size', String(testSize));
-      formData.append('stratify', String(stratify));
-      formData.append('random_seed', String(randomSeed));
-      formData.append('experiment_name', experimentName || '');
-      formData.append('enable_visualization', String(enableVisualization));
-      formData.append('advanced_analytics', String(enableAnalytics));
-      formData.append('store_model', 'true');
 
       const response = await trainingApi.customTrain(formData);
       
-      const experimentId = response?.experiment_id || response?.data?.experiment_id;
-      
-      if (experimentId) {
+      if (response?.experiment_id) {
         toast({
           title: "Training Submitted",
           description: `Custom training job submitted successfully.`,
         });
-        navigate(`/results/${experimentId}`);
+        setActiveExperimentId(response.experiment_id);
+        navigate(`/results/${response?.experiment_id}`);
       } else {
         throw new Error('No experiment ID returned from the server');
       }
@@ -185,7 +173,7 @@ const CustomTraining: React.FC = () => {
   const isFormValid = () => {
     return !!(
       datasetId &&
-      taskType &&
+      datasetTaskType &&
       customParameters.algorithm &&
       customParameters.testSize >= 0.1 &&
       customParameters.testSize <= 0.5

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTraining } from '@/contexts/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -14,7 +14,13 @@ const ModelTrainingContent: React.FC = () => {
     resetTrainingState,
     lastTrainingType
   } = useTraining();
-  const [activeTab, setActiveTab] = useState<string>(activeExperimentId ? 'results' : 'automl');
+  const [activeTab, setActiveTab] = useState<string>('automl');
+
+  useEffect(() => {
+    if (experimentResults?.status === 'completed' || experimentResults?.status === 'success') {
+      setActiveTab('results');
+    }
+  }, [experimentResults?.status]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -26,19 +32,8 @@ const ModelTrainingContent: React.FC = () => {
   };
 
   const handleBack = () => {
-    // Go back to the original training tab
     setActiveTab(lastTrainingType === 'custom' ? 'custom' : 'automl');
   };
-
-  // TypeScript is enforcing proper prop typing, so we need to cast the components 
-  // to allow the onTrainingStart prop to be passed
-  const AutoMLTrainingWithProps = AutoMLTraining as React.ComponentType<{
-    onTrainingStart: () => void;
-  }>;
-  
-  const CustomTrainingWithProps = CustomTraining as React.ComponentType<{
-    onTrainingStart: () => void;
-  }>;
 
   return (
     <div className="container max-w-7xl mx-auto py-6">
@@ -50,29 +45,22 @@ const ModelTrainingContent: React.FC = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="automl">AutoML Training</TabsTrigger>
           <TabsTrigger value="custom">Custom Training</TabsTrigger>
-          <TabsTrigger 
-            value="results" 
-            disabled={!activeExperimentId && !experimentResults}
-          >
-            Results
-          </TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
         </TabsList>
         
         <TabsContent value="automl">
-          <AutoMLTrainingWithProps onTrainingStart={() => setActiveTab('results')} />
+          <AutoMLTraining onTrainingStart={() => setActiveTab('results')} />
         </TabsContent>
         
         <TabsContent value="custom">
-          <CustomTrainingWithProps onTrainingStart={() => setActiveTab('results')} />
+          <CustomTraining onTrainingStart={() => setActiveTab('results')} />
         </TabsContent>
         
         <TabsContent value="results">
-          {(activeExperimentId || experimentResults) && (
-            <UnifiedExperimentResults 
-              onReset={handleReset} 
-              onBack={handleBack}
-            />
-          )}
+          <UnifiedExperimentResults 
+            onReset={handleReset} 
+            onBack={handleBack}
+          />
         </TabsContent>
       </Tabs>
     </div>

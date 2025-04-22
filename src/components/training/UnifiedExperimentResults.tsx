@@ -57,25 +57,49 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
   onBack
 }) => {
   const { toast } = useToast();
-  const { activeExperimentId, experimentResults, isLoadingResults, error } = useTraining();
+  const { activeExperimentId, experimentResults, isLoadingResults, error, trainingApi } = useTraining();
   const [activeTab, setActiveTab] = useState('metrics');
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let pollInterval: NodeJS.Timeout;
 
-    if (isLoadingResults) {
-      timeoutId = setTimeout(() => {
-        setHasTimedOut(true);
-      }, TIMEOUT_DURATION);
+    if (activeExperimentId && (isLoadingResults || !experimentResults)) {
+      pollInterval = setInterval(() => {
+        trainingApi.getExperimentResults(activeExperimentId)
+          .then(data => {
+            if (data.status === 'completed' || data.status === 'success') {
+              clearInterval(pollInterval);
+              setExperimentResults(data);
+              setIsLoadingResults(false);
+              toast({
+                title: "Training Complete",
+                description: "Your model has finished training!"
+              });
+            } else if (data.status === 'failed') {
+              clearInterval(pollInterval);
+              setError(data.error_message || 'Training failed');
+              setIsLoadingResults(false);
+              toast({
+                title: "Training Failed",
+                description: data.error_message || 'An error occurred during training',
+                variant: "destructive"
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Polling error:', error);
+            // Don't clear interval on network errors - keep trying
+          });
+      }, 2000);
     }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (pollInterval) {
+        clearInterval(pollInterval);
       }
     };
-  }, [isLoadingResults]);
+  }, [activeExperimentId, isLoadingResults]);
 
   if (isLoadingResults) {
     return (
