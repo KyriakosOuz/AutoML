@@ -324,8 +324,16 @@ export const trainingApi = {
       console.log('[DEBUG] Raw customTrain response:', response);
       console.log('[DEBUG] Content-Type:', response.headers.get('content-type'));
       
-      const data = await handleApiResponse(response);
-      console.log('[API] Custom training response:', data);
+      const responseJson = await handleApiResponse(response);
+      console.log('[API] Custom training response:', responseJson);
+
+      // Unwrap `data` object if present
+      const data = responseJson.data || responseJson;
+
+      if (!data.experiment_id) {
+        throw new Error('No experiment ID returned from the server');
+      }
+
       return data;
     } catch (error) {
       console.error('[API] Error starting custom training:', {
