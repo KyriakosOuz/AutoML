@@ -37,7 +37,7 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = window.location.origin;
 
 // Updated getAuthHeaders function that returns a regular object, not a Promise
 const getAuthHeaders = () => {
@@ -123,7 +123,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/dataset-overview/`, {
+    const response = await fetch(`${API_BASE}/dataset/dataset-overview/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -141,7 +141,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/preview-data/`, {
+    const response = await fetch(`${API_BASE}/dataset/preview-data/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -165,7 +165,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/handle-dataset/`, {
+    const response = await fetch(`${API_BASE}/dataset/handle-dataset/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -183,7 +183,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/detect-task-type/`, {
+    const response = await fetch(`${API_BASE}/dataset/detect-task-type/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -201,7 +201,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/feature-importance-preview/`, {
+    const response = await fetch(`${API_BASE}/dataset/feature-importance-preview/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -234,7 +234,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/save-dataset/`, {
+    const response = await fetch(`${API_BASE}/dataset/save-dataset/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -253,7 +253,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/data-preprocess/`, {
+    const response = await fetch(`${API_BASE}/dataset/data-preprocess/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -264,7 +264,7 @@ export const datasetApi = {
     return await handleApiResponse(response);
   },
   getFeatureImportance: async (datasetId: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance`, {
+    const response = await fetch(`${API_BASE}/datasets/${datasetId}/feature_importance`, {
       headers: getAuthHeaders(),
     });
     
@@ -280,7 +280,7 @@ export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
     try {
       // Ensure we're passing the task_type as a query parameter
-      const response = await fetch(`${API_URL}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
+      const response = await fetch(`${API_BASE}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
         headers: getAuthHeaders(),
       });
       
@@ -295,7 +295,7 @@ export const trainingApi = {
   checkStatus: async (experimentId: string) => {
     try {
       console.log('[API] Checking status for experiment:', experimentId);
-      const response = await fetch(`${API_URL}/training/check-status/${experimentId}`, {
+      const response = await fetch(`${API_BASE}/training/check-status/${experimentId}`, {
         headers: getAuthHeaders(),
       });
       
@@ -362,7 +362,7 @@ export const trainingApi = {
       formData.append('stratify', stratify.toString());
       formData.append('random_seed', randomSeed.toString());
       
-      const response = await fetch(`${API_URL}/training/automl/`, {
+      const response = await fetch(`${API_BASE}/training/automl/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
@@ -433,7 +433,7 @@ export const trainingApi = {
       });
       
       const token = getAuthToken();
-      const response = await fetch(`${API_URL}/training/custom-train/`, {
+      const response = await fetch(`${API_BASE}/training/custom-train/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -502,7 +502,7 @@ export const trainingApi = {
 
   getAvailableHyperparameters: async (algorithm: string) => {
     try {
-      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+      const response = await fetch(`${API_BASE}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         headers: getAuthHeaders(),
       });
       
@@ -517,7 +517,7 @@ export const trainingApi = {
   getExperimentResults: async (experimentId: string) => {
     try {
       console.log('[API] Fetching results for experiment:', experimentId);
-      const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
+      const response = await fetch(`${API_BASE}/experiments/experiment-results/${experimentId}`, {
         headers: getAuthHeaders()
       });
       

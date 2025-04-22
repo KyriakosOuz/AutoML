@@ -1,3 +1,8 @@
+
+// Library for training and prediction-related API calls
+
+const API_BASE = window.location.origin;
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { 
@@ -5,14 +10,15 @@ import {
   ManualPredictionResponse, 
   BatchPredictionResponse 
 } from '@/types/training';
-import { API_BASE_URL } from './constants';
+// Remove old import for constants
+// import { API_BASE_URL } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
     console.log('[API] Checking status for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/training/check-status/${experimentId}`, {
+    const response = await fetch(`${API_BASE}/training/check-status/${experimentId}`, {
       headers
     });
 
@@ -33,7 +39,7 @@ export const getExperimentResults = async (
 
     // Always use the correct endpoint for full experiment results
     const response = await fetch(
-      `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
+      `${API_BASE}/experiments/experiment-results/${experimentId}`,
       { headers }
     );
 
@@ -109,7 +115,7 @@ export const predictManual = async (
     formData.append('input_values', JSON.stringify(inputValues));
 
     const response = await fetch(
-      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-manual/`,
+      `${API_BASE}/prediction/predict-manual/`,
       {
         method: 'POST',
         headers: {
@@ -163,7 +169,7 @@ export const predictBatchCsv = async (
     formData.append('file', file);
 
     const response = await fetch(
-      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-csv/`,
+      `${API_BASE}/prediction/predict-csv/`,
       {
         method: 'POST',
         headers: {
@@ -203,3 +209,4 @@ export const predictBatchCsv = async (
     throw error;
   }
 };
+
