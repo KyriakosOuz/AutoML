@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -19,10 +20,17 @@ import {
   RefreshCw, 
   Activity,
   Loader,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
+
+// Import the chart components
+import RocCurveChart from './charts/RocCurveChart';
+import PrecisionRecallChart from './charts/PrecisionRecallChart';
+import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
+import MetricsGrid from './charts/MetricsGrid';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -74,38 +82,29 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     };
   }, [experimentId, toast]);
 
-  // drill down into training_results for all metrics/predictions
-  let training_results = null, files = [], experiment_name = '';
+  // Extract data from results
+  let training_results = null, files = [], experiment_name = '', task_type = '';
   if (results) {
     training_results = results.training_results ?? {};
     files = (results.files as any[]) || [];
     experiment_name = results.experiment_name || '';
+    task_type = results.task_type || '';
   }
 
   const metrics = training_results ? training_results.metrics || {} : {};
   const y_true = training_results ? training_results.y_true : [];
   const y_pred = training_results ? training_results.y_pred : [];
   const y_probs = training_results ? training_results.y_probs : [];
-
-  // Format metrics and helper functions
-  const formatMetric = (value: number | undefined) => {
-    if (value === undefined) return 'N/A';
-    return (value * 100).toFixed(2) + '%';
-  };
   
-  const formatRegressionMetric = (value: number | undefined) => {
-    if (value === undefined) return 'N/A';
-    return value.toFixed(4);
-  };
+  // Extract ROC and PR curve data if available
+  const fpr = training_results?.metrics?.fpr || [];
+  const tpr = training_results?.metrics?.tpr || [];
+  const precision = training_results?.metrics?.precision_curve || [];
+  const recall = training_results?.metrics?.recall_curve || [];
+  const confusion_matrix = training_results?.metrics?.confusion_matrix || null;
+  const auc = training_results?.metrics?.auc;
+  const f1_score = training_results?.metrics?.f1_score;
   
-  const getMetricColor = (value: number | undefined) => {
-    if (value === undefined) return 'text-gray-400';
-    if (value >= 0.9) return 'text-green-600';
-    if (value >= 0.7) return 'text-emerald-600';
-    if (value >= 0.5) return 'text-amber-600';
-    return 'text-red-600';
-  };
-
   // Loading state
   if (isLoading) {
     return (
@@ -203,13 +202,18 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   
   // Extract relevant data from results
   const { 
-    task_type = '',
     target_column = '',
     training_time_sec,
     completed_at,
   } = results;
 
   const isClassification = task_type ? task_type.includes('classification') : false;
+  const isBinaryClassification = isClassification && task_type.includes('binary');
+  
+  // Determine if we have advanced chart data
+  const hasAdvancedCharts = (fpr.length > 0 && tpr.length > 0) || 
+                           (precision.length > 0 && recall.length > 0) || 
+                           confusion_matrix;
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -255,14 +259,21 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 rounded-none border-b h-12">
+          <TabsList className={`w-full grid ${hasAdvancedCharts ? 'grid-cols-4' : 'grid-cols-3'} rounded-none border-b h-12`}>
             <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
             </TabsTrigger>
             
+            {hasAdvancedCharts && (
+              <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
+                <BarChart4 className="h-4 w-4" />
+                <span>Advanced Charts</span>
+              </TabsTrigger>
+            )}
+            
             <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
-              <BarChart4 className="h-4 w-4" />
+              <ImageIcon className="h-4 w-4" />
               <span>Visualizations</span>
             </TabsTrigger>
             
@@ -273,130 +284,54 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           </TabsList>
           
           <TabsContent value="metrics" className="p-6">
-            {Object.keys(metrics).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {isClassification ? (
-                  // Classification metrics
-                  <>
-                    {metrics.accuracy !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Accuracy</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-2xl font-bold ${getMetricColor(metrics.accuracy)}`}>
-                            {formatMetric(metrics.accuracy)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.f1_score !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">F1 Score</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-2xl font-bold ${getMetricColor(metrics.f1_score)}`}>
-                            {formatMetric(metrics.f1_score)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.precision !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Precision</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-2xl font-bold ${getMetricColor(metrics.precision)}`}>
-                            {formatMetric(metrics.precision)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.recall !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Recall</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-2xl font-bold ${getMetricColor(metrics.recall)}`}>
-                            {formatMetric(metrics.recall)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
-                ) : (
-                  // Regression metrics
-                  <>
-                    {metrics.r2_score !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">R² Score</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-2xl font-bold ${getMetricColor(metrics.r2_score)}`}>
-                            {formatRegressionMetric(metrics.r2_score)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.mae !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Mean Absolute Error</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">
-                            {formatRegressionMetric(metrics.mae)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.mse !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Mean Squared Error</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">
-                            {formatRegressionMetric(metrics.mse)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    {metrics.rmse !== undefined && (
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">Root Mean Squared Error</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">
-                            {formatRegressionMetric(metrics.rmse)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <Activity className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No Metrics Available</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">
-                  No performance metrics were found for this experiment.
-                </p>
+            <MetricsGrid metrics={metrics} taskType={task_type} />
+            
+            {metrics.classification_report && (
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-2">Classification Report</h3>
+                <div className="bg-muted/40 p-4 rounded-md">
+                  <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
+                    {typeof metrics.classification_report === 'string' 
+                      ? metrics.classification_report 
+                      : JSON.stringify(metrics.classification_report, null, 2)}
+                  </pre>
+                </div>
               </div>
             )}
           </TabsContent>
+          
+          {hasAdvancedCharts && (
+            <TabsContent value="charts" className="p-6">
+              <div className="space-y-8">
+                {isBinaryClassification && fpr.length > 0 && tpr.length > 0 && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <RocCurveChart fpr={fpr} tpr={tpr} auc={auc} />
+                    <PrecisionRecallChart precision={precision} recall={recall} f1Score={f1_score} />
+                  </div>
+                )}
+                
+                {confusion_matrix && (
+                  <div className="mt-6">
+                    <ConfusionMatrixChart 
+                      matrix={confusion_matrix}
+                      labels={results.class_labels || ['Negative', 'Positive']}
+                    />
+                  </div>
+                )}
+                
+                {!isBinaryClassification && Object.keys(metrics).length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Performance Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MetricsGrid metrics={metrics} taskType={task_type} />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          )}
           
           <TabsContent value="visualizations" className="p-6">
             {files.length > 0 ? (
