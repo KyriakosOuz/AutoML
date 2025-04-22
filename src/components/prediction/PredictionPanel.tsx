@@ -1,112 +1,78 @@
 
 import React, { useState, useEffect } from 'react';
-import { getExperimentResults, predictManual } from '@/lib/training';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Loader } from 'lucide-react';
+import { Loader, Upload } from 'lucide-react';
 
 interface PredictionPanelProps {
   experimentId: string;
 }
 
-type ManualForm = {
-  allColumns: string[]; // all columns including target
-  features: string[];   // features, excluding target column
-  sampleRow: Record<string, string>;
-  targetColumn: string;
-};
-
-const parseCsvSample = (csvText: string, targetColumn: string) => {
-  const rows = csvText.trim().split('\n');
-  if (rows.length < 2) return { allColumns: [], features: [], sampleRow: {}, target: '' };
-
-  const header = rows[0].split(',').map(col => col.trim());
-  const firstRow = rows[1].split(',');
-
-  const features = header.filter(f => f !== targetColumn);
-  const sampleRow: Record<string, string> = {};
-  header.forEach((col, idx) => {
-    sampleRow[col] = (firstRow[idx] ?? '').trim();
-  });
-
-  return { allColumns: header, features, sampleRow };
-};
+interface SchemaResponse {
+  features: string[];
+  target_column: string;
+  sample_row: Record<string, any>;
+}
 
 const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   const [loading, setLoading] = useState(true);
   const [predicting, setPredicting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manualForm, setManualForm] = useState<ManualForm | null>(null);
+  const [schema, setSchema] = useState<SchemaResponse | null>(null);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [prediction, setPrediction] = useState<any>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [taskType, setTaskType] = useState<string>('');
   const { toast } = useToast();
 
-  // --- Manual Prediction Data Fetching Logic ---
+  // Fetch schema on component mount
   useEffect(() => {
-    const fetchManualPredictionInfo = async () => {
+    const fetchSchema = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // 1. Fetch experiment results JSON
-        const result = await getExperimentResults(experimentId);
-
-        if (!result) throw new Error('Failed to fetch experiment results');
-        const target_column = result.target_column ?? '';
-        setTaskType(result.task_type || '');
-
-        let allColumns: string[] = [];
-        let features: string[] = [];
-        let sampleRow: Record<string, string> = {};
-
-        // 2. Get dataset_file_url and sample row
-        let datasetFileUrl: string | undefined;
-        if (result.files?.length) {
-          const datasetFile = result.files.find(f => f.file_type === 'dataset');
-          if (datasetFile?.file_url) {
-            datasetFileUrl = datasetFile.file_url;
-          }
-        }
-        if (!datasetFileUrl && (result as any).dataset_file_url) {
-          datasetFileUrl = (result as any).dataset_file_url;
-        }
-
-        if (datasetFileUrl) {
-          const resp = await fetch(datasetFileUrl);
-          const text = await resp.text();
-          const res = parseCsvSample(text, target_column);
-          allColumns = res.allColumns;
-          features = res.features;
-          sampleRow = res.sampleRow;
-        } else if (result.columns_to_keep && result.columns_to_keep.length > 0) {
-          allColumns = result.columns_to_keep;
-          features = result.columns_to_keep.filter(f => f !== target_column);
-          features.forEach(f => sampleRow[f] = '');
-        } else {
-          throw new Error('Unable to load feature columns');
-        }
-
-        setManualForm({
-          allColumns,
-          features,
-          sampleRow,
-          targetColumn: target_column
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/prediction/schema/${experimentId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
         });
 
-        // Set up empty input values
+        if (!response.ok) {
+          throw new Error(`Failed to fetch schema: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setSchema(data);
+        
+        // Initialize input values with empty strings
         const initialInputs: Record<string, string> = {};
-        features.forEach(f => {
-          initialInputs[f] = '';
+        data.features.forEach((feature: string) => {
+          initialInputs[feature] = '';
         });
         setInputValues(initialInputs);
+
+        // Also fetch experiment details to get task type if needed
+        const experimentResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/experiments/experiment-results/${experimentId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (experimentResponse.ok) {
+          const experimentData = await experimentResponse.json();
+          const experimentResult = experimentData.data || experimentData;
+          setTaskType(experimentResult.task_type || '');
+        }
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load prediction form');
@@ -116,7 +82,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     };
 
     if (experimentId) {
-      fetchManualPredictionInfo();
+      fetchSchema();
     }
   }, [experimentId]);
 
@@ -128,8 +94,8 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   };
 
   const areAllInputsFilled = () => {
-    if (!manualForm) return false;
-    return manualForm.features.every(feature => inputValues[feature]?.trim() !== '');
+    if (!schema) return false;
+    return schema.features.every(feature => inputValues[feature]?.trim() !== '');
   };
 
   const handlePredict = async () => {
@@ -139,20 +105,35 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     setError(null);
 
     try {
-      // Number parse attempt
-      const formattedInputs: Record<string, any> = {};
-      Object.entries(inputValues).forEach(([key, value]) => {
-        const numValue = Number(value);
-        formattedInputs[key] = isNaN(numValue) ? value : numValue;
+      // Create FormData object
+      const formData = new FormData();
+      formData.append('experiment_id', experimentId);
+      
+      // Convert input values to JSON string
+      formData.append('input_values', JSON.stringify(inputValues));
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/prediction/predict-manual/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: formData,
       });
 
-      const result = await predictManual(experimentId, formattedInputs);
+      if (!response.ok) {
+        throw new Error(`Prediction failed: ${response.status} ${response.statusText}`);
+      }
 
-      if (result.prediction !== undefined) {
-        setPrediction(result.prediction);
-        if (taskType.includes('classification') && result.probability !== undefined) {
-          setConfidence(result.probability);
+      const result = await response.json();
+
+      if (result.status === 'success' && result.data.prediction !== undefined) {
+        setPrediction(result.data.prediction);
+        
+        // Set confidence if available and task is classification
+        if (taskType.includes('classification') && result.data.probability !== undefined) {
+          setConfidence(result.data.probability);
         }
+        
         toast({
           title: 'Prediction Generated',
           description: 'The model has successfully generated a prediction.',
@@ -170,6 +151,15 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     } finally {
       setPredicting(false);
     }
+  };
+
+  const handleBatchPrediction = () => {
+    // Batch prediction functionality would go here
+    toast({
+      title: 'Batch Prediction',
+      description: 'Batch prediction is not yet implemented.',
+      variant: 'default',
+    });
   };
 
   // --- Render ---
@@ -210,84 +200,108 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manual Input</CardTitle>
+        <CardTitle>Model Predictions</CardTitle>
         <CardDescription>
-          Enter values for each feature to generate a prediction.
+          Generate predictions using your trained model
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="w-full overflow-auto">
-          <form
-            onSubmit={e => {
-              e.preventDefault();
-              handlePredict();
-            }}
-          >
-            <div className="flex flex-row gap-4 items-end mb-4">
-              {manualForm &&
-                manualForm.allColumns.map((col) => {
-                  const isTarget = col === manualForm.targetColumn;
-                  if (isTarget) {
-                    // Prediction output field (different color & disabled)
-                    return (
-                      <div key={col} className="flex flex-col items-start" style={{ minWidth: 140 }}>
-                        <Label htmlFor={`manual-${col}`}>{col}</Label>
-                        <Input
-                          id={`manual-${col}`}
-                          placeholder={manualForm.sampleRow[col] || ''}
-                          value={
-                            prediction !== null
-                              ? typeof prediction === 'number'
-                                ? prediction.toFixed(4)
-                                : prediction
-                              : ''
-                          }
-                          readOnly
-                          disabled
-                          className="bg-primary/10 text-primary focus:shadow-none opacity-90 font-semibold ring-0 border-2 border-primary/20"
-                        />
-                        {taskType.includes('classification') && confidence !== null && (
-                          <Badge variant="outline" className="mt-1 bg-primary/10 text-primary text-xs">
-                            {(confidence * 100).toFixed(1)}% confidence
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  } else {
-                    // Editable feature input
-                    return (
-                      <div key={col} className="flex flex-col items-start" style={{ minWidth: 140 }}>
-                        <Label htmlFor={`manual-${col}`}>{col}</Label>
-                        <Input
-                          id={`manual-${col}`}
-                          placeholder={manualForm.sampleRow[col] || `Enter ${col}`}
-                          value={inputValues[col] || ''}
-                          onChange={e => handleInputChange(col, e.target.value)}
-                          className=""
-                          disabled={predicting}
-                          autoComplete="off"
-                        />
-                      </div>
-                    );
-                  }
-                })}
+        <Tabs defaultValue="manual" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="manual">Manual Input</TabsTrigger>
+            <TabsTrigger value="batch">Batch Prediction</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="manual" className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              Enter values for each feature to generate a prediction.
             </div>
-            <Button
-              type="submit"
-              disabled={predicting || !areAllInputsFilled()}
-              className="w-full"
+            
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                handlePredict();
+              }}
             >
-              {predicting ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Prediction...
-                </>
-              ) : (
-                'Generate Prediction'
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {schema && schema.features.map((feature) => (
+                  <div key={feature} className="flex flex-col space-y-1.5">
+                    <Label htmlFor={`feature-${feature}`}>{feature}</Label>
+                    <Input
+                      id={`feature-${feature}`}
+                      placeholder={schema.sample_row[feature]?.toString() || `Enter ${feature}`}
+                      value={inputValues[feature] || ''}
+                      onChange={e => handleInputChange(feature, e.target.value)}
+                      disabled={predicting}
+                      className="w-full"
+                      autoComplete="off"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Target column display */}
+              {schema && (
+                <div className="flex flex-col space-y-1.5 mb-6 max-w-md mx-auto">
+                  <Label htmlFor={`target-${schema.target_column}`} className="font-semibold text-center">
+                    {schema.target_column} (Prediction)
+                  </Label>
+                  <Input
+                    id={`target-${schema.target_column}`}
+                    value={
+                      prediction !== null
+                        ? typeof prediction === 'number'
+                          ? prediction.toFixed(4)
+                          : prediction
+                        : ''
+                    }
+                    readOnly
+                    disabled
+                    className="bg-primary/10 text-primary focus:shadow-none opacity-90 font-semibold ring-0 border-2 border-primary/20 text-center"
+                  />
+                  {taskType.includes('classification') && confidence !== null && (
+                    <Badge variant="outline" className="mx-auto mt-1 bg-primary/10 text-primary text-xs">
+                      {(confidence * 100).toFixed(1)}% confidence
+                    </Badge>
+                  )}
+                </div>
               )}
-            </Button>
-          </form>
-        </div>
+              
+              <Button
+                type="submit"
+                disabled={predicting || !areAllInputsFilled()}
+                className="w-full"
+              >
+                {predicting ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Prediction...
+                  </>
+                ) : (
+                  'Generate Prediction'
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="batch" className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              Upload a CSV file containing multiple samples to generate predictions in batch.
+            </div>
+            
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <div className="flex flex-col items-center">
+                <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium mb-1">Drop your CSV file here or click to browse</p>
+                <p className="text-xs text-muted-foreground">CSV file should contain all feature columns (without the target column)</p>
+              </div>
+              
+              <Button variant="outline" className="mt-4" onClick={handleBatchPrediction}>
+                Upload and Predict
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
