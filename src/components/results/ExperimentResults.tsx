@@ -27,7 +27,7 @@ import { ExperimentStatus } from '@/contexts/TrainingContext';
 interface ExperimentMetadata {
   experiment_id: string;
   experiment_name: string;
-  status: string;
+  status: 'completed' | 'running' | 'failed';
   task_type: string;
   algorithm: string;
   automl_engine: string;
@@ -43,13 +43,6 @@ interface ExperimentFile {
   file_type: string;
   file_url: string;
   file_name: string;
-}
-
-interface ExperimentResponse {
-  experiment_metadata: ExperimentMetadata;
-  metrics: Record<string, number>;
-  files: ExperimentFile[];
-  results_directory?: string;
 }
 
 interface ExperimentResultsProps {
@@ -71,6 +64,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
   const [activeTab, setActiveTab] = useState<string>('metrics');
   const { toast } = useToast();
 
+  // Fetch experiment results
   useEffect(() => {
     if (!experimentId) return;
     
@@ -88,6 +82,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
         const data = await response.json();
         setResults(data);
         
+        // Auto-scroll to top when new experiment loads
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
         console.error('Error fetching experiment results:', err);
@@ -105,16 +100,19 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     fetchResults();
   }, [experimentId, toast]);
 
+  // Format task type for display
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
   
+  // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return (value >= 0 && value <= 1) ? (value * 100).toFixed(2) + '%' : value.toFixed(4);
   };
   
+  // Get color based on metric value
   const getMetricColor = (value: number | undefined) => {
     if (value === undefined) return 'text-gray-400';
     if (value >= 0.9) return 'text-green-600';
@@ -123,11 +121,13 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     return 'text-red-600';
   };
 
+  // Determine if a file is a visualization
   const isVisualizationFile = (fileType: string) => {
     const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
     return visualTypes.some(type => fileType.includes(type));
   };
   
+  // Get downloadable files
   const getDownloadableFiles = () => {
     if (!results) return [];
     
@@ -138,6 +138,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     );
   };
   
+  // Loading state
   if (isLoading || status === 'processing' || status === 'running') {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -169,6 +170,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     );
   }
   
+  // Error state
   if (error || status === 'failed') {
     const errorMessage = results?.experiment_metadata.error_message || error;
     
@@ -202,6 +204,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     );
   }
   
+  // No data state
   if (!results) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -226,6 +229,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     );
   }
   
+  // Extract metadata for readability
   const { 
     experiment_id,
     experiment_name,
@@ -309,12 +313,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
             </TabsTrigger>
           </TabsList>
           
+          {/* Metrics Tab - Dynamically show metrics */}
           <TabsContent value="metrics" className="p-6">
             {Object.keys(metrics).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(metrics).map(([key, value]) => {
+                  // Skip non-numeric metrics
                   if (typeof value !== 'number') return null;
                   
+                  // Determine if this is a percentage-based metric
                   const isPercentageMetric = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2'].some(m => 
                     key.toLowerCase().includes(m)
                   );
@@ -346,6 +353,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
             )}
           </TabsContent>
           
+          {/* Visualizations Tab - Display all visualization files */}
           <TabsContent value="visualizations" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -412,6 +420,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
             )}
           </TabsContent>
           
+          {/* Details Tab - Show experiment metadata */}
           <TabsContent value="details" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
@@ -500,6 +509,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
             </div>
           </TabsContent>
           
+          {/* Downloads Tab - Provide downloadable artifacts */}
           <TabsContent value="downloads" className="p-6">
             {getDownloadableFiles().length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
