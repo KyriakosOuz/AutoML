@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -186,6 +185,17 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({
     }
     
     return value;
+  };
+  
+  // Helper function to safely format class probabilities
+  const formatClassProbability = (prob: number | number[]): string => {
+    if (Array.isArray(prob)) {
+      // If it's an array, get the max value
+      return `${(Math.max(...prob) * 100).toFixed(2)}%`;
+    } else if (typeof prob === 'number') {
+      return `${(prob * 100).toFixed(2)}%`;
+    }
+    return 'N/A';
   };
   
   // Create a download URL for CSV data

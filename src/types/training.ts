@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
@@ -140,6 +141,7 @@ export interface BatchPredictionResponseEvaluation {
   metrics: Record<string, number>;
   y_true: Array<string | number>;
   y_pred: Array<string | number>;
+  y_probs?: number[][] | number[];
   confusion_matrix?: number[][];
 }
 

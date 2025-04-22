@@ -1,6 +1,11 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
-import { ExperimentResults } from '@/types/training';
+import { 
+  ExperimentResults, 
+  ManualPredictionResponse, 
+  BatchPredictionResponse 
+} from '@/types/training';
 import { API_BASE_URL } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
