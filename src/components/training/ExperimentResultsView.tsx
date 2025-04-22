@@ -30,67 +30,7 @@ import RocCurveChart from './charts/RocCurveChart';
 import PrecisionRecallChart from './charts/PrecisionRecallChart';
 import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 import MetricsGrid from './charts/MetricsGrid';
-
-interface ClassificationReportProps {
-  report: Record<string, any>;
-}
-
-const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report }) => {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Class</TableHead>
-          <TableHead>Precision</TableHead>
-          <TableHead>Recall</TableHead>
-          <TableHead>F1-Score</TableHead>
-          <TableHead>Support</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Object.entries(report).map(([label, stats]) => {
-          if (typeof stats !== "object" || stats === null) return null; // skip non-object entries
-          
-          // Safely cast stats to avoid TypeScript errors
-          const statsObj = stats as Record<string, any>;
-          
-          // Check if this is a class stats object with the required properties
-          if (!('precision' in statsObj || 'recall' in statsObj || 'f1-score' in statsObj)) return null;
-          
-          return (
-            <TableRow key={label}>
-              <TableCell className="capitalize">{label.replace('_',' ')}</TableCell>
-              <TableCell>
-                {typeof statsObj.precision === 'number' 
-                  ? `${(statsObj.precision * 100).toFixed(1)}%` 
-                  : statsObj.precision || '-'}
-              </TableCell>
-              <TableCell>
-                {typeof statsObj.recall === 'number' 
-                  ? `${(statsObj.recall * 100).toFixed(1)}%` 
-                  : statsObj.recall || '-'}
-              </TableCell>
-              <TableCell>
-                {typeof statsObj['f1-score'] === 'number' 
-                  ? `${(statsObj['f1-score'] * 100).toFixed(1)}%` 
-                  : statsObj['f1-score'] || '-'}
-              </TableCell>
-              <TableCell>{statsObj.support}</TableCell>
-            </TableRow>
-          );
-        })}
-        {typeof report.accuracy === "number" && (
-          <TableRow>
-            <TableCell colSpan={3}><strong>Overall Accuracy</strong></TableCell>
-            <TableCell colSpan={2}>
-              {(report.accuracy * 100).toFixed(1)}%
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  );
-};
+import ClassificationReportTable from './ClassificationReportTable';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -115,9 +55,20 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
     async function fetchResults() {
       try {
+        console.log('[ExperimentResultsView] Fetching results for experiment:', experimentId);
         const data = await getExperimentResults(experimentId);
+        console.log('[ExperimentResultsView] Received data:', data ? 'data present' : 'null');
+        
         if (!cancelled) {
           if (data) {
+            console.log('[ExperimentResultsView] Setting results state with data');
+            console.log('[ExperimentResultsView] Data structure:', {
+              hasTrainingResults: !!data.training_results,
+              hasMetrics: data.training_results ? !!data.training_results.metrics : false,
+              hasClassificationReport: data.training_results?.metrics ? 
+                !!data.training_results.metrics.classification_report : false
+            });
+            
             setResults(data);
           } else {
             setError('Results are still being processed. Please try again in a moment.');
@@ -125,7 +76,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load experiment results');
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load experiment results';
+          console.error('[ExperimentResultsView] Fetch error:', errorMessage);
+          setError(errorMessage);
           toast({
             title: "Error",
             description: "Failed to load experiment results",
@@ -237,6 +190,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
   
+  // Log the results structure before extracting data
+  console.log('[ExperimentResultsView] Rendering with results:', {
+    hasResults: !!results,
+    experimentName: results?.experiment_name,
+    taskType: results?.task_type,
+    status: results?.status,
+    hasTrainingResults: !!results?.training_results,
+    hasMetrics: results?.training_results ? !!results.training_results.metrics : false
+  });
+  
   // Extract relevant data from results
   const { 
     experiment_name = '', 
@@ -250,6 +213,15 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
   // Safely extract metrics from training results
   const metrics = training_results?.metrics || {};
+  console.log('[ExperimentResultsView] Metrics keys:', Object.keys(metrics));
+  
+  if (metrics.classification_report) {
+    console.log('[ExperimentResultsView] Classification report type:', typeof metrics.classification_report);
+    if (typeof metrics.classification_report === 'object') {
+      console.log('[ExperimentResultsView] Classification report keys:', Object.keys(metrics.classification_report));
+    }
+  }
+  
   const y_true = training_results?.y_true || [];
   const y_pred = training_results?.y_pred || [];
   const y_probs = training_results?.y_probs || [];
@@ -346,15 +318,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
-                  {typeof metrics.classification_report === 'string' ? (
-                    <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
-                      {metrics.classification_report}
-                    </pre>
-                  ) : (
-                    <ClassificationReportTable 
-                      report={metrics.classification_report as Record<string, any>} 
-                    />
-                  )}
+                  <ClassificationReportTable report={metrics.classification_report} />
                 </div>
               </div>
             )}

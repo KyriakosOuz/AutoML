@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -39,6 +38,7 @@ import {
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ExperimentResults } from '@/types/training';
+import ClassificationReportTable from './ClassificationReportTable';
 
 interface CustomTrainingResultsProps {
   experimentResults: ExperimentResults;
@@ -58,6 +58,16 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   onReset 
 }) => {
   const [activeTab, setActiveTab] = useState('metrics');
+  
+  console.log('[CustomTrainingResults] Rendering with experiment results:', {
+    experimentId: experimentResults.experiment_id,
+    experimentName: experimentResults.experiment_name,
+    taskType: experimentResults.task_type,
+    hasMetrics: !!experimentResults.metrics,
+    metricsKeys: Object.keys(experimentResults.metrics || {}),
+    hasClassificationReport: experimentResults.metrics ? 
+      'classification_report' in experimentResults.metrics : false
+  });
 
   const { 
     experiment_id, 
@@ -101,6 +111,14 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
 
   // Format task type for display with null check
   const formattedTaskType = task_type ? task_type.replace(/_/g, ' ') : 'unknown task';
+  
+  // Check and log classification report if it exists
+  if (metrics && metrics.classification_report) {
+    console.log('[CustomTrainingResults] Classification report type:', typeof metrics.classification_report);
+    if (typeof metrics.classification_report === 'object') {
+      console.log('[CustomTrainingResults] Classification report keys:', Object.keys(metrics.classification_report));
+    }
+  }
 
   return (
     <Card className="shadow-lg border-primary/10">
@@ -330,37 +348,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {typeof metrics.classification_report === 'string' ? (
-                  <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto">
-                    {metrics.classification_report}
-                  </pre>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Class</TableHead>
-                        <TableHead>Precision</TableHead>
-                        <TableHead>Recall</TableHead>
-                        <TableHead>F1-Score</TableHead>
-                        <TableHead>Support</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(metrics.classification_report || {}).map(([className, values]: [string, any]) => {
-                        if (className === 'accuracy' || typeof values !== 'object') return null;
-                        return (
-                          <TableRow key={className}>
-                            <TableCell className="font-medium">{className}</TableCell>
-                            <TableCell>{formatMetric(values.precision)}</TableCell>
-                            <TableCell>{formatMetric(values.recall)}</TableCell>
-                            <TableCell>{formatMetric(values.f1_score)}</TableCell>
-                            <TableCell>{values.support}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
+                <ClassificationReportTable report={metrics.classification_report} />
               </CardContent>
             </Card>
           </TabsContent>

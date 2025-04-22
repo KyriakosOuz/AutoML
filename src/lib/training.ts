@@ -67,6 +67,11 @@ export const getExperimentResults = async (
 
     try {
       apiResponse = JSON.parse(responseText);
+      console.log('[API] Full API response structure:', {
+        keys: Object.keys(apiResponse),
+        hasStatus: 'status' in apiResponse,
+        hasData: 'data' in apiResponse
+      });
     } catch (err) {
       console.error('[API] JSON parse error:', err);
       console.error('[API] Failed to parse response text:', responseText.substring(0, 200) + '...');
@@ -75,10 +80,23 @@ export const getExperimentResults = async (
 
     // Unwrap envelope: { status, data }
     const payload = apiResponse.data ?? apiResponse;
+    console.log('[API] Unwrapped payload keys:', Object.keys(payload));
 
     // If results aren't ready yet, just return null (not an error!)
     if (payload.hasTrainingResults === false) {
       return null;
+    }
+
+    // Log training results structure if present
+    if (payload.training_results) {
+      console.log('[API] Training results structure:', {
+        hasMetrics: !!payload.training_results.metrics,
+        metricsKeys: Object.keys(payload.training_results.metrics || {}),
+        hasClassificationReport: !!payload.training_results.metrics?.classification_report,
+        classificationReportType: typeof payload.training_results.metrics?.classification_report,
+        classificationReportKeys: payload.training_results.metrics?.classification_report ? 
+          Object.keys(payload.training_results.metrics.classification_report) : 'none'
+      });
     }
 
     // At this point, payload should be a full ExperimentResults
