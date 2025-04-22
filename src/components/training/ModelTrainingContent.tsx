@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -20,6 +21,7 @@ const ModelTrainingContent: React.FC = () => {
 
   const [showResults, setShowResults] = useState(false);
 
+  // Allow users to always open the "custom" tab, only force "results" if experiment is COMPLETED
   useEffect(() => {
     if (experimentStatus === 'completed' && activeExperimentId) {
       setShowResults(true);
@@ -28,8 +30,10 @@ const ModelTrainingContent: React.FC = () => {
         console.log('[Tabs] Switching to results tab because training completed');
       }
     }
+    // Do not force tab if experiment is cleared; user should control switching
     if (!activeExperimentId) {
       setShowResults(false);
+      // No longer force to 'automl' since that breaks manual tab toggling
     }
   }, [experimentStatus, activeExperimentId, setActiveTab, activeTab]);
 
@@ -68,11 +72,7 @@ const ModelTrainingContent: React.FC = () => {
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
           {showResults && activeExperimentId ? (
-            <ExperimentResultsView 
-              experimentId={activeExperimentId} 
-              status={experimentStatus}
-              onReset={handleReset} 
-            />
+            <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Results Available</h3>
@@ -88,3 +88,4 @@ const ModelTrainingContent: React.FC = () => {
 };
 
 export default ModelTrainingContent;
+
