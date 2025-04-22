@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -65,36 +64,84 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeExperimentId, state.lastTrainingType]);
 
+  // --- Refactored polling success handler to handle hasTrainingResults=false properly ---
   const handlePollingSuccess = useCallback(async (experimentId: string) => {
-    try {
-      const results = await trainingApi.getExperimentResults(experimentId);
-      setState(prev => ({
-        ...prev,
-        experimentResults: results,
-        isLoadingResults: false,
-        isTraining: false
-      }));
-      
-      toast({
-        title: "Training Complete",
-        description: "Your model has finished training successfully!"
-      });
-    } catch (error) {
-      console.error('[TrainingContext] Error fetching results:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch results';
-      setState(prev => ({
-        ...prev,
-        error: errorMessage,
-        isLoadingResults: false,
-        isTraining: false
-      }));
-      
-      toast({
-        title: "Error Fetching Results",
-        description: errorMessage,
-        variant: "destructive"
-      });
+    let tryCount = 0;
+    const maxTries = 8;
+    let results: ExperimentResults | null = null;
+
+    setState(prev => ({
+      ...prev,
+      isLoadingResults: true
+    }));
+
+    while (tryCount < maxTries) {
+      try {
+        results = await trainingApi.getExperimentResults(experimentId);
+
+        // Only accept results if they're truly complete (hasTrainingResults && status completed/success)
+        if (
+          (results.hasTrainingResults === true) &&
+          (results.status === "completed" || results.status === "success")
+        ) {
+          setState(prev => ({
+            ...prev,
+            experimentResults: results,
+            isLoadingResults: false,
+            isTraining: false,
+            error: null
+          }));
+
+          toast({
+            title: "Training Complete",
+            description: "Your model has finished training successfully!"
+          });
+          return; // Finished
+        } else {
+          // Still incomplete/partial - keep trying
+          tryCount++;
+          await new Promise(res => setTimeout(res, 1800));
+        }
+      } catch (error) {
+        // If server still isn't ready, retry (as long as it's not fatal)
+        tryCount++;
+        if (tryCount >= maxTries) {
+          const errMsg =
+            error instanceof Error
+              ? error.message
+              : 'Failed to fetch results after training completion (server not ready)';
+          setState(prev => ({
+            ...prev,
+            error: errMsg,
+            isLoadingResults: false,
+            isTraining: false
+          }));
+
+          toast({
+            title: "Error Fetching Results",
+            description: errMsg,
+            variant: "destructive"
+          });
+          return;
+        }
+        // Wait and try again
+        await new Promise(res => setTimeout(res, 1800));
+      }
     }
+
+    // After exhausting tries without real results
+    setState(prev => ({
+      ...prev,
+      error: "Results are not yet ready. Please try again in a few seconds.",
+      isLoadingResults: false,
+      isTraining: false
+    }));
+
+    toast({
+      title: "Results Not Ready",
+      description: "Your results aren't available yet. Please retry after a few moments.",
+      variant: "destructive"
+    });
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
@@ -119,18 +166,28 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
+  // --- Remove any extraneous/duplicated experimentResults fetch logic: keep only one canonical fetch ---
   const getExperimentResults = useCallback(async () => {
     if (!state.activeExperimentId) return;
-    
+    setState(prev => ({ ...prev, isLoadingResults: true }));
+
     try {
-      setState(prev => ({ ...prev, isLoadingResults: true }));
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
-      setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false }));
+
+      if (
+        results.hasTrainingResults &&
+        (results.status === "completed" || results.status === "success")
+      ) {
+        setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false, error: null }));
+      } else {
+        throw new Error("Results are not ready yet");
+      }
     } catch (error) {
-      console.error('Error fetching experiment results:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch experiment results';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch experiment results';
       setState(prev => ({ ...prev, error: errorMessage, isLoadingResults: false }));
-      
       toast({
         title: "Error Fetching Results",
         description: errorMessage,
