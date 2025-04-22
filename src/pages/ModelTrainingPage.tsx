@@ -3,14 +3,20 @@ import React from 'react';
 import { DatasetProvider } from '@/contexts/DatasetContext';
 import { TrainingProvider } from '@/contexts/TrainingContext';
 import ModelTrainingContent from '@/components/training/ModelTrainingContent';
+import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
 
 const ModelTrainingPage: React.FC = () => {
   return (
     <DatasetProvider>
       <TrainingProvider>
-        <ModelTrainingContent />
-        <Toaster />
+        <div className="flex flex-col min-h-screen">
+          <TrainingHeader />
+          <div className="flex-1 p-6">
+            <ModelTrainingContent />
+          </div>
+          <Toaster />
+        </div>
       </TrainingProvider>
     </DatasetProvider>
   );

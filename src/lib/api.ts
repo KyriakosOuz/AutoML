@@ -276,7 +276,11 @@ export const trainingApi = {
         body: formData,
       });
       
-      return await handleApiResponse(response);
+      const data = await handleApiResponse(response);
+      return {
+        experiment_id: data.experiment_id,
+        experiment_name: data.experiment_name
+      };
     } catch (error) {
       console.error('Error starting AutoML training:', error);
       throw error;
@@ -308,7 +312,11 @@ export const trainingApi = {
         body: formData
       });
       
-      return await handleApiResponse(response);
+      const data = await handleApiResponse(response);
+      return {
+        experiment_id: data.experiment_id,
+        experiment_name: data.experiment_name
+      };
     } catch (error) {
       console.error('Error starting custom training:', error);
       throw error;
