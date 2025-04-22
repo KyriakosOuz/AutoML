@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -21,11 +22,11 @@ const ModelTrainingContent: React.FC = () => {
 
   const [showResults, setShowResults] = useState(false);
 
+  // Only show "Results" tab when training is completed and there is an experiment
   useEffect(() => {
     if (experimentStatus === 'completed' && activeExperimentId) {
       setShowResults(true);
     }
-    
     if (!activeExperimentId) {
       setShowResults(false);
     }
@@ -78,6 +79,7 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
+          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
           {activeExperimentId ? (
