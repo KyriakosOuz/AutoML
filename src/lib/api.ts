@@ -37,25 +37,35 @@ const getAuthHeaders = () => {
   };
 };
 
-// Helper function to handle API responses
+// Updated handleApiResponse function with better content-type handling
 const handleApiResponse = async (response: Response) => {
+  const contentType = response.headers.get('content-type');
+
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage;
-    
+
     try {
-      // Try to parse as JSON
       const errorJson = JSON.parse(errorText);
       errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
     } catch {
-      // If not JSON, use the raw text
       errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText}`;
     }
-    
+
     throw new Error(errorMessage);
   }
-  
-  return await response.json();
+
+  // Only attempt to parse JSON if content-type indicates it's JSON
+  if (!contentType || !contentType.includes('application/json')) {
+    return {}; // Safe fallback if no body or wrong format
+  }
+
+  try {
+    return await response.json();
+  } catch (err) {
+    console.error('❌ Failed to parse JSON response:', err);
+    return {};
+  }
 };
 
 export const datasetApi = {
@@ -310,6 +320,9 @@ export const trainingApi = {
         },
         body: formData
       });
+      
+      console.log('[DEBUG] Raw customTrain response:', response);
+      console.log('[DEBUG] Content-Type:', response.headers.get('content-type'));
       
       const data = await handleApiResponse(response);
       console.log('[API] Custom training response:', data);
