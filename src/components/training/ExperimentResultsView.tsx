@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Award, 
   BarChart4, 
@@ -62,7 +62,7 @@ interface ClassificationReport {
 
 interface ExperimentResultsData {
   experiment_metadata: ExperimentMetadata;
-  metrics: Record<string,number>;
+  metrics: Record<string, number>;
   classificationReport?: ClassificationReport | string | null;
   confusionMatrix?: number[][] | null;
   roc?: { fpr: number[]; tpr: number[]; auc: number } | null;
@@ -112,9 +112,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         const tr = payload.training_results || {};
         const allMetrics = tr.metrics || {};
 
-        const metrics = Object.fromEntries(
-          Object.entries(allMetrics).filter(([_, v]) => typeof v === 'number')
-        );
+        const numericMetrics: Record<string, number> = {};
+        Object.entries(allMetrics).forEach(([key, value]) => {
+          if (typeof value === 'number') {
+            numericMetrics[key] = value;
+          }
+        });
 
         const classificationReport = allMetrics.classification_report ?? null;
         const confusionMatrix = allMetrics.confusion_matrix ?? null;
@@ -149,7 +152,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               completed_at: payload.completed_at,
               error_message: payload.error_message ?? null,
             },
-            metrics: metrics,
+            metrics: numericMetrics,
             classificationReport,
             confusionMatrix,
             roc,
@@ -343,9 +346,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           </TabsList>
 
           <TabsContent value="metrics" className="p-6">
-            {Object.keys(numberMetrics).length > 0 ? (
+            {Object.keys(results?.metrics || {}).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(numberMetrics).map(([key, value]) => (
+                {Object.entries(results?.metrics || {}).map(([key, value]) => (
                   <Card key={key} className="shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm capitalize">{key.replace(/_/g, " ")}</CardTitle>
@@ -356,8 +359,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                         key.toLowerCase().includes("f1_score") ||
                         key.toLowerCase().includes("precision") ||
                         key.toLowerCase().includes("recall")
-                          ? `${(value as number * 100).toFixed(2)}%`
-                          : (value as number).toFixed(4)}
+                          ? `${(value * 100).toFixed(2)}%`
+                          : value.toFixed(4)}
                       </div>
                     </CardContent>
                   </Card>
@@ -368,37 +371,37 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                 No performance metrics were found for this experiment.
               </p>
             )}
-            {classificationReport && (
+            {results?.classificationReport && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
-                  <ClassificationReportTable report={classificationReport} />
+                  <ClassificationReportTable report={results.classificationReport} />
                 </div>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="visualizations" className="p-6">
-            {confusionMatrix && (
+            {results?.confusionMatrix && (
               <div className="mb-8">
                 <ConfusionMatrixChart 
-                  matrix={confusionMatrix} 
+                  matrix={results.confusionMatrix} 
                   labels={undefined} 
                 />
               </div>
             )}
-            {prCurve && (
+            {results?.prCurve && (
               <div className="mb-8">
                 <PrecisionRecallChart 
-                  precision={prCurve.precision} 
-                  recall={prCurve.recall} 
-                  f1Score={prCurve.f1Score}
+                  precision={results.prCurve.precision} 
+                  recall={results.prCurve.recall} 
+                  f1Score={results.prCurve.f1Score}
                 />
               </div>
             )}
-            {files.length > 0 ? (
+            {results?.files && results.files.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {files.filter(file => 
+                {results.files.filter(file => 
                   !file.file_type.includes('model') && 
                   !file.file_type.includes('report')
                 ).map((file, index) => (
