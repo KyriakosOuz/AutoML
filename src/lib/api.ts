@@ -240,7 +240,7 @@ export const trainingApi = {
 
   checkStatus: async (experimentId: string) => {
     try {
-      const response = await fetch(`${API_URL}/training/check-status/`, {
+      const response = await fetch(`${API_URL}/training/check-status/${experimentId}`, {
         headers: getAuthHeaders(),
       });
       

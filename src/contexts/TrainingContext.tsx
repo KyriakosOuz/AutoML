@@ -138,16 +138,20 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     setIsLoadingResults(true);
     setActiveExperimentId(experimentId);
+    setPollingAttempts(0);
 
     const interval = setInterval(async () => {
       try {
+        console.log('Polling experiment status:', experimentId);
         const statusResponse = await trainingApi.checkStatus(experimentId);
+        console.log('Status response:', statusResponse);
         
-        if (statusResponse.status === 'completed') {
+        if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
           stopPolling();
           const results = await trainingApi.getExperimentResults(experimentId);
           setExperimentResults(results);
           setIsLoadingResults(false);
+          setIsTraining(false);
           toast({
             title: "Training Complete",
             description: "Your model has finished training successfully!"
@@ -157,16 +161,30 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           const results = await trainingApi.getExperimentResults(experimentId);
           setError(results.error_message || 'Training failed');
           setIsLoadingResults(false);
+          setIsTraining(false);
           toast({
             title: "Training Failed",
             description: results.error_message || 'An error occurred during training',
             variant: "destructive"
           });
+        } else {
+          // Still processing
+          setPollingAttempts(prev => {
+            if (prev >= MAX_POLL_ATTEMPTS) {
+              stopPolling();
+              setError('Training timeout - please check results page later');
+              setIsLoadingResults(false);
+              setIsTraining(false);
+              return prev;
+            }
+            return prev + 1;
+          });
         }
       } catch (error) {
         console.error('Polling error:', error);
+        // Don't stop polling on network errors, but log them
       }
-    }, 2000);
+    }, POLL_INTERVAL);
 
     setPollingInterval(interval);
   };
