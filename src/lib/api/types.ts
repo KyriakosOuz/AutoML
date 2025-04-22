@@ -34,5 +34,6 @@ export interface ExperimentStatusResponse {
   status: string;
   hasTrainingResults: boolean;
   error_message?: string;
+  experiment_id?: string; // Adding this field to handle legacy responses
+  message?: string; // Adding this field to handle error messages
 }
-

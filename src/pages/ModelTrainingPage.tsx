@@ -7,6 +7,8 @@ import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
 
 const ModelTrainingPage: React.FC = () => {
+  console.log('Rendering ModelTrainingPage');
+  
   return (
     <DatasetProvider>
       <TrainingProvider>
