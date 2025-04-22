@@ -37,6 +37,8 @@ import ClassificationReportTable from './ClassificationReportTable';
 import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 import PrecisionRecallChart from './charts/PrecisionRecallChart';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const formatTaskType = (type: string = '') => {
   if (!type) return "Unknown";
   
@@ -285,8 +287,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         const numValue = Number(value);
         formattedInputs[key] = isNaN(numValue) ? value : numValue;
       });
-      
-      const response = await fetch(`/prediction/predict-manual/`, {
+
+      const response = await fetch(`${API_URL}/prediction/predict-manual/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -296,10 +298,17 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           inputs: formattedInputs
         }),
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to make prediction');
+        let errorMessage = 'Failed to make prediction';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          const errorText = await response.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
@@ -355,15 +364,22 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('experiment_id', experimentId);
-      
-      const response = await fetch(`/prediction/predict-csv/`, {
+
+      const response = await fetch(`${API_URL}/prediction/predict-csv/`, {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to process batch prediction');
+        let errorMessage = 'Failed to process batch prediction';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          const errorText = await response.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
