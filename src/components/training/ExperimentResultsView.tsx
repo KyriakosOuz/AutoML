@@ -25,7 +25,7 @@ import {
   FileInput,
   Upload
 } from 'lucide-react';
-import { getExperimentResults } from '@/lib/training';
+import { getExperimentResults, predictManual, predictBatchCsv } from '@/lib/training';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { trainingApi } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -288,30 +288,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         formattedInputs[key] = isNaN(numValue) ? value : numValue;
       });
 
-      const response = await fetch(`${API_URL}/prediction/predict-manual/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          experiment_id: experimentId,
-          inputs: formattedInputs
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to make prediction';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          const errorText = await response.text();
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
+      const result = await predictManual(experimentId, formattedInputs);
       setPredictResult(result);
       
       toast({
@@ -365,24 +342,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
       formData.append('file', selectedFile);
       formData.append('experiment_id', experimentId);
 
-      const response = await fetch(`${API_URL}/prediction/predict-csv/`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to process batch prediction';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          const errorText = await response.text();
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
+      const result = await predictBatchCsv(experimentId, selectedFile);
       setBatchResult(result);
       
       toast({
