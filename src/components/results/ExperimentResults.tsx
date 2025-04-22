@@ -237,7 +237,10 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
   const files = results.files || [];
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   
-  const classificationReport = metrics.classification_report;
+  const classificationReport = metrics.classification_report && 
+    (typeof metrics.classification_report === 'string' || typeof metrics.classification_report === 'object') 
+      ? metrics.classification_report 
+      : null;
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -454,7 +457,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
 
 export default ExperimentResults;
 
-// Helper to determine visualization files
 function isVisualizationFile(type: string) {
   return !type.includes('model') && !type.includes('report');
 }
