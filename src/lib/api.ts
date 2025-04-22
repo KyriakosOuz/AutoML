@@ -7,7 +7,12 @@ import {
 } from '@/types/training';
 
 // Import the functions from training.ts and re-export them
-import { checkStatus, getExperimentResults, predictManual, predictBatchCsv } from './training';
+import { 
+  checkStatus, 
+  getExperimentResults, 
+  predictManual, 
+  predictBatchCsv 
+} from './training';
 
 // Define the Dataset type
 export interface Dataset {
@@ -279,10 +284,78 @@ export const datasetApi = {
   },
 };
 
-// Export the training API functions
+// Add the missing methods to trainingApi
 export const trainingApi = {
   checkStatus,
   getExperimentResults,
   predictManual,
-  predictBatchCsv
+  predictBatchCsv,
+
+  // Adding the missing methods
+  automlTrain: async (
+    datasetId: string,
+    taskType: string,
+    automlEngine: string,
+    testSize: number,
+    stratify: boolean,
+    randomSeed: number
+  ) => {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('task_type', taskType);
+    formData.append('automl_engine', automlEngine);
+    formData.append('test_size', String(testSize));
+    formData.append('stratify', String(stratify));
+    formData.append('random_seed', String(randomSeed));
+    
+    const token = getAuthToken();
+    
+    const response = await fetch(`${API_URL}/training/automl-train/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+    
+    return await handleApiResponse(response);
+  },
+
+  customTrain: async (formData: FormData) => {
+    const token = getAuthToken();
+    
+    const response = await fetch(`${API_URL}/training/custom-train/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+    
+    return await handleApiResponse(response);
+  },
+
+  getAvailableAlgorithms: async (taskType: string) => {
+    const token = getAuthToken();
+    
+    const response = await fetch(`${API_URL}/training/algorithms/${taskType}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+    
+    return await handleApiResponse(response);
+  },
+
+  getAvailableHyperparameters: async (algorithm: string) => {
+    const token = getAuthToken();
+    
+    const response = await fetch(`${API_URL}/training/hyperparameters/${algorithm}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+    
+    return await handleApiResponse(response);
+  }
 };
