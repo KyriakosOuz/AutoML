@@ -2,11 +2,12 @@
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
+import { API_BASE_URL } from './constants';
 
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
     console.log('[API] Checking status for experiment:', experimentId);
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/training/check-status/${experimentId}`, {
+    const response = await fetch(`${API_BASE_URL}/training/check-status/${experimentId}`, {
       headers: getAuthHeaders(),
     });
 
@@ -20,7 +21,7 @@ export const checkStatus = async (experimentId: string): Promise<ApiResponse<Exp
 export const getExperimentResults = async (experimentId: string): Promise<ExperimentResults> => {
   try {
     console.log('[API] Fetching results for experiment:', experimentId);
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/experiments/experiment-results/${experimentId}`, {
+    const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
       headers: getAuthHeaders()
     });
 

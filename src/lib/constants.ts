@@ -68,3 +68,5 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   const day = String(date.getDate()).padStart(2, '0');
   return `${prefix}_${identifier}_${year}_${month}_${day}`;
 };
+
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
