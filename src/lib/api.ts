@@ -11,10 +11,40 @@ const getAuthHeaders = () => {
   };
 };
 
+// Types
+export interface Dataset {
+  id: string;
+  dataset_id: string; // Added this field to fix errors
+  filename: string;
+  created_at: string;
+  rows: number;
+  columns: number;
+  file_url?: string;
+  overview?: DatasetOverview; // Added this field to fix errors
+}
+
+export interface DatasetOverview {
+  num_rows: number;
+  num_columns: number;
+  numerical_features: string[];
+  categorical_features: string[];
+  total_missing_values?: number;
+}
+
+export interface FeatureImportance {
+  feature: string;
+  importance: number;
+}
+
 // Dataset API service
 export const datasetApi = {
   // Upload a dataset
-  uploadDataset: async (formData: FormData) => {
+  uploadDataset: async (formData: FormData, customMissingSymbol?: string) => {
+    // If customMissingSymbol is provided, append it to the form
+    if (customMissingSymbol) {
+      formData.append('missing_values_symbol', customMissingSymbol);
+    }
+    
     const response = await fetch(`${API_URL}/datasets/upload`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -57,6 +87,11 @@ export const datasetApi = {
     }
 
     return response.json();
+  },
+
+  // Handle missing values (alias to processMissingValues)
+  handleMissingValues: async (datasetId: string, strategy: string) => {
+    return datasetApi.processMissingValues(datasetId, strategy);
   },
 
   // Calculate feature importance
@@ -114,6 +149,23 @@ export const datasetApi = {
 
     return response.json();
   },
+
+  // Detect task type from target column
+  detectTaskType: async (datasetId: string, targetColumn: string) => {
+    const response = await fetch(
+      `${API_URL}/datasets/${datasetId}/detect-task-type?target_column=${targetColumn}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error detecting task type: ${errorText}`);
+    }
+
+    return response.json();
+  }
 };
 
 // Training API service
@@ -194,6 +246,20 @@ export const trainingApi = {
     return data.hyperparameters || {};
   },
 
+  // Check experiment status
+  checkStatus: async (experimentId: string) => {
+    const response = await fetch(`${API_URL}/experiments/${experimentId}/status`, {
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error checking experiment status: ${errorText}`);
+    }
+
+    return response.json();
+  },
+
   // Get experiment results
   getExperimentResults: async (experimentId: string) => {
     try {
@@ -244,26 +310,3 @@ export const trainingApi = {
     }
   }
 };
-
-// Types
-export interface Dataset {
-  id: string;
-  filename: string;
-  created_at: string;
-  rows: number;
-  columns: number;
-  file_url?: string;
-}
-
-export interface DatasetOverview {
-  num_rows: number;
-  num_columns: number;
-  numerical_features: string[];
-  categorical_features: string[];
-  total_missing_values?: number;
-}
-
-export interface FeatureImportance {
-  feature: string;
-  importance: number;
-}
