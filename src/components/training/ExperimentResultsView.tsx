@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -27,11 +26,13 @@ import { getExperimentResults } from '@/lib/training';
 import { ExperimentStatus } from '@/contexts/training/types';
 
 import ClassificationReportTable from './ClassificationReportTable';
+import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
+import PrecisionRecallChart from './charts/PrecisionRecallChart';
 
 interface ExperimentMetadata {
   experiment_id: string;
   experiment_name: string;
-  status: 'completed' | 'running' | 'failed';
+  status: 'completed' | 'running' | 'failed' | string;
   task_type: string;
   algorithm: string;
   automl_engine: string;
@@ -47,6 +48,27 @@ interface ExperimentFile {
   file_type: string;
   file_url: string;
   file_name: string;
+  created_at?: string;
+}
+
+interface ClassificationReport {
+  [label: string]: {
+    precision: number;
+    recall: number;
+    "f1-score": number;
+    support: number;
+  };
+}
+
+interface ExperimentResultsData {
+  experiment_metadata: ExperimentMetadata;
+  metrics: Record<string,number>;
+  classificationReport?: ClassificationReport | string | null;
+  confusionMatrix?: number[][] | null;
+  roc?: { fpr: number[]; tpr: number[]; auc: number } | null;
+  prCurve?: { precision: number[]; recall: number[]; f1Score: number } | null;
+  shapValues?: any;
+  files: ExperimentFile[];
 }
 
 interface ExperimentResultsProps {
@@ -58,13 +80,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
   experimentId,
   onReset
 }) => {
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<ExperimentResultsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('metrics');
   const { toast } = useToast();
 
-  // Fetch and normalize the experiment response
   useEffect(() => {
     if (!experimentId) return;
     let cancelled = false;
@@ -73,25 +94,46 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
     async function fetchResults() {
       try {
-        const response = await getExperimentResults(experimentId);
-        if (!cancelled) {
-          if (!response) {
-            setError('Results are still being processed. Please try again in a moment.');
-            setIsLoading(false);
-            return;
-          }
-          
-          // Unwrap the payload from the API response
-          const payload = response;
-          
-          // Compute training time if needed
-          let trainingTimeSec = payload.training_time_sec;
-          if (!trainingTimeSec && payload.created_at && payload.completed_at) {
-            const created = new Date(payload.created_at);
-            const completed = new Date(payload.completed_at);
-            trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
-          }
+        const response = await fetch(`/experiments/experiment-results/${experimentId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch experiment results');
+        }
+        const apiRes = await response.json();
 
+        if (!apiRes.data || !apiRes.data.hasTrainingResults) {
+          if (!cancelled) {
+            setResults(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const payload = apiRes.data;
+        const tr = payload.training_results || {};
+        const allMetrics = tr.metrics || {};
+
+        const metrics = Object.fromEntries(
+          Object.entries(allMetrics).filter(([_, v]) => typeof v === 'number')
+        );
+
+        const classificationReport = allMetrics.classification_report ?? null;
+        const confusionMatrix = allMetrics.confusion_matrix ?? null;
+        const roc = (allMetrics.fpr && allMetrics.tpr && allMetrics.auc)
+          ? { fpr: allMetrics.fpr, tpr: allMetrics.tpr, auc: allMetrics.auc }
+          : null;
+        const prCurve = (Array.isArray(allMetrics.precision) && Array.isArray(allMetrics.recall) && typeof allMetrics.f1_score === 'number')
+          ? { precision: allMetrics.precision, recall: allMetrics.recall, f1Score: allMetrics.f1_score }
+          : null;
+        const shapValues = allMetrics.shap_values ?? undefined;
+
+        let trainingTimeSec = payload.training_time_sec;
+        if (!trainingTimeSec && payload.created_at && payload.completed_at) {
+          const created = new Date(payload.created_at);
+          const completed = new Date(payload.completed_at);
+          trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
+        }
+
+        if (!cancelled) {
           setResults({
             experiment_metadata: {
               experiment_id: payload.experiment_id,
@@ -105,19 +147,24 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               training_time_sec: trainingTimeSec,
               created_at: payload.created_at,
               completed_at: payload.completed_at,
-              error_message: payload.error_message || null,
+              error_message: payload.error_message ?? null,
             },
-            metrics: payload.training_results?.metrics || {},
+            metrics: metrics,
+            classificationReport,
+            confusionMatrix,
+            roc,
+            prCurve,
+            shapValues,
             files: payload.files || [],
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         if (!cancelled) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to load experiment results';
           setError(errorMessage);
           toast({
             title: "Error",
-            description: "Failed to load experiment results",
+            description: errorMessage,
             variant: "destructive"
           });
         }
@@ -215,16 +262,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     );
   }
 
-  // ↓ Destructure from results object 
-  const { experiment_metadata, metrics, files } = results;
+  const { experiment_metadata, metrics, files, classificationReport, confusionMatrix, roc, prCurve } = results;
 
-  // Only pass number metrics to grid
-  const numberMetrics = Object.fromEntries(
-    Object.entries(metrics).filter(([k, v]) => typeof v === "number")
-  );
+  const numberMetrics = metrics;
   
-  const classificationReport = metrics.classification_report ?? null;
-
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -338,6 +379,23 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           </TabsContent>
 
           <TabsContent value="visualizations" className="p-6">
+            {confusionMatrix && (
+              <div className="mb-8">
+                <ConfusionMatrixChart 
+                  matrix={confusionMatrix} 
+                  labels={undefined} 
+                />
+              </div>
+            )}
+            {prCurve && (
+              <div className="mb-8">
+                <PrecisionRecallChart 
+                  precision={prCurve.precision} 
+                  recall={prCurve.recall} 
+                  f1Score={prCurve.f1Score}
+                />
+              </div>
+            )}
             {files.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {files.filter(file => 
