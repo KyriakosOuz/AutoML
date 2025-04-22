@@ -384,11 +384,14 @@ export const trainingApi = {
 
   getExperimentResults: async (experimentId: string) => {
     try {
-      const response = await fetch(`/experiment-results/${experimentId}`, {
+      console.log('[API] Fetching experiment results for:', experimentId);
+      
+      const response = await fetch(`${API_URL}/training/experiment-results/${experimentId}`, {
         headers: getAuthHeaders()
       });
       
       const contentType = response.headers.get('content-type');
+      console.log('[API] Response content-type:', contentType);
 
       if (!response.ok) {
         if (response.status === 404) {
