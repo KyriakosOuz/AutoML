@@ -321,13 +321,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
                   return (
                     <Card key={key} className="shadow-sm">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-base capitalize">
+                        <CardTitle className="text-sm capitalize">
                           {key.replace(/_/g, ' ')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-2xl font-bold ${isPercentageMetric ? getMetricColor(value) : ''}`}>
-                          {isPercentageMetric ? formatMetric(value) : value.toFixed(4)}
+                        <div className="text-2xl font-bold">
+                          {isPercentageMetric
+                            ? `${(value * 100).toFixed(2)}%`
+                            : value.toFixed(4)}
                         </div>
                       </CardContent>
                     </Card>
@@ -335,30 +337,20 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
                 })}
               </div>
             ) : (
-              <div className="text-center py-10">
-                <Activity className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No Metrics Available</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">
-                  No performance metrics were found for this experiment.
-                </p>
-              </div>
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                No performance metrics were found for this experiment.
+              </p>
             )}
             {classificationReport && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
-                {typeof classificationReport === 'object' ? (
-                  <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
-                    <ClassificationReportTable report={classificationReport} />
-                  </div>
-                ) : (
-                  <pre className="whitespace-pre-wrap bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
-                    {String(classificationReport)}
-                  </pre>
-                )}
+                <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
+                  <ClassificationReportTable report={classificationReport} />
+                </div>
               </div>
             )}
           </TabsContent>
-          
+
           <TabsContent value="visualizations" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -424,109 +416,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
               </div>
             )}
           </TabsContent>
-          
-          <TabsContent value="details" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Experiment Configuration</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      {algorithm && (
-                        <TableRow>
-                          <TableCell className="font-medium">Algorithm</TableCell>
-                          <TableCell>{algorithm}</TableCell>
-                        </TableRow>
-                      )}
-                      {automl_engine && (
-                        <TableRow>
-                          <TableCell className="font-medium">AutoML Engine</TableCell>
-                          <TableCell>{automl_engine}</TableCell>
-                        </TableRow>
-                      )}
-                      {task_type && (
-                        <TableRow>
-                          <TableCell className="font-medium">Task Type</TableCell>
-                          <TableCell>{formatTaskType(task_type)}</TableCell>
-                        </TableRow>
-                      )}
-                      {target_column && (
-                        <TableRow>
-                          <TableCell className="font-medium">Target Column</TableCell>
-                          <TableCell>{target_column}</TableCell>
-                        </TableRow>
-                      )}
-                      {experiment_id && (
-                        <TableRow>
-                          <TableCell className="font-medium">Experiment ID</TableCell>
-                          <TableCell className="font-mono text-xs">{experiment_id}</TableCell>
-                        </TableRow>
-                      )}
-                      {created_at && (
-                        <TableRow>
-                          <TableCell className="font-medium">Created At</TableCell>
-                          <TableCell>{new Date(created_at).toLocaleString()}</TableCell>
-                        </TableRow>
-                      )}
-                      {completed_at && (
-                        <TableRow>
-                          <TableCell className="font-medium">Completed At</TableCell>
-                          <TableCell>{new Date(completed_at).toLocaleString()}</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-              
-              {hyperparameters && Object.keys(hyperparameters).length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Hyperparameters</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Parameter</TableHead>
-                          <TableHead>Value</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(hyperparameters).map(([key, value]) => (
-                          <TableRow key={key}>
-                            <TableCell className="font-medium">{key}</TableCell>
-                            <TableCell>
-                              {typeof value === 'object' 
-                                ? JSON.stringify(value) 
-                                : String(value)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-            {classificationReport && (
-              <Card className="shadow-sm mt-6">
-                <CardHeader><CardTitle>Classification Report</CardTitle></CardHeader>
-                <CardContent>
-                  {typeof classificationReport === 'object' ? (
-                    <ClassificationReportTable report={classificationReport} />
-                  ) : (
-                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
-                      {String(classificationReport)}
-                    </pre>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
+
           <TabsContent value="downloads" className="p-6">
             {getDownloadableFiles().length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -558,24 +448,13 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
           </TabsContent>
         </Tabs>
       </CardContent>
-      
-      <CardFooter className="flex justify-between border-t p-4">
-        {onReset && (
-          <Button variant="outline" onClick={onReset}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Run New Experiment
-          </Button>
-        )}
-        
-        {completed_at && (
-          <div className="text-xs text-muted-foreground flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            Completed: {new Date(completed_at).toLocaleString()}
-          </div>
-        )}
-      </CardFooter>
     </Card>
   );
 };
 
 export default ExperimentResults;
+
+// Helper to determine visualization files
+function isVisualizationFile(type: string) {
+  return !type.includes('model') && !type.includes('report');
+}

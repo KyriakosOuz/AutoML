@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -83,7 +82,7 @@ export const getExperimentResults = async (
     console.log('[API] Unwrapped payload keys:', Object.keys(payload));
 
     // If results aren't ready yet, just return null (not an error!)
-    if (payload.hasTrainingResults === false) {
+    if (typeof payload.hasTrainingResults !== "undefined" && payload.hasTrainingResults === false) {
       return null;
     }
 
