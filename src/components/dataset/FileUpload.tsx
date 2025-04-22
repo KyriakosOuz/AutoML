@@ -116,7 +116,7 @@ const FileUpload: React.FC = () => {
         const datasetOverview = {
           num_rows: overview.num_rows || 0,
           num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {},
+          missing_values: overview.missing_values || {}, // Ensure missing_values is always provided
           numerical_features: numericalFeatures,
           categorical_features: categoricalFeatures,
           total_missing_values: overview.total_missing_values,
@@ -149,7 +149,7 @@ const FileUpload: React.FC = () => {
         const datasetOverview = {
           num_rows: overview.num_rows || 0,
           num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {},
+          missing_values: overview.missing_values || {}, // Ensure missing_values is always provided
           numerical_features: numericalFeatures,
           categorical_features: categoricalFeatures,
           total_missing_values: overview.total_missing_values,

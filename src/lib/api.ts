@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,22 @@ export interface Dataset {
   file_url: string;
   data?: Record<string, any>[];
   overview?: Record<string, any>;
+}
+
+// Define the DatasetOverview interface to match the one in DatasetContext
+export interface DatasetOverview {
+  num_rows: number;
+  num_columns: number;
+  missing_values: Record<string, any>; // Now required, not optional
+  numerical_features: string[];
+  categorical_features: string[];
+  // Properties from backend response
+  total_missing_values?: number;
+  missing_values_count?: Record<string, number>;
+  column_names?: string[];
+  unique_values_count?: Record<string, number>;
+  data_types?: Record<string, string>;
+  feature_classification?: Record<string, string>;
 }
 
 // Define the API response interfaces
