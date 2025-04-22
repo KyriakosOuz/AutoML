@@ -28,6 +28,7 @@ export const getAuthHeaders = async () => {
 export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
   const contentType = response.headers.get('content-type') || '';
   
+  // More strict content-type check to ensure we only process JSON
   if (!contentType.includes('application/json')) {
     const text = await response.text();
     console.error('[API] Non-JSON response:', text);
@@ -41,6 +42,7 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
   }
 
   // If missing the expected fields, still coerce to ApiResponse
+  // This handles inconsistent API responses
   if (!json.hasOwnProperty('status') || !json.hasOwnProperty('data')) {
     return {
       status: 'success',

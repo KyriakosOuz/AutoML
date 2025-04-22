@@ -64,8 +64,9 @@ export const useExperimentPolling = ({
 
         setExperimentStatus(data.status as ExperimentStatus);
 
-        if (data.status === 'completed' && data.hasTrainingResults) {
-          console.log('[TrainingContext] Training completed and results available.');
+        // Stop polling if status is "completed" or "success" regardless of hasTrainingResults
+        if (data.status === 'completed' || data.status === 'success') {
+          console.log('[TrainingContext] Training completed, stopping polling.');
           stopPolling();
           onSuccess(experimentId);
           return;
