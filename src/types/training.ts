@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
@@ -28,6 +27,7 @@ export interface TrainingFile {
   file_id: string;
   file_type: string;
   file_url: string;
+  file_name?: string;
   created_at: string;
 }
 

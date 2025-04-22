@@ -125,7 +125,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
         const payload = apiRes;
         const tr = payload.training_results || {};
-        const allMetrics = tr.metrics || {};
+        // Ensure tr.metrics exists before trying to access it
+        const allMetrics = (tr && typeof tr === 'object' && 'metrics' in tr) ? tr.metrics || {} : {};
 
         const numericMetrics: Record<string, number> = {};
         Object.entries(allMetrics).forEach(([key, value]) => {
@@ -151,6 +152,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
         }
 
+        // Process files to ensure they have file_name property
+        const processedFiles: ExperimentFile[] = (payload.files || []).map(file => ({
+          ...file,
+          file_name: file.file_name || file.file_type + '.file' // Add file_name if missing
+        }));
+
         if (!cancelled) {
           setResults({
             experiment_metadata: {
@@ -173,7 +180,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
             roc,
             prCurve,
             shapValues,
-            files: payload.files || [],
+            files: processedFiles,
           });
         }
       } catch (err: any) {
@@ -196,7 +203,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     };
   }, [experimentId, toast]);
 
-  
   if (isLoading) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -281,7 +287,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     );
   }
 
-  
   const { experiment_metadata, metrics, files, classificationReport, confusionMatrix, roc, prCurve } = results;
 
   const numberMetrics = metrics;
@@ -341,7 +346,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         </CardDescription>
       </CardHeader>
 
-      
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
