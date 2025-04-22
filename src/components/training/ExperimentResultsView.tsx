@@ -94,13 +94,18 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
     async function fetchResults() {
       try {
-        const response = await fetch(`/experiments/experiment-results/${experimentId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch experiment results');
-        }
-        const apiRes = await response.json();
+        const apiRes = await getExperimentResults(experimentId);
 
-        if (!apiRes.data || !apiRes.data.hasTrainingResults) {
+        if (
+          typeof apiRes === 'string' &&
+          apiRes.trim().startsWith('<')
+        ) {
+          throw new Error('Received unexpected HTML from API. Please verify backend routing.');
+        }
+
+        console.log('[ExperimentResultsView] Raw API response:', apiRes);
+
+        if (!apiRes || (typeof apiRes === 'object' && apiRes.hasTrainingResults === false)) {
           if (!cancelled) {
             setResults(null);
             setIsLoading(false);
@@ -108,7 +113,21 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           return;
         }
 
-        const payload = apiRes.data;
+        if (typeof apiRes === 'object') {
+          console.log('[ExperimentResultsView] API keys:', Object.keys(apiRes));
+          if ('training_results' in apiRes) {
+            console.log('[ExperimentResultsView] training_results keys:', Object.keys(apiRes.training_results ?? {}));
+          }
+        }
+
+        const payload = (apiRes && (apiRes as any).training_results) ? apiRes : (apiRes as any).data || apiRes;
+
+        if (!payload) {
+          setResults(null);
+          setIsLoading(false);
+          return;
+        }
+
         const tr = payload.training_results || {};
         const allMetrics = tr.metrics || {};
 
