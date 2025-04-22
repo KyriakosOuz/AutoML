@@ -69,10 +69,10 @@ export const getExperimentResults = async (
     }
 
     // Unwrap envelope: { status, data }
-    const payload = apiResponse.data ?? apiResponse;
-    console.log('[API] Unwrapped payload keys:', Object.keys(payload));
+    const result = apiResponse.data ?? apiResponse;
+    console.log('[API] Unwrapped payload keys:', Object.keys(result));
 
-    return payload;
+    return result;
   } catch (error) {
     console.error('[API] Error in getExperimentResults:', error);
     throw error;

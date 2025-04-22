@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import DatasetPage from "./pages/DatasetPage";
 import ModelTrainingPage from "./pages/ModelTrainingPage";
+import ExperimentResultsPage from "./pages/ExperimentResultsPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
@@ -32,6 +33,11 @@ const App = () => (
             <Route path="/training" element={
               <ProtectedRoute>
                 <ModelTrainingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/results/:experimentId" element={
+              <ProtectedRoute>
+                <ExperimentResultsPage />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

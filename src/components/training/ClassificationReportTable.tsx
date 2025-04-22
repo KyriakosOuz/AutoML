@@ -17,19 +17,28 @@ export interface ClassificationReportTableProps {
 const ClassificationReportTable: React.FC<ClassificationReportTableProps> = ({
   report,
 }) => {
-  if (!report || typeof report === "string") {
-    // handle string fallback if API ever goes string again
+  if (!report) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        No classification report found
+      </p>
+    );
+  }
+
+  if (typeof report === "string") {
     return (
       <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-        {report || "No classification report found"}
+        {report}
       </pre>
     );
   }
+
   // Only show per-class rows, not "accuracy", "macro avg" or "weighted avg"
   const shownClasses = Object.entries(report).filter(
     ([label]) =>
       label !== "accuracy" && label !== "macro avg" && label !== "weighted avg"
   );
+
   return (
     <Table>
       <TableHeader>

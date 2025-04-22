@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -53,7 +54,7 @@ interface ExperimentResultsProps {
   onReset?: () => void;
 }
 
-const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
+const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
   experimentId,
   onReset
 }) => {
@@ -72,22 +73,24 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
     async function fetchResults() {
       try {
-        const raw = await getExperimentResults(experimentId);
+        const response = await getExperimentResults(experimentId);
         if (!cancelled) {
-          if (!raw) {
+          if (!response) {
             setError('Results are still being processed. Please try again in a moment.');
             setIsLoading(false);
             return;
           }
-          // Remap/unwrap the full response
-          const payload = (raw.data ? raw.data : raw);
-          const created = payload.created_at && new Date(payload.created_at);
-          const completed = payload.completed_at && new Date(payload.completed_at);
-          const training_time_sec =
-            payload.training_time_sec ??
-            (created && completed
-              ? (completed.getTime() - created.getTime()) / 1000
-              : undefined);
+          
+          // Unwrap the payload from the API response
+          const payload = response;
+          
+          // Compute training time if needed
+          let trainingTimeSec = payload.training_time_sec;
+          if (!trainingTimeSec && payload.created_at && payload.completed_at) {
+            const created = new Date(payload.created_at);
+            const completed = new Date(payload.completed_at);
+            trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
+          }
 
           setResults({
             experiment_metadata: {
@@ -99,7 +102,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               automl_engine: payload.automl_engine,
               target_column: payload.target_column,
               hyperparameters: payload.hyperparameters,
-              training_time_sec: training_time_sec,
+              training_time_sec: trainingTimeSec,
               created_at: payload.created_at,
               completed_at: payload.completed_at,
               error_message: payload.error || payload.error_message,
@@ -212,13 +215,14 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
 
-  // ↓ NEW: normalized destructure for below
+  // ↓ Destructure from results object 
   const { experiment_metadata, metrics, files } = results;
 
   // Only pass number metrics to grid
   const numberMetrics = Object.fromEntries(
     Object.entries(metrics).filter(([k, v]) => typeof v === "number")
   );
+  
   const classificationReport = metrics.classification_report ?? null;
 
   const formatTaskType = (type: string = '') => {
@@ -311,8 +315,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                         key.toLowerCase().includes("f1_score") ||
                         key.toLowerCase().includes("precision") ||
                         key.toLowerCase().includes("recall")
-                          ? `${(value * 100).toFixed(2)}%`
-                          : value.toFixed(4)}
+                          ? `${(value as number * 100).toFixed(2)}%`
+                          : (value as number).toFixed(4)}
                       </div>
                     </CardContent>
                   </Card>
