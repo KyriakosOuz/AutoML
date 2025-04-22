@@ -1,6 +1,7 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
-export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success';
+export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
 
 export interface AutoMLParameters {
   automlEngine: TrainingEngine;
@@ -22,6 +23,42 @@ export interface CustomTrainingParameters {
 
 export type HyperParameter = string | number | boolean | string[] | number[];
 export type HyperParameters = Record<string, HyperParameter>;
+
+export interface TrainingFile {
+  file_id: string;
+  file_type: string;
+  file_url: string;
+  created_at: string;
+}
+
+export interface TrainingResults {
+  metrics: Record<string, number>;
+  y_true?: number[] | string[];
+  y_pred?: number[] | string[];
+  y_probs?: number[][];
+}
+
+export interface ExperimentResults {
+  id: string;
+  experiment_id?: string;
+  experiment_name: string;
+  status: ExperimentStatus;
+  task_type?: string;
+  target_column?: string;
+  created_at: string;
+  completed_at?: string;
+  error_message?: string;
+  training_results?: TrainingResults;
+  files?: TrainingFile[];
+  algorithm?: string;
+  model_format?: string;
+  leaderboard?: any[];
+  selected_algorithm?: string;
+  columns_to_keep?: string[];
+  hyperparameters?: Record<string, any>;
+  message?: string;
+  automl_engine?: string;
+}
 
 export interface AutoMLResult {
   experimentId: string;
@@ -47,33 +84,4 @@ export interface CustomTrainingResult {
   selectedAlgorithm: string;
   modelFormat: string;
   experimentName: string;
-}
-
-export interface ExperimentResults {
-  status: ExperimentStatus;
-  error_message?: string;
-  experiment_id: string;
-  experiment_name?: string;
-  task_type: string;
-  target_column?: string;
-  metrics?: Record<string, number>;
-  model_path?: string;
-  completed_at?: string;
-  training_time_sec?: number;
-  files?: Array<{
-    file_type: string;
-    file_url: string;
-  }>;
-  model_file_url?: string;
-  report_file_url?: string;
-  training_results?: any;
-  algorithm?: string;
-  model_format?: string;
-  leaderboard?: any[];
-  selected_algorithm?: string;
-  columns_to_keep?: string[];
-  hyperparameters?: Record<string, any>;
-  message?: string;
-  id?: string; // Adding this property which is referenced in CustomTrainingResults.tsx
-  automl_engine?: string; // Add this missing property
 }

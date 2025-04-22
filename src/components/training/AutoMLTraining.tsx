@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
 import { trainingApi } from '@/lib/api';
@@ -15,7 +17,6 @@ import { AlertCircle, Rocket, HelpCircle, Play, Settings, Loader } from 'lucide-
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
-import TrainingResults from './TrainingResults';
 import { useAuth } from '@/contexts/AuthContext';
 
 const AutoMLTraining: React.FC = () => {
@@ -31,14 +32,12 @@ const AutoMLTraining: React.FC = () => {
     setStratify,
     randomSeed,
     setRandomSeed,
-    setAutomlResult,
-    setLastTrainingType,
     setError
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [experimentName, setExperimentName] = useState('');
-  const [experimentId, setExperimentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (taskType && automlEngine) {
@@ -69,7 +68,6 @@ const AutoMLTraining: React.FC = () => {
     try {
       setIsTraining(true);
       setError(null);
-      setLastTrainingType('automl');
 
       toast({
         title: "Training Started",
@@ -85,19 +83,17 @@ const AutoMLTraining: React.FC = () => {
         randomSeed
       );
 
-      const respExperimentId = response?.data?.experiment_id;
+      const experimentId = response?.experiment_id || response?.data?.experiment_id;
 
-      if (respExperimentId) {
-        setExperimentId(respExperimentId);
+      if (experimentId) {
         toast({
           title: "Training Submitted",
-          description: `AutoML training with ${automlEngine} has been submitted. Fetching results...`,
+          description: `AutoML training job submitted successfully.`,
         });
+        // Navigate to results page with experiment ID
+        navigate(`/results/${experimentId}`);
       } else {
-        toast({
-          title: "Training Initiated",
-          description: `AutoML training with ${automlEngine} has started. Results will be available soon.`,
-        });
+        throw new Error('No experiment ID returned from the server');
       }
     } catch (error) {
       console.error('AutoML training error:', error);
@@ -108,7 +104,6 @@ const AutoMLTraining: React.FC = () => {
         description: errorMessage,
         variant: "destructive"
       });
-    } finally {
       setIsTraining(false);
     }
   };
@@ -275,14 +270,6 @@ const AutoMLTraining: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {experimentId && (
-        <TrainingResults 
-          type="automl"
-          experimentId={experimentId} 
-          onReset={() => setExperimentId(null)}
-        />
-      )}
     </div>
   );
 };

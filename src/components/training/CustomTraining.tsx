@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
@@ -17,8 +16,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
-import CustomTrainingResults from './CustomTrainingResults'; // Add this import
+import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
+import { useNavigate } from 'react-router-dom';
 
 const CustomTraining: React.FC = () => {
   const { datasetId, targetColumn, taskType } = useDataset();
@@ -40,6 +40,8 @@ const CustomTraining: React.FC = () => {
   const [experimentName, setExperimentName] = useState('');
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     return () => {
@@ -151,19 +153,16 @@ const CustomTraining: React.FC = () => {
 
       const response = await trainingApi.customTrain(formData);
       
-      const respExperimentId = response?.data?.data?.experiment_id;
+      const experimentId = response?.experiment_id || response?.data?.experiment_id;
       
-      console.log("🚀 Training started with ID:", respExperimentId);
-      
-      if (respExperimentId) {
-        setActiveExperimentId(respExperimentId);
-        
+      if (experimentId) {
         toast({
           title: "Training Submitted",
-          description: `Custom training with ${algorithm} has been submitted. Redirecting to results...`,
+          description: `Custom training job submitted successfully.`,
         });
+        navigate(`/results/${experimentId}`);
       } else {
-        throw new Error('No experiment ID returned from server');
+        throw new Error('No experiment ID returned from the server');
       }
     } catch (error) {
       console.error('Custom training error:', error);
