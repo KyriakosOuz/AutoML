@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
@@ -14,24 +14,36 @@ const ModelTrainingContent: React.FC = () => {
     isLoadingResults,
     experimentResults,
     experimentStatus,
-    error
+    error,
+    isTraining
   } = useTraining();
   
-  const [activeTab, setActiveTab] = useState<'automl' | 'custom'>('automl');
+  const [activeTab, setActiveTab] = useState<'automl' | 'custom' | 'results'>('automl');
+  
+  // Effect to switch to results tab when experiment completes
+  useEffect(() => {
+    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && experimentResults) {
+      setActiveTab('results');
+    }
+  }, [activeExperimentId, experimentStatus, experimentResults]);
   
   const handleTabChange = (value: string) => {
-    setActiveTab(value as 'automl' | 'custom');
+    setActiveTab(value as 'automl' | 'custom' | 'results');
   };
   
   const handleReset = () => {
     resetTrainingState();
+    setActiveTab('automl');
   };
   
   // Only show results tab when we have an active experiment
   const showResults = activeExperimentId !== null;
   
-  // Don't allow clicking the results tab while processing
-  const isResultsDisabled = experimentStatus === 'processing';
+  // Don't allow clicking the results tab while processing/running or if we have an error
+  const isResultsDisabled = 
+    experimentStatus === 'processing' || 
+    experimentStatus === 'running' || 
+    (error !== null && experimentStatus !== 'completed' && experimentStatus !== 'success');
   
   // Map context status to StatusBadge status
   const badgeStatus: Status = experimentStatus as Status;
@@ -40,10 +52,24 @@ const ModelTrainingContent: React.FC = () => {
     <div className="w-full">
       {showResults ? (
         <div className="space-y-6">
-          <Tabs defaultValue="results" className="w-full">
+          <Tabs 
+            value={activeTab} 
+            onValueChange={handleTabChange} 
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="automl">AutoML Training</TabsTrigger>
-              <TabsTrigger value="custom">Custom Training</TabsTrigger>
+              <TabsTrigger 
+                value="automl" 
+                disabled={isTraining}
+              >
+                AutoML Training
+              </TabsTrigger>
+              <TabsTrigger 
+                value="custom" 
+                disabled={isTraining}
+              >
+                Custom Training
+              </TabsTrigger>
               <TabsTrigger value="results" disabled={isResultsDisabled}>
                 Results 
                 {experimentStatus && (

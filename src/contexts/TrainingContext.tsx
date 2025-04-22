@@ -83,8 +83,8 @@ const defaultCustomParameters: CustomTrainingParameters = {
 };
 
 const TrainingContext = createContext<TrainingContextProps | undefined>(undefined);
-const POLL_INTERVAL = 5000; // 5 seconds
-const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes
+const POLL_INTERVAL = 3000; // 3 seconds
+const MAX_POLL_ATTEMPTS = 120; // 6 minutes
 
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
@@ -150,6 +150,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setPollingAttempts(0);
     setExperimentStatus('processing');
 
+    toast({
+      title: "Training in Progress",
+      description: "Your model training has started. Please wait while we process your request."
+    });
+
     const interval = setInterval(async () => {
       try {
         const statusResponse = await trainingApi.checkStatus(experimentId);
@@ -171,6 +176,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setExperimentResults(results);
             setIsLoadingResults(false);
             setIsTraining(false);
+            
             toast({
               title: "Training Complete",
               description: "Your model has finished training successfully!"
@@ -180,6 +186,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setError(resultError instanceof Error ? resultError.message : 'Failed to fetch results');
             setIsLoadingResults(false);
             setIsTraining(false);
+            
+            toast({
+              title: "Error Fetching Results",
+              description: resultError instanceof Error ? resultError.message : 'Failed to fetch experiment results',
+              variant: "destructive"
+            });
           }
         } else if (statusResponse.status === 'failed') {
           console.error('[TrainingContext] Training failed');
@@ -188,8 +200,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             const results = await trainingApi.getExperimentResults(experimentId);
             console.error('[TrainingContext] Error details:', results.error_message);
             setError(results.error_message || 'Training failed');
+            setExperimentResults(results);
             setIsLoadingResults(false);
             setIsTraining(false);
+            
             toast({
               title: "Training Failed",
               description: results.error_message || 'An error occurred during training',
@@ -200,6 +214,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             setError('Training failed and could not fetch error details');
             setIsLoadingResults(false);
             setIsTraining(false);
+            
             toast({
               title: "Training Failed",
               description: 'An error occurred during training',
@@ -212,6 +227,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           setError('Timeout while waiting for training completion');
           setIsLoadingResults(false);
           setIsTraining(false);
+          
           toast({
             title: "Training Timeout",
             description: "The training process is taking longer than expected. Check back later.",
@@ -228,6 +244,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           stopPolling();
           setIsLoadingResults(false);
           setIsTraining(false);
+          
           toast({
             title: "Connection Error",
             description: "Failed to connect to the server after multiple attempts",
@@ -283,6 +300,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error('Error fetching experiment results:', error);
       setError('Failed to fetch experiment results');
       setIsLoadingResults(false);
+      
+      toast({
+        title: "Error Fetching Results",
+        description: error instanceof Error ? error.message : 'Failed to fetch experiment results',
+        variant: "destructive"
+      });
     }
   };
   

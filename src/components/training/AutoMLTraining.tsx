@@ -33,11 +33,13 @@ const AutoMLTraining: React.FC = () => {
     setError,
     startPolling,
     setLastTrainingType,
-    setActiveExperimentId
+    setActiveExperimentId,
+    experimentStatus
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (taskType && automlEngine) {
@@ -65,10 +67,19 @@ const AutoMLTraining: React.FC = () => {
       return;
     }
 
+    if (isTraining || isSubmitting) {
+      toast({
+        title: "Training Already in Progress",
+        description: "Please wait for the current training to complete",
+      });
+      return;
+    }
+
     try {
-      setActiveExperimentId(null);
+      setIsSubmitting(true);
       setIsTraining(true);
       setError(null);
+      setActiveExperimentId(null);
 
       toast({
         title: "Training Started",
@@ -90,7 +101,7 @@ const AutoMLTraining: React.FC = () => {
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${result.experiment_name || result.experiment_id} started.`,
+          description: `Experiment ${result.experiment_name || result.experiment_id} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');
@@ -99,12 +110,15 @@ const AutoMLTraining: React.FC = () => {
       console.error('AutoML training error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to train model';
       setError(errorMessage);
+      setIsTraining(false);
+      
       toast({
         title: "Training Failed",
         description: errorMessage,
         variant: "destructive"
       });
-      setIsTraining(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -117,6 +131,13 @@ const AutoMLTraining: React.FC = () => {
       testSize <= 0.5
     );
   };
+
+  const isButtonDisabled = 
+    isTraining || 
+    isSubmitting || 
+    !isFormValid() || 
+    experimentStatus === 'processing' || 
+    experimentStatus === 'running';
 
   return (
     <div className="space-y-8">
@@ -132,12 +153,21 @@ const AutoMLTraining: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {isTraining && (
+              <Alert className="mb-4 bg-primary/10 border-primary/20">
+                <Loader className="h-4 w-4 animate-spin text-primary mr-2" />
+                <AlertDescription>
+                  Training is in progress. Please wait while your model is being trained.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label>AutoML Engine</Label>
               <Select
                 value={automlEngine}
                 onValueChange={(value) => setAutomlEngine(value as TrainingEngine)}
-                disabled={isTraining}
+                disabled={isTraining || isSubmitting}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select AutoML engine" />
@@ -168,7 +198,7 @@ const AutoMLTraining: React.FC = () => {
                 value={experimentName}
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
-                disabled={isTraining}
+                disabled={isTraining || isSubmitting}
               />
             </div>
 
@@ -184,7 +214,7 @@ const AutoMLTraining: React.FC = () => {
                 step={0.05}
                 value={[testSize]}
                 onValueChange={(values) => setTestSize(values[0])}
-                disabled={isTraining}
+                disabled={isTraining || isSubmitting}
                 aria-label="Test set size"
               />
             </div>
@@ -210,7 +240,7 @@ const AutoMLTraining: React.FC = () => {
                 id="stratify"
                 checked={stratify}
                 onCheckedChange={(checked) => setStratify(checked)}
-                disabled={isTraining}
+                disabled={isTraining || isSubmitting}
                 aria-label="Stratify split"
               />
             </div>
@@ -235,7 +265,7 @@ const AutoMLTraining: React.FC = () => {
                 min={0}
                 value={randomSeed}
                 onChange={(e) => setRandomSeed(parseInt(e.target.value) || 0)}
-                disabled={isTraining}
+                disabled={isTraining || isSubmitting}
                 placeholder="Enter random seed (e.g. 42)"
                 aria-label="Random seed for reproducibility"
               />
@@ -244,14 +274,18 @@ const AutoMLTraining: React.FC = () => {
 
             <Button
               onClick={handleTrainModel}
-              disabled={isTraining || !isFormValid()}
+              disabled={isButtonDisabled}
               className="w-full mt-4"
               size="lg"
             >
-              {isTraining ? (
+              {isTraining || isSubmitting ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
-                  Training in Progress...
+                  {experimentStatus === 'processing' 
+                    ? 'Processing...' 
+                    : experimentStatus === 'running' 
+                      ? 'Training in Progress...' 
+                      : 'Starting Training...'}
                 </>
               ) : (
                 <>
