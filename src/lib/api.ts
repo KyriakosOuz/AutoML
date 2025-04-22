@@ -289,7 +289,7 @@ export const trainingApi = {
       formData.append('stratify', stratify.toString());
       formData.append('random_seed', randomSeed.toString());
       
-      const response = await fetch(`${API_URL}/training/automl-train/`, {
+      const response = await fetch(`${API_URL}/training/automl/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,

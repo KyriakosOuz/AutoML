@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -73,44 +72,50 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout;
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const checkStatus = async () => {
+      try {
+        if (!activeExperimentId) return;
+        
+        const data = await trainingApi.getExperimentResults(activeExperimentId);
+        console.log('[UnifiedExperimentResults] Poll response:', data);
+        
+        if (data.status === 'completed' || data.status === 'success') {
+          if (pollInterval) clearInterval(pollInterval);
+          setExperimentResults(data);
+          setIsLoadingResults(false);
+          toast({
+            title: "Training Complete",
+            description: "Your model has finished training!"
+          });
+        } else if (data.status === 'failed') {
+          if (pollInterval) clearInterval(pollInterval);
+          setError(data.error_message || 'Training failed');
+          setIsLoadingResults(false);
+          toast({
+            title: "Training Failed",
+            description: data.error_message || 'An error occurred during training',
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        // Don't clear interval on network errors - keep trying
+      }
+    };
 
     if (activeExperimentId && (isLoadingResults || !experimentResults)) {
-      pollInterval = setInterval(async () => {
-        trainingApi.getExperimentResults(activeExperimentId)
-          .then(data => {
-            if (data.status === 'completed' || data.status === 'success') {
-              clearInterval(pollInterval);
-              setExperimentResults(data);
-              setIsLoadingResults(false);
-              toast({
-                title: "Training Complete",
-                description: "Your model has finished training!"
-              });
-            } else if (data.status === 'failed') {
-              clearInterval(pollInterval);
-              setError(data.error_message || 'Training failed');
-              setIsLoadingResults(false);
-              toast({
-                title: "Training Failed",
-                description: data.error_message || 'An error occurred during training',
-                variant: "destructive"
-              });
-            }
-          })
-          .catch(error => {
-            console.error('Polling error:', error);
-            // Don't clear interval on network errors - keep trying
-          });
-      }, 2000);
+      pollInterval = setInterval(checkStatus, 2000);
     }
 
     return () => {
       if (pollInterval) {
+        console.log('[UnifiedExperimentResults] Cleaning up polling interval');
         clearInterval(pollInterval);
       }
     };
-  }, [activeExperimentId, isLoadingResults, setExperimentResults, setIsLoadingResults, setError, toast]);
+  }, [activeExperimentId, isLoadingResults, experimentResults, setError, setExperimentResults, setIsLoadingResults, toast]);
 
   if (isLoadingResults) {
     return (
