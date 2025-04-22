@@ -7,8 +7,6 @@ import {
 } from '@/types/training';
 import { API_BASE_URL } from './constants';
 
-const API_BASE = window.location.origin;
-
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
@@ -99,7 +97,7 @@ async function extractApiError(response: Response, fallbackMessage: string): Pro
 
 // Prediction endpoints
 export async function predictManual(experimentId: string, inputValues: Record<string, any>) {
-  const res = await fetch(`${API_BASE}/prediction/predict-manual/`, {
+  const res = await fetch(`${API_BASE_URL}/prediction/predict-manual/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -115,7 +113,7 @@ export async function predictBatchCsv(experimentId: string, file: File) {
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/prediction/predict-csv/`, {
+  const res = await fetch(`${API_BASE_URL}/prediction/predict-csv/`, {
     method: 'POST',
     body: form
   });
