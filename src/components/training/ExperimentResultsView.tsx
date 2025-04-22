@@ -243,6 +243,13 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                            (precision.length > 0 && recall.length > 0) || 
                            confusion_matrix;
   
+  // Defensive: Only show classification report in metrics tab if it's string or object (never render as children!)
+  const classificationReport =
+    metrics.classification_report &&
+    (typeof metrics.classification_report === "object" || typeof metrics.classification_report === "string")
+      ? metrics.classification_report
+      : null;
+
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -314,11 +321,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           <TabsContent value="metrics" className="p-6">
             <MetricsGrid metrics={metrics} taskType={task_type} />
             
-            {metrics.classification_report && (
+            {classificationReport && (
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
-                  <ClassificationReportTable report={metrics.classification_report} />
+                  {/* Only ever pass report as a prop, never as children */}
+                  <ClassificationReportTable report={classificationReport} />
                 </div>
               </div>
             )}
