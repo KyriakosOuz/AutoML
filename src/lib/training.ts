@@ -96,27 +96,52 @@ async function extractApiError(response: Response, fallbackMessage: string): Pro
 }
 
 // Prediction endpoints
-export async function predictManual(experimentId: string, inputValues: Record<string, any>) {
-  const res = await fetch(`${API_BASE_URL}/prediction/predict-manual/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      experiment_id: experimentId,
-      input_values: JSON.stringify(inputValues)
-    })
-  });
+export async function predictManual(
+  experimentId: string,
+  inputValues: Record<string, any>
+): Promise<ManualPredictionResponse> {
+  const headers = await getAuthHeaders();
+  // Remove Content-Type for FormData (the browser sets it itself)
+  const form = new FormData();
+  form.append('experiment_id', experimentId);
+  form.append('input_values', JSON.stringify(inputValues));
+
+  // Omit Content-Type header so boundary is set correctly by browser
+  delete (headers as any)['Content-Type'];
+
+  const res = await fetch(
+    `${API_BASE_URL}/prediction/predict-manual/`,
+    {
+      method: 'POST',
+      headers,
+      body: form
+    }
+  );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-export async function predictBatchCsv(experimentId: string, file: File) {
+export async function predictBatchCsv(
+  experimentId: string,
+  file: File
+): Promise<BatchPredictionResponse> {
+  const headers = await getAuthHeaders();
+  // Remove Content-Type for FormData (the browser sets it itself)
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('file', file);
-  const res = await fetch(`${API_BASE_URL}/prediction/predict-csv/`, {
-    method: 'POST',
-    body: form
-  });
+
+  // Omit Content-Type header so boundary is set correctly by browser
+  delete (headers as any)['Content-Type'];
+
+  const res = await fetch(
+    `${API_BASE_URL}/prediction/predict-csv/`,
+    {
+      method: 'POST',
+      headers,
+      body: form
+    }
+  );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
