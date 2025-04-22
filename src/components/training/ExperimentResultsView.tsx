@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -58,6 +59,19 @@ interface ClassificationReport {
     "f1-score": number;
     support: number;
   };
+}
+
+// Extended metrics interface to help with type-checking
+interface ExtendedMetrics extends Record<string, any> {
+  classification_report?: ClassificationReport | string | null;
+  confusion_matrix?: number[][] | null;
+  fpr?: number[];
+  tpr?: number[];
+  auc?: number;
+  precision?: number[];
+  recall?: number[];
+  f1_score?: number;
+  shap_values?: any;
 }
 
 interface ExperimentResultsData {
@@ -127,6 +141,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         const tr = payload.training_results || {};
         // Ensure tr.metrics exists before trying to access it
         const allMetrics = (tr && typeof tr === 'object' && 'metrics' in tr) ? tr.metrics || {} : {};
+        
+        // Cast allMetrics to our extended interface to help with type checking
+        const typedMetrics = allMetrics as ExtendedMetrics;
 
         const numericMetrics: Record<string, number> = {};
         Object.entries(allMetrics).forEach(([key, value]) => {
@@ -135,15 +152,20 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           }
         });
 
-        const classificationReport = allMetrics.classification_report ?? null;
-        const confusionMatrix = allMetrics.confusion_matrix ?? null;
-        const roc = (allMetrics.fpr && allMetrics.tpr && allMetrics.auc)
-          ? { fpr: allMetrics.fpr, tpr: allMetrics.tpr, auc: allMetrics.auc }
+        const classificationReport = typedMetrics.classification_report ?? null;
+        const confusionMatrix = typedMetrics.confusion_matrix ?? null;
+        
+        // Handle ROC data if available
+        const roc = (typedMetrics.fpr && typedMetrics.tpr && typedMetrics.auc)
+          ? { fpr: typedMetrics.fpr, tpr: typedMetrics.tpr, auc: typedMetrics.auc }
           : null;
-        const prCurve = (Array.isArray(allMetrics.precision) && Array.isArray(allMetrics.recall) && typeof allMetrics.f1_score === 'number')
-          ? { precision: allMetrics.precision, recall: allMetrics.recall, f1Score: allMetrics.f1_score }
+          
+        // Handle precision-recall curve data if available
+        const prCurve = (Array.isArray(typedMetrics.precision) && Array.isArray(typedMetrics.recall) && typeof typedMetrics.f1_score === 'number')
+          ? { precision: typedMetrics.precision, recall: typedMetrics.recall, f1Score: typedMetrics.f1_score }
           : null;
-        const shapValues = allMetrics.shap_values ?? undefined;
+          
+        const shapValues = typedMetrics.shap_values ?? undefined;
 
         let trainingTimeSec = payload.training_time_sec;
         if (!trainingTimeSec && payload.created_at && payload.completed_at) {

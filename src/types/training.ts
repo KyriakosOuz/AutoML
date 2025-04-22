@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
