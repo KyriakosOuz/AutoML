@@ -25,13 +25,6 @@ import {
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
 
-// Import the chart components
-import RocCurveChart from './charts/RocCurveChart';
-import PrecisionRecallChart from './charts/PrecisionRecallChart';
-import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
-import MetricsGrid from './charts/MetricsGrid';
-import ClassificationReportTable from './ClassificationReportTable';
-
 interface ExperimentResultsViewProps {
   experimentId: string;
   onReset?: () => void;
@@ -95,7 +88,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     };
   }, [experimentId, toast]);
 
-  // Loading state
   if (isLoading) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -125,7 +117,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
   
-  // Error state
   if (error) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
@@ -157,7 +148,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
   
-  // No results state
   if (!results) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -190,7 +180,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
   
-  // Log the results structure before extracting data
   console.log('[ExperimentResultsView] Rendering with results:', {
     hasResults: !!results,
     experimentName: results?.experiment_name,
@@ -200,7 +189,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     hasMetrics: results?.training_results ? !!results.training_results.metrics : false
   });
   
-  // Extract relevant data from results
   const { 
     experiment_name = '', 
     task_type = '',
@@ -211,7 +199,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     files = []
   } = results || {};
 
-  // Safely extract metrics from training results
   const metrics = training_results?.metrics || {};
   console.log('[ExperimentResultsView] Metrics keys:', Object.keys(metrics));
   
@@ -226,7 +213,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const y_pred = training_results?.y_pred || [];
   const y_probs = training_results?.y_probs || [];
   
-  // Extract ROC and PR curve data if available
   const fpr = metrics?.fpr || [];
   const tpr = metrics?.tpr || [];
   const precision = metrics?.precision_curve || [];
@@ -238,12 +224,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const isClassification = task_type ? task_type.includes('classification') : false;
   const isBinaryClassification = isClassification && task_type.includes('binary');
   
-  // Determine if we have advanced chart data
   const hasAdvancedCharts = (fpr.length > 0 && tpr.length > 0) || 
                            (precision.length > 0 && recall.length > 0) || 
                            confusion_matrix;
   
-  // Defensive: Only show classification report in metrics tab if it's string or object (never render as children!)
   const classificationReport =
     metrics.classification_report &&
     (typeof metrics.classification_report === "object" || typeof metrics.classification_report === "string")
@@ -325,7 +309,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
-                  {/* Only ever pass report as a prop, never as children */}
                   <ClassificationReportTable report={classificationReport} />
                 </div>
               </div>

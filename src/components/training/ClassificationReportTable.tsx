@@ -12,9 +12,35 @@ const LOG_PREFIX = '[ClassificationReportTable]';
 /** Checks if a stats object has at least two classification metrics (no just e.g. support or accuracy). */
 const isValidStatsObject = (obj: any) => {
   if (!obj || typeof obj !== "object") return false;
-  const metricKeys = ["precision", "recall", "f1-score"];
+  
+  // Check for both sklearn and custom format keys
+  const metricKeys = ["precision", "recall", "f1-score", "f1_score"];
+  // Count how many valid metric keys we find
   const found = metricKeys.filter(k => typeof obj[k] === "number").length;
-  return found >= 2;
+  return found >= 1; // At least one metric should be present
+};
+
+// Normalize keys with spaces or underscores
+const normalizeKey = (key: string) => {
+  return key.replace(/_/g, '-').trim();
+};
+
+// Safely get a metric value regardless of key format (f1-score or f1_score)
+const getMetricValue = (obj: any, metric: string) => {
+  // Try different format variations
+  const variations = [
+    metric,
+    metric.replace(/-/g, '_'),
+    metric.replace(/_/g, '-')
+  ];
+  
+  for (const key of variations) {
+    if (obj[key] !== undefined) {
+      return obj[key];
+    }
+  }
+  
+  return undefined;
 };
 
 const renderMetricCellFormatted = (value: any, isPercent = false) => {
@@ -45,21 +71,41 @@ const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report
     return <p className="text-muted-foreground">No classification report available.</p>;
   }
 
-  // Only use object keys with at least 2 real metric keys
+  // Only use object keys with at least 1 real metric key
   const allKeys = Object.keys(report);
   if (allKeys.length === 0) {
     return <p className="text-muted-foreground">No classification metrics available.</p>;
   }
 
-  // top-level keys like "accuracy" should be handled separately
-  const classStatKeys = allKeys.filter(k => isValidStatsObject(report[k]));
-  const nonStatKeys = allKeys.filter(k => !isValidStatsObject(report[k]));
-
   console.log(`${LOG_PREFIX} Report keys:`, allKeys);
-  console.log(`${LOG_PREFIX} Rows to render as class stats:`, classStatKeys);
+  
+  // Classify keys into class stats vs. overall stats
+  // Class stats are individual classes and aggregates like macro/weighted avg
+  // Non-stat keys are top-level metrics like accuracy
+  const specialAggregateKeywords = ['avg', 'average', 'total', 'macro', 'weighted', 'samples'];
+  
+  const isAggregateKey = (key: string) => {
+    const normalized = key.toLowerCase();
+    return specialAggregateKeywords.some(keyword => normalized.includes(keyword));
+  };
+  
+  const isClassKey = (key: string) => {
+    return (
+      isValidStatsObject(report[key]) && 
+      !['accuracy', 'support'].includes(key.toLowerCase()) &&
+      !key.includes('_')  // Avoid metrics with underscores being treated as classes
+    );
+  };
+  
+  // Separate normal classes from aggregate metrics
+  const classKeys = allKeys.filter(k => isClassKey(k) && !isAggregateKey(k));
+  const aggregateKeys = allKeys.filter(k => isValidStatsObject(report[k]) && isAggregateKey(k));
+  const nonStatKeys = allKeys.filter(k => !isValidStatsObject(report[k]) || k === 'accuracy');
+
+  console.log(`${LOG_PREFIX} Rows to render as class stats:`, [...classKeys, ...aggregateKeys]);
   console.log(`${LOG_PREFIX} Rows to skip or handle as special rows:`, nonStatKeys);
 
-  if (classStatKeys.length === 0) {
+  if ([...classKeys, ...aggregateKeys].length === 0) {
     // All entries are either accuracy or non-stat; fallback: show pretty JSON
     return (
       <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto">
@@ -81,20 +127,38 @@ const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report
         </TableRow>
       </TableHeader>
       <TableBody>
-        {classStatKeys.map(label => {
+        {/* First render the class rows */}
+        {classKeys.map(label => {
           const statsObj = report[label];
           if (!isValidStatsObject(statsObj)) return null;
-          // Defensive: check all values
+          
           return (
             <TableRow key={label}>
               <TableCell className="capitalize">{label.replace(/_/g, ' ')}</TableCell>
-              <TableCell>{renderMetricCellFormatted(statsObj.precision, true)}</TableCell>
-              <TableCell>{renderMetricCellFormatted(statsObj.recall, true)}</TableCell>
-              <TableCell>{renderMetricCellFormatted(statsObj['f1-score'], true)}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'precision'), true)}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'recall'), true)}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'f1-score'), true)}</TableCell>
               <TableCell>{statsObj.support !== undefined ? statsObj.support : '-'}</TableCell>
             </TableRow>
           );
         })}
+        
+        {/* Then render aggregate rows (macro avg, weighted avg, etc.) */}
+        {aggregateKeys.map(label => {
+          const statsObj = report[label];
+          if (!isValidStatsObject(statsObj)) return null;
+          
+          return (
+            <TableRow key={label} className="bg-muted/30">
+              <TableCell className="font-medium">{label.replace(/_/g, ' ')}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'precision'), true)}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'recall'), true)}</TableCell>
+              <TableCell>{renderMetricCellFormatted(getMetricValue(statsObj, 'f1-score'), true)}</TableCell>
+              <TableCell>{statsObj.support !== undefined ? statsObj.support : '-'}</TableCell>
+            </TableRow>
+          );
+        })}
+        
         {/* Special overall accuracy row */}
         {typeof report.accuracy === "number" && (
           <TableRow className="bg-muted/50 font-medium">

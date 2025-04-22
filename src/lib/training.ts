@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -81,8 +82,10 @@ export const getExperimentResults = async (
     const payload = apiResponse.data ?? apiResponse;
     console.log('[API] Unwrapped payload keys:', Object.keys(payload));
 
-    // If results aren't ready yet, just return null (not an error!)
-    if (typeof payload.hasTrainingResults !== "undefined" && payload.hasTrainingResults === false) {
+    // CRITICAL FIX: Only check for hasTrainingResults if it's explicitly false
+    // Most APIs don't include hasTrainingResults when results are actually present
+    if (payload.hasTrainingResults === false) {
+      console.log('[API] Training results not ready yet according to hasTrainingResults flag');
       return null;
     }
 
@@ -96,6 +99,15 @@ export const getExperimentResults = async (
         classificationReportKeys: payload.training_results.metrics?.classification_report ? 
           Object.keys(payload.training_results.metrics.classification_report) : 'none'
       });
+    }
+
+    // If we have actual results data (either in training_results or metrics directly)
+    // then set hasTrainingResults to true explicitly for consistency
+    if (
+      (payload.training_results && Object.keys(payload.training_results).length > 0) ||
+      (payload.metrics && Object.keys(payload.metrics).length > 0)
+    ) {
+      payload.hasTrainingResults = true;
     }
 
     // At this point, payload should be a full ExperimentResults
