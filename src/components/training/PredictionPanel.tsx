@@ -328,15 +328,28 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({
                           <div className="mt-4 w-full max-w-md">
                             <h4 className="text-sm font-medium mb-2">Class Probabilities</h4>
                             <div className="space-y-2">
-                              {Object.entries(manualPrediction.class_probabilities).map(([className, prob]) => (
-                                <div key={className} className="space-y-1">
-                                  <div className="flex justify-between text-xs">
-                                    <span>{className}</span>
-                                    <span>{(prob * 100).toFixed(2)}%</span>
+                              {Object.entries(manualPrediction.class_probabilities).map(([className, prob]) => {
+                                let probValue: number | null = null;
+                                if (Array.isArray(prob)) {
+                                  probValue = prob.length > 0 ? Math.max(...prob) : null;
+                                } else if (typeof prob === 'number') {
+                                  probValue = prob;
+                                }
+
+                                return (
+                                  <div key={className} className="space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                      <span>{className}</span>
+                                      <span>
+                                        {probValue !== null
+                                          ? `${(probValue * 100).toFixed(2)}%`
+                                          : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <Progress value={probValue !== null ? probValue * 100 : 0} className="h-2" />
                                   </div>
-                                  <Progress value={prob * 100} className="h-2" />
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
