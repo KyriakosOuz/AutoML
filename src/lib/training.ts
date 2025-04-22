@@ -7,6 +7,8 @@ import {
 } from '@/types/training';
 import { API_BASE_URL } from './constants';
 
+const API_BASE = window.location.origin;
+
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
@@ -96,110 +98,27 @@ async function extractApiError(response: Response, fallbackMessage: string): Pro
 }
 
 // Prediction endpoints
-export const predictManual = async (
-  experimentId: string,
-  inputValues: Record<string, any>
-): Promise<ManualPredictionResponse> => {
-  try {
-    console.log('[API] Making manual prediction for experiment:', experimentId);
-    const headers = await getAuthHeaders();
-    
-    const formData = new FormData();
-    formData.append('experiment_id', experimentId);
-    formData.append('input_values', JSON.stringify(inputValues));
+export async function predictManual(experimentId: string, inputValues: Record<string, any>) {
+  const res = await fetch(`${API_BASE}/prediction/predict-manual/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      experiment_id: experimentId,
+      input_values: JSON.stringify(inputValues)
+    })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
-    const response = await fetch(
-      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-manual/`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': headers.Authorization
-        },
-        body: formData
-      }
-    );
-
-    // Read the response as text first
-    const responseText = await response.text();
-    if (!response.ok) {
-      const errorMsg = await extractApiError(response, `Prediction failed: ${response.status} ${response.statusText}`);
-      console.error('[API] Manual prediction error:', {
-        status: response.status,
-        response: responseText.substring(0, 200),
-        errorMsg
-      });
-      throw new Error(errorMsg);
-    }
-
-    // Check for empty response
-    if (!responseText || responseText.trim().length === 0) {
-      console.error('[API] Manual prediction: empty response body');
-      throw new Error("Prediction failed: Server returned empty response. Please try again or contact support.");
-    }
-
-    // Parse JSON safely
-    try {
-      return JSON.parse(responseText);
-    } catch (err) {
-      console.error('[API] Manual prediction: failed to parse JSON:', err, responseText.substring(0, 200));
-      throw new Error("Prediction failed: Invalid JSON response from server");
-    }
-  } catch (error) {
-    console.error('[API] Error in manual prediction:', error);
-    throw error;
-  }
-};
-
-export const predictBatchCsv = async (
-  experimentId: string,
-  file: File
-): Promise<BatchPredictionResponse> => {
-  try {
-    console.log('[API] Making batch prediction for experiment:', experimentId);
-    const headers = await getAuthHeaders();
-    
-    const formData = new FormData();
-    formData.append('experiment_id', experimentId);
-    formData.append('file', file);
-
-    const response = await fetch(
-      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-csv/`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': headers.Authorization
-        },
-        body: formData
-      }
-    );
-
-    // Read the response as text first
-    const responseText = await response.text();
-    if (!response.ok) {
-      const errorMsg = await extractApiError(response, `Batch prediction failed: ${response.status} ${response.statusText}`);
-      console.error('[API] Batch prediction error:', {
-        status: response.status,
-        response: responseText.substring(0, 200),
-        errorMsg
-      });
-      throw new Error(errorMsg);
-    }
-
-    // Check for empty response
-    if (!responseText || responseText.trim().length === 0) {
-      console.error('[API] Batch prediction: empty response body');
-      throw new Error("Batch prediction failed: Server returned empty response. Please try again.");
-    }
-
-    // Parse JSON safely
-    try {
-      return JSON.parse(responseText);
-    } catch (err) {
-      console.error('[API] Batch prediction: failed to parse JSON:', err, responseText.substring(0, 200));
-      throw new Error("Batch prediction failed: Invalid JSON response from server");
-    }
-  } catch (error) {
-    console.error('[API] Error in batch prediction:', error);
-    throw error;
-  }
-};
+export async function predictBatchCsv(experimentId: string, file: File) {
+  const form = new FormData();
+  form.append('experiment_id', experimentId);
+  form.append('file', file);
+  const res = await fetch(`${API_BASE}/prediction/predict-csv/`, {
+    method: 'POST',
+    body: form
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
