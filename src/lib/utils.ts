@@ -1,5 +1,7 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ApiResponse } from "@/types/api"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -13,7 +15,7 @@ export const getAuthHeaders = () => {
   };
 };
 
-export const handleApiResponse = async <T>(response: Response): Promise<T> => {
+export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
   if (!response.ok) {
     const contentType = response.headers.get('content-type');
     
@@ -36,5 +38,16 @@ export const handleApiResponse = async <T>(response: Response): Promise<T> => {
     throw new Error('Server returned non-JSON content type');
   }
 
-  return response.json();
+  const jsonData = await response.json();
+  
+  // Ensure the returned data conforms to ApiResponse structure
+  if (!jsonData.hasOwnProperty('status') || !jsonData.hasOwnProperty('data')) {
+    // If the API doesn't return in the expected format, transform it
+    return {
+      status: 'success',
+      data: jsonData as T
+    };
+  }
+  
+  return jsonData as ApiResponse<T>;
 };

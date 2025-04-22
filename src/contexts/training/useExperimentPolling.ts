@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { trainingApi } from '@/lib/api';
+import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from './types';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
@@ -45,14 +45,14 @@ export const useExperimentPolling = ({
 
     const interval = setInterval(async () => {
       try {
-        const response = await trainingApi.checkStatus(experimentId);
+        const response = await checkStatus(experimentId);
         console.log('[TrainingContext] Status response:', response);
         
-        if (!response || response.status === 'error') {
-          throw new Error(response?.message || 'Invalid status response from server');
+        if (response.status === 'error') {
+          throw new Error(response.message || 'Invalid status response from server');
         }
 
-        const data = response.data as ExperimentStatusResponse;
+        const data = response.data;
         setExperimentStatus(data.status as ExperimentStatus);
 
         if (data.status === 'completed' && data.hasTrainingResults) {
