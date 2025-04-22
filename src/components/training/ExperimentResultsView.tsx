@@ -94,7 +94,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
           setResults({
             experiment_metadata: {
-              experiment_id: payload.experimentId ?? payload.experiment_id,
+              experiment_id: payload.experiment_id,
               experiment_name: payload.experiment_name,
               status: payload.status,
               task_type: payload.task_type,
@@ -105,7 +105,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               training_time_sec: trainingTimeSec,
               created_at: payload.created_at,
               completed_at: payload.completed_at,
-              error_message: payload.error || payload.error_message,
+              error_message: payload.error_message || null,
             },
             metrics: payload.training_results?.metrics || {},
             files: payload.files || [],
