@@ -67,11 +67,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     if (isLoadingResults) {
       timeoutId = setTimeout(() => {
         setHasTimedOut(true);
-        toast({
-          title: "Training Timeout",
-          description: "The training process is taking longer than expected. You can wait or try again.",
-          variant: "destructive",
-        });
       }, TIMEOUT_DURATION);
     }
 
@@ -80,7 +75,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [isLoadingResults, toast]);
+  }, [isLoadingResults]);
 
   if (isLoadingResults) {
     return (
@@ -105,16 +100,6 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
                 : "Processing your model training experiment..."
               }
             </p>
-            {hasTimedOut && (
-              <Button 
-                variant="outline" 
-                onClick={onReset}
-                className="mt-4"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            )}
             {activeExperimentId && (
               <p className="text-xs font-mono text-muted-foreground">
                 Experiment ID: {activeExperimentId}
@@ -126,7 +111,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     );
   }
 
-  if (error || (experimentResults?.status === 'failed')) {
+  if (error || experimentResults?.status === 'failed') {
     const errorMessage = error || experimentResults?.error_message || "The training process failed.";
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">

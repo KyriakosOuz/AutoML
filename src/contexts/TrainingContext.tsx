@@ -71,6 +71,8 @@ const defaultCustomParameters: CustomTrainingParameters = {
 };
 
 const TrainingContext = createContext<TrainingContextProps | undefined>(undefined);
+const POLL_INTERVAL = 5000; // 5 seconds
+const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes
 
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
@@ -87,11 +89,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [pollingAttempts, setPollingAttempts] = useState(0);
-  const [initialWaitAttempts, setInitialWaitAttempts] = useState(0);
-  
-  const MAX_INITIAL_WAIT = 24; // 2 minutes (24 * 5 seconds)
-  const MAX_POLL_ATTEMPTS = 30; // ~2.5 minutes with 5-second intervals
-  const POLL_INTERVAL = 5000; // 5 seconds
   
   useEffect(() => {
     try {
@@ -127,191 +124,90 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error("Error saving experiment data to localStorage:", error);
     }
   }, [activeExperimentId, lastTrainingType]);
-  
+
   useEffect(() => {
-    let pollTimeout: number | null = null;
-    let pollInterval: number | null = null;
+    let pollTimeout: NodeJS.Timeout | null = null;
     
     const pollResults = async () => {
-      if (!activeExperimentId || activeExperimentId.length < 20) {
-        console.warn("⚠️ Invalid or missing experimentId for polling:", activeExperimentId);
-        if (pollInterval) {
-          window.clearInterval(pollInterval);
-        }
+      if (!activeExperimentId) {
         return;
       }
       
       try {
         const results = await trainingApi.getExperimentResults(activeExperimentId);
-        const status = results?.status as ExperimentStatus;
         
-        setInitialWaitAttempts(0);
-        
-        console.log(`🔄 [Polling] Attempt ${pollingAttempts + 1}: Status = ${status}`);
-        
-        switch (status) {
-          case 'completed':
-          case 'success':
-            setExperimentResults(results);
-            setIsLoadingResults(false);
-            
-            if (lastTrainingType === 'automl') {
-              setAutomlResult({
-                experimentId: activeExperimentId,
-                engine: automlParameters.automlEngine,
-                taskType: results.task_type as TaskType,
-                target: results.target_column || '',
-                metrics: results.metrics || {},
-                modelPath: results.model_path || '',
-                completedAt: results.completed_at || '',
-                trainingTimeSec: results.training_time_sec || 0,
-                leaderboard: results.leaderboard || [],
-                selectedAlgorithm: results.selected_algorithm || '',
-              });
-            } else if (lastTrainingType === 'custom') {
-              setCustomResult({
-                experimentId: activeExperimentId,
-                taskType: results.task_type as TaskType,
-                target: results.target_column || '',
-                metrics: results.metrics || {},
-                modelPath: results.model_path || '',
-                completedAt: results.completed_at || '',
-                trainingTimeSec: results.training_time_sec || 0,
-                selectedAlgorithm: results.algorithm || '',
-                modelFormat: results.model_format || '',
-                experimentName: results.experiment_name || '',
-              });
-            }
-            
-            if (pollInterval) {
-              window.clearInterval(pollInterval);
-            }
-            
-            toast({
-              title: "Training Completed",
-              description: `Model training ${results.experiment_name ? `for ${results.experiment_name}` : ''} completed successfully.`,
-            });
-            
-            setPollingAttempts(0);
-            break;
-            
-          case 'failed':
-            setIsLoadingResults(false);
-            const errorMessage = results?.error_message || "The training process failed.";
-            setError(errorMessage);
-            
-            toast({
-              title: "Training Failed",
-              description: errorMessage,
-              variant: "destructive"
-            });
-            
-            if (pollInterval) {
-              window.clearInterval(pollInterval);
-            }
-            
-            setPollingAttempts(0);
-            break;
-            
-          case 'running':
-            setPollingAttempts(prev => prev + 1);
-            
-            if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
-              const timeoutMessage = "Training took too long to complete. Please try again or check the experiment status later.";
-              setError(timeoutMessage);
-              
-              toast({
-                title: "Training Timeout",
-                description: timeoutMessage,
-                variant: "destructive"
-              });
-              
-              if (pollInterval) {
-                window.clearInterval(pollInterval);
-              }
-              
-              setIsLoadingResults(false);
-              setPollingAttempts(0);
-            }
-            break;
-            
-          default:
-            console.warn("Unknown status received:", status);
-        }
-      } catch (error: any) {
-        console.error('Error polling experiment results:', error);
-        
-        if (error.message && error.message.includes('404')) {
-          setInitialWaitAttempts(prev => prev + 1);
-          console.log(`⏳ Waiting for experiment to be created (attempt ${initialWaitAttempts + 1}/${MAX_INITIAL_WAIT})`);
-          
-          if (initialWaitAttempts >= MAX_INITIAL_WAIT) {
-            const timeoutMessage = "The experiment could not be started within the expected timeframe. Please try again or contact support if this persists.";
-            setError(timeoutMessage);
-            
-            toast({
-              title: "Training Failed",
-              description: timeoutMessage,
-              variant: "destructive"
-            });
-            
-            if (pollInterval) {
-              window.clearInterval(pollInterval);
-            }
-            
-            setIsLoadingResults(false);
-            setPollingAttempts(0);
-            setInitialWaitAttempts(0);
-            setActiveExperimentId(null);
-          }
-        } else {
-          const errorMessage = error.message || "Failed to retrieve training results.";
-          setError(errorMessage);
-          
+        if (results.status === 'failed') {
+          setExperimentResults(results);
+          setError(results.error_message || 'The experiment failed without a specific error message.');
+          setIsLoadingResults(false);
           toast({
-            title: "Error",
-            description: errorMessage,
+            title: "Training Failed",
+            description: `⚠️ Experiment failed: ${results.error_message || 'Unknown error'}`,
             variant: "destructive"
           });
-          
-          if (pollInterval) {
-            window.clearInterval(pollInterval);
-          }
-          
+          return; // Stop polling on failure
+        }
+        
+        if (results.status === 'completed' || results.status === 'success') {
+          setExperimentResults(results);
           setIsLoadingResults(false);
-          setPollingAttempts(0);
-          setInitialWaitAttempts(0);
+          toast({
+            title: "Training Completed",
+            description: `Model training ${results.experiment_name ? `for ${results.experiment_name}` : ''} completed successfully.`
+          });
+          return; // Stop polling on completion
+        }
+        
+        // Continue polling for 'running' status
+        if (results.status === 'running') {
+          setPollingAttempts(prev => {
+            if (prev >= MAX_POLL_ATTEMPTS) {
+              setError('Training timeout: The experiment took too long to complete.');
+              setIsLoadingResults(false);
+              toast({
+                title: "Training Timeout",
+                description: "The experiment took too long to complete. Please check the status later.",
+                variant: "destructive"
+              });
+              return prev;
+            }
+            return prev + 1;
+          });
+          
+          pollTimeout = setTimeout(pollResults, POLL_INTERVAL);
+        }
+        
+      } catch (error: any) {
+        if (error.message && error.message.includes('404')) {
+          // Experiment not yet created - continue polling
+          toast({
+            title: "Waiting",
+            description: "Waiting for experiment to start...",
+          });
+          pollTimeout = setTimeout(pollResults, POLL_INTERVAL);
+        } else {
+          setError(error.message || 'Failed to fetch experiment results');
+          setIsLoadingResults(false);
+          toast({
+            title: "Error",
+            description: error.message || 'Failed to fetch experiment results',
+            variant: "destructive"
+          });
         }
       }
     };
     
     if (activeExperimentId && !experimentResults) {
       setIsLoadingResults(true);
-      
-      console.log("🚀 Starting polling for experiment ID:", activeExperimentId);
-      
-      if (pollTimeout) {
-        window.clearTimeout(pollTimeout);
-      }
-      if (pollInterval) {
-        window.clearInterval(pollInterval);
-      }
-      
-      pollTimeout = window.setTimeout(() => {
-        pollResults();
-        pollInterval = window.setInterval(pollResults, POLL_INTERVAL);
-      }, 3000);
+      pollTimeout = setTimeout(pollResults, 1000); // Start polling after 1 second
     }
     
     return () => {
       if (pollTimeout) {
-        window.clearTimeout(pollTimeout);
-      }
-      if (pollInterval) {
-        window.clearInterval(pollInterval);
+        clearTimeout(pollTimeout);
       }
     };
-  }, [activeExperimentId, experimentResults, pollingAttempts, initialWaitAttempts, lastTrainingType, automlParameters, toast]);
+  }, [activeExperimentId, experimentResults, toast]);
   
   const setAutomlEngine = (engine: TrainingEngine) => {
     setAutomlParametersState(prev => ({ ...prev, automlEngine: engine }));
