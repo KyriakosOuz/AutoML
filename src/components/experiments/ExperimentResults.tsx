@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ExperimentResults as ExperimentResultsType } from '@/types/training';
+import { ExperimentResults as ExperimentResultsType, TrainingResults } from '@/types/training';
 import {
   Award,
   BarChart4,
@@ -305,17 +305,17 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     files = [],
     hyperparameters,
     columns_to_keep,
-    class_labels
+    class_labels,
+    training_results = {} as TrainingResults
   } = experimentResults;
   
-  // Handle training results data
-  const trainingResults = experimentResults.training_results || {};
-  const metrics = trainingResults.metrics || {};
-  const confusionMatrix = trainingResults.confusion_matrix || metrics.confusion_matrix;
-  const classificationReport = trainingResults.classification_report || metrics.classification_report;
-  const yTrue = trainingResults.y_true || [];
-  const yPred = trainingResults.y_pred || [];
-  const yProbs = trainingResults.y_probs || [];
+  // Handle training results data safely with proper typing
+  const metrics = training_results?.metrics || {};
+  const confusionMatrix = training_results?.confusion_matrix || metrics?.confusion_matrix || [];
+  const classificationReport = training_results?.classification_report || metrics?.classification_report;
+  const yTrue = training_results?.y_true || [];
+  const yPred = training_results?.y_pred || [];
+  const yProbs = training_results?.y_probs || [];
   
   // Determine if this is a classification or regression task
   const isClassification = task_type?.includes('classification');
@@ -430,6 +430,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' ');
                     
+                  // Ensure value is a number before formatting
+                  const numericValue = typeof value === 'number' ? value : 0;
+                  
                   return (
                     <Card key={key} className="shadow-sm">
                       <CardHeader className="pb-2">
@@ -440,8 +443,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                       <CardContent>
                         <div className="text-2xl font-bold">
                           {isPercentageMetric
-                            ? `${(value * 100).toFixed(2)}%`
-                            : value.toFixed(4)}
+                            ? `${(numericValue * 100).toFixed(2)}%`
+                            : numericValue.toFixed(4)}
                         </div>
                       </CardContent>
                     </Card>
@@ -455,7 +458,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             )}
             
             {/* Confusion Matrix (for classification tasks) */}
-            {isClassification && confusionMatrix && (
+            {isClassification && confusionMatrix.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Confusion Matrix</h3>
                 <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
@@ -511,9 +514,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                           {isClassification && yProbs.length > 0 && (
                             <TableCell>
                               {Array.isArray(yProbs[index]) 
-                                ? `${(Math.max(...yProbs[index]) * 100).toFixed(2)}%` 
+                                ? `${(Math.max(...(yProbs[index] as number[])) * 100).toFixed(2)}%` 
                                 : typeof yProbs[index] === 'number'
-                                  ? `${(yProbs[index] * 100).toFixed(2)}%`
+                                  ? `${(yProbs[index] as number * 100).toFixed(2)}%`
                                   : 'N/A'}
                             </TableCell>
                           )}
@@ -779,4 +782,3 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
-
