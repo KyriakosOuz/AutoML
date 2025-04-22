@@ -53,15 +53,13 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger value="automl">AutoML</TabsTrigger>
             <TabsTrigger value="custom">Custom Training</TabsTrigger>
             {showResults && (
-              <>
-                <TabsTrigger value="results">
-                  Results
-                </TabsTrigger>
-                <TabsTrigger value="predict">
-                  Predict
-                </TabsTrigger>
-              </>
+              <TabsTrigger value="results">
+                Results
+              </TabsTrigger>
             )}
+            <TabsTrigger value="predict">
+              Predict
+            </TabsTrigger>
           </TabsList>
           {(activeExperimentId || showResults) && (
             <Button variant="outline" size="sm" onClick={handleReset}>
@@ -89,7 +87,7 @@ const ModelTrainingContent: React.FC = () => {
           )}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
-          {showResults && activeExperimentId ? (
+          {activeExperimentId ? (
             <DynamicPredictionForm experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">

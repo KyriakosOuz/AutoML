@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -146,16 +147,21 @@ export const submitManualPrediction = async (
 
 // New utility for manual prediction; uses FormData instead of JSON in body
 export async function predictManual(experimentId: string, inputs: Record<string, any>) {
+  const headers = await getAuthHeaders();
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('input_values', JSON.stringify(inputs));
 
-  // Always use the same endpoint; uses VITE_API_URL/env if set
+  // Always use the same endpoint; uses API_BASE_URL from constants
   const url = `${API_BASE_URL}/prediction/predict-manual/`;
 
   const res = await fetch(
     url,
-    { method: 'POST', body: form }
+    { 
+      method: 'POST', 
+      headers,  // Include auth headers
+      body: form 
+    }
   );
   if (!res.ok) throw new Error(await res.text());
   return res.json();

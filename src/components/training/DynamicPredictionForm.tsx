@@ -7,13 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { predictManual } from '@/lib/training';
+import { getPredictionSchema, predictManual } from '@/lib/training';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimentId }) => {
   const [columns, setColumns] = useState<string[]>([]);
@@ -38,15 +36,8 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     if (!experimentId) return;
     const fetchSchema = async () => {
       try {
-        const token = localStorage.getItem('sb-access-token') || '';
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API_BASE_URL}/prediction/schema/${experimentId}`, { headers });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text.substring(0, 300) || 'Failed to fetch prediction schema');
-        }
-        const resp = await res.json();
-        const data = resp.data || resp;
+        const data = await getPredictionSchema(experimentId);
+        
         setColumns(data.columns || []);
         setTarget(data.target || '');
         setExample(data.example || {});
@@ -70,8 +61,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       }
     };
     fetchSchema();
-    // eslint-disable-next-line
-  }, [experimentId]);
+  }, [experimentId, toast]);
 
   const handleInputChange = (col: string, value: string) => {
     setManualInputs(prev => ({ ...prev, [col]: value }));
