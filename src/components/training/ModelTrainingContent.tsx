@@ -72,7 +72,11 @@ const ModelTrainingContent: React.FC = () => {
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
           {showResults && activeExperimentId ? (
-            <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+            <ExperimentResultsView 
+              experimentId={activeExperimentId} 
+              status={experimentStatus} 
+              onReset={handleReset} 
+            />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Results Available</h3>
@@ -88,4 +92,3 @@ const ModelTrainingContent: React.FC = () => {
 };
 
 export default ModelTrainingContent;
-

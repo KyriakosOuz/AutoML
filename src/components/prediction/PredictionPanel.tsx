@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,6 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   const [taskType, setTaskType] = useState<string>('');
   const { toast } = useToast();
 
-  // Fetch experiment data and sample row on mount
   useEffect(() => {
     const fetchExperimentData = async () => {
       try {
@@ -43,60 +41,82 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
           throw new Error('Failed to fetch experiment results');
         }
         
-        // Extract relevant information
         const target = result.target_column;
         setTargetColumn(target);
         
-        // Get task type for handling classification confidence
         const taskTypeResult = result.task_type || '';
         setTaskType(taskTypeResult);
         
-        // Get sample row from X_sample if available
-        if (result.training_results?.X_sample && result.training_results.X_sample.length > 0) {
-          const firstSample = result.training_results.X_sample[0];
-          setSampleRow(firstSample);
-          
-          // Extract feature names excluding target column
-          const featureList = Object.keys(firstSample).filter(col => col !== target);
-          setFeatures(featureList);
-          
-          // Initialize input values with empty strings
-          const initialInputs: Record<string, string> = {};
-          featureList.forEach(feature => {
-            initialInputs[feature] = '';
-          });
-          setInputValues(initialInputs);
-        } 
-        // Fallback: If X_sample isn't available, try to get columns from the dataset
-        else if (result.dataset_file_url) {
-          try {
-            const resp = await fetch(result.dataset_file_url);
-            const text = await resp.text();
-            const allCols = text.split('\n')[0].split(',').map(col => col.trim());
+        if (result.training_results?.y_true && result.training_results.y_pred) {
+          if (result.files?.some(file => file.file_type === 'dataset')) {
+            const datasetFile = result.files.find(file => file.file_type === 'dataset');
+            if (datasetFile?.file_url) {
+              try {
+                const resp = await fetch(datasetFile.file_url);
+                const text = await resp.text();
+                const allCols = text.split('\n')[0].split(',').map(col => col.trim());
+                
+                const featureList = allCols.filter(col => col !== target);
+                setFeatures(featureList);
+                
+                const sampleData: Record<string, string> = {};
+                featureList.forEach(feature => {
+                  sampleData[feature] = `Sample ${feature} value`;
+                });
+                setSampleRow(sampleData);
+                
+                const initialInputs: Record<string, string> = {};
+                featureList.forEach(feature => {
+                  initialInputs[feature] = '';
+                });
+                setInputValues(initialInputs);
+              } catch (err) {
+                console.error('Error fetching dataset file:', err);
+                setError('Could not load feature columns from dataset');
+              }
+            }
+          } else {
+            const availableColumns = Object.keys(result.metrics || {})
+              .filter(key => !['accuracy', 'f1_score', 'precision', 'recall', 'classification_report'].includes(key))
+              .map(key => key.replace('_importance', ''));
             
-            // Filter out target column
-            const featureList = allCols.filter(col => col !== target);
+            if (availableColumns.length > 0) {
+              setFeatures(availableColumns);
+              
+              const sampleData: Record<string, string> = {};
+              availableColumns.forEach(feature => {
+                sampleData[feature] = `Sample ${feature} value`;
+              });
+              setSampleRow(sampleData);
+              
+              const initialInputs: Record<string, string> = {};
+              availableColumns.forEach(feature => {
+                initialInputs[feature] = '';
+              });
+              setInputValues(initialInputs);
+            } else {
+              setError('Could not determine feature columns from available data');
+            }
+          }
+        } else {
+          if (result.columns_to_keep && result.columns_to_keep.length > 0) {
+            const featureList = result.columns_to_keep.filter(col => col !== target);
             setFeatures(featureList);
             
-            // Create empty sample row for placeholders
             const sampleData: Record<string, string> = {};
             featureList.forEach(feature => {
               sampleData[feature] = `Sample ${feature} value`;
             });
             setSampleRow(sampleData);
             
-            // Initialize input values
             const initialInputs: Record<string, string> = {};
             featureList.forEach(feature => {
               initialInputs[feature] = '';
             });
             setInputValues(initialInputs);
-          } catch (err) {
-            console.error('Error fetching dataset file:', err);
-            setError('Could not load feature columns from dataset');
+          } else {
+            setError('No feature columns available');
           }
-        } else {
-          setError('No sample data or dataset file available');
         }
       } catch (err) {
         console.error('Error fetching experiment data:', err);
@@ -111,7 +131,6 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     }
   }, [experimentId]);
   
-  // Handle input change
   const handleInputChange = (feature: string, value: string) => {
     setInputValues(prev => ({
       ...prev,
@@ -119,33 +138,27 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     }));
   };
   
-  // Check if all inputs are filled
   const areAllInputsFilled = () => {
     return features.every(feature => inputValues[feature]?.trim() !== '');
   };
   
-  // Handle prediction submission
   const handlePredict = async () => {
     try {
       setPredicting(true);
       setPrediction(null);
       setConfidence(null);
       
-      // Format input values (convert numbers)
       const formattedInputs: Record<string, any> = {};
       Object.entries(inputValues).forEach(([key, value]) => {
         const numValue = Number(value);
         formattedInputs[key] = isNaN(numValue) ? value : numValue;
       });
       
-      // Make prediction API call
       const result = await predictManual(experimentId, formattedInputs);
       
-      // Handle prediction result
       if (result.prediction !== undefined) {
         setPrediction(result.prediction);
         
-        // Set confidence for classification tasks
         if (taskType.includes('classification') && result.probability !== undefined) {
           setConfidence(result.probability);
         }
@@ -171,10 +184,8 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     }
   };
   
-  // Determine if it's a classification task
   const isClassification = taskType.includes('classification');
   
-  // Format prediction for display
   const formattedPrediction = () => {
     if (prediction === null) return '';
     
