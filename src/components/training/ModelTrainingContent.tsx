@@ -2,22 +2,20 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import ExperimentResults from '../results/ExperimentResults';
 import { useTraining } from '@/contexts/TrainingContext';
-import { ExternalLink } from 'lucide-react';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
     resetTrainingState, 
     activeExperimentId,
-    isLoadingResults
+    isLoadingResults,
+    experimentResults
   } = useTraining();
   
   const [activeTab, setActiveTab] = useState<'automl' | 'custom'>('automl');
-  const navigate = useNavigate();
   
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'automl' | 'custom');
@@ -26,15 +24,9 @@ const ModelTrainingContent: React.FC = () => {
   const handleReset = () => {
     resetTrainingState();
   };
-
-  const viewFullResults = () => {
-    if (activeExperimentId) {
-      navigate(`/experiment/${activeExperimentId}`);
-    }
-  };
   
-  // Only show results tab if we have active experiment or are loading results
-  const showResults = activeExperimentId || isLoadingResults;
+  // Only show results tab if we have active experiment results or loading results
+  const showResults = (activeExperimentId && experimentResults) || isLoadingResults;
   
   return (
     <div className="w-full">
@@ -56,17 +48,6 @@ const ModelTrainingContent: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="results" className="pt-4">
-              <div className="flex justify-end mb-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={viewFullResults}
-                  className="flex items-center gap-1"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  View Full Results
-                </Button>
-              </div>
               <ExperimentResults 
                 experimentId={activeExperimentId} 
                 onReset={handleReset} 

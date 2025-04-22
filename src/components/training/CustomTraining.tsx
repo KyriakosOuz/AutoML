@@ -141,15 +141,15 @@ const CustomTraining: React.FC = () => {
         description: `Starting custom training with ${customParameters.algorithm}...`,
       });
 
-      const { experiment_id, experiment_name } = await trainingApi.customTrain(formData);
+      const result = await trainingApi.customTrain(formData);
       
-      if (experiment_id) {
-        setActiveExperimentId(experiment_id);
-        startPolling(experiment_id);
+      if (result && result.experiment_id) {
+        setActiveExperimentId(result.experiment_id);
+        startPolling(result.experiment_id);
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${experiment_name} (${experiment_id}) started.`,
+          description: `Experiment ${result.experiment_name || result.experiment_id} started.`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');

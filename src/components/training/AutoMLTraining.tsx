@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/TrainingContext';
 import { trainingApi } from '@/lib/api';
@@ -33,11 +32,11 @@ const AutoMLTraining: React.FC = () => {
     setRandomSeed,
     setError,
     startPolling,
-    setLastTrainingType
+    setLastTrainingType,
+    setActiveExperimentId
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [experimentName, setExperimentName] = useState('');
 
   useEffect(() => {
@@ -67,6 +66,7 @@ const AutoMLTraining: React.FC = () => {
     }
 
     try {
+      setActiveExperimentId(null);
       setIsTraining(true);
       setError(null);
 
@@ -75,7 +75,7 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      const { experiment_id, experiment_name } = await trainingApi.automlTrain(
+      const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
@@ -84,13 +84,13 @@ const AutoMLTraining: React.FC = () => {
         randomSeed
       );
 
-      if (experiment_id) {
+      if (result && result.experiment_id) {
         setLastTrainingType('automl');
-        startPolling(experiment_id);
+        startPolling(result.experiment_id);
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${experiment_name} (${experiment_id}) started.`,
+          description: `Experiment ${result.experiment_name || result.experiment_id} started.`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');
@@ -261,7 +261,7 @@ const AutoMLTraining: React.FC = () => {
               )}
             </Button>
 
-            <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
+            <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md mt-4">
               <p className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 <span>Training might take several minutes depending on dataset size and complexity.</span>
