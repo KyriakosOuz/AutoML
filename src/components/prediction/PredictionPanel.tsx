@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { getExperimentResults } from '@/lib/training';
+import { getExperimentResults, predictManual } from '@/lib/training';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,160 +10,172 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, FileInput } from 'lucide-react';
-import { predictManual } from '@/lib/training';
+import { Loader } from 'lucide-react';
 
 interface PredictionPanelProps {
   experimentId: string;
 }
 
+type ManualForm = {
+  features: string[];
+  sampleRow: Record<string, string>;
+  targetColumn: string;
+};
+
+const parseCsvSample = (csvText: string, targetColumn: string) => {
+  const rows = csvText.trim().split('\n');
+  if (rows.length < 2) return { features: [], sampleRow: {} };
+
+  const header = rows[0].split(',').map(col => col.trim());
+  const firstRow = rows[1].split(',');
+
+  // Remove target_column from features
+  const features = header.filter(f => f !== targetColumn);
+
+  // Map features to sample values
+  const sampleRow: Record<string, string> = {};
+  features.forEach((feature, idx) => {
+    const colIdx = header.indexOf(feature);
+    sampleRow[feature] = (firstRow[colIdx] ?? '').trim();
+  });
+
+  return { features, sampleRow };
+};
+
 const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   const [loading, setLoading] = useState(true);
   const [predicting, setPredicting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [features, setFeatures] = useState<string[]>([]);
-  const [targetColumn, setTargetColumn] = useState<string>('');
-  const [sampleRow, setSampleRow] = useState<Record<string, any>>({});
+  const [manualForm, setManualForm] = useState<ManualForm | null>(null);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [prediction, setPrediction] = useState<any>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [taskType, setTaskType] = useState<string>('');
   const { toast } = useToast();
 
+  // --- Manual Prediction Data Fetching Logic ---
   useEffect(() => {
-    const fetchExperimentData = async () => {
+    const fetchManualPredictionInfo = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        setLoading(true);
-        setError(null);
-        
+        // 1. Fetch experiment results JSON
         const result = await getExperimentResults(experimentId);
-        
-        if (!result) {
-          throw new Error('Failed to fetch experiment results');
+
+        if (!result) throw new Error('Failed to fetch experiment results');
+        const target_column = result.target_column ?? '';
+        setTaskType(result.task_type || '');
+
+        let features: string[] = [];
+        let sampleRow: Record<string, string> = {};
+
+        // 2. Get dataset_file_url and sample row
+        // Prefer result.files to locate dataset file
+        let datasetFileUrl: string | undefined;
+        if (result.files?.length) {
+          const datasetFile = result.files.find(f => f.file_type === 'dataset');
+          if (datasetFile?.file_url) {
+            datasetFileUrl = datasetFile.file_url;
+          }
         }
-        
-        const target = result.target_column;
-        setTargetColumn(target);
-        
-        const taskTypeResult = result.task_type || '';
-        setTaskType(taskTypeResult);
-        
-        if (result.training_results?.y_true && result.training_results.y_pred) {
-          if (result.files?.some(file => file.file_type === 'dataset')) {
-            const datasetFile = result.files.find(file => file.file_type === 'dataset');
-            if (datasetFile?.file_url) {
-              try {
-                const resp = await fetch(datasetFile.file_url);
-                const text = await resp.text();
-                const allCols = text.split('\n')[0].split(',').map(col => col.trim());
-                
-                const featureList = allCols.filter(col => col !== target);
-                setFeatures(featureList);
-                
-                const sampleData: Record<string, string> = {};
-                featureList.forEach(feature => {
-                  sampleData[feature] = `Sample ${feature} value`;
-                });
-                setSampleRow(sampleData);
-                
-                const initialInputs: Record<string, string> = {};
-                featureList.forEach(feature => {
-                  initialInputs[feature] = '';
-                });
-                setInputValues(initialInputs);
-              } catch (err) {
-                console.error('Error fetching dataset file:', err);
-                setError('Could not load feature columns from dataset');
-              }
-            }
-          } else {
-            const availableColumns = Object.keys(result.metrics || {})
-              .filter(key => !['accuracy', 'f1_score', 'precision', 'recall', 'classification_report'].includes(key))
-              .map(key => key.replace('_importance', ''));
-            
-            if (availableColumns.length > 0) {
-              setFeatures(availableColumns);
-              
-              const sampleData: Record<string, string> = {};
-              availableColumns.forEach(feature => {
-                sampleData[feature] = `Sample ${feature} value`;
+        // fallback for direct property
+        if (!datasetFileUrl && (result as any).dataset_file_url) {
+          datasetFileUrl = (result as any).dataset_file_url;
+        }
+
+        // Directly use X_sample if available
+        if ((result.training_results as any)?.X_sample && Array.isArray((result.training_results as any).X_sample)) {
+          // Use header from CSV still for safety
+          if (datasetFileUrl) {
+            try {
+              const resp = await fetch(datasetFileUrl);
+              const text = await resp.text();
+              const header = text.split('\n')[0].split(',').map(col => col.trim());
+              features = header.filter(f => f !== target_column);
+              const xArr = (result.training_results as any).X_sample[0] || [];
+              features.forEach((feature, idx) => {
+                sampleRow[feature] = xArr[header.indexOf(feature)] ?? '';
               });
-              setSampleRow(sampleData);
-              
-              const initialInputs: Record<string, string> = {};
-              availableColumns.forEach(feature => {
-                initialInputs[feature] = '';
-              });
-              setInputValues(initialInputs);
-            } else {
-              setError('Could not determine feature columns from available data');
+            } catch (e) {
+              // fallback: just show empty values
+              features = (result.columns_to_keep ?? []).filter(f => f !== target_column);
+              features.forEach(f => sampleRow[f] = '');
             }
           }
+        }
+        // Else, fetch from dataset CSV
+        else if (datasetFileUrl) {
+          const resp = await fetch(datasetFileUrl);
+          const text = await resp.text();
+          const res = parseCsvSample(text, target_column);
+          features = res.features;
+          sampleRow = res.sampleRow;
+        } else if (result.columns_to_keep && result.columns_to_keep.length > 0) {
+          features = result.columns_to_keep.filter(f => f !== target_column);
+          features.forEach(f => sampleRow[f] = '');
         } else {
-          if (result.columns_to_keep && result.columns_to_keep.length > 0) {
-            const featureList = result.columns_to_keep.filter(col => col !== target);
-            setFeatures(featureList);
-            
-            const sampleData: Record<string, string> = {};
-            featureList.forEach(feature => {
-              sampleData[feature] = `Sample ${feature} value`;
-            });
-            setSampleRow(sampleData);
-            
-            const initialInputs: Record<string, string> = {};
-            featureList.forEach(feature => {
-              initialInputs[feature] = '';
-            });
-            setInputValues(initialInputs);
-          } else {
-            setError('No feature columns available');
-          }
+          throw new Error('Unable to load feature columns');
         }
+
+        setManualForm({
+          features,
+          sampleRow,
+          targetColumn: target_column
+        });
+
+        // Set up empty input values
+        const initialInputs: Record<string, string> = {};
+        features.forEach(f => {
+          initialInputs[f] = '';
+        });
+        setInputValues(initialInputs);
+
       } catch (err) {
-        console.error('Error fetching experiment data:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        setError(err instanceof Error ? err.message : 'Failed to load prediction form');
       } finally {
         setLoading(false);
       }
     };
-    
+
     if (experimentId) {
-      fetchExperimentData();
+      fetchManualPredictionInfo();
     }
   }, [experimentId]);
-  
+
+  // --- Form Handlers ---
   const handleInputChange = (feature: string, value: string) => {
     setInputValues(prev => ({
       ...prev,
       [feature]: value
     }));
   };
-  
+
   const areAllInputsFilled = () => {
-    return features.every(feature => inputValues[feature]?.trim() !== '');
+    if (!manualForm) return false;
+    return manualForm.features.every(feature => inputValues[feature]?.trim() !== '');
   };
-  
+
   const handlePredict = async () => {
+    setPredicting(true);
+    setPrediction(null);
+    setConfidence(null);
+
     try {
-      setPredicting(true);
-      setPrediction(null);
-      setConfidence(null);
-      
+      // Number parse attempt
       const formattedInputs: Record<string, any> = {};
       Object.entries(inputValues).forEach(([key, value]) => {
         const numValue = Number(value);
         formattedInputs[key] = isNaN(numValue) ? value : numValue;
       });
-      
+
       const result = await predictManual(experimentId, formattedInputs);
-      
+
       if (result.prediction !== undefined) {
         setPrediction(result.prediction);
-        
         if (taskType.includes('classification') && result.probability !== undefined) {
           setConfidence(result.probability);
         }
-        
         toast({
           title: 'Prediction Generated',
           description: 'The model has successfully generated a prediction.',
@@ -171,9 +184,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
         throw new Error('Invalid prediction result');
       }
     } catch (err) {
-      console.error('Prediction error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate prediction');
-      
       toast({
         title: 'Prediction Failed',
         description: err instanceof Error ? err.message : 'Could not generate prediction',
@@ -183,19 +194,8 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
       setPredicting(false);
     }
   };
-  
-  const isClassification = taskType.includes('classification');
-  
-  const formattedPrediction = () => {
-    if (prediction === null) return '';
-    
-    if (typeof prediction === 'number') {
-      return prediction.toFixed(4);
-    }
-    
-    return prediction.toString();
-  };
-  
+
+  // --- Render ---
   if (loading) {
     return (
       <Card>
@@ -213,7 +213,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
       </Card>
     );
   }
-  
+
   if (error) {
     return (
       <Card>
@@ -229,7 +229,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
       </Card>
     );
   }
-  
+
   return (
     <Card>
       <CardHeader>
@@ -240,36 +240,32 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          {features.map((feature) => (
+          {/* --- Dynamically generated input form based on dataset --- */}
+          {manualForm && manualForm.features.map((feature) => (
             <div key={feature} className="space-y-2">
               <Label htmlFor={`feature-${feature}`}>{feature}</Label>
               <Input
                 id={`feature-${feature}`}
-                placeholder={sampleRow[feature]?.toString() || `Enter ${feature}`}
+                placeholder={manualForm.sampleRow[feature] || `Enter ${feature}`}
                 value={inputValues[feature]}
                 onChange={(e) => handleInputChange(feature, e.target.value)}
               />
             </div>
           ))}
-          
-          <div className="space-y-2 mt-4">
-            <Label htmlFor="extra-manual-input">Manual Input Field (example)</Label>
-            <Input id="extra-manual-input" placeholder="Extra manual input" />
-          </div>
-          
+
           <div className="space-y-2 mt-4 pt-4 border-t">
-            <Label htmlFor="prediction">{targetColumn || 'Prediction'}</Label>
+            <Label htmlFor="prediction">{manualForm?.targetColumn || 'Prediction'}</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="prediction"
-                value={formattedPrediction()}
+                value={prediction !== null && typeof prediction === "number" ? prediction.toFixed(4) : prediction ?? ''}
                 placeholder="Prediction will appear here"
                 readOnly
                 disabled
                 className={prediction ? "bg-primary/5 font-medium" : ""}
               />
-              
-              {isClassification && confidence !== null && (
+
+              {taskType.includes('classification') && confidence !== null && (
                 <Badge variant="outline" className="bg-primary/10 text-primary">
                   {(confidence * 100).toFixed(1)}% confidence
                 </Badge>
@@ -279,8 +275,8 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          onClick={handlePredict} 
+        <Button
+          onClick={handlePredict}
           disabled={predicting || !areAllInputsFilled()}
           className="w-full"
         >
@@ -299,3 +295,4 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
 };
 
 export default PredictionPanel;
+
