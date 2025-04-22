@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
-import { ExperimentResults } from '@/types/training';
+import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
 import { TrainingContextValue, TrainingContextState, ExperimentStatus } from './types';
 import { EXPERIMENT_STORAGE_KEY, EXPERIMENT_TYPE_STORAGE_KEY, defaultAutomlParameters, defaultCustomParameters } from './constants';
 import { useExperimentPolling } from './useExperimentPolling';
@@ -22,6 +23,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     experimentResults: null,
     isLoadingResults: false,
     experimentStatus: 'processing',
+    statusResponse: null,
     automlEngine: defaultAutomlParameters.automlEngine,
     testSize: defaultAutomlParameters.testSize,
     stratify: defaultAutomlParameters.stratify,
@@ -63,53 +65,31 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeExperimentId, state.lastTrainingType]);
 
+  // Effect to fetch results when status indicates they're ready
+  useEffect(() => {
+    if (state.statusResponse?.hasTrainingResults === true && 
+        state.activeExperimentId && 
+        !state.experimentResults && 
+        !state.isLoadingResults) {
+      console.log("[TrainingContext] Status indicates results are ready, fetching them now");
+      getExperimentResults();
+    }
+  }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults]);
+
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
     setState(prev => ({
       ...prev,
-      isLoadingResults: true
+      statusResponse: {
+        status: 'completed',
+        hasTrainingResults: true
+      },
+      experimentStatus: 'completed'
     }));
-    try {
-      const results = await trainingApi.getExperimentResults(experimentId);
-      if (results) {
-        setState(prev => ({
-          ...prev,
-          experimentResults: results,
-          isLoadingResults: false,
-          isTraining: false,
-          error: null,
-        }));
-
-        toast({
-          title: "Training Complete",
-          description: "Your model has finished training successfully!"
-        });
-        return;
-      } else {
-        setState(prev => ({
-          ...prev,
-          isLoadingResults: false
-        }));
-        return;
-      }
-    } catch (error) {
-      const errMsg =
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch results after training completion (server not ready)';
-      setState(prev => ({
-        ...prev,
-        error: errMsg,
-        isLoadingResults: false,
-        isTraining: false
-      }));
-
-      toast({
-        title: "Error Fetching Results",
-        description: errMsg,
-        variant: "destructive"
-      });
-      return;
-    }
+    
+    toast({
+      title: "Training Complete",
+      description: "Your model has finished training successfully!"
+    });
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
@@ -117,7 +97,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       ...prev,
       error,
       isLoadingResults: false,
-      isTraining: false
+      isTraining: false,
+      statusResponse: {
+        status: 'failed',
+        hasTrainingResults: false,
+        error_message: error
+      }
     }));
     
     toast({
@@ -136,14 +121,31 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const getExperimentResults = React.useCallback(async () => {
     if (!state.activeExperimentId) return;
+    
+    // Don't refetch if we already have results
+    if (state.experimentResults && !state.isLoadingResults) {
+      console.log("[TrainingContext] Already have results, not fetching again");
+      return;
+    }
+    
     setState(prev => ({ ...prev, isLoadingResults: true }));
+    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId);
 
     try {
+      // Use the correct endpoint for full experiment results
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
 
       if (results) {
-        setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false, error: null }));
+        console.log("[TrainingContext] Successfully fetched experiment results");
+        setState(prev => ({ 
+          ...prev, 
+          experimentResults: results, 
+          isLoadingResults: false, 
+          error: null,
+          experimentStatus: results.status || 'completed'
+        }));
       } else {
+        console.log("[TrainingContext] No results returned from API");
         setState(prev => ({ ...prev, isLoadingResults: false }));
       }
     } catch (error) {
@@ -151,6 +153,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         error instanceof Error
           ? error.message
           : 'Failed to fetch experiment results';
+      console.error("[TrainingContext] Error fetching results:", errorMessage);
       setState(prev => ({ ...prev, error: errorMessage, isLoadingResults: false }));
       toast({
         title: "Error Fetching Results",
@@ -158,7 +161,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         variant: "destructive"
       });
     }
-  }, [state.activeExperimentId, toast]);
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, toast]);
 
   const contextValue: TrainingContextValue = {
     ...state,
@@ -173,6 +176,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setExperimentResults: (results) => setState(prev => ({ ...prev, experimentResults: results })),
     setIsLoadingResults: (isLoading) => setState(prev => ({ ...prev, isLoadingResults: isLoading })),
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
+    setStatusResponse: (response) => setState(prev => ({ ...prev, statusResponse: response })),
     setAutomlEngine: (engine) => setState(prev => ({ ...prev, automlEngine: engine })),
     setTestSize: (size) => setState(prev => ({ ...prev, testSize: size })),
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
@@ -191,6 +195,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         experimentResults: null,
         isLoadingResults: false,
         experimentStatus: 'processing',
+        statusResponse: null,
         automlEngine: defaultAutomlParameters.automlEngine,
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
@@ -204,7 +209,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setState(prev => ({
         ...prev,
         experimentResults: null,
-        activeExperimentId: null
+        activeExperimentId: null,
+        statusResponse: null
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);

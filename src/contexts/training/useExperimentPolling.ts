@@ -1,9 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus } from './types';
+import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
-import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 
 export interface UseExperimentPollingProps {
   onSuccess: (experimentId: string) => void;

@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -24,22 +25,14 @@ export const getExperimentResults = async (
   experimentId: string
 ): Promise<ExperimentResults | null> => {
   try {
-    console.log('[API] Fetching results for experiment:', experimentId);
+    console.log('[API] Fetching full results for experiment:', experimentId);
     const headers = await getAuthHeaders();
 
-    // Use the correct endpoint as per backend implementation
-    let response = await fetch(
+    // Always use the correct endpoint for full experiment results
+    const response = await fetch(
       `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
       { headers }
     );
-
-    if (!response.ok && response.status !== 401) {
-      console.warn('[API] Primary endpoint failed, retrying...');
-      response = await fetch(
-        `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
-        { headers }
-      );
-    }
 
     if (!response.ok) {
       if (response.status === 401) {

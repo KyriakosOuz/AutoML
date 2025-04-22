@@ -67,6 +67,13 @@ export interface ExperimentResults {
   class_labels?: string[];
 }
 
+export interface ExperimentStatusResponse {
+  status: ExperimentStatus;
+  hasTrainingResults: boolean;
+  message?: string;
+  error_message?: string;
+}
+
 export interface AutoMLResult {
   experimentId: string;
   engine: TrainingEngine;

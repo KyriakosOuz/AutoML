@@ -5,7 +5,8 @@ import {
   AutoMLResult, 
   CustomTrainingResult, 
   ExperimentResults, 
-  TrainingEngine 
+  TrainingEngine,
+  ExperimentStatusResponse 
 } from '@/types/training';
 
 export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed' | 'success';
@@ -22,6 +23,7 @@ export interface TrainingContextState {
   experimentResults: ExperimentResults | null;
   isLoadingResults: boolean;
   experimentStatus: ExperimentStatus;
+  statusResponse: ExperimentStatusResponse | null;
   automlEngine: TrainingEngine;
   testSize: number;
   stratify: boolean;
@@ -50,5 +52,6 @@ export interface TrainingContextValue extends TrainingContextState {
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
+  setStatusResponse: (response: ExperimentStatusResponse | null) => void;
   setActiveTab: (tab: string) => void;
 }
