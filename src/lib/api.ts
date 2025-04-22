@@ -55,13 +55,13 @@ const handleApiResponse = async (response: Response) => {
     throw new Error(errorMessage);
   }
 
-  // Only attempt to parse JSON if content-type indicates it's JSON
   if (!contentType || !contentType.includes('application/json')) {
     return {}; // Safe fallback if no body or wrong format
   }
 
   try {
-    return await response.json();
+    const data = await response.json();
+    return data.data?.experiment_results || data.experiment_results || data;
   } catch (err) {
     console.error('❌ Failed to parse JSON response:', err);
     return {};
@@ -414,7 +414,7 @@ export const trainingApi = {
       }
       
       const data = await response.json();
-      return data.experiment_results || data;
+      return data.data?.experiment_results || data.experiment_results || data;
     } catch (error) {
       console.error('Error fetching experiment results:', error);
       throw error;

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -75,7 +76,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
     let pollInterval: NodeJS.Timeout;
 
     if (activeExperimentId && (isLoadingResults || !experimentResults)) {
-      pollInterval = setInterval(() => {
+      pollInterval = setInterval(async () => {
         trainingApi.getExperimentResults(activeExperimentId)
           .then(data => {
             if (data.status === 'completed' || data.status === 'success') {
