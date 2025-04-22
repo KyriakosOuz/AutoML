@@ -1,68 +1,76 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTraining } from '@/contexts/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
-import DatasetSummary from './DatasetSummary';
 import UnifiedExperimentResults from './UnifiedExperimentResults';
+import { useTraining } from '@/contexts/TrainingContext';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
-    activeExperimentId, 
+    resetTrainingState, 
     experimentResults, 
-    resetTrainingState,
-    lastTrainingType
+    activeExperimentId,
+    isLoadingResults
   } = useTraining();
-  const [activeTab, setActiveTab] = useState<string>('automl');
-
-  useEffect(() => {
-    if (experimentResults?.status === 'completed' || experimentResults?.status === 'success') {
-      setActiveTab('results');
-    }
-  }, [experimentResults?.status]);
-
+  
+  const [activeTab, setActiveTab] = useState<'automl' | 'custom'>('automl');
+  
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
+    setActiveTab(value as 'automl' | 'custom');
   };
-
+  
   const handleReset = () => {
     resetTrainingState();
-    setActiveTab('automl');
   };
-
-  const handleBack = () => {
-    setActiveTab(lastTrainingType === 'custom' ? 'custom' : 'automl');
-  };
-
+  
+  // Only show results tab if we have results or are loading results
+  const showResults = experimentResults || isLoadingResults || activeExperimentId;
+  
   return (
-    <div className="container max-w-7xl mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Model Training</h1>
-      
-      <DatasetSummary />
-      
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="automl">AutoML Training</TabsTrigger>
-          <TabsTrigger value="custom">Custom Training</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="automl">
-          <AutoMLTraining />
-        </TabsContent>
-        
-        <TabsContent value="custom">
-          <CustomTraining />
-        </TabsContent>
-        
-        <TabsContent value="results">
-          <UnifiedExperimentResults 
-            onReset={handleReset} 
-            onBack={handleBack}
-          />
-        </TabsContent>
-      </Tabs>
+    <div className="w-full">
+      {showResults ? (
+        <div className="space-y-6">
+          <Tabs defaultValue="results" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="automl">AutoML Training</TabsTrigger>
+              <TabsTrigger value="custom">Custom Training</TabsTrigger>
+              <TabsTrigger value="results">Results</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="automl" className="p-4 pt-6">
+              <AutoMLTraining />
+            </TabsContent>
+            
+            <TabsContent value="custom" className="p-4 pt-6">
+              <CustomTraining />
+            </TabsContent>
+            
+            <TabsContent value="results" className="pt-4">
+              <UnifiedExperimentResults onReset={handleReset} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      ) : (
+        <Tabs 
+          value={activeTab} 
+          onValueChange={handleTabChange} 
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="automl">AutoML Training</TabsTrigger>
+            <TabsTrigger value="custom">Custom Training</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="automl" className="p-4 pt-6">
+            <AutoMLTraining />
+          </TabsContent>
+          
+          <TabsContent value="custom" className="p-4 pt-6">
+            <CustomTraining />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
