@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -63,12 +62,21 @@ export const useExperimentPolling = ({
 
         setExperimentStatus(data.status);
 
-        // Stop polling SPECIFICALLY when status is "completed"
-        if (data.status === 'completed') {
-          console.log('[TrainingContext] Training completed (polling stops).');
+        // Only trigger onSuccess when BOTH conditions are met: status is "completed" AND hasTrainingResults is true
+        if (data.status === 'completed' && data.hasTrainingResults === true) {
+          console.log('[TrainingContext] Training completed with results ready (polling stops).');
           stopPolling();
-          onSuccess(experimentId); // this will fetch results or show "No results"
+          
+          // Add a small delay before fetching results to give the backend time to fully prepare them
+          setTimeout(() => {
+            onSuccess(experimentId);
+          }, 2000); 
           return;
+        }
+        
+        // If completed but no results yet, keep polling but don't call onSuccess
+        if (data.status === 'completed' && data.hasTrainingResults !== true) {
+          console.log('[TrainingContext] Training completed but results not ready yet. Continuing to poll.');
         }
 
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
