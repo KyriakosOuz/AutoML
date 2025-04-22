@@ -15,6 +15,42 @@ const isValidStatsObject = (stats: any, label: string) => {
   );
 };
 
+// Helper to only render primitive or display a placeholder for object/array
+const renderMetricCell = (value: any) => {
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value === undefined || value === null) {
+    return '-';
+  }
+  // Avoid rendering raw object/array: show JSON or '-'
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '[object]';
+  }
+};
+
+const renderMetricCellFormatted = (
+  value: any,
+  isPercent: boolean = false
+) => {
+  if (typeof value === 'number') {
+    return isPercent ? `${(value * 100).toFixed(1)}%` : value;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value === undefined || value === null) {
+    return '-';
+  }
+  // Avoid rendering raw object/array: show placeholder
+  return '[invalid]';
+};
+
 const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report }) => {
   console.log(`${LOG_PREFIX} Received report:`, report);
   console.log(`${LOG_PREFIX} Report type:`, typeof report);
@@ -74,23 +110,19 @@ const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report
 
           return (
             <TableRow key={label}>
-              <TableCell className="capitalize">{label.replace('_',' ')}</TableCell>
+              <TableCell className="capitalize">{label.replace('_', ' ')}</TableCell>
               <TableCell>
-                {typeof statsObj.precision === 'number'
-                  ? `${(statsObj.precision * 100).toFixed(1)}%`
-                  : statsObj.precision ?? '-'}
+                {renderMetricCellFormatted(statsObj.precision, true)}
               </TableCell>
               <TableCell>
-                {typeof statsObj.recall === 'number'
-                  ? `${(statsObj.recall * 100).toFixed(1)}%`
-                  : statsObj.recall ?? '-'}
+                {renderMetricCellFormatted(statsObj.recall, true)}
               </TableCell>
               <TableCell>
-                {typeof statsObj['f1-score'] === 'number'
-                  ? `${(statsObj['f1-score'] * 100).toFixed(1)}%`
-                  : statsObj['f1-score'] ?? '-'}
+                {renderMetricCellFormatted(statsObj['f1-score'], true)}
               </TableCell>
-              <TableCell>{statsObj.support ?? '-'}</TableCell>
+              <TableCell>
+                {renderMetricCell(statsObj.support)}
+              </TableCell>
             </TableRow>
           );
         })}
