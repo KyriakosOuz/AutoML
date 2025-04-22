@@ -384,7 +384,7 @@ export const trainingApi = {
 
   getExperimentResults: async (experimentId: string) => {
     try {
-      const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
+      const response = await fetch(`/experiment-results/${experimentId}`, {
         headers: getAuthHeaders()
       });
       
