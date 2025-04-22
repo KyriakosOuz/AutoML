@@ -29,6 +29,7 @@ export const useExperimentPolling = ({
     }
   }, [pollingInterval]);
 
+  // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string) => {
     stopPolling();
 
@@ -42,7 +43,7 @@ export const useExperimentPolling = ({
       description: "Your model training has started. Please wait while we process your request."
     });
 
-    const interval = setInterval(async () => {
+    const poller = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
         const data = response.data;
@@ -59,26 +60,19 @@ export const useExperimentPolling = ({
           });
           return;
         }
-
         setExperimentStatus(data.status);
 
-        // Only trigger onSuccess when BOTH conditions are met: status is "completed" AND hasTrainingResults is true
-        if (data.status === 'completed' && data.hasTrainingResults === true) {
-          console.log('[TrainingContext] Training completed with results ready (polling stops).');
-          stopPolling();
-          
-          // Add a small delay before fetching results to give the backend time to fully prepare them
+        // Stop polling immediately if results are available
+        if (data.hasTrainingResults === true) {
+          console.log('[TrainingContext] Results ready — stopping poller');
+          clearInterval(poller);
+          setPollingInterval(null);
+
           setTimeout(() => {
             onSuccess(experimentId);
-          }, 2000); 
+          }, 1000); // (optional: allow backend ready time)
           return;
         }
-        
-        // If completed but no results yet, keep polling but don't call onSuccess
-        if (data.status === 'completed' && data.hasTrainingResults !== true) {
-          console.log('[TrainingContext] Training completed but results not ready yet. Continuing to poll.');
-        }
-
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');
@@ -91,12 +85,9 @@ export const useExperimentPolling = ({
           });
           return;
         }
-
         setPollingAttempts(prev => prev + 1);
       } catch (error: any) {
         console.error('[TrainingContext] Polling error:', error);
-
-        // Session expired/401
         if (
           typeof error.message === 'string' &&
           (error.message.includes('Unauthorized') || error.message.includes('401'))
@@ -111,7 +102,6 @@ export const useExperimentPolling = ({
           });
           return;
         }
-
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
           stopPolling();
@@ -128,7 +118,7 @@ export const useExperimentPolling = ({
       }
     }, POLL_INTERVAL);
 
-    setPollingInterval(interval);
+    setPollingInterval(poller);
   }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
   useEffect(() => {

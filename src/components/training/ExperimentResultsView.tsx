@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -30,9 +29,9 @@ interface ExperimentResultsViewProps {
   onReset?: () => void;
 }
 
-const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({ 
-  experimentId, 
-  onReset 
+const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
+  experimentId,
+  onReset
 }) => {
   const [results, setResults] = useState<ExperimentResults | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,37 +41,51 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
   useEffect(() => {
     if (!experimentId) return;
-    
-    const fetchResults = async () => {
-      setIsLoading(true);
-      setError(null);
-      
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+
+    async function fetchResults() {
       try {
         const data = await getExperimentResults(experimentId);
-        
-        if (data) {
-          setResults(data);
-          console.log('[Results] Fetched experiment results:', data);
-        } else {
-          // Results not ready yet
-          console.log('[Results] Results not ready yet for experiment:', experimentId);
-          setError('Results are still being processed. Please try again in a moment.');
+        if (!cancelled) {
+          if (data && data.training_results) {
+            setResults(data);
+          } else {
+            setError('Results are still being processed. Please try again in a moment.');
+          }
         }
       } catch (err) {
-        console.error('[Results] Error fetching experiment results:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load experiment results');
-        toast({
-          title: "Error",
-          description: "Failed to load experiment results",
-          variant: "destructive"
-        });
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load experiment results');
+          toast({
+            title: "Error",
+            description: "Failed to load experiment results",
+            variant: "destructive"
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
-    };
-    
+    }
     fetchResults();
+    return () => {
+      cancelled = true;
+    };
   }, [experimentId, toast]);
+
+  // drill down into training_results for all metrics/predictions
+  let training_results = null, files = [], experiment_name = '';
+  if (results) {
+    training_results = results.training_results ?? {};
+    files = (results.files as any[]) || [];
+    experiment_name = results.experiment_name || '';
+  }
+
+  const metrics = training_results ? training_results.metrics || {} : {};
+  const y_true = training_results ? training_results.y_true : [];
+  const y_pred = training_results ? training_results.y_pred : [];
+  const y_probs = training_results ? training_results.y_probs : [];
 
   // Format metrics and helper functions
   const formatMetric = (value: number | undefined) => {
@@ -190,13 +203,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   
   // Extract relevant data from results
   const { 
-    experiment_name,
     task_type = '',
     target_column = '',
     training_time_sec,
     completed_at,
-    metrics = {},
-    files = []
   } = results;
 
   const isClassification = task_type ? task_type.includes('classification') : false;
