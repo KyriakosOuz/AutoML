@@ -31,6 +31,67 @@ import PrecisionRecallChart from './charts/PrecisionRecallChart';
 import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 import MetricsGrid from './charts/MetricsGrid';
 
+interface ClassificationReportProps {
+  report: Record<string, any>;
+}
+
+const ClassificationReportTable: React.FC<ClassificationReportProps> = ({ report }) => {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Class</TableHead>
+          <TableHead>Precision</TableHead>
+          <TableHead>Recall</TableHead>
+          <TableHead>F1-Score</TableHead>
+          <TableHead>Support</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Object.entries(report).map(([label, stats]) => {
+          if (typeof stats !== "object" || stats === null) return null; // skip non-object entries
+          
+          // Safely cast stats to avoid TypeScript errors
+          const statsObj = stats as Record<string, any>;
+          
+          // Check if this is a class stats object with the required properties
+          if (!('precision' in statsObj || 'recall' in statsObj || 'f1-score' in statsObj)) return null;
+          
+          return (
+            <TableRow key={label}>
+              <TableCell className="capitalize">{label.replace('_',' ')}</TableCell>
+              <TableCell>
+                {typeof statsObj.precision === 'number' 
+                  ? `${(statsObj.precision * 100).toFixed(1)}%` 
+                  : statsObj.precision || '-'}
+              </TableCell>
+              <TableCell>
+                {typeof statsObj.recall === 'number' 
+                  ? `${(statsObj.recall * 100).toFixed(1)}%` 
+                  : statsObj.recall || '-'}
+              </TableCell>
+              <TableCell>
+                {typeof statsObj['f1-score'] === 'number' 
+                  ? `${(statsObj['f1-score'] * 100).toFixed(1)}%` 
+                  : statsObj['f1-score'] || '-'}
+              </TableCell>
+              <TableCell>{statsObj.support}</TableCell>
+            </TableRow>
+          );
+        })}
+        {typeof report.accuracy === "number" && (
+          <TableRow>
+            <TableCell colSpan={3}><strong>Overall Accuracy</strong></TableCell>
+            <TableCell colSpan={2}>
+              {(report.accuracy * 100).toFixed(1)}%
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+};
+
 interface ExperimentResultsViewProps {
   experimentId: string;
   onReset?: () => void;
@@ -56,7 +117,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       try {
         const data = await getExperimentResults(experimentId);
         if (!cancelled) {
-          if (data && data.training_results) {
+          if (data) {
             setResults(data);
           } else {
             setError('Results are still being processed. Please try again in a moment.');
@@ -81,29 +142,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     };
   }, [experimentId, toast]);
 
-  // Extract data from results
-  let training_results = null, files = [], experiment_name = '', task_type = '';
-  if (results) {
-    training_results = results.training_results ?? {};
-    files = (results.files as any[]) || [];
-    experiment_name = results.experiment_name || '';
-    task_type = results.task_type || '';
-  }
-
-  const metrics = training_results ? training_results.metrics || {} : {};
-  const y_true = training_results ? training_results.y_true : [];
-  const y_pred = training_results ? training_results.y_pred : [];
-  const y_probs = training_results ? training_results.y_probs : [];
-  
-  // Extract ROC and PR curve data if available
-  const fpr = training_results?.metrics?.fpr || [];
-  const tpr = training_results?.metrics?.tpr || [];
-  const precision = training_results?.metrics?.precision_curve || [];
-  const recall = training_results?.metrics?.recall_curve || [];
-  const confusion_matrix = training_results?.metrics?.confusion_matrix || null;
-  const auc = training_results?.metrics?.auc;
-  const f1_score = training_results?.metrics?.f1_score;
-  
   // Loading state
   if (isLoading) {
     return (
@@ -201,11 +239,30 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   
   // Extract relevant data from results
   const { 
+    experiment_name = '', 
+    task_type = '',
     target_column = '',
     training_time_sec,
     completed_at,
-  } = results;
+    training_results,
+    files = []
+  } = results || {};
 
+  // Safely extract metrics from training results
+  const metrics = training_results?.metrics || {};
+  const y_true = training_results?.y_true || [];
+  const y_pred = training_results?.y_pred || [];
+  const y_probs = training_results?.y_probs || [];
+  
+  // Extract ROC and PR curve data if available
+  const fpr = metrics?.fpr || [];
+  const tpr = metrics?.tpr || [];
+  const precision = metrics?.precision_curve || [];
+  const recall = metrics?.recall_curve || [];
+  const confusion_matrix = metrics?.confusion_matrix || null;
+  const auc = metrics?.auc;
+  const f1_score = metrics?.f1_score;
+  
   const isClassification = task_type ? task_type.includes('classification') : false;
   const isBinaryClassification = isClassification && task_type.includes('binary');
   
@@ -213,80 +270,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const hasAdvancedCharts = (fpr.length > 0 && tpr.length > 0) || 
                            (precision.length > 0 && recall.length > 0) || 
                            confusion_matrix;
-  
-  // Helper function to safely render classification report
-  const renderClassificationReport = () => {
-    if (!metrics.classification_report) return null;
-    
-    if (typeof metrics.classification_report === 'string') {
-      return (
-        <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
-          {metrics.classification_report}
-        </pre>
-      );
-    }
-    
-    // If it's an object, convert it to a more readable format
-    try {
-      // Safely cast the classification_report to a Record type
-      const reportObj = metrics.classification_report as Record<string, any>;
-      
-      return (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Class</TableHead>
-                <TableHead>Precision</TableHead>
-                <TableHead>Recall</TableHead>
-                <TableHead>F1-Score</TableHead>
-                <TableHead>Support</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(reportObj).map(([key, value]) => {
-                // Skip if value is not an object or doesn't have expected properties
-                if (typeof value !== 'object' || value === null) return null;
-                
-                // Safely cast value to avoid TypeScript errors
-                const reportValue = value as Record<string, any>;
-                
-                // Extract metrics safely with proper type checking
-                const precision = 'precision' in reportValue ? String(reportValue.precision) : '-';
-                const recall = 'recall' in reportValue ? String(reportValue.recall) : '-';
-                const f1Score = 'f1-score' in reportValue ? String(reportValue['f1-score']) : '-';
-                const support = 'support' in reportValue ? String(reportValue.support) : '-';
-                
-                // Format numbers if they are numeric
-                const formatValue = (val: string): string => {
-                  const num = parseFloat(val);
-                  return !isNaN(num) ? (num >= 0 && num <= 1 ? num.toFixed(2) : num.toFixed(4)) : val;
-                };
-                
-                return (
-                  <TableRow key={key}>
-                    <TableCell className="font-medium">{key}</TableCell>
-                    <TableCell>{precision !== '-' ? formatValue(precision) : precision}</TableCell>
-                    <TableCell>{recall !== '-' ? formatValue(recall) : recall}</TableCell>
-                    <TableCell>{f1Score !== '-' ? formatValue(f1Score) : f1Score}</TableCell>
-                    <TableCell>{support}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      );
-    } catch (err) {
-      console.error('Error rendering classification report:', err);
-      return (
-        <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto text-destructive">
-          Error rendering classification report. Raw data: 
-          {JSON.stringify(metrics.classification_report, null, 2)}
-        </pre>
-      );
-    }
-  };
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -363,7 +346,15 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
-                  {renderClassificationReport()}
+                  {typeof metrics.classification_report === 'string' ? (
+                    <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
+                      {metrics.classification_report}
+                    </pre>
+                  ) : (
+                    <ClassificationReportTable 
+                      report={metrics.classification_report as Record<string, any>} 
+                    />
+                  )}
                 </div>
               </div>
             )}

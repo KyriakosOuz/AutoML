@@ -32,7 +32,7 @@ export interface TrainingFile {
 }
 
 export interface TrainingResults {
-  metrics: Record<string, number>;
+  metrics: Record<string, any>;
   y_true?: number[] | string[];
   y_pred?: number[] | string[];
   y_probs?: number[][];
@@ -51,7 +51,7 @@ export interface ExperimentResults {
   error_message?: string;
   training_results?: TrainingResults;
   training_time_sec?: number;
-  metrics?: Record<string, number>;
+  metrics?: Record<string, any>;
   files?: TrainingFile[];
   algorithm?: string;
   model_format?: string;
@@ -63,7 +63,7 @@ export interface ExperimentResults {
   hyperparameters?: Record<string, any>;
   message?: string;
   automl_engine?: string;
-  class_labels?: string[]; // Added missing property
+  class_labels?: string[];
 }
 
 export interface AutoMLResult {
