@@ -12,7 +12,8 @@ const ModelTrainingContent: React.FC = () => {
     resetTrainingState, 
     activeExperimentId,
     isLoadingResults,
-    experimentResults
+    experimentResults,
+    error
   } = useTraining();
   
   const [activeTab, setActiveTab] = useState<'automl' | 'custom'>('automl');
@@ -25,8 +26,9 @@ const ModelTrainingContent: React.FC = () => {
     resetTrainingState();
   };
   
-  // Only show results tab if we have active experiment results or loading results
-  const showResults = (activeExperimentId && experimentResults) || isLoadingResults;
+  // Only show results tab if we have active experiment results, are loading results, or have an error
+  // The key is to not attempt to render the actual results until they're fully loaded
+  const showResults = activeExperimentId && (experimentResults || isLoadingResults || error);
   
   return (
     <div className="w-full">
