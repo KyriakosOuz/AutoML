@@ -26,6 +26,7 @@ export interface TrainingContextState {
   testSize: number;
   stratify: boolean;
   randomSeed: number;
+  activeTab: string;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -49,4 +50,5 @@ export interface TrainingContextValue extends TrainingContextState {
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
+  setActiveTab: (tab: string) => void;
 }

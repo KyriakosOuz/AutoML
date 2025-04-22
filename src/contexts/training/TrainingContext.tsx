@@ -26,6 +26,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     testSize: defaultAutomlParameters.testSize,
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
+    activeTab: 'automl',
   });
 
   useEffect(() => {
@@ -176,6 +177,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setTestSize: (size) => setState(prev => ({ ...prev, testSize: size })),
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
+    setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -193,6 +195,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
+        activeTab: 'automl',
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
