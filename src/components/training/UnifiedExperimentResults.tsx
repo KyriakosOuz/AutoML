@@ -44,6 +44,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import { useTraining } from '@/contexts/TrainingContext';
 import { useToast } from '@/hooks/use-toast';
+import { trainingApi } from '@/lib/api';
 
 interface UnifiedExperimentResultsProps {
   onReset: () => void;
@@ -57,7 +58,16 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
   onBack
 }) => {
   const { toast } = useToast();
-  const { activeExperimentId, experimentResults, isLoadingResults, error, trainingApi } = useTraining();
+  const { 
+    activeExperimentId, 
+    experimentResults, 
+    isLoadingResults, 
+    error, 
+    setError,
+    setActiveExperimentId,
+    setExperimentResults,
+    setIsLoadingResults
+  } = useTraining();
   const [activeTab, setActiveTab] = useState('metrics');
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
@@ -99,7 +109,7 @@ const UnifiedExperimentResults: React.FC<UnifiedExperimentResultsProps> = ({
         clearInterval(pollInterval);
       }
     };
-  }, [activeExperimentId, isLoadingResults]);
+  }, [activeExperimentId, isLoadingResults, setExperimentResults, setIsLoadingResults, setError, toast]);
 
   if (isLoadingResults) {
     return (

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
@@ -43,6 +44,8 @@ export interface TrainingContextProps {
   resetTrainingState: () => void;
   
   setActiveExperimentId: (id: string | null) => void;
+  setExperimentResults: (results: ExperimentResults | null) => void;
+  setIsLoadingResults: (isLoading: boolean) => void;
   clearExperimentResults: () => void;
   getExperimentResults: () => void;
   
@@ -300,6 +303,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     resetTrainingState,
     
     setActiveExperimentId,
+    setExperimentResults,
+    setIsLoadingResults,
     clearExperimentResults,
     getExperimentResults,
     

@@ -49,11 +49,11 @@ const ModelTrainingContent: React.FC = () => {
         </TabsList>
         
         <TabsContent value="automl">
-          <AutoMLTraining onTrainingStart={() => setActiveTab('results')} />
+          <AutoMLTraining />
         </TabsContent>
         
         <TabsContent value="custom">
-          <CustomTraining onTrainingStart={() => setActiveTab('results')} />
+          <CustomTraining />
         </TabsContent>
         
         <TabsContent value="results">
