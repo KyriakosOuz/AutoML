@@ -95,17 +95,11 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     async function fetchResults() {
       try {
         const apiRes = await getExperimentResults(experimentId);
-
-        if (
-          typeof apiRes === 'string' &&
-          apiRes.trim().startsWith('<')
-        ) {
-          throw new Error('Received unexpected HTML from API. Please verify backend routing.');
-        }
-
+        
         console.log('[ExperimentResultsView] Raw API response:', apiRes);
 
-        if (!apiRes || (typeof apiRes === 'object' && apiRes.hasTrainingResults === false)) {
+        // Handle raw string responses (which might be HTML error pages)
+        if (apiRes === null) {
           if (!cancelled) {
             setResults(null);
             setIsLoading(false);
@@ -120,14 +114,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           }
         }
 
-        const payload = (apiRes && (apiRes as any).training_results) ? apiRes : (apiRes as any).data || apiRes;
-
-        if (!payload) {
-          setResults(null);
-          setIsLoading(false);
+        // If the result doesn't have what we need, return early
+        if (!apiRes) {
+          if (!cancelled) {
+            setResults(null);
+            setIsLoading(false);
+          }
           return;
         }
 
+        const payload = apiRes;
         const tr = payload.training_results || {};
         const allMetrics = tr.metrics || {};
 
@@ -200,6 +196,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     };
   }, [experimentId, toast]);
 
+  
   if (isLoading) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -284,6 +281,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     );
   }
 
+  
   const { experiment_metadata, metrics, files, classificationReport, confusionMatrix, roc, prCurve } = results;
 
   const numberMetrics = metrics;
@@ -343,6 +341,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         </CardDescription>
       </CardHeader>
 
+      
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
