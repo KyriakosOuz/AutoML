@@ -1,4 +1,3 @@
-
 // Library for training and prediction-related API calls
 
 const API_BASE = window.location.origin;
@@ -10,8 +9,6 @@ import {
   ManualPredictionResponse, 
   BatchPredictionResponse 
 } from '@/types/training';
-// Remove old import for constants
-// import { API_BASE_URL } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
@@ -209,4 +206,3 @@ export const predictBatchCsv = async (
     throw error;
   }
 };
-

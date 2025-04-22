@@ -55,12 +55,19 @@ const CustomTraining: React.FC = () => {
       setIsLoadingAlgorithms(true);
       trainingApi.getAvailableAlgorithms(datasetTaskType)
         .then(algorithms => {
-          setAlgorithms(algorithms);
+          if (Array.isArray(algorithms)) {
+            setAlgorithms(algorithms);
+          } else {
+            console.error('Expected algorithms array, got:', algorithms);
+            // Fallback to allowed algorithms from constants
+            setAlgorithms(ALLOWED_ALGORITHMS[datasetTaskType] || []);
+          }
           setIsLoadingAlgorithms(false);
         })
         .catch(error => {
           console.error('Error fetching algorithms:', error);
           setIsLoadingAlgorithms(false);
+          // Use fallback algorithms on error
           setAlgorithms(ALLOWED_ALGORITHMS[datasetTaskType] || []);
         });
     }
@@ -207,7 +214,7 @@ const CustomTraining: React.FC = () => {
                   <SelectValue placeholder={isLoadingAlgorithms ? "Loading algorithms..." : "Select algorithm"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {algorithms.map((algo) => (
+                  {(algorithms || []).map((algo) => (
                     <SelectItem key={algo} value={algo}>
                       {algo}
                     </SelectItem>
