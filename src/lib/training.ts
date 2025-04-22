@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -27,7 +28,7 @@ export const getExperimentResults = async (
     console.log('[API] Fetching results for experiment:', experimentId);
     const headers = await getAuthHeaders();
 
-    // Only use the correct endpoint, retry once on non-401 error
+    // Use the correct endpoint as per backend implementation
     let response = await fetch(
       `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
       { headers }
@@ -80,7 +81,7 @@ export const getExperimentResults = async (
       return null;
     }
 
-    // At this point, payload should be a full ExperimentResults with training_results, etc.
+    // At this point, payload should be a full ExperimentResults
     console.log('[API] Results data received:', payload);
     return payload as ExperimentResults;
   } catch (error) {

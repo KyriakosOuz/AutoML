@@ -1,117 +1,93 @@
+
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
-import ExperimentResults from '../results/ExperimentResults';
-import StatusBadge, { Status } from './StatusBadge';
-import { useTraining } from '@/contexts/training/TrainingContext';
+import DatasetSummary from './DatasetSummary';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { RefreshCcw } from 'lucide-react';
+import ExperimentResultsView from './ExperimentResultsView';
+import { useToast } from '@/hooks/use-toast';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
-    resetTrainingState, 
+    activeTab, 
+    setActiveTab,
+    resetTrainingState,
     activeExperimentId,
-    isLoadingResults,
-    experimentResults,
-    experimentStatus,
-    error,
-    isTraining
+    experimentStatus
   } = useTraining();
-  
-  const [activeTab, setActiveTab] = useState<'automl' | 'custom' | 'results'>('automl');
-  
+  const [showResults, setShowResults] = useState(false);
+  const { toast } = useToast();
+
+  // Check if we should show results when status changes to completed
   useEffect(() => {
-    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && experimentResults) {
+    if (experimentStatus === 'completed' && activeExperimentId) {
+      setShowResults(true);
       setActiveTab('results');
     }
-  }, [activeExperimentId, experimentStatus, experimentResults]);
-  
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as 'automl' | 'custom' | 'results');
-  };
-  
+  }, [experimentStatus, activeExperimentId, setActiveTab]);
+
   const handleReset = () => {
     resetTrainingState();
-    setActiveTab('automl');
+    setShowResults(false);
   };
-  
-  const showResults = activeExperimentId !== null;
-  
-  const isResultsDisabled = 
-    experimentStatus === 'processing' || 
-    experimentStatus === 'running' || 
-    (error !== null && experimentStatus !== 'completed' && experimentStatus !== 'success');
-  
-  const badgeStatus: Status = experimentStatus as Status;
-  
+
   return (
-    <div className="w-full">
-      {showResults ? (
-        <div className="space-y-6">
-          <Tabs 
-            value={activeTab} 
-            onValueChange={handleTabChange} 
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger 
-                value="automl" 
-                disabled={isTraining}
-              >
-                AutoML Training
-              </TabsTrigger>
-              <TabsTrigger 
-                value="custom" 
-                disabled={isTraining}
-              >
-                Custom Training
-              </TabsTrigger>
-              <TabsTrigger value="results" disabled={isResultsDisabled}>
-                Results 
-                {experimentStatus && (
-                  <div className="ml-2">
-                    <StatusBadge status={badgeStatus} />
-                  </div>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="automl" className="p-4 pt-6">
-              <AutoMLTraining />
-            </TabsContent>
-            
-            <TabsContent value="custom" className="p-4 pt-6">
-              <CustomTraining />
-            </TabsContent>
-            
-            <TabsContent value="results" className="pt-4">
-              <ExperimentResults 
-                experimentId={activeExperimentId}
-                status={experimentStatus}
-                onReset={handleReset}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-      ) : (
-        <Tabs 
-          value={activeTab} 
-          onValueChange={handleTabChange} 
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="automl">AutoML Training</TabsTrigger>
+    <div className="space-y-6">
+      <DatasetSummary />
+      
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="automl">AutoML</TabsTrigger>
             <TabsTrigger value="custom">Custom Training</TabsTrigger>
+            <TabsTrigger value="results" disabled={!showResults}>
+              Results
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="automl" className="p-4 pt-6">
-            <AutoMLTraining />
-          </TabsContent>
-          
-          <TabsContent value="custom" className="p-4 pt-6">
-            <CustomTraining />
-          </TabsContent>
-        </Tabs>
-      )}
+          {(activeExperimentId || showResults) && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleReset}
+            >
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          )}
+        </div>
+        
+        <TabsContent value="automl" className="space-y-4">
+          <AutoMLTraining />
+        </TabsContent>
+        
+        <TabsContent value="custom" className="space-y-4">
+          <CustomTraining />
+        </TabsContent>
+        
+        <TabsContent value="results" className="space-y-4">
+          {showResults && activeExperimentId ? (
+            <ExperimentResultsView 
+              experimentId={activeExperimentId}
+              onReset={handleReset}
+            />
+          ) : (
+            <div className="text-center py-12 bg-muted/30 rounded-lg">
+              <h3 className="text-lg font-medium mb-2">No Results Available</h3>
+              <p className="text-muted-foreground">
+                Complete a training run to see model results
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
