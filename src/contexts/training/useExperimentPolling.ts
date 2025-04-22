@@ -54,21 +54,23 @@ export const useExperimentPolling = ({
         if (!statusResponse) {
           throw new Error('Invalid status response from server');
         }
+
+        // Update experiment status based on the response
+        const status = statusResponse.data?.status || statusResponse.status;
+        setExperimentStatus(status as ExperimentStatus);
         
-        setExperimentStatus(statusResponse.status as ExperimentStatus);
-        
-        // Stop polling on completed or failed status
-        if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
-          console.log('[TrainingContext] Training completed successfully');
+        // Only proceed to fetch results if status is completed and hasTrainingResults is true
+        if (status === 'completed' && statusResponse.data?.hasTrainingResults === true) {
+          console.log('[TrainingContext] Training completed successfully with results available');
           stopPolling();
           onSuccess(experimentId);
-        } else if (statusResponse.status === 'failed') {
-          console.error('[TrainingContext] Training failed:', statusResponse.error_message);
+        } else if (status === 'failed' || statusResponse.status === 'error') {
+          console.error('[TrainingContext] Training failed:', statusResponse.message || statusResponse.error_message);
           stopPolling();
-          onError(statusResponse.error_message || 'Training failed');
+          onError(statusResponse.message || statusResponse.error_message || 'Training failed');
           toast({
             title: "Training Failed",
-            description: statusResponse.error_message || "An error occurred during training",
+            description: statusResponse.message || statusResponse.error_message || "An error occurred during training",
             variant: "destructive"
           });
         } else if (pollingAttempts >= MAX_POLL_ATTEMPTS) {

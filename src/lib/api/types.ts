@@ -24,7 +24,15 @@ export interface DatasetOverview {
 }
 
 export interface ApiResponse<T = any> {
-  status?: string;
+  status: string;
   message?: string;
   data?: T;
 }
+
+export interface ExperimentStatusResponse {
+  experimentId: string;
+  status: string;
+  hasTrainingResults: boolean;
+  error_message?: string;
+}
+
