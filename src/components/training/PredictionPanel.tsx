@@ -173,8 +173,17 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({
   };
   
   // Format prediction value for display
-  const formatPredictionValue = (value: string | number | undefined) => {
+  const formatPredictionValue = (value: string | number | number[] | undefined) => {
     if (value === undefined) return 'N/A';
+    
+    // Handle array case first
+    if (Array.isArray(value)) {
+      const maxValue = Math.max(...value);
+      if (maxValue >= 0 && maxValue <= 1 && isClassification) {
+        return `${(maxValue * 100).toFixed(2)}%`;
+      }
+      return maxValue.toFixed(4);
+    }
     
     // Format probability as percentage if it's between 0 and 1
     if (typeof value === 'number') {
