@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import ExperimentResults from '../results/ExperimentResults';
-import StatusBadge from './StatusBadge';
+import StatusBadge, { Status } from './StatusBadge';
 import { useTraining } from '@/contexts/TrainingContext';
 
 const ModelTrainingContent: React.FC = () => {
@@ -33,6 +33,9 @@ const ModelTrainingContent: React.FC = () => {
   // Don't allow clicking the results tab while processing
   const isResultsDisabled = experimentStatus === 'processing';
   
+  // Map context status to StatusBadge status
+  const badgeStatus: Status = experimentStatus as Status;
+  
   return (
     <div className="w-full">
       {showResults ? (
@@ -45,7 +48,7 @@ const ModelTrainingContent: React.FC = () => {
                 Results 
                 {experimentStatus && (
                   <div className="ml-2">
-                    <StatusBadge status={experimentStatus} />
+                    <StatusBadge status={badgeStatus} />
                   </div>
                 )}
               </TabsTrigger>

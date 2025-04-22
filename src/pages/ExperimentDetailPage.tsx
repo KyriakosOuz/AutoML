@@ -8,6 +8,7 @@ import { ChevronLeft } from 'lucide-react';
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
   const navigate = useNavigate();
+  const [status, setStatus] = useState<'processing' | 'running' | 'completed' | 'failed' | 'success'>('completed');
   
   const goBack = () => {
     navigate('/training');
@@ -23,7 +24,10 @@ const ExperimentDetailPage: React.FC = () => {
         <h1 className="text-2xl font-bold">Experiment Results</h1>
       </div>
       
-      <ExperimentResults experimentId={experimentId || null} />
+      <ExperimentResults 
+        experimentId={experimentId || null} 
+        status={status}
+      />
     </div>
   );
 };

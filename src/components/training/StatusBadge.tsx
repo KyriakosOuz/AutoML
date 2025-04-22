@@ -3,7 +3,8 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 
-type Status = 'processing' | 'running' | 'completed' | 'failed';
+// Update the Status type to include 'success' since it's used in the API
+export type Status = 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 interface StatusBadgeProps {
   status: Status;
@@ -13,6 +14,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const getStatusColor = (status: Status) => {
     switch (status) {
       case 'completed':
+      case 'success':
         return 'bg-green-100 text-green-800 hover:bg-green-200';
       case 'failed':
         return 'bg-red-100 text-red-800 hover:bg-red-200';

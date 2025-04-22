@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
 
@@ -10,10 +11,14 @@ import {
   AutoMLResult,
   CustomTrainingResult,
   ExperimentResults,
-  ExperimentStatus
+  ExperimentStatus as TypeExperimentStatus
 } from '@/types/training';
 
-export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed';
+// Local storage keys
+const EXPERIMENT_STORAGE_KEY = 'activeExperimentId';
+const EXPERIMENT_TYPE_STORAGE_KEY = 'experimentType';
+
+export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 export interface TrainingContextProps {
   isTraining: boolean;
