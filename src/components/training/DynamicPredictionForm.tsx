@@ -79,7 +79,10 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
       const resp = await predictManual(experimentId, processedInputs);
-      const newPrediction = resp?.prediction ?? resp?.data?.prediction ?? '';
+      
+      // Updated to handle the new response format
+      const newPrediction = resp?.data?.prediction ?? '';
+      console.log('Prediction response:', resp);
       setPrediction(newPrediction);
       toast({
         title: "Prediction Success",
