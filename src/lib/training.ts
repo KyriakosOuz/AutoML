@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { 
@@ -99,16 +98,29 @@ export const predictManual = async (
       }
     );
 
+    // Read the response as text first
+    const responseText = await response.text();
     if (!response.ok) {
-      const errorText = await response.text();
       console.error('[API] Manual prediction error:', {
         status: response.status,
-        response: errorText.substring(0, 200)
+        response: responseText.substring(0, 200)
       });
       throw new Error(`Prediction failed: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json();
+    // Check for empty response
+    if (!responseText || responseText.trim().length === 0) {
+      console.error('[API] Manual prediction: empty response body');
+      throw new Error("Prediction failed: Server returned empty response. Please try again or contact support.");
+    }
+
+    // Parse JSON safely
+    try {
+      return JSON.parse(responseText);
+    } catch (err) {
+      console.error('[API] Manual prediction: failed to parse JSON:', err, responseText.substring(0, 200));
+      throw new Error("Prediction failed: Invalid JSON response from server");
+    }
   } catch (error) {
     console.error('[API] Error in manual prediction:', error);
     throw error;
@@ -138,16 +150,29 @@ export const predictBatchCsv = async (
       }
     );
 
+    // Read the response as text first
+    const responseText = await response.text();
     if (!response.ok) {
-      const errorText = await response.text();
       console.error('[API] Batch prediction error:', {
         status: response.status,
-        response: errorText.substring(0, 200)
+        response: responseText.substring(0, 200)
       });
       throw new Error(`Batch prediction failed: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json();
+    // Check for empty response
+    if (!responseText || responseText.trim().length === 0) {
+      console.error('[API] Batch prediction: empty response body');
+      throw new Error("Batch prediction failed: Server returned empty response. Please try again.");
+    }
+
+    // Parse JSON safely
+    try {
+      return JSON.parse(responseText);
+    } catch (err) {
+      console.error('[API] Batch prediction: failed to parse JSON:', err, responseText.substring(0, 200));
+      throw new Error("Batch prediction failed: Invalid JSON response from server");
+    }
   } catch (error) {
     console.error('[API] Error in batch prediction:', error);
     throw error;
