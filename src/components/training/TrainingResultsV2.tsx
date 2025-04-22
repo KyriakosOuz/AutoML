@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Card,
@@ -26,7 +25,8 @@ import {
   Settings,
   Activity,
   Microscope,
-  Loader
+  Loader,
+  Sparkles
 } from 'lucide-react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
@@ -34,13 +34,13 @@ import MetricsPanel from './MetricsPanel';
 import VisualizationsPanel from './VisualizationsPanel';
 import DetailsPanel from './DetailsPanel';
 import ReportPanel from './ReportPanel';
+import PredictionPanel from './PredictionPanel';
 
 export interface TrainingResultsV2Props {
   experimentId: string;
   onReset: () => void;
 }
 
-// Helper function to format task type
 const formatTaskType = (type: string) => {
   if (!type) return "Unknown";
   switch (type) {
@@ -145,7 +145,6 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({
     report_file_url
   } = results;
 
-  // Get unique downloadable files (model and report)
   const downloadableFiles = Array.from(new Set(
     files.filter(file =>
       file.file_type === 'model' ||
@@ -194,7 +193,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({
 
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
             <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
@@ -211,7 +210,12 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({
               <FileText className="h-4 w-4" />
               <span>Report</span>
             </TabsTrigger>
+            <TabsTrigger value="prediction" className="text-sm flex items-center gap-1">
+              <Sparkles className="h-4 w-4" />
+              <span>Prediction</span>
+            </TabsTrigger>
           </TabsList>
+          
           <TabsContent value="metrics" className="p-6">
             <MetricsPanel taskType={task_type} metrics={metrics} />
             {metrics.classification_report && (
@@ -227,9 +231,11 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({
               </div>
             )}
           </TabsContent>
+          
           <TabsContent value="visualizations" className="p-6">
             <VisualizationsPanel files={visualizationFiles} />
           </TabsContent>
+          
           <TabsContent value="details" className="p-6">
             <DetailsPanel
               experimentId={experimentId}
@@ -240,11 +246,22 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({
               hyperparameters={hyperparameters}
             />
           </TabsContent>
+          
           <TabsContent value="report" className="p-6">
             <ReportPanel modelFileUrl={model_file_url} reportFileUrl={report_file_url} />
           </TabsContent>
+          
+          <TabsContent value="prediction" className="p-6">
+            <PredictionPanel
+              experimentId={experimentId}
+              taskType={task_type}
+              targetColumn={target_column}
+              columnsToKeep={columns_to_keep}
+            />
+          </TabsContent>
         </Tabs>
       </CardContent>
+      
       <CardFooter className="flex justify-between border-t p-4">
         <Button variant="outline" onClick={onReset}>
           <RefreshCw className="h-4 w-4 mr-2" />

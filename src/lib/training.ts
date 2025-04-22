@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -67,6 +66,85 @@ export const getExperimentResults = async (
     return result;
   } catch (error) {
     console.error('[API] Error in getExperimentResults:', error);
+    throw error;
+  }
+};
+
+// Prediction endpoints
+export const predictManual = async (
+  experimentId: string,
+  inputValues: Record<string, any>
+): Promise<ManualPredictionResponse> => {
+  try {
+    console.log('[API] Making manual prediction for experiment:', experimentId);
+    const headers = await getAuthHeaders();
+    
+    const formData = new FormData();
+    formData.append('experiment_id', experimentId);
+    formData.append('input_values', JSON.stringify(inputValues));
+
+    const response = await fetch(
+      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-manual/`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': headers.Authorization
+        },
+        body: formData
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Manual prediction error:', {
+        status: response.status,
+        response: errorText.substring(0, 200)
+      });
+      throw new Error(`Prediction failed: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('[API] Error in manual prediction:', error);
+    throw error;
+  }
+};
+
+export const predictBatchCsv = async (
+  experimentId: string,
+  file: File
+): Promise<BatchPredictionResponse> => {
+  try {
+    console.log('[API] Making batch prediction for experiment:', experimentId);
+    const headers = await getAuthHeaders();
+    
+    const formData = new FormData();
+    formData.append('experiment_id', experimentId);
+    formData.append('file', file);
+
+    const response = await fetch(
+      `https://smart-whole-cockatoo.ngrok-free.app/prediction/predict-csv/`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': headers.Authorization
+        },
+        body: formData
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Batch prediction error:', {
+        status: response.status,
+        response: errorText.substring(0, 200)
+      });
+      throw new Error(`Batch prediction failed: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('[API] Error in batch prediction:', error);
     throw error;
   }
 };
