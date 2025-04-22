@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -32,7 +31,9 @@ const AutoMLTraining: React.FC = () => {
     setStratify,
     randomSeed,
     setRandomSeed,
-    setError
+    setError,
+    startPolling,
+    setLastTrainingType
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -86,12 +87,13 @@ const AutoMLTraining: React.FC = () => {
       const experimentId = response?.experiment_id || response?.data?.experiment_id;
 
       if (experimentId) {
+        setLastTrainingType('automl');
+        startPolling(experimentId);
+        
         toast({
           title: "Training Submitted",
           description: `AutoML training job submitted successfully.`,
         });
-        // Navigate to results page with experiment ID
-        navigate(`/results/${experimentId}`);
       } else {
         throw new Error('No experiment ID returned from the server');
       }

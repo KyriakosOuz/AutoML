@@ -238,6 +238,19 @@ export const trainingApi = {
     }
   },
 
+  checkStatus: async (experimentId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/training/check-status/`, {
+        headers: getAuthHeaders(),
+      });
+      
+      return await handleApiResponse(response);
+    } catch (error) {
+      console.error('Error checking training status:', error);
+      throw error;
+    }
+  },
+
   automlTrain: async (
     datasetId: string, 
     taskType: string, 
@@ -247,17 +260,20 @@ export const trainingApi = {
     randomSeed: number
   ) => {
     try {
+      const formData = new FormData();
+      formData.append('dataset_id', datasetId);
+      formData.append('task_type', taskType);
+      formData.append('automl_engine', automlEngine);
+      formData.append('test_size', testSize.toString());
+      formData.append('stratify', stratify.toString());
+      formData.append('random_seed', randomSeed.toString());
+      
       const response = await fetch(`${API_URL}/training/automl-train/`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          dataset_id: datasetId,
-          task_type: taskType,
-          automl_engine: automlEngine,
-          test_size: testSize,
-          stratify: stratify,
-          random_seed: randomSeed,
-        }),
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: formData,
       });
       
       return await handleApiResponse(response);
@@ -283,13 +299,11 @@ export const trainingApi = {
 
   customTrain: async (formData: FormData) => {
     try {
-      // For FormData, we need a different approach for headers
       const token = getAuthToken();
       const response = await fetch(`${API_URL}/training/custom-train/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-          // Note: Do not set 'Content-Type' for FormData
         },
         body: formData
       });

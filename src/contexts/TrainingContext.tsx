@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   TrainingEngine, 
@@ -53,6 +52,9 @@ export interface TrainingContextProps {
   setTestSize: (size: number) => void;
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
+  
+  startPolling: (experimentId: string) => void;
+  stopPolling: () => void;
 }
 
 const defaultAutomlParameters: AutoMLParameters = {
@@ -91,6 +93,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
   
   useEffect(() => {
@@ -128,90 +131,59 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [activeExperimentId, lastTrainingType]);
 
-  useEffect(() => {
-    let pollTimeout: NodeJS.Timeout | null = null;
-    
-    const pollResults = async () => {
-      if (!activeExperimentId) {
-        return;
-      }
-      
+  const startPolling = async (experimentId: string) => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    setIsLoadingResults(true);
+    setActiveExperimentId(experimentId);
+
+    const interval = setInterval(async () => {
       try {
-        const results = await trainingApi.getExperimentResults(activeExperimentId);
+        const statusResponse = await trainingApi.checkStatus(experimentId);
         
-        if (results.status === 'failed') {
+        if (statusResponse.status === 'completed') {
+          stopPolling();
+          const results = await trainingApi.getExperimentResults(experimentId);
           setExperimentResults(results);
-          setError(results.error_message || 'The experiment failed without a specific error message.');
+          setIsLoadingResults(false);
+          toast({
+            title: "Training Complete",
+            description: "Your model has finished training successfully!"
+          });
+        } else if (statusResponse.status === 'failed') {
+          stopPolling();
+          const results = await trainingApi.getExperimentResults(experimentId);
+          setError(results.error_message || 'Training failed');
           setIsLoadingResults(false);
           toast({
             title: "Training Failed",
-            description: `⚠️ Experiment failed: ${results.error_message || 'Unknown error'}`,
-            variant: "destructive"
-          });
-          return; // Stop polling on failure
-        }
-        
-        if (results.status === 'completed' || results.status === 'success') {
-          setExperimentResults(results);
-          setIsLoadingResults(false);
-          toast({
-            title: "Training Completed",
-            description: `Model training ${results.experiment_name ? `for ${results.experiment_name}` : ''} completed successfully.`
-          });
-          return; // Stop polling on completion
-        }
-        
-        // Continue polling for 'running' status
-        if (results.status === 'running') {
-          setPollingAttempts(prev => {
-            if (prev >= MAX_POLL_ATTEMPTS) {
-              setError('Training timeout: The experiment took too long to complete.');
-              setIsLoadingResults(false);
-              toast({
-                title: "Training Timeout",
-                description: "The experiment took too long to complete. Please check the status later.",
-                variant: "destructive"
-              });
-              return prev;
-            }
-            return prev + 1;
-          });
-          
-          pollTimeout = setTimeout(pollResults, POLL_INTERVAL);
-        }
-        
-      } catch (error: any) {
-        if (error.message && error.message.includes('404')) {
-          // Experiment not yet created - continue polling
-          toast({
-            title: "Waiting",
-            description: "Waiting for experiment to start...",
-          });
-          pollTimeout = setTimeout(pollResults, POLL_INTERVAL);
-        } else {
-          setError(error.message || 'Failed to fetch experiment results');
-          setIsLoadingResults(false);
-          toast({
-            title: "Error",
-            description: error.message || 'Failed to fetch experiment results',
+            description: results.error_message || 'An error occurred during training',
             variant: "destructive"
           });
         }
+      } catch (error) {
+        console.error('Polling error:', error);
       }
-    };
-    
-    if (activeExperimentId && !experimentResults) {
-      setIsLoadingResults(true);
-      pollTimeout = setTimeout(pollResults, 1000); // Start polling after 1 second
+    }, 2000);
+
+    setPollingInterval(interval);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
     }
-    
+  };
+
+  useEffect(() => {
     return () => {
-      if (pollTimeout) {
-        clearTimeout(pollTimeout);
-      }
+      stopPolling();
     };
-  }, [activeExperimentId, experimentResults, toast]);
-  
+  }, []);
+
   const setAutomlEngine = (engine: TrainingEngine) => {
     setAutomlParametersState(prev => ({ ...prev, automlEngine: engine }));
   };
@@ -312,6 +284,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setTestSize,
     setStratify,
     setRandomSeed,
+    
+    startPolling,
+    stopPolling,
   };
   
   return (
