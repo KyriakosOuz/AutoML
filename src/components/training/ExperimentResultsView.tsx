@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -214,6 +215,69 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                            (precision.length > 0 && recall.length > 0) || 
                            confusion_matrix;
   
+  // Helper function to safely render classification report
+  const renderClassificationReport = () => {
+    if (!metrics.classification_report) return null;
+    
+    if (typeof metrics.classification_report === 'string') {
+      return (
+        <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
+          {metrics.classification_report}
+        </pre>
+      );
+    }
+    
+    // If it's an object, convert it to a more readable format
+    try {
+      const reportObj = metrics.classification_report;
+      return (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class</TableHead>
+                <TableHead>Precision</TableHead>
+                <TableHead>Recall</TableHead>
+                <TableHead>F1-Score</TableHead>
+                <TableHead>Support</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(reportObj).map(([key, value]) => {
+                // Skip if value is not an object or doesn't have expected properties
+                if (typeof value !== 'object' || value === null) return null;
+                
+                // Extract metrics safely with defaults
+                const precision = 'precision' in value ? value.precision : '-';
+                const recall = 'recall' in value ? value.recall : '-';
+                const f1Score = 'f1-score' in value ? value['f1-score'] : '-';
+                const support = 'support' in value ? value.support : '-';
+                
+                return (
+                  <TableRow key={key}>
+                    <TableCell className="font-medium">{key}</TableCell>
+                    <TableCell>{typeof precision === 'number' ? precision.toFixed(2) : precision}</TableCell>
+                    <TableCell>{typeof recall === 'number' ? recall.toFixed(2) : recall}</TableCell>
+                    <TableCell>{typeof f1Score === 'number' ? f1Score.toFixed(2) : f1Score}</TableCell>
+                    <TableCell>{support}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    } catch (err) {
+      console.error('Error rendering classification report:', err);
+      return (
+        <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto text-destructive">
+          Error rendering classification report. Raw data: 
+          {JSON.stringify(metrics.classification_report, null, 2)}
+        </pre>
+      );
+    }
+  };
+  
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -289,11 +353,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
-                  <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
-                    {typeof metrics.classification_report === 'string' 
-                      ? metrics.classification_report 
-                      : JSON.stringify(metrics.classification_report, null, 2)}
-                  </pre>
+                  {renderClassificationReport()}
                 </div>
               </div>
             )}
