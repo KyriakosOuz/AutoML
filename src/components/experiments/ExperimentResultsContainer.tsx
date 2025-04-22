@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { trainingApi } from '@/lib/api';
+import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from '@/contexts/training/types';
@@ -46,7 +46,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     
     try {
       console.log("[ExperimentResultsContainer] Fetching results for experiment:", experimentId);
-      const data = await trainingApi.getExperimentResults(experimentId);
+      const data = await getExperimentResults(experimentId);
       
       if (data) {
         console.log("[ExperimentResultsContainer] Successfully fetched experiment results");

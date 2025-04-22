@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { trainingApi } from '@/lib/api';
+import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
@@ -45,7 +45,7 @@ export const useExperimentPolling = ({
 
     const poller = setInterval(async () => {
       try {
-        const response = await trainingApi.checkStatus(experimentId);
+        const response = await checkStatus(experimentId);
         const data = response.data;
         console.log('[TrainingContext] Status response data:', data);
 

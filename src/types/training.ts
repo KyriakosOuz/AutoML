@@ -118,38 +118,3 @@ export interface BatchPredictionResult {
   metrics?: Record<string, number>;
   preview?: Record<string, any>[];
 }
-
-// Prediction types
-export interface ManualPredictionRequest {
-  experiment_id: string;
-  input_values: Record<string, any>;
-}
-
-export interface ManualPredictionResponse {
-  prediction: string | number;
-  probability?: number | number[];
-  class_probabilities?: Record<string, number>;
-}
-
-export interface BatchPredictionRequest {
-  experiment_id: string;
-  file: File;
-}
-
-export interface BatchPredictionResponseEvaluation {
-  mode: 'evaluation';
-  metrics: Record<string, number>;
-  y_true: Array<string | number>;
-  y_pred: Array<string | number>;
-  y_probs?: number[][] | number[];
-  confusion_matrix?: number[][];
-}
-
-export interface BatchPredictionResponsePrediction {
-  mode: 'prediction_only';
-  filled_dataset_preview: Record<string, any>[];
-  predictions?: Array<string | number>;
-  download_url?: string;
-}
-
-export type BatchPredictionResponse = BatchPredictionResponseEvaluation | BatchPredictionResponsePrediction;

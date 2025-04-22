@@ -1,11 +1,7 @@
 
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
-import { 
-  ExperimentResults, 
-  ManualPredictionResponse, 
-  BatchPredictionResponse 
-} from '@/types/training';
+import { ExperimentResults } from '@/types/training';
 import { API_BASE_URL } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
@@ -74,75 +70,3 @@ export const getExperimentResults = async (
     throw error;
   }
 };
-
-// Helper to extract error details from FastAPI error responses
-async function extractApiError(response: Response, fallbackMessage: string): Promise<string> {
-  const text = await response.text();
-  if (!text) return fallbackMessage;
-
-  try {
-    // Try to extract { detail: ... } from response
-    const json = JSON.parse(text);
-    if (json && typeof json.detail === 'string') {
-      return json.detail;
-    }
-    // Sometimes FastAPI returns { detail: [ { loc, msg, type } ] }
-    if (json && Array.isArray(json.detail) && json.detail[0]?.msg) {
-      return json.detail.map((err: any) => err.msg).join(', ');
-    }
-  } catch {
-    // Not JSON, just return the start of the text
-  }
-  return text.substring(0, 200) || fallbackMessage;
-}
-
-// Prediction endpoints
-export async function predictManual(
-  experimentId: string,
-  inputValues: Record<string, any>
-): Promise<ManualPredictionResponse> {
-  const headers = await getAuthHeaders();
-  // Remove Content-Type for FormData (the browser sets it itself)
-  const form = new FormData();
-  form.append('experiment_id', experimentId);
-  form.append('input_values', JSON.stringify(inputValues));
-
-  // Omit Content-Type header so boundary is set correctly by browser
-  delete (headers as any)['Content-Type'];
-
-  const res = await fetch(
-    `${API_BASE_URL}/prediction/predict-manual/`,
-    {
-      method: 'POST',
-      headers,
-      body: form
-    }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-export async function predictBatchCsv(
-  experimentId: string,
-  file: File
-): Promise<BatchPredictionResponse> {
-  const headers = await getAuthHeaders();
-  // Remove Content-Type for FormData (the browser sets it itself)
-  const form = new FormData();
-  form.append('experiment_id', experimentId);
-  form.append('file', file);
-
-  // Omit Content-Type header so boundary is set correctly by browser
-  delete (headers as any)['Content-Type'];
-
-  const res = await fetch(
-    `${API_BASE_URL}/prediction/predict-csv/`,
-    {
-      method: 'POST',
-      headers,
-      body: form
-    }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}

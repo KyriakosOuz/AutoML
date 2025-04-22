@@ -6,14 +6,6 @@ import {
   TaskType 
 } from '@/types/training';
 
-// Import the functions from training.ts and re-export them
-import { 
-  checkStatus, 
-  getExperimentResults, 
-  predictManual, 
-  predictBatchCsv 
-} from './training';
-
 // Define the Dataset type
 export interface Dataset {
   dataset_id: string;
@@ -284,78 +276,331 @@ export const datasetApi = {
   },
 };
 
-// Add the missing methods to trainingApi
 export const trainingApi = {
-  checkStatus,
-  getExperimentResults,
-  predictManual,
-  predictBatchCsv,
+  getAvailableAlgorithms: async (taskType: string) => {
+    try {
+      // Ensure we're passing the task_type as a query parameter
+      const response = await fetch(`${API_URL}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.algorithms;
+    } catch (error) {
+      console.error('Error fetching algorithms:', error);
+      throw error;
+    }
+  },
 
-  // Adding the missing methods
+  checkStatus: async (experimentId: string) => {
+    try {
+      console.log('[API] Checking status for experiment:', experimentId);
+      const response = await fetch(`${API_URL}/training/check-status/${experimentId}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[API] Status check error:', {
+          experimentId,
+          status: response.status,
+          response: errorText.substring(0, 200)
+        });
+        
+        throw new Error(`Failed to check status: ${response.status} ${response.statusText}`);
+      }
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('[API] Expected JSON response, got:', contentType, text.substring(0, 200));
+        throw new Error('Server returned invalid content type');
+      }
+      
+      // Parse JSON with error handling
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        const text = await response.text();
+        console.error('[API] JSON parsing error:', jsonError, text.substring(0, 200));
+        throw new Error('Failed to parse server response');
+      }
+      
+      console.log('[API] Status check response:', {
+        experimentId,
+        status: response.status,
+        data
+      });
+      
+      return data;
+    } catch (error) {
+      console.error('[API] Error checking training status:', {
+        experimentId,
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
+  },
+
   automlTrain: async (
-    datasetId: string,
-    taskType: string,
-    automlEngine: string,
-    testSize: number,
-    stratify: boolean,
+    datasetId: string, 
+    taskType: string, 
+    automlEngine: string, 
+    testSize: number, 
+    stratify: boolean, 
     randomSeed: number
   ) => {
-    const formData = new FormData();
-    formData.append('dataset_id', datasetId);
-    formData.append('task_type', taskType);
-    formData.append('automl_engine', automlEngine);
-    formData.append('test_size', String(testSize));
-    formData.append('stratify', String(stratify));
-    formData.append('random_seed', String(randomSeed));
-    
-    const token = getAuthToken();
-    
-    const response = await fetch(`${API_URL}/training/automl-train/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData
-    });
-    
-    return await handleApiResponse(response);
+    try {
+      const formData = new FormData();
+      formData.append('dataset_id', datasetId);
+      formData.append('task_type', taskType);
+      formData.append('automl_engine', automlEngine);
+      formData.append('test_size', testSize.toString());
+      formData.append('stratify', stratify.toString());
+      formData.append('random_seed', randomSeed.toString());
+      
+      const response = await fetch(`${API_URL}/training/automl/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AutoML training error:', {
+          status: response.status,
+          response: errorText.substring(0, 200)
+        });
+        
+        // Check if the error response is HTML
+        if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+          throw new Error(`Server returned HTML error page. Status: ${response.status}`);
+        }
+        
+        try {
+          // Try to parse as JSON for structured error
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.detail || errorJson.message || `Error: ${response.status}`);
+        } catch (parseError) {
+          // If parsing fails, use text
+          throw new Error(`Error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
+        }
+      }
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Expected JSON response, got:', contentType, text.substring(0, 200));
+        throw new Error('Server returned invalid content type');
+      }
+      
+      // Parse with error handling
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        const text = await response.text();
+        console.error('JSON parsing error:', jsonError, text.substring(0, 200));
+        throw new Error('Failed to parse server response');
+      }
+      
+      // Extract result from response data structure
+      const result = data.data || data;
+      
+      if (!result.experiment_id) {
+        throw new Error('No experiment ID returned from the server');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error starting AutoML training:', error);
+      throw error;
+    }
   },
 
   customTrain: async (formData: FormData) => {
-    const token = getAuthToken();
-    
-    const response = await fetch(`${API_URL}/training/custom-train/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData
-    });
-    
-    return await handleApiResponse(response);
-  },
-
-  getAvailableAlgorithms: async (taskType: string) => {
-    const token = getAuthToken();
-    
-    const response = await fetch(`${API_URL}/training/algorithms/${taskType}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    try {
+      console.log('[API] Starting custom training with params:', {
+        dataset_id: formData.get('dataset_id'),
+        algorithm: formData.get('algorithm'),
+        use_default_hyperparams: formData.get('use_default_hyperparams'),
+      });
+      
+      const token = getAuthToken();
+      const response = await fetch(`${API_URL}/training/custom-train/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[API] Custom training error:', {
+          status: response.status,
+          response: errorText.substring(0, 200)
+        });
+        
+        // Check if HTML error page
+        if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+          throw new Error(`Server returned HTML error page. Status: ${response.status}`);
+        }
+        
+        try {
+          // Try to parse as JSON
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.detail || errorJson.message || `Error: ${response.status}`);
+        } catch (parseError) {
+          // Use text if parsing fails
+          throw new Error(`Error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
+        }
       }
-    });
-    
-    return await handleApiResponse(response);
+      
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('[API] Expected JSON response, got:', contentType, text.substring(0, 200));
+        throw new Error('Server returned invalid content type');
+      }
+      
+      // Parse with error handling
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        const text = await response.text();
+        console.error('[API] JSON parsing error:', jsonError, text.substring(0, 200));
+        throw new Error('Failed to parse server response');
+      }
+      
+      console.log('[API] Custom training response:', data);
+      
+      // Unwrap nested data if present
+      const result = data.data || data;
+      
+      if (!result.experiment_id) {
+        throw new Error('No experiment ID returned from the server');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('[API] Error starting custom training:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   },
 
   getAvailableHyperparameters: async (algorithm: string) => {
-    const token = getAuthToken();
-    
-    const response = await fetch(`${API_URL}/training/hyperparameters/${algorithm}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    try {
+      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      const data = await handleApiResponse(response);
+      return data.hyperparameters;
+    } catch (error) {
+      console.error('Error fetching hyperparameters:', error);
+      throw error;
+    }
+  },
+
+  getExperimentResults: async (experimentId: string) => {
+    try {
+      console.log('[API] Fetching results for experiment:', experimentId);
+      const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
+        headers: getAuthHeaders()
+      });
+      
+      // Handle non-200 responses
+      if (!response.ok) {
+        // Special case for 404 - experiment may not exist yet
+        if (response.status === 404) {
+          return { 
+            status: 'processing',
+            experiment_id: experimentId,
+            message: 'Waiting for experiment to start...',
+          };
+        }
+        
+        // For other errors, extract useful information
+        let errorMessage;
+        try {
+          // Try to get response as text first
+          const errorText = await response.text();
+          
+          // Check if we got HTML instead of JSON
+          if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+            console.error("Server returned HTML instead of JSON:", errorText.substring(0, 200));
+            errorMessage = `Error: Server returned HTML instead of JSON. Status: ${response.status}`;
+          } else {
+            // Try to parse as JSON
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
+            } catch {
+              // If not parseable JSON, use the raw text
+              errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`;
+            }
+          }
+        } catch (textError) {
+          // If we can't even get text, fall back to status
+          errorMessage = `Error: ${response.status} ${response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
       }
-    });
-    
-    return await handleApiResponse(response);
+      
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          console.error(`Expected JSON response, got: ${contentType}`, text.substring(0, 200));
+          throw new Error(`Expected JSON response, got: ${contentType || 'unknown'}`);
+        } catch (error) {
+          throw new Error(`Failed to parse non-JSON response: ${error.message}`);
+        }
+      }
+      
+      // Parse JSON with extensive error handling
+      let data;
+      try {
+        data = await response.json();
+        console.log('[API] Results data received:', { 
+          experimentId,
+          status: data.status || 'unknown',
+          hasTrainingResults: !!data.training_results
+        });
+      } catch (jsonError) {
+        console.error("JSON parsing error:", jsonError);
+        // Try to get the raw text to see what's going on
+        try {
+          const text = await response.text();
+          console.error("Failed to parse as JSON:", text.substring(0, 200));
+        } catch (textError) {
+          console.error("Also failed to get response as text:", textError);
+        }
+        throw new Error(`Failed to parse response as JSON: ${jsonError.message}`);
+      }
+      
+      // Return data in the expected format, handling various response structures
+      return data.data?.experiment_results || 
+             data.experiment_results || 
+             data.data?.experiment_metadata || 
+             data;
+    } catch (error) {
+      console.error('Error fetching experiment results:', error);
+      throw error;
+    }
   }
 };
