@@ -1,38 +1,55 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Award, 
   BarChart4, 
   Clock, 
-  Image as ImageIcon,
   Download, 
   FileText, 
   RefreshCw, 
+  Layers,
+  Settings,
   Activity,
   Loader,
-  AlertTriangle,
-  ChevronRight
+  Image as ImageIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults } from '@/types/training';
-import ClassificationReportTable from './ClassificationReportTable';
-import MetricsGrid from './charts/MetricsGrid';
-import RocCurveChart from './charts/RocCurveChart';
-import PrecisionRecallChart from './charts/PrecisionRecallChart';
-import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
+import { ExperimentStatus } from '@/contexts/training/types';
 
-interface ExperimentResultsViewProps {
-  experimentId: string;
+import ClassificationReportTable from './ClassificationReportTable';
+
+interface ExperimentMetadata {
+  experiment_id: string;
+  experiment_name: string;
+  status: 'completed' | 'running' | 'failed';
+  task_type: string;
+  algorithm: string;
+  automl_engine: string;
+  target_column: string;
+  hyperparameters: Record<string, any>;
+  training_time_sec: number;
+  created_at: string;
+  completed_at: string;
+  error_message: string | null;
+}
+
+interface ExperimentFile {
+  file_type: string;
+  file_url: string;
+  file_name: string;
+}
+
+interface ExperimentResultsProps {
+  experimentId: string | null;
   onReset?: () => void;
 }
 
@@ -40,12 +57,13 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId,
   onReset
 }) => {
-  const [results, setResults] = useState<ExperimentResults | null>(null);
+  const [results, setResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('metrics');
   const { toast } = useToast();
 
+  // Fetch and normalize the experiment response
   useEffect(() => {
     if (!experimentId) return;
     let cancelled = false;
@@ -54,29 +72,45 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
     async function fetchResults() {
       try {
-        console.log('[ExperimentResultsView] Fetching results for experiment:', experimentId);
-        const data = await getExperimentResults(experimentId);
-        console.log('[ExperimentResultsView] Received data:', data ? 'data present' : 'null');
-        
+        const raw = await getExperimentResults(experimentId);
         if (!cancelled) {
-          if (data) {
-            console.log('[ExperimentResultsView] Setting results state with data');
-            console.log('[ExperimentResultsView] Data structure:', {
-              hasTrainingResults: !!data.training_results,
-              hasMetrics: data.training_results ? !!data.training_results.metrics : false,
-              hasClassificationReport: data.training_results?.metrics ? 
-                !!data.training_results.metrics.classification_report : false
-            });
-            
-            setResults(data);
-          } else {
+          if (!raw) {
             setError('Results are still being processed. Please try again in a moment.');
+            setIsLoading(false);
+            return;
           }
+          // Remap/unwrap the full response
+          const payload = (raw.data ? raw.data : raw);
+          const created = payload.created_at && new Date(payload.created_at);
+          const completed = payload.completed_at && new Date(payload.completed_at);
+          const training_time_sec =
+            payload.training_time_sec ??
+            (created && completed
+              ? (completed.getTime() - created.getTime()) / 1000
+              : undefined);
+
+          setResults({
+            experiment_metadata: {
+              experiment_id: payload.experimentId ?? payload.experiment_id,
+              experiment_name: payload.experiment_name,
+              status: payload.status,
+              task_type: payload.task_type,
+              algorithm: payload.algorithm,
+              automl_engine: payload.automl_engine,
+              target_column: payload.target_column,
+              hyperparameters: payload.hyperparameters,
+              training_time_sec: training_time_sec,
+              created_at: payload.created_at,
+              completed_at: payload.completed_at,
+              error_message: payload.error || payload.error_message,
+            },
+            metrics: payload.training_results?.metrics || {},
+            files: payload.files || [],
+          });
         }
       } catch (err) {
         if (!cancelled) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to load experiment results';
-          console.error('[ExperimentResultsView] Fetch error:', errorMessage);
           setError(errorMessage);
           toast({
             title: "Error",
@@ -172,71 +206,38 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
             <p className="text-sm text-muted-foreground">
               Please check back in a moment
             </p>
-            <Button 
-              variant="outline" 
-              onClick={() => window.location.reload()}
-              className="mt-2"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
           </div>
         </CardContent>
       </Card>
     );
   }
-  
-  console.log('[ExperimentResultsView] Rendering with results:', {
-    hasResults: !!results,
-    experimentName: results?.experiment_name,
-    taskType: results?.task_type,
-    status: results?.status,
-    hasTrainingResults: !!results?.training_results,
-    hasMetrics: results?.training_results ? !!results.training_results.metrics : false
-  });
-  
-  const { 
-    experiment_name = '', 
-    task_type = '',
-    target_column = '',
-    training_time_sec,
-    completed_at,
-    training_results,
-    files = []
-  } = results || {};
 
-  const metrics = training_results?.metrics || {};
-  console.log('[ExperimentResultsView] Metrics keys:', Object.keys(metrics));
+  // ↓ NEW: normalized destructure for below
+  const { experiment_metadata, metrics, files } = results;
 
-  // Extract arrays for visualization from metrics if they exist
-  const fpr = Array.isArray(metrics.fpr) ? metrics.fpr : [];
-  const tpr = Array.isArray(metrics.tpr) ? metrics.tpr : [];
-  const precision_curve = Array.isArray(metrics.precision_curve) ? metrics.precision_curve : [];
-  const recall_curve = Array.isArray(metrics.recall_curve) ? metrics.recall_curve : [];
-  const confusion_matrix = metrics.confusion_matrix || null;
-  const auc = typeof metrics.auc === 'number' ? metrics.auc : undefined;
-  const f1_score = typeof metrics.f1_score === 'number' ? metrics.f1_score : undefined;
+  // Only pass number metrics to grid
+  const numberMetrics = Object.fromEntries(
+    Object.entries(metrics).filter(([k, v]) => typeof v === "number")
+  );
+  const classificationReport = metrics.classification_report ?? null;
+
+  const formatTaskType = (type: string = '') => {
+    if (!type) return "Unknown";
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
   
-  // Extract class labels if available
-  const class_labels = results.class_labels || [];
+  const isVisualizationFile = (fileType: string) => {
+    const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
+    return visualTypes.some(type => fileType.includes(type));
+  };
   
-  // Check if task is classification
-  const isClassification = task_type ? task_type.includes('classification') : false;
-  const isBinaryClassification = isClassification && task_type.includes('binary');
-  
-  // Determine if we have ROC or PR curve data available
-  const hasRocCurveData = fpr.length > 0 && tpr.length > 0;
-  const hasPrCurveData = precision_curve.length > 0 && recall_curve.length > 0;
-  const hasConfusionMatrix = Array.isArray(confusion_matrix) && confusion_matrix.length > 0;
-  
-  // Check if we have any advanced visualization data
-  const hasAdvancedCharts = hasRocCurveData || hasPrCurveData || hasConfusionMatrix;
-  
-  // Check for a valid classification report
-  const classificationReport = metrics.classification_report &&
-    (typeof metrics.classification_report === "object" || typeof metrics.classification_report === "string")
-      ? metrics.classification_report
-      : null;
+  const getDownloadableFiles = () => {
+    return files.filter(file => 
+      file.file_type === 'model' || 
+      file.file_type === 'report' || 
+      file.file_type.includes('report')
+    );
+  };
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -244,116 +245,94 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">{experiment_name || 'Experiment Results'}</CardTitle>
+            <CardTitle className="text-xl">{experiment_metadata.experiment_name || 'Experiment Results'}</CardTitle>
           </div>
-          
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {task_type.replace(/_/g, ' ')}
+            {experiment_metadata.algorithm || experiment_metadata.automl_engine || experiment_metadata.task_type}
           </Badge>
         </div>
-        
         <CardDescription className="flex flex-wrap gap-x-4 mt-2">
           <span className="inline-flex items-center">
             <Activity className="h-3.5 w-3.5 mr-1" />
-            Task: <span className="font-semibold ml-1">{task_type.replace(/_/g, ' ')}</span>
+            Task: <span className="font-semibold ml-1">{experiment_metadata.task_type}</span>
           </span>
-          
-          {target_column && (
+          {experiment_metadata.target_column && (
             <span className="inline-flex items-center">
               <Activity className="h-3.5 w-3.5 mr-1" />
-              Target: <span className="font-semibold ml-1">{target_column}</span>
+              Target: <span className="font-semibold ml-1">{experiment_metadata.target_column}</span>
             </span>
           )}
-          
-          {training_time_sec && (
+          {experiment_metadata.training_time_sec && (
             <span className="inline-flex items-center">
               <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{training_time_sec.toFixed(1)}s</span>
+              Time: <span className="font-semibold ml-1">{experiment_metadata.training_time_sec.toFixed(1)}s</span>
             </span>
           )}
-          
-          {experimentId && (
+          {experiment_metadata.experiment_id && (
             <span className="inline-flex items-center">
-              <span className="font-mono text-xs text-muted-foreground">ID: {experimentId.substring(0, 8)}</span>
+              <span className="font-mono text-xs text-muted-foreground">ID: {String(experiment_metadata.experiment_id).substring(0, 8)}</span>
             </span>
           )}
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`w-full grid ${hasAdvancedCharts ? 'grid-cols-4' : 'grid-cols-3'} rounded-none border-b h-12`}>
+          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
             <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
             </TabsTrigger>
-            
-            {hasAdvancedCharts && (
-              <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
-                <BarChart4 className="h-4 w-4" />
-                <span>Advanced Charts</span>
-              </TabsTrigger>
-            )}
-            
             <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
-              <ImageIcon className="h-4 w-4" />
+              <BarChart4 className="h-4 w-4" />
               <span>Visualizations</span>
             </TabsTrigger>
-            
             <TabsTrigger value="details" className="text-sm flex items-center gap-1">
               <FileText className="h-4 w-4" />
               <span>Details</span>
             </TabsTrigger>
+            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1">
+              <Download className="h-4 w-4" />
+              <span>Downloads</span>
+            </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="metrics" className="p-6">
-            <MetricsGrid metrics={metrics} taskType={task_type} />
-            
+            {Object.keys(numberMetrics).length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(numberMetrics).map(([key, value]) => (
+                  <Card key={key} className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm capitalize">{key.replace(/_/g, " ")}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {key.toLowerCase().includes("accuracy") ||
+                        key.toLowerCase().includes("f1_score") ||
+                        key.toLowerCase().includes("precision") ||
+                        key.toLowerCase().includes("recall")
+                          ? `${(value * 100).toFixed(2)}%`
+                          : value.toFixed(4)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                No performance metrics were found for this experiment.
+              </p>
+            )}
             {classificationReport && (
               <div className="mt-8">
-                <h3 className="text-lg font-medium mb-2">Classification Report</h3>
-                <div className="bg-muted/40 p-4 rounded-md">
+                <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
+                <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
                   <ClassificationReportTable report={classificationReport} />
                 </div>
               </div>
             )}
           </TabsContent>
-          
-          {hasAdvancedCharts && (
-            <TabsContent value="charts" className="p-6">
-              <div className="space-y-8">
-                {isBinaryClassification && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {hasRocCurveData && (
-                      <RocCurveChart fpr={fpr} tpr={tpr} auc={auc} />
-                    )}
-                    
-                    {hasPrCurveData && (
-                      <PrecisionRecallChart precision={precision_curve} recall={recall_curve} f1Score={f1_score} />
-                    )}
-                  </div>
-                )}
-                
-                {hasConfusionMatrix && (
-                  <div className="mt-6">
-                    <ConfusionMatrixChart 
-                      matrix={confusion_matrix}
-                      labels={class_labels.length > 0 ? class_labels : (isBinaryClassification ? ['Negative', 'Positive'] : [])}
-                    />
-                  </div>
-                )}
-                
-                {!hasRocCurveData && !hasPrCurveData && !hasConfusionMatrix && (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      No advanced charts available for this experiment.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          )}
-          
+
           <TabsContent value="visualizations" className="p-6">
             {files.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -391,12 +370,21 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                           <h3 className="font-medium capitalize">
                             {file.file_type.replace(/_/g, ' ')}
                           </h3>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </a>
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </div>
                     </DialogContent>
@@ -413,7 +401,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               </div>
             )}
           </TabsContent>
-          
+
           <TabsContent value="details" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
@@ -425,30 +413,30 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                     <TableBody>
                       <TableRow>
                         <TableCell className="font-medium">Task Type</TableCell>
-                        <TableCell>{task_type.replace(/_/g, ' ')}</TableCell>
+                        <TableCell>{experiment_metadata.task_type}</TableCell>
                       </TableRow>
-                      {target_column && (
+                      {experiment_metadata.target_column && (
                         <TableRow>
                           <TableCell className="font-medium">Target Column</TableCell>
-                          <TableCell>{target_column}</TableCell>
+                          <TableCell>{experiment_metadata.target_column}</TableCell>
                         </TableRow>
                       )}
-                      {experimentId && (
+                      {experiment_metadata.experiment_id && (
                         <TableRow>
                           <TableCell className="font-medium">Experiment ID</TableCell>
-                          <TableCell className="font-mono text-xs">{experimentId}</TableCell>
+                          <TableCell className="font-mono text-xs">{experiment_metadata.experiment_id}</TableCell>
                         </TableRow>
                       )}
-                      {completed_at && (
+                      {experiment_metadata.completed_at && (
                         <TableRow>
                           <TableCell className="font-medium">Completed At</TableCell>
-                          <TableCell>{new Date(completed_at).toLocaleString()}</TableCell>
+                          <TableCell>{new Date(experiment_metadata.completed_at).toLocaleString()}</TableCell>
                         </TableRow>
                       )}
-                      {training_time_sec && (
+                      {experiment_metadata.training_time_sec && (
                         <TableRow>
                           <TableCell className="font-medium">Training Time</TableCell>
-                          <TableCell>{training_time_sec.toFixed(1)} seconds</TableCell>
+                          <TableCell>{experiment_metadata.training_time_sec.toFixed(1)} seconds</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
@@ -462,22 +450,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {files.filter(file => 
-                      file.file_type.includes('model') || 
-                      file.file_type.includes('report')
-                    ).map((file, index) => (
+                    {getDownloadableFiles().map((file, index) => (
                       <Button key={index} variant="outline" className="w-full justify-start" asChild>
-                        <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download {file.file_type.replace(/_/g, ' ')}
+                        <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" /> 
+                          Download {file.file_name}
                         </a>
                       </Button>
                     ))}
                     
-                    {files.filter(file => 
-                      file.file_type.includes('model') || 
-                      file.file_type.includes('report')
-                    ).length === 0 && (
+                    {getDownloadableFiles().length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No downloadable files available
                       </p>
@@ -487,24 +469,38 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
               </Card>
             </div>
           </TabsContent>
+
+          <TabsContent value="downloads" className="p-6">
+            {getDownloadableFiles().length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {getDownloadableFiles().map((file, index) => (
+                  <Card key={index} className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button asChild className="w-full">
+                        <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" /> 
+                          Download {file.file_name}
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Download className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  No downloadable artifacts were found for this experiment.
+                </p>
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </CardContent>
-      
-      <CardFooter className="justify-between border-t p-4">
-        {onReset && (
-          <Button variant="outline" onClick={onReset}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Run New Experiment
-          </Button>
-        )}
-        
-        {completed_at && (
-          <div className="text-xs text-muted-foreground flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            Completed: {new Date(completed_at).toLocaleString()}
-          </div>
-        )}
-      </CardFooter>
     </Card>
   );
 };
