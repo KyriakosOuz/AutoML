@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -71,7 +70,7 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
       throw new Error('Server returned HTML instead of JSON. Check server configuration.');
     }
     
-    // Now parse the text as JSON
+    // Parse the text as JSON, expect only the canonical format
     let apiResponse: any;
     try {
       apiResponse = JSON.parse(responseText);
@@ -83,27 +82,27 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
 
     // Log the full structure for debugging
     console.log('[API] Results data received:', apiResponse);
-    
-    // Extract data from various response formats
-    let resultData: any = null;
-    
-    // Format 1: { status: 'success', data: {...} }
-    if (apiResponse.status === 'success' && apiResponse.data && typeof apiResponse.data === 'object') {
-      resultData = apiResponse.data;
-    } 
-    // Format 2: Direct experiment data in root
-    else if (apiResponse.experiment_id || apiResponse.experiment_name) {
-      resultData = apiResponse;
+
+    // Accept ONLY the canonical format: { experiment_id, status, ... }
+    if (
+      typeof apiResponse === 'object' &&
+      (apiResponse.experiment_id || apiResponse.experiment_name)
+    ) {
+      // If we receive hasTrainingResults: false, indicate results not ready yet
+      if (apiResponse.hasTrainingResults === false) {
+        throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
+      }
+      // Otherwise, treat as valid results object
+      return apiResponse as ExperimentResults;
     }
-    
-    // Validate that we have proper result data
-    if (resultData && typeof resultData === 'object') {
-      return resultData as ExperimentResults;
-    }
-    
-    // Handle case with hasTrainingResults flag in the API response
-    if (apiResponse.hasTrainingResults === false) {
-      throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
+
+    // As a safety, check old data-wrapping (should not happen in new backend structure)
+    if (apiResponse.status === 'success' && typeof apiResponse.data === 'object') {
+      const data = apiResponse.data;
+      if (data.hasTrainingResults === false) {
+        throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
+      }
+      return data as ExperimentResults;
     }
     
     throw new Error('Invalid or empty response format from experiment results endpoint');
