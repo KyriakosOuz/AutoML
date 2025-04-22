@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -24,6 +23,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { ExperimentStatus } from '@/contexts/training/types';
+import ClassificationReportTable from '../training/ClassificationReportTable';
 
 interface ExperimentMetadata {
   experiment_id: string;
@@ -73,15 +73,14 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
       setError(null);
       
       try {
-        // FIX: Use correct backend path!
         const response = await fetch(`/experiments/experiment-results/${experimentId}`);
         
         if (!response.ok) {
           throw new Error(`Error fetching results: ${response.statusText}`);
         }
         
-        const data = await response.json();
-        setResults(data);
+        const envelope = await response.json();
+        setResults(envelope.data);
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
@@ -238,6 +237,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
   const files = results.files || [];
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   
+  const classificationReport = metrics.classification_report;
+
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -308,12 +309,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
             {Object.keys(metrics).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {Object.entries(metrics).map(([key, value]) => {
+                  if (
+                    key === 'classification_report'
+                  ) {
+                    return null;
+                  }
                   if (typeof value !== 'number') return null;
-                  
                   const isPercentageMetric = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2'].some(m => 
                     key.toLowerCase().includes(m)
                   );
-                  
                   return (
                     <Card key={key} className="shadow-sm">
                       <CardHeader className="pb-2">
@@ -337,6 +341,20 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
                 <p className="text-muted-foreground max-w-md mx-auto mt-2">
                   No performance metrics were found for this experiment.
                 </p>
+              </div>
+            )}
+            {classificationReport && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
+                {typeof classificationReport === 'object' ? (
+                  <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
+                    <ClassificationReportTable report={classificationReport} />
+                  </div>
+                ) : (
+                  <pre className="whitespace-pre-wrap bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
+                    {String(classificationReport)}
+                  </pre>
+                )}
               </div>
             )}
           </TabsContent>
@@ -493,6 +511,20 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
                 </Card>
               )}
             </div>
+            {classificationReport && (
+              <Card className="shadow-sm mt-6">
+                <CardHeader><CardTitle>Classification Report</CardTitle></CardHeader>
+                <CardContent>
+                  {typeof classificationReport === 'object' ? (
+                    <ClassificationReportTable report={classificationReport} />
+                  ) : (
+                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded text-xs font-mono overflow-x-auto">
+                      {String(classificationReport)}
+                    </pre>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
           
           <TabsContent value="downloads" className="p-6">
@@ -547,4 +579,3 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
 };
 
 export default ExperimentResults;
-
