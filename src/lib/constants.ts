@@ -14,6 +14,7 @@ export const ALLOWED_ALGORITHMS = {
 } as const;
 
 export const DEFAULT_HYPERPARAMETERS = {
+  "Logistic Regression": {},
   "Decision Tree": {
     max_depth: 5,
     min_samples_split: 2
