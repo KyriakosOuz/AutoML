@@ -94,8 +94,12 @@ const FileUpload: React.FC = () => {
       
       console.log('Uploading file:', selectedFile.name);
       
+      // Create FormData and append the file
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
       const response = await datasetApi.uploadDataset(
-        selectedFile, 
+        formData, 
         customMissingSymbol || undefined
       );
       
@@ -110,6 +114,8 @@ const FileUpload: React.FC = () => {
         
         // Check if overview is directly in response or nested in data
         const overview = dataset.overview || {};
+        
+        // Extract features safely with fallbacks
         const numericalFeatures = overview.numerical_features || [];
         const categoricalFeatures = overview.categorical_features || [];
         
@@ -119,12 +125,12 @@ const FileUpload: React.FC = () => {
           missing_values: overview.missing_values || {},
           numerical_features: numericalFeatures,
           categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values,
-          missing_values_count: overview.missing_values_count,
-          column_names: overview.column_names,
-          unique_values_count: overview.unique_values_count,
-          data_types: overview.data_types,
-          feature_classification: overview.feature_classification
+          total_missing_values: overview.total_missing_values || 0,
+          missing_values_count: overview.missing_values_count || {},
+          column_names: overview.column_names || [],
+          unique_values_count: overview.unique_values_count || {},
+          data_types: overview.data_types || {},
+          feature_classification: overview.feature_classification || {}
         };
         
         updateState({
@@ -152,12 +158,12 @@ const FileUpload: React.FC = () => {
           missing_values: overview.missing_values || {},
           numerical_features: numericalFeatures,
           categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values,
-          missing_values_count: overview.missing_values_count,
-          column_names: overview.column_names,
-          unique_values_count: overview.unique_values_count,
-          data_types: overview.data_types,
-          feature_classification: overview.feature_classification
+          total_missing_values: overview.total_missing_values || 0,
+          missing_values_count: overview.missing_values_count || {},
+          column_names: overview.column_names || [],
+          unique_values_count: overview.unique_values_count || {},
+          data_types: overview.data_types || {},
+          feature_classification: overview.feature_classification || {}
         };
         
         updateState({
