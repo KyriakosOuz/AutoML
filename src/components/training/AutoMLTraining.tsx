@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -84,7 +85,8 @@ const AutoMLTraining: React.FC = () => {
         randomSeed
       );
 
-      const experimentId = response?.experiment_id || response?.data?.experiment_id;
+      const experimentId = response.experiment_id;
+      const experimentName = response.experiment_name;
 
       if (experimentId) {
         setLastTrainingType('automl');
