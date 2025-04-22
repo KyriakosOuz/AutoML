@@ -388,6 +388,8 @@ export const trainingApi = {
         headers: getAuthHeaders()
       });
       
+      const contentType = response.headers.get('content-type');
+
       if (!response.ok) {
         if (response.status === 404) {
           // Return a structured response for 404 (experiment not yet created)
@@ -411,6 +413,11 @@ export const trainingApi = {
         }
         
         throw new Error(errorMessage);
+      }
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Expected JSON response, got: ${contentType}\n${text.slice(0, 200)}`);
       }
       
       const data = await response.json();
