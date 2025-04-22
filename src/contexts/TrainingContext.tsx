@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -165,34 +164,78 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
           console.log('[TrainingContext] Training completed successfully');
           stopPolling();
-          const results = await trainingApi.getExperimentResults(experimentId);
-          console.log('[TrainingContext] Retrieved results:', results);
-          setExperimentResults(results);
-          setIsLoadingResults(false);
-          setIsTraining(false);
-          toast({
-            title: "Training Complete",
-            description: "Your model has finished training successfully!"
-          });
+          
+          try {
+            const results = await trainingApi.getExperimentResults(experimentId);
+            console.log('[TrainingContext] Retrieved results:', results);
+            setExperimentResults(results);
+            setIsLoadingResults(false);
+            setIsTraining(false);
+            toast({
+              title: "Training Complete",
+              description: "Your model has finished training successfully!"
+            });
+          } catch (resultError) {
+            console.error('[TrainingContext] Error fetching results:', resultError);
+            setError(resultError instanceof Error ? resultError.message : 'Failed to fetch results');
+            setIsLoadingResults(false);
+            setIsTraining(false);
+          }
         } else if (statusResponse.status === 'failed') {
           console.error('[TrainingContext] Training failed');
           stopPolling();
-          const results = await trainingApi.getExperimentResults(experimentId);
-          console.error('[TrainingContext] Error details:', results.error_message);
-          setError(results.error_message || 'Training failed');
+          try {
+            const results = await trainingApi.getExperimentResults(experimentId);
+            console.error('[TrainingContext] Error details:', results.error_message);
+            setError(results.error_message || 'Training failed');
+            setIsLoadingResults(false);
+            setIsTraining(false);
+            toast({
+              title: "Training Failed",
+              description: results.error_message || 'An error occurred during training',
+              variant: "destructive"
+            });
+          } catch (resultError) {
+            console.error('[TrainingContext] Error fetching failure details:', resultError);
+            setError('Training failed and could not fetch error details');
+            setIsLoadingResults(false);
+            setIsTraining(false);
+            toast({
+              title: "Training Failed",
+              description: 'An error occurred during training',
+              variant: "destructive"
+            });
+          }
+        } else if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          console.warn('[TrainingContext] Reached maximum polling attempts');
+          stopPolling();
+          setError('Timeout while waiting for training completion');
           setIsLoadingResults(false);
           setIsTraining(false);
           toast({
-            title: "Training Failed",
-            description: results.error_message || 'An error occurred during training',
+            title: "Training Timeout",
+            description: "The training process is taking longer than expected. Check back later.",
             variant: "destructive"
           });
+        } else {
+          setPollingAttempts(prev => prev + 1);
         }
       } catch (error) {
         console.error('[TrainingContext] Polling error:', error);
-        setExperimentStatus('failed');
-        setError('Failed to check experiment status');
-        stopPolling();
+        if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          setExperimentStatus('failed');
+          setError('Failed to check experiment status after multiple attempts');
+          stopPolling();
+          setIsLoadingResults(false);
+          setIsTraining(false);
+          toast({
+            title: "Connection Error",
+            description: "Failed to connect to the server after multiple attempts",
+            variant: "destructive"
+          });
+        } else {
+          setPollingAttempts(prev => prev + 1);
+        }
       }
     }, POLL_INTERVAL);
 

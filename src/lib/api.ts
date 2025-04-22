@@ -417,28 +417,65 @@ export const trainingApi = {
           };
         }
         
-        const errorText = await response.text();
         let errorMessage;
-        
         try {
-          // Try to parse as JSON
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
-        } catch {
-          // If not JSON, use the raw text
-          errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText}`;
+          // Try to get response as text first
+          const errorText = await response.text();
+          
+          // Check if we got HTML instead of JSON
+          if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+            console.error("Server returned HTML instead of JSON:", errorText.substring(0, 200));
+            errorMessage = `Error: Server returned HTML instead of JSON. Status: ${response.status}`;
+          } else {
+            // Try to parse as JSON
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.detail || errorJson.message || `Error: ${response.status} ${response.statusText}`;
+            } catch {
+              // If not parseable JSON, use the raw text
+              errorMessage = `Error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`;
+            }
+          }
+        } catch (textError) {
+          // If we can't even get text, fall back to status
+          errorMessage = `Error: ${response.status} ${response.statusText}`;
         }
         
         throw new Error(errorMessage);
       }
       
+      // Check if response is not JSON
       if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Expected JSON response, got: ${contentType}\n${text.slice(0, 200)}`);
+        try {
+          const text = await response.text();
+          console.error(`Expected JSON response, got: ${contentType}`, text.substring(0, 200));
+          throw new Error(`Expected JSON response, got: ${contentType || 'unknown'}`);
+        } catch (error) {
+          throw new Error(`Failed to parse non-JSON response: ${error.message}`);
+        }
       }
       
-      const data = await response.json();
-      return data.data?.experiment_results || data.experiment_results || data;
+      // Parse JSON response
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("JSON parsing error:", jsonError);
+        // Try to get the raw text to see what's going on
+        try {
+          const text = await response.text();
+          console.error("Failed to parse as JSON:", text.substring(0, 200));
+        } catch (textError) {
+          console.error("Also failed to get response as text:", textError);
+        }
+        throw new Error(`Failed to parse response as JSON: ${jsonError.message}`);
+      }
+      
+      // Return data in the expected format
+      return data.data?.experiment_results || 
+             data.experiment_results || 
+             data.data?.experiment_metadata || 
+             data;
     } catch (error) {
       console.error('Error fetching experiment results:', error);
       throw error;
