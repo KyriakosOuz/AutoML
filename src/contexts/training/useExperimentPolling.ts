@@ -46,7 +46,7 @@ export const useExperimentPolling = ({
     const interval = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
-        console.log('[TrainingContext] Status response:', response);
+        console.log('[TrainingContext] Status response data:', data);
 
         const data = response.data;
 
@@ -66,9 +66,9 @@ export const useExperimentPolling = ({
 
         // Stop polling SPECIFICALLY when status is "completed"
         if (data.status === 'completed') {
-          console.log('[TrainingContext] Training completed, stopping polling.');
+          console.log('[TrainingContext] Training completed (polling stops).');
           stopPolling();
-          onSuccess(experimentId);
+          onSuccess(experimentId); // this will fetch results or show "No results"
           return;
         }
 
