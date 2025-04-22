@@ -70,3 +70,77 @@ export const getExperimentResults = async (
     throw error;
   }
 };
+
+// Get prediction schema for an experiment
+export interface PredictionSchema {
+  features: string[];
+  target_column: string;
+  sample_row: Record<string, any>;
+}
+
+export const getPredictionSchema = async (experimentId: string): Promise<PredictionSchema> => {
+  try {
+    console.log('[API] Fetching prediction schema for experiment:', experimentId);
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(
+      `${API_BASE_URL}/prediction/schema/${experimentId}`,
+      { headers }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error('[API] Error fetching prediction schema:', errorText.substring(0, 200));
+      throw new Error(`Failed to fetch prediction schema: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('[API] Prediction schema:', data);
+    return data;
+  } catch (error) {
+    console.error('[API] Error in getPredictionSchema:', error);
+    throw error;
+  }
+};
+
+// Submit manual prediction
+export const submitManualPrediction = async (
+  experimentId: string, 
+  inputValues: Record<string, any>
+): Promise<any> => {
+  try {
+    console.log('[API] Submitting manual prediction for experiment:', experimentId);
+    console.log('[API] Input values:', inputValues);
+    
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    
+    formData.append('experiment_id', experimentId);
+    formData.append('input_values', JSON.stringify(inputValues));
+    
+    const response = await fetch(
+      `${API_BASE_URL}/prediction/predict-manual/`,
+      { 
+        method: 'POST',
+        headers: {
+          ...headers,
+          // Don't set Content-Type as the browser will set it with the boundary
+        },
+        body: formData
+      }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error('[API] Error submitting prediction:', errorText.substring(0, 200));
+      throw new Error(`Failed to submit prediction: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('[API] Prediction response:', data);
+    return data.data || data;
+  } catch (error) {
+    console.error('[API] Error in submitManualPrediction:', error);
+    throw error;
+  }
+};

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCcw } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import { useToast } from '@/hooks/use-toast';
+import DynamicPredictionForm from './DynamicPredictionForm';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -52,9 +53,14 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger value="automl">AutoML</TabsTrigger>
             <TabsTrigger value="custom">Custom Training</TabsTrigger>
             {showResults && (
-              <TabsTrigger value="results">
-                Results
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="results">
+                  Results
+                </TabsTrigger>
+                <TabsTrigger value="predict">
+                  Predict
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
           {(activeExperimentId || showResults) && (
@@ -82,10 +88,21 @@ const ModelTrainingContent: React.FC = () => {
             </div>
           )}
         </TabsContent>
+        <TabsContent value="predict" className="space-y-4">
+          {showResults && activeExperimentId ? (
+            <DynamicPredictionForm experimentId={activeExperimentId} />
+          ) : (
+            <div className="text-center py-12 bg-muted/30 rounded-lg">
+              <h3 className="text-lg font-medium mb-2">No Model Available</h3>
+              <p className="text-muted-foreground">
+                Complete a training run to make predictions
+              </p>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
 };
 
 export default ModelTrainingContent;
-
