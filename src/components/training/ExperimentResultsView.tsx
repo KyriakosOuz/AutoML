@@ -24,6 +24,11 @@ import {
 } from 'lucide-react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
+import ClassificationReportTable from './ClassificationReportTable';
+import MetricsGrid from './charts/MetricsGrid';
+import RocCurveChart from './charts/RocCurveChart';
+import PrecisionRecallChart from './charts/PrecisionRecallChart';
+import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
