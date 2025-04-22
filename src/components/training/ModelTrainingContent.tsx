@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AutoMLTraining from './AutoMLTraining';
@@ -8,8 +7,6 @@ import StatusBadge, { Status } from './StatusBadge';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 const ModelTrainingContent: React.FC = () => {
-  console.log('Rendering ModelTrainingContent');
-  
   const { 
     resetTrainingState, 
     activeExperimentId,
