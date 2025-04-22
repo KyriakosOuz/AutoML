@@ -74,6 +74,27 @@ export const getExperimentResults = async (
   }
 };
 
+// Helper to extract error details from FastAPI error responses
+async function extractApiError(response: Response, fallbackMessage: string): Promise<string> {
+  const text = await response.text();
+  if (!text) return fallbackMessage;
+
+  try {
+    // Try to extract { detail: ... } from response
+    const json = JSON.parse(text);
+    if (json && typeof json.detail === 'string') {
+      return json.detail;
+    }
+    // Sometimes FastAPI returns { detail: [ { loc, msg, type } ] }
+    if (json && Array.isArray(json.detail) && json.detail[0]?.msg) {
+      return json.detail.map((err: any) => err.msg).join(', ');
+    }
+  } catch {
+    // Not JSON, just return the start of the text
+  }
+  return text.substring(0, 200) || fallbackMessage;
+}
+
 // Prediction endpoints
 export const predictManual = async (
   experimentId: string,
@@ -101,11 +122,13 @@ export const predictManual = async (
     // Read the response as text first
     const responseText = await response.text();
     if (!response.ok) {
+      const errorMsg = await extractApiError(response, `Prediction failed: ${response.status} ${response.statusText}`);
       console.error('[API] Manual prediction error:', {
         status: response.status,
-        response: responseText.substring(0, 200)
+        response: responseText.substring(0, 200),
+        errorMsg
       });
-      throw new Error(`Prediction failed: ${response.status} ${response.statusText}`);
+      throw new Error(errorMsg);
     }
 
     // Check for empty response
@@ -153,11 +176,13 @@ export const predictBatchCsv = async (
     // Read the response as text first
     const responseText = await response.text();
     if (!response.ok) {
+      const errorMsg = await extractApiError(response, `Batch prediction failed: ${response.status} ${response.statusText}`);
       console.error('[API] Batch prediction error:', {
         status: response.status,
-        response: responseText.substring(0, 200)
+        response: responseText.substring(0, 200),
+        errorMsg
       });
-      throw new Error(`Batch prediction failed: ${response.status} ${response.statusText}`);
+      throw new Error(errorMsg);
     }
 
     // Check for empty response
