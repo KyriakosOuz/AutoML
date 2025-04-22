@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
@@ -23,12 +22,7 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
   
   if (!contentType || !contentType.includes('application/json')) {
     const text = await response.text();
-    console.error('Server returned non-JSON response:', {
-      status: response.status,
-      contentType,
-      text: text.substring(0, 200)
-    });
-    throw new Error(`Server returned non-JSON response (${response.status})`);
+    throw new Error(`Expected JSON but got: ${text.slice(0, 100)}`);
   }
 
   if (!response.ok) {
@@ -38,9 +32,7 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
 
   const jsonData = await response.json();
   
-  // Ensure the returned data conforms to ApiResponse structure
   if (!jsonData.hasOwnProperty('status') || !jsonData.hasOwnProperty('data')) {
-    // If the API doesn't return in the expected format, transform it
     return {
       status: 'success',
       data: jsonData as T

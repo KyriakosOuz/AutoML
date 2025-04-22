@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +31,7 @@ export const useExperimentPolling = ({
 
   const startPolling = useCallback(async (experimentId: string) => {
     stopPolling();
-    
+
     console.log('[TrainingContext] Starting polling for experiment:', experimentId);
     setIsLoading(true);
     setPollingAttempts(0);
@@ -47,29 +46,33 @@ export const useExperimentPolling = ({
       try {
         const response = await checkStatus(experimentId);
         console.log('[TrainingContext] Status response:', response);
-        
-        if (response.status === 'error') {
-          throw new Error(response.message || 'Invalid status response from server');
-        }
 
         const data = response.data;
+
+        if (data.status === 'failed' || !!data.error_message) {
+          setExperimentStatus('failed');
+          stopPolling();
+          onError(data.error_message || 'Training failed.');
+          toast({
+            title: "Training Failed",
+            description: data.error_message || "An error occurred during training.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         setExperimentStatus(data.status as ExperimentStatus);
 
         if (data.status === 'completed' && data.hasTrainingResults) {
-          console.log('[TrainingContext] Training completed successfully');
+          console.log('[TrainingContext] Training completed and results available.');
           stopPolling();
           onSuccess(experimentId);
-        } else if (data.status === 'failed') {
-          console.error('[TrainingContext] Training failed:', data.error_message);
-          stopPolling();
-          onError(data.error_message || 'Training failed');
-          toast({
-            title: "Training Failed",
-            description: data.error_message || "An error occurred during training",
-            variant: "destructive"
-          });
-        } else if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          return;
+        }
+
+        if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
+          setExperimentStatus('failed');
           stopPolling();
           onError('Timeout while waiting for training completion');
           toast({
@@ -77,11 +80,13 @@ export const useExperimentPolling = ({
             description: "The training process took too long to complete",
             variant: "destructive"
           });
-        } else {
-          setPollingAttempts(prev => prev + 1);
+          return;
         }
+
+        setPollingAttempts(prev => prev + 1);
       } catch (error) {
         console.error('[TrainingContext] Polling error:', error);
+
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
           stopPolling();
@@ -99,7 +104,7 @@ export const useExperimentPolling = ({
     }, POLL_INTERVAL);
 
     setPollingInterval(interval);
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
   useEffect(() => {
     return () => {
