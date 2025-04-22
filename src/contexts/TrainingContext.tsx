@@ -136,19 +136,26 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       clearInterval(pollingInterval);
     }
 
+    console.log('[TrainingContext] Starting polling for experiment:', experimentId);
     setIsLoadingResults(true);
     setActiveExperimentId(experimentId);
     setPollingAttempts(0);
 
     const interval = setInterval(async () => {
       try {
-        console.log('Polling experiment status:', experimentId);
+        console.log('[TrainingContext] Polling attempt', pollingAttempts + 1, 'for experiment:', experimentId);
         const statusResponse = await trainingApi.checkStatus(experimentId);
-        console.log('Status response:', statusResponse);
+        console.log('[TrainingContext] Status response:', {
+          status: statusResponse.status,
+          experimentId,
+          response: statusResponse
+        });
         
         if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
+          console.log('[TrainingContext] Training completed successfully');
           stopPolling();
           const results = await trainingApi.getExperimentResults(experimentId);
+          console.log('[TrainingContext] Retrieved results:', results);
           setExperimentResults(results);
           setIsLoadingResults(false);
           setIsTraining(false);
@@ -157,8 +164,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             description: "Your model has finished training successfully!"
           });
         } else if (statusResponse.status === 'failed') {
+          console.error('[TrainingContext] Training failed');
           stopPolling();
           const results = await trainingApi.getExperimentResults(experimentId);
+          console.error('[TrainingContext] Error details:', results.error_message);
           setError(results.error_message || 'Training failed');
           setIsLoadingResults(false);
           setIsTraining(false);
@@ -169,8 +178,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           });
         } else {
           // Still processing
+          console.log('[TrainingContext] Training still in progress, attempt:', pollingAttempts + 1);
           setPollingAttempts(prev => {
             if (prev >= MAX_POLL_ATTEMPTS) {
+              console.error('[TrainingContext] Training timed out after', MAX_POLL_ATTEMPTS, 'attempts');
               stopPolling();
               setError('Training timeout - please check results page later');
               setIsLoadingResults(false);
@@ -181,7 +192,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           });
         }
       } catch (error) {
-        console.error('Polling error:', error);
+        console.error('[TrainingContext] Polling error:', {
+          error,
+          experimentId,
+          attempt: pollingAttempts + 1
+        });
         // Don't stop polling on network errors, but log them
       }
     }, POLL_INTERVAL);

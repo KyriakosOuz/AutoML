@@ -240,13 +240,24 @@ export const trainingApi = {
 
   checkStatus: async (experimentId: string) => {
     try {
+      console.log('[API] Checking status for experiment:', experimentId);
       const response = await fetch(`${API_URL}/training/check-status/${experimentId}`, {
         headers: getAuthHeaders(),
       });
       
-      return await handleApiResponse(response);
+      const data = await handleApiResponse(response);
+      console.log('[API] Status check response:', {
+        experimentId,
+        status: response.status,
+        data
+      });
+      return data;
     } catch (error) {
-      console.error('Error checking training status:', error);
+      console.error('[API] Error checking training status:', {
+        experimentId,
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      });
       throw error;
     }
   },
@@ -285,6 +296,12 @@ export const trainingApi = {
 
   customTrain: async (formData: FormData) => {
     try {
+      console.log('[API] Starting custom training with params:', {
+        dataset_id: formData.get('dataset_id'),
+        algorithm: formData.get('algorithm'),
+        use_default_hyperparams: formData.get('use_default_hyperparams'),
+      });
+      
       const token = getAuthToken();
       const response = await fetch(`${API_URL}/training/custom-train/`, {
         method: 'POST',
@@ -294,9 +311,15 @@ export const trainingApi = {
         body: formData
       });
       
-      return await handleApiResponse(response);
+      const data = await handleApiResponse(response);
+      console.log('[API] Custom training response:', data);
+      return data;
     } catch (error) {
-      console.error('Error starting custom training:', error);
+      console.error('[API] Error starting custom training:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        formDataKeys: Array.from(formData.keys())
+      });
       throw error;
     }
   },
