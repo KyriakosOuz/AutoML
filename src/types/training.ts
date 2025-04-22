@@ -33,7 +33,7 @@ export interface TrainingFile {
 }
 
 export interface TrainingResults {
-  metrics: Record<string, any>;
+  metrics?: Record<string, any>;
   y_true?: number[] | string[];
   y_pred?: number[] | string[];
   y_probs?: number[][] | number[];
@@ -109,3 +109,12 @@ export interface CustomTrainingResult {
   experimentName: string;
 }
 
+export interface PredictionResult {
+  prediction: string | number;
+  probability?: number | number[];
+}
+
+export interface BatchPredictionResult {
+  metrics?: Record<string, number>;
+  preview?: Record<string, any>[];
+}

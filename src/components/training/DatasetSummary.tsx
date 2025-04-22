@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +23,14 @@ const DatasetSummary: React.FC = () => {
   const numSelectedFeatures = columnsToKeep?.length || 0;
   const totalFeatures = previewColumns?.length || 0;
   
+  const filteredNumericalFeatures = overview.numerical_features?.filter(
+    feat => columnsToKeep?.includes(feat)
+  ) || [];
+  
+  const filteredCategoricalFeatures = overview.categorical_features?.filter(
+    feat => columnsToKeep?.includes(feat) && feat !== targetColumn
+  ) || [];
+  
   const getTaskTypeBadge = () => {
     if (!taskType) return null;
     
@@ -44,7 +51,10 @@ const DatasetSummary: React.FC = () => {
     return (
       <Badge variant="outline" className={`${color} flex items-center gap-1`}>
         {icon}
-        {taskType.replace('_', ' ')}
+        {taskType === 'binary_classification' ? 'Binary Classification' :
+         taskType === 'multiclass_classification' ? 'Multiclass Classification' :
+         taskType === 'regression' ? 'Regression' : 
+         taskType.replace('_', ' ')}
       </Badge>
     );
   };
@@ -94,8 +104,8 @@ const DatasetSummary: React.FC = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Numerical Features</p>
             <div className="flex flex-wrap gap-1">
-              {overview.numerical_features?.length ? (
-                overview.numerical_features.map(feat => (
+              {filteredNumericalFeatures.length ? (
+                filteredNumericalFeatures.map(feat => (
                   <Badge key={feat} variant="outline" className="bg-blue-50">
                     {feat}
                   </Badge>
@@ -109,9 +119,8 @@ const DatasetSummary: React.FC = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Categorical Features</p>
             <div className="flex flex-wrap gap-1">
-              {overview.categorical_features?.length ? (
-                overview.categorical_features
-                  .filter(feat => feat !== targetColumn)
+              {filteredCategoricalFeatures.length ? (
+                filteredCategoricalFeatures
                   .slice(0, 5)
                   .map(feat => (
                     <Badge key={feat} variant="outline" className="bg-amber-50">
@@ -121,8 +130,8 @@ const DatasetSummary: React.FC = () => {
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
-              {overview.categorical_features?.length > 6 && (
-                <Badge variant="outline">+{overview.categorical_features.length - 5} more</Badge>
+              {filteredCategoricalFeatures.length > 5 && (
+                <Badge variant="outline">+{filteredCategoricalFeatures.length - 5} more</Badge>
               )}
             </div>
           </div>

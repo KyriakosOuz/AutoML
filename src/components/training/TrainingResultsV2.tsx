@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,17 +30,27 @@ export interface TrainingResultsV2Props {
   onReset: () => void;
 }
 
+// Helper function to format task type
+const formatTaskType = (type: string) => {
+  if (!type) return "Unknown";
+  
+  switch (type) {
+    case 'binary_classification':
+      return 'Binary Classification';
+    case 'multiclass_classification':
+      return 'Multiclass Classification';
+    case 'regression':
+      return 'Regression';
+    default:
+      return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }
+};
+
 const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onReset }) => {
   const { isLoadingResults, experimentResults } = useTraining();
   const [activeTab, setActiveTab] = useState<string>('metrics');
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Format task type for display
-  const formatTaskType = (type: string) => {
-    if (!type) return "Unknown";
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
   
   // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
@@ -139,16 +150,23 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     model_file_url,
     report_file_url
   } = results;
+  
+  // Get unique downloadable files (model and report)
+  const downloadableFiles = Array.from(new Set(
+    files.filter(file => 
+      file.file_type === 'model' || 
+      file.file_type.includes('report')
+    ).map(file => file.file_url)
+  )).map(url => {
+    const file = files.find(f => f.file_url === url);
+    return file ? file : null;
+  }).filter(Boolean) as typeof files;
 
   // Now we can safely use the files variable since it's been declared
-  const filesByType = files.reduce((acc, file) => {
-    const type = file.file_type;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(file);
-    return acc;
-  }, {} as Record<string, typeof files>);
+  const visualizationFiles = files.filter(file => 
+    file.file_type !== 'model' && 
+    !file.file_type.includes('report')
+  );
   
   const isClassification = task_type?.includes('classification');
   
@@ -162,7 +180,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </div>
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {algorithm || task_type.replace(/_/g, ' ')}
+            {algorithm || formatTaskType(task_type)}
           </Badge>
         </div>
         
@@ -340,53 +358,33 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </TabsContent>
           
           <TabsContent value="visualizations" className="p-6">
-            {files.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {files.map((file, index) => (
-                  <Dialog key={index}>
-                    <DialogTrigger asChild>
-                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                        <CardContent className="p-3">
-                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            <div 
-                              className="absolute inset-0 bg-cover bg-center"
-                              style={{ backgroundImage: `url(${file.file_url})` }}
-                            />
-                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
-                          </div>
-                          <div className="mt-2 text-center">
-                            <p className="text-sm font-medium">
-                              {file.file_type.split('_').map(word => 
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                              ).join(' ')}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <div className="p-1">
-                        <img 
-                          src={file.file_url} 
-                          alt={file.file_type} 
-                          className="w-full rounded-md"
-                        />
-                        <div className="mt-2 flex justify-between items-center">
-                          <h3 className="font-medium">
-                            {file.file_type.split('_').map(word => 
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                            ).join(' ')}
-                          </h3>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </a>
-                          </Button>
-                        </div>
+            {visualizationFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visualizationFiles.map((file, index) => (
+                  <Card key={index} className="overflow-hidden">
+                    <CardHeader className="py-2 px-4 bg-muted/30">
+                      <CardTitle className="text-sm font-medium">
+                        {file.file_type.split('_').map(word => 
+                          word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <img 
+                        src={file.file_url} 
+                        alt={file.file_type} 
+                        className="w-full rounded-md"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </a>
+                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -479,7 +477,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           
           <TabsContent value="report" className="p-6">
             <div className="flex flex-col items-center justify-center py-6 space-y-6">
-              {model_file_url ? (
+              {model_file_url && (
                 <Card className="w-full max-w-md shadow-sm">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Trained Model</CardTitle>
@@ -494,9 +492,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     </Button>
                   </CardContent>
                 </Card>
-              ) : null}
+              )}
               
-              {report_file_url ? (
+              {report_file_url && (
                 <Card className="w-full max-w-md shadow-sm">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Full Report</CardTitle>
@@ -511,7 +509,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     </Button>
                   </CardContent>
                 </Card>
-              ) : (
+              )}
+              
+              {downloadableFiles.length === 0 && (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground">
                     No additional reports are available for this experiment.

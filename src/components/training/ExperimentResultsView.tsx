@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -21,14 +20,37 @@ import {
   Activity,
   Loader,
   Image as ImageIcon,
-  AlertTriangle
+  AlertTriangle,
+  BrainCircuit,
+  FileInput,
+  Upload
 } from 'lucide-react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentStatus } from '@/contexts/training/types';
+import { trainingApi } from '@/lib/api';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Loader2 } from 'lucide-react';
 
 import ClassificationReportTable from './ClassificationReportTable';
 import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 import PrecisionRecallChart from './charts/PrecisionRecallChart';
+
+const formatTaskType = (type: string = '') => {
+  if (!type) return "Unknown";
+  
+  switch (type) {
+    case 'binary_classification':
+      return 'Binary Classification';
+    case 'multiclass_classification':
+      return 'Multiclass Classification';
+    case 'regression':
+      return 'Regression';
+    default:
+      return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }
+};
 
 interface ExperimentMetadata {
   experiment_id: string;
@@ -61,7 +83,6 @@ interface ClassificationReport {
   };
 }
 
-// Extended metrics interface to help with type-checking
 interface ExtendedMetrics extends Record<string, any> {
   classification_report?: ClassificationReport | string | null;
   confusion_matrix?: number[][] | null;
@@ -85,6 +106,18 @@ interface ExperimentResultsData {
   files: ExperimentFile[];
 }
 
+interface ManualPredictionResponse {
+  prediction: string | number;
+  probability?: number | number[];
+  error?: string;
+}
+
+interface BatchPredictionResponse {
+  metrics?: Record<string, number>;
+  preview?: Record<string, any>[];
+  error?: string;
+}
+
 interface ExperimentResultsProps {
   experimentId: string | null;
   onReset?: () => void;
@@ -99,6 +132,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('metrics');
   const { toast } = useToast();
+  
+  const [predictInputs, setPredictInputs] = useState<Record<string, string>>({});
+  const [predictResult, setPredictResult] = useState<ManualPredictionResponse | null>(null);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [predictError, setPredictError] = useState<string | null>(null);
+  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchPredictionResponse | null>(null);
+  const [isBatchLoading, setIsBatchLoading] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!experimentId) return;
@@ -112,7 +155,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         
         console.log('[ExperimentResultsView] Raw API response:', apiRes);
 
-        // Handle raw string responses (which might be HTML error pages)
         if (apiRes === null) {
           if (!cancelled) {
             setResults(null);
@@ -128,7 +170,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           }
         }
 
-        // If the result doesn't have what we need, return early
         if (!apiRes) {
           if (!cancelled) {
             setResults(null);
@@ -139,10 +180,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
         const payload = apiRes;
         const tr = payload.training_results || {};
-        // Ensure tr.metrics exists before trying to access it
         const allMetrics = (tr && typeof tr === 'object' && 'metrics' in tr) ? tr.metrics || {} : {};
         
-        // Cast allMetrics to our extended interface to help with type checking
         const typedMetrics = allMetrics as ExtendedMetrics;
 
         const numericMetrics: Record<string, number> = {};
@@ -155,12 +194,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         const classificationReport = typedMetrics.classification_report ?? null;
         const confusionMatrix = typedMetrics.confusion_matrix ?? null;
         
-        // Handle ROC data if available
         const roc = (typedMetrics.fpr && typedMetrics.tpr && typedMetrics.auc)
           ? { fpr: typedMetrics.fpr, tpr: typedMetrics.tpr, auc: typedMetrics.auc }
           : null;
           
-        // Handle precision-recall curve data if available
         const prCurve = (Array.isArray(typedMetrics.precision) && Array.isArray(typedMetrics.recall) && typeof typedMetrics.f1_score === 'number')
           ? { precision: typedMetrics.precision, recall: typedMetrics.recall, f1Score: typedMetrics.f1_score }
           : null;
@@ -174,10 +211,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
         }
 
-        // Process files to ensure they have file_name property
         const processedFiles: ExperimentFile[] = (payload.files || []).map(file => ({
           ...file,
-          file_name: file.file_name || file.file_type + '.file' // Add file_name if missing
+          file_name: file.file_name || file.file_type + '.file'
         }));
 
         if (!cancelled) {
@@ -204,6 +240,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
             shapValues,
             files: processedFiles,
           });
+          
+          if (payload.columns_to_keep && Array.isArray(payload.columns_to_keep)) {
+            const initialInputs: Record<string, string> = {};
+            payload.columns_to_keep.forEach((column: string) => {
+              if (column !== payload.target_column) {
+                initialInputs[column] = '';
+              }
+            });
+            setPredictInputs(initialInputs);
+          }
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -224,6 +270,131 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
       cancelled = true;
     };
   }, [experimentId, toast]);
+  
+  const handleManualPredictSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPredicting(true);
+    setPredictError(null);
+    setPredictResult(null);
+    
+    try {
+      if (!experimentId) throw new Error('Experiment ID is required');
+      
+      const formattedInputs: Record<string, any> = {};
+      Object.entries(predictInputs).forEach(([key, value]) => {
+        const numValue = Number(value);
+        formattedInputs[key] = isNaN(numValue) ? value : numValue;
+      });
+      
+      const response = await fetch(`/prediction/predict-manual/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          experiment_id: experimentId,
+          inputs: formattedInputs
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to make prediction');
+      }
+      
+      const result = await response.json();
+      setPredictResult(result);
+      
+      toast({
+        title: "Prediction Complete",
+        description: "Successfully generated prediction",
+      });
+    } catch (err) {
+      console.error('Prediction error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to make prediction';
+      setPredictError(errorMessage);
+      toast({
+        title: "Prediction Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsPredicting(false);
+    }
+  };
+  
+  const handleBatchFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        setBatchError('Please select a CSV file');
+        setSelectedFile(null);
+        return;
+      }
+      
+      setSelectedFile(file);
+      setBatchError(null);
+    }
+  };
+  
+  const handleBatchPrediction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedFile) {
+      setBatchError('Please select a CSV file');
+      return;
+    }
+    
+    setIsBatchLoading(true);
+    setBatchError(null);
+    setBatchResult(null);
+    
+    try {
+      if (!experimentId) throw new Error('Experiment ID is required');
+      
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('experiment_id', experimentId);
+      
+      const response = await fetch(`/prediction/predict-csv/`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to process batch prediction');
+      }
+      
+      const result = await response.json();
+      setBatchResult(result);
+      
+      toast({
+        title: "Batch Prediction Complete",
+        description: result.metrics 
+          ? "Successfully evaluated predictions against true values" 
+          : "Successfully generated predictions for the CSV",
+      });
+    } catch (err) {
+      console.error('Batch prediction error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process batch prediction';
+      setBatchError(errorMessage);
+      toast({
+        title: "Batch Prediction Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsBatchLoading(false);
+    }
+  };
+  
+  const handleInputChange = (column: string, value: string) => {
+    setPredictInputs(prev => ({
+      ...prev,
+      [column]: value
+    }));
+  };
 
   if (isLoading) {
     return (
@@ -313,23 +484,25 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
   const numberMetrics = metrics;
   
-  const formatTaskType = (type: string = '') => {
-    if (!type) return "Unknown";
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-  
   const isVisualizationFile = (fileType: string) => {
     const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
     return visualTypes.some(type => fileType.includes(type));
   };
   
-  const getDownloadableFiles = () => {
-    return files.filter(file => 
+  const downloadableFiles = Array.from(new Set(
+    files.filter(file => 
       file.file_type === 'model' || 
-      file.file_type === 'report' || 
       file.file_type.includes('report')
-    );
-  };
+    ).map(file => file.file_url)
+  )).map(url => {
+    const file = files.find(f => f.file_url === url);
+    return file ? file : null;
+  }).filter(Boolean) as typeof files;
+  
+  const visualizationFiles = files.filter(file => 
+    file.file_type !== 'model' && 
+    !file.file_type.includes('report')
+  );
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -340,13 +513,13 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
             <CardTitle className="text-xl">{experiment_metadata.experiment_name || 'Experiment Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {experiment_metadata.algorithm || experiment_metadata.automl_engine || experiment_metadata.task_type}
+            {experiment_metadata.algorithm || experiment_metadata.automl_engine || formatTaskType(experiment_metadata.task_type)}
           </Badge>
         </div>
         <CardDescription className="flex flex-wrap gap-x-4 mt-2">
           <span className="inline-flex items-center">
             <Activity className="h-3.5 w-3.5 mr-1" />
-            Task: <span className="font-semibold ml-1">{experiment_metadata.task_type}</span>
+            Task: <span className="font-semibold ml-1">{formatTaskType(experiment_metadata.task_type)}</span>
           </span>
           {experiment_metadata.target_column && (
             <span className="inline-flex items-center">
@@ -370,7 +543,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
 
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
             <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
@@ -387,28 +560,46 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               <Download className="h-4 w-4" />
               <span>Downloads</span>
             </TabsTrigger>
+            <TabsTrigger value="prediction" className="text-sm flex items-center gap-1">
+              <BrainCircuit className="h-4 w-4" />
+              <span>Prediction</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="metrics" className="p-6">
             {Object.keys(results?.metrics || {}).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(results?.metrics || {}).map(([key, value]) => (
-                  <Card key={key} className="shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm capitalize">{key.replace(/_/g, " ")}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {key.toLowerCase().includes("accuracy") ||
-                        key.toLowerCase().includes("f1_score") ||
-                        key.toLowerCase().includes("precision") ||
-                        key.toLowerCase().includes("recall")
-                          ? `${(value * 100).toFixed(2)}%`
-                          : value.toFixed(4)}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {Object.entries(results?.metrics || {}).map(([key, value]) => {
+                  const isPercentageMetric = 
+                    key.toLowerCase().includes("accuracy") ||
+                    key.toLowerCase().includes("f1_score") ||
+                    key.toLowerCase().includes("precision") ||
+                    key.toLowerCase().includes("recall");
+                    
+                  const metricDisplayName = key.replace(/_/g, " ")
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                    
+                  const numericValue = typeof value === 'number' ? value : 0;
+                  
+                  return (
+                    <Card key={key} className="shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm capitalize">
+                          {metricDisplayName}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {isPercentageMetric
+                            ? `${(numericValue * 100).toFixed(2)}%`
+                            : numericValue.toFixed(4)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted-foreground max-w-md mx-auto mt-2">
@@ -426,7 +617,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           </TabsContent>
 
           <TabsContent value="visualizations" className="p-6">
-            {results?.confusionMatrix && (
+            {results?.confusionMatrix && results.confusionMatrix.length > 0 && (
               <div className="mb-8">
                 <ConfusionMatrixChart 
                   matrix={results.confusionMatrix} 
@@ -443,61 +634,31 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                 />
               </div>
             )}
-            {results?.files && results.files.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {results.files.filter(file => 
-                  !file.file_type.includes('model') && 
-                  !file.file_type.includes('report')
-                ).map((file, index) => (
-                  <Dialog key={index}>
-                    <DialogTrigger asChild>
-                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                        <CardContent className="p-3">
-                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            <div 
-                              className="absolute inset-0 bg-cover bg-center"
-                              style={{ backgroundImage: `url(${file.file_url})` }}
-                            />
-                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
-                          </div>
-                          <div className="mt-2 text-center">
-                            <p className="text-sm font-medium capitalize">
-                              {file.file_type.replace(/_/g, ' ')}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <div className="p-1">
-                        <img 
-                          src={file.file_url} 
-                          alt={file.file_type} 
-                          className="w-full rounded-md"
-                        />
-                        <div className="mt-2 flex justify-between items-center">
-                          <h3 className="font-medium capitalize">
-                            {file.file_type.replace(/_/g, ' ')}
-                          </h3>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" size="sm" asChild>
-                                  <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Download
-                                  </a>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Download this visualization</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+            {visualizationFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visualizationFiles.map((file, index) => (
+                  <Card key={index} className="overflow-hidden">
+                    <CardHeader className="py-2 px-4 bg-muted/30">
+                      <CardTitle className="text-sm font-medium capitalize">
+                        {file.file_type.replace(/_/g, ' ')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <img 
+                        src={file.file_url} 
+                        alt={file.file_type} 
+                        className="w-full rounded-md" 
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </a>
+                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -522,7 +683,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                     <TableBody>
                       <TableRow>
                         <TableCell className="font-medium">Task Type</TableCell>
-                        <TableCell>{experiment_metadata.task_type}</TableCell>
+                        <TableCell>{formatTaskType(experiment_metadata.task_type)}</TableCell>
                       </TableRow>
                       {experiment_metadata.target_column && (
                         <TableRow>
@@ -559,16 +720,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {getDownloadableFiles().map((file, index) => (
+                    {downloadableFiles.map((file, index) => (
                       <Button key={index} variant="outline" className="w-full justify-start" asChild>
                         <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
                           <Download className="h-4 w-4 mr-2" /> 
-                          Download {file.file_name}
+                          Download {file.file_type.replace(/_/g, ' ')}
                         </a>
                       </Button>
                     ))}
                     
-                    {getDownloadableFiles().length === 0 && (
+                    {downloadableFiles.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No downloadable files available
                       </p>
@@ -580,9 +741,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           </TabsContent>
 
           <TabsContent value="downloads" className="p-6">
-            {getDownloadableFiles().length > 0 ? (
+            {downloadableFiles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {getDownloadableFiles().map((file, index) => (
+                {downloadableFiles.map((file, index) => (
                   <Card key={index} className="shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
@@ -591,7 +752,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                       <Button asChild className="w-full">
                         <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
                           <Download className="h-4 w-4 mr-2" /> 
-                          Download {file.file_name}
+                          Download {file.file_type.replace(/_/g, ' ')}
                         </a>
                       </Button>
                     </CardContent>
@@ -607,6 +768,257 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                 </p>
               </div>
             )}
+          </TabsContent>
+          
+          <TabsContent value="prediction" className="p-6">
+            <Tabs defaultValue="manual" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="manual">Manual Input</TabsTrigger>
+                <TabsTrigger value="batch">Batch CSV</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="manual">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Make a Single Prediction</CardTitle>
+                    <CardDescription>
+                      Enter values for each feature to get a prediction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {predictResult && (
+                      <Card className="mb-6 bg-primary/5 border-primary/20">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center">
+                            <BrainCircuit className="h-4 w-4 mr-2 text-primary" />
+                            Prediction Result
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Predicted Value:</p>
+                              <p className="text-2xl font-bold">
+                                {predictResult.prediction}
+                              </p>
+                            </div>
+                            
+                            {predictResult.probability !== undefined && (
+                              <div>
+                                <p className="text-sm text-muted-foreground">Confidence:</p>
+                                <p className="text-2xl font-bold">
+                                  {typeof predictResult.probability === 'number' 
+                                    ? `${(predictResult.probability * 100).toFixed(2)}%`
+                                    : Array.isArray(predictResult.probability) 
+                                      ? `${(Math.max(...predictResult.probability) * 100).toFixed(2)}%`
+                                      : 'N/A'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {predictError && (
+                      <Alert variant="destructive" className="mb-6">
+                        <AlertDescription>{predictError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <form onSubmit={handleManualPredictSubmit}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {Object.keys(predictInputs).map((column) => (
+                          <div key={column} className="space-y-2">
+                            <Label htmlFor={`input-${column}`}>{column}</Label>
+                            <Input 
+                              id={`input-${column}`}
+                              value={predictInputs[column]}
+                              onChange={(e) => handleInputChange(column, e.target.value)}
+                              placeholder={`Enter ${column} value`}
+                              required
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="mt-6 w-full"
+                        disabled={isPredicting || Object.values(predictInputs).some(val => val === '')}
+                      >
+                        {isPredicting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <BrainCircuit className="h-4 w-4 mr-2" />
+                            Generate Prediction
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="batch">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Batch Prediction</CardTitle>
+                    <CardDescription>
+                      Upload a CSV file to make predictions for multiple records
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {batchError && (
+                      <Alert variant="destructive" className="mb-6">
+                        <AlertDescription>{batchError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <form onSubmit={handleBatchPrediction}>
+                      <div className="grid w-full items-center gap-4">
+                        <Label htmlFor="csv-file">Upload CSV File</Label>
+                        <div className="flex flex-col items-center justify-center w-full">
+                          <label 
+                            htmlFor="csv-file" 
+                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/40 hover:bg-muted/60"
+                          >
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                              <p className="mb-1 text-sm text-muted-foreground">
+                                <span className="font-semibold">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                CSV file with feature columns
+                              </p>
+                            </div>
+                            <Input 
+                              id="csv-file" 
+                              type="file" 
+                              accept=".csv" 
+                              className="hidden" 
+                              onChange={handleBatchFileChange}
+                            />
+                          </label>
+                        </div>
+                        
+                        {selectedFile && (
+                          <div className="flex items-center p-2 mt-2 text-sm text-primary bg-primary/10 rounded">
+                            <FileText className="h-4 w-4 mr-2" />
+                            <span>{selectedFile.name}</span>
+                          </div>
+                        )}
+                        
+                        <Button 
+                          type="submit" 
+                          className="mt-2"
+                          disabled={isBatchLoading || !selectedFile}
+                        >
+                          {isBatchLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <BrainCircuit className="h-4 w-4 mr-2" />
+                              Run Batch Prediction
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                    
+                    {batchResult && (
+                      <div className="mt-8">
+                        <Separator className="my-4" />
+                        
+                        {batchResult.metrics && (
+                          <div className="mb-6">
+                            <h3 className="text-lg font-medium mb-4">Evaluation Metrics</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {Object.entries(batchResult.metrics).map(([key, value]) => {
+                                const isPercentageMetric = 
+                                  key.toLowerCase().includes("accuracy") ||
+                                  key.toLowerCase().includes("f1") ||
+                                  key.toLowerCase().includes("precision") ||
+                                  key.toLowerCase().includes("recall");
+                                  
+                                return (
+                                  <Card key={key} className="shadow-sm">
+                                    <CardHeader className="py-2">
+                                      <CardTitle className="text-sm capitalize">
+                                        {key.replace(/_/g, " ")}
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="text-2xl font-bold">
+                                        {isPercentageMetric
+                                          ? `${(Number(value) * 100).toFixed(2)}%`
+                                          : typeof value === 'number' 
+                                            ? value.toFixed(4)
+                                            : value}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {batchResult.preview && batchResult.preview.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-medium mb-4">Prediction Preview</h3>
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    {Object.keys(batchResult.preview[0]).map((column) => (
+                                      <TableHead key={column}>
+                                        {column === 'prediction' || column === 'probability' ? (
+                                          <span className="font-bold text-primary">{column}</span>
+                                        ) : (
+                                          column
+                                        )}
+                                      </TableHead>
+                                    ))}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {batchResult.preview.map((row, index) => (
+                                    <TableRow key={index}>
+                                      {Object.entries(row).map(([column, value], colIndex) => (
+                                        <TableCell key={colIndex} className={column === 'prediction' || column === 'probability' ? 'font-bold text-primary' : ''}>
+                                          {value as React.ReactNode}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                            
+                            {batchResult.preview.length > 0 && (
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" disabled>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download Full Results CSV
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </CardContent>
