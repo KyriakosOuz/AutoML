@@ -1,43 +1,41 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-interface SchemaApiData {
-  columns: string[];
-  target: string;
-  example: Record<string, any>;
-}
+import { useToast } from '@/hooks/use-toast';
+import { predictManual } from '@/lib/training';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
 }
 
-const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimentId }) => {
-  const [columnsToKeep, setColumnsToKeep] = useState<string[]>([]);
-  const [targetColumn, setTargetColumn] = useState<string>('');
-  const [exampleRow, setExampleRow] = useState<Record<string, any>>({});
-  const [inputValues, setInputValues] = useState<Record<string, any>>({});
-  const [targetPrediction, setTargetPrediction] = useState<string | number>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isPredicting, setIsPredicting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimentId }) => {
+  const [columns, setColumns] = useState<string[]>([]);
+  const [target, setTarget] = useState<string>('');
+  const [example, setExample] = useState<Record<string, any>>({});
+  const [manualInputs, setManualInputs] = useState<Record<string, any>>({});
+  const [prediction, setPrediction] = useState<string | number | undefined>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch schema data for prediction
+  // Fetch prediction schema on mount
   useEffect(() => {
-    if (!experimentId) return;
     setIsLoading(true);
     setError(null);
-
+    setColumns([]);
+    setTarget('');
+    setExample({});
+    setManualInputs({});
+    setPrediction('');
+    if (!experimentId) return;
     const fetchSchema = async () => {
       try {
         const token = localStorage.getItem('sb-access-token') || '';
@@ -47,21 +45,20 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
           const text = await res.text();
           throw new Error(text.substring(0, 300) || 'Failed to fetch prediction schema');
         }
-        const data: SchemaApiData = (await res.json()).data || (await res.json()) as SchemaApiData;
-        // If wrapped in .data envelope (sometimes), else fallback
-        const { columns, target, example } = data;
-        setColumnsToKeep(columns.filter(col => col !== target));
-        setTargetColumn(target);
-        setExampleRow(example);
-        // Setup blank inputs
+        const resp = await res.json();
+        const data = resp.data || resp;
+        setColumns(data.columns || []);
+        setTarget(data.target || '');
+        setExample(data.example || {});
+        // Set blank inputs
         const blankInputs: Record<string, any> = {};
-        columns.filter(col => col !== target).forEach(col => {
-          blankInputs[col] = '';
+        (data.columns || []).forEach((col: string) => {
+          if (col !== data.target) blankInputs[col] = '';
         });
-        setInputValues(blankInputs);
-        setTargetPrediction('');
+        setManualInputs(blankInputs);
+        setPrediction('');
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to load prediction schema';
+        const msg = err instanceof Error ? err.message : 'Failed to fetch prediction schema';
         setError(msg);
         toast({
           title: "Prediction Form Error",
@@ -73,52 +70,33 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       }
     };
     fetchSchema();
-  }, [experimentId, toast]);
+    // eslint-disable-next-line
+  }, [experimentId]);
 
   const handleInputChange = (col: string, value: string) => {
-    setInputValues(prev => ({ ...prev, [col]: value }));
+    setManualInputs(prev => ({ ...prev, [col]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPredicting(true);
     setError(null);
-    setTargetPrediction('');
-
+    setPrediction('');
     try {
-      const form = new FormData();
-      form.append('experiment_id', experimentId);
-
-      // Prepare input values with numbers if possible
-      const formattedInputs: Record<string, any> = {};
-      for (const [key, value] of Object.entries(inputValues)) {
+      // Prepare input values as numbers where possible
+      const processedInputs: Record<string, any> = {};
+      for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
-        formattedInputs[key] = isNaN(numValue) ? value : numValue;
-      }
-      form.append('input_values', JSON.stringify(formattedInputs));
-
-      const token = localStorage.getItem('sb-access-token') || '';
-      const fetchOptions: RequestInit = {
-        method: 'POST',
-        body: form,
-      };
-      if (token) {
-        (fetchOptions.headers as Record<string, string>) = { Authorization: `Bearer ${token}` };
+        processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
 
-      const res = await fetch(`${API_BASE_URL}/prediction/predict-manual/`, fetchOptions);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text.substring(0, 300) || 'Failed to generate prediction');
-      }
-      const data = await res.json();
-      const result = data.data || data;
-      // Fill target input with prediction value
-      setTargetPrediction(result.prediction ?? '');
-
+      const resp = await predictManual(experimentId, processedInputs);
+      // Accept both .data and direct .prediction for robustness
+      const newPrediction = resp?.prediction ?? resp?.data?.prediction ?? '';
+      setPrediction(newPrediction);
       toast({
         title: "Prediction Success",
-        description: "Prediction generated and filled in the target field.",
+        description: "Prediction generated.",
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to generate prediction';
@@ -156,7 +134,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  if (!columnsToKeep.length || !targetColumn) {
+  if (!columns.length || !target) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -165,6 +143,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       </Card>
     );
   }
+
+  // Remove target column from regular input fields
+  const inputColumns = columns.filter(col => col !== target);
 
   return (
     <Card>
@@ -177,33 +158,29 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {columnsToKeep.map(col => (
+            {inputColumns.map(col => (
               <div key={col} className="space-y-2">
-                <Label htmlFor={`input-${col}`}>{col}</Label>
+                <Label htmlFor={`field-${col}`}>{col}</Label>
                 <Input
-                  id={`input-${col}`}
-                  value={inputValues[col] || ''}
+                  key={col}
+                  id={`field-${col}`}
+                  placeholder={String(example[col] ?? '')}
+                  value={manualInputs[col] || ''}
                   onChange={(e) => handleInputChange(col, e.target.value)}
-                  placeholder={exampleRow && exampleRow[col] !== undefined ? exampleRow[col]?.toString() : ''}
                   disabled={isPredicting}
                 />
               </div>
             ))}
           </div>
-          {/* Target column disabled, styled gray */}
           <div className="mt-4 space-y-2">
-            <Label htmlFor="target-col" className="text-primary">{targetColumn} (Target)</Label>
+            <Label htmlFor="field-target" className="text-primary">{target} (Target)</Label>
             <Input
-              id="target-col"
-              value={targetPrediction ? targetPrediction.toString() : ''}
-              className="bg-muted/50 border-muted text-gray-600"
-              readOnly
+              id="field-target"
+              value={typeof prediction !== 'undefined' ? String(prediction) : ''}
+              placeholder={String(example[target] ?? '')}
               disabled
-              placeholder={
-                exampleRow && exampleRow[targetColumn] !== undefined
-                  ? exampleRow[targetColumn]?.toString()
-                  : "Prediction will appear here"
-              }
+              className="bg-gray-100 text-gray-500"
+              readOnly
             />
           </div>
           <Button
@@ -211,7 +188,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             className="mt-6 w-full"
             disabled={
               isPredicting ||
-              columnsToKeep.some(col => !inputValues[col] && inputValues[col] !== 0)
+              inputColumns.some(col => manualInputs[col] === '' || manualInputs[col] === undefined)
             }
           >
             {isPredicting ? (
