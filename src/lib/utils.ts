@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
@@ -7,37 +8,45 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Always uses fresh access token or throws if unauthenticated
 export const getAuthHeaders = async () => {
-  const { data } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
-  
+
+  if (!token) {
+    console.warn('[AUTH] No access token found. Are you logged in?');
+    throw new Error('Unauthorized: Missing access token');
+  }
+
   return {
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
 };
 
+// Ensure we only process JSON, handle errors clearly, and log non-JSON responses
 export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
-  const contentType = response.headers.get('content-type');
+  const contentType = response.headers.get('content-type') || '';
   
-  if (!contentType || !contentType.includes('application/json')) {
+  if (!contentType.includes('application/json')) {
     const text = await response.text();
-    throw new Error(`Expected JSON but got: ${text.slice(0, 100)}`);
+    console.error('[API] Non-JSON response:', text);
+    throw new Error('Expected JSON but received non-JSON response');
   }
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
-
-  const jsonData = await response.json();
+  const json = await response.json();
   
-  if (!jsonData.hasOwnProperty('status') || !jsonData.hasOwnProperty('data')) {
+  if (!response.ok) {
+    throw new Error(json.message || 'Request failed');
+  }
+
+  // If missing the expected fields, still coerce to ApiResponse
+  if (!json.hasOwnProperty('status') || !json.hasOwnProperty('data')) {
     return {
       status: 'success',
-      data: jsonData as T
+      data: json as T
     };
   }
   
-  return jsonData as ApiResponse<T>;
+  return json as ApiResponse<T>;
 };

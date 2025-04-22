@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -84,8 +85,24 @@ export const useExperimentPolling = ({
         }
 
         setPollingAttempts(prev => prev + 1);
-      } catch (error) {
+      } catch (error: any) {
         console.error('[TrainingContext] Polling error:', error);
+
+        // Session expired/401
+        if (
+          typeof error.message === 'string' &&
+          (error.message.includes('Unauthorized') || error.message.includes('401'))
+        ) {
+          stopPolling();
+          setExperimentStatus('failed');
+          onError('Your session has expired. Please log in again.');
+          toast({
+            title: "Session Expired",
+            description: "Please log in again to continue training.",
+            variant: "destructive"
+          });
+          return;
+        }
 
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
