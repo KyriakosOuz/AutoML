@@ -14,13 +14,13 @@ const getAuthHeaders = () => {
 // Types
 export interface Dataset {
   id: string;
-  dataset_id: string; // Added this field to fix errors
+  dataset_id: string; 
   filename: string;
   created_at: string;
   rows: number;
   columns: number;
   file_url?: string;
-  overview?: DatasetOverview; // Added this field to fix errors
+  overview?: DatasetOverview;
 }
 
 export interface DatasetOverview {
@@ -28,7 +28,13 @@ export interface DatasetOverview {
   num_columns: number;
   numerical_features: string[];
   categorical_features: string[];
-  total_missing_values?: number;
+  total_missing_values: number;
+  missing_values?: Record<string, any>;
+  missing_values_count?: Record<string, number>;
+  column_names?: string[];
+  unique_values_count?: Record<string, number>;
+  data_types?: Record<string, string>;
+  feature_classification?: Record<string, string>;
 }
 
 export interface FeatureImportance {

@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { datasetApi, Dataset } from '@/lib/api';
+import { datasetApi, Dataset, DatasetOverview } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -112,31 +112,43 @@ const FileUpload: React.FC = () => {
       if (response && 'dataset_id' in response) {
         const dataset = response as Dataset;
         
-        // Check if overview is directly in response or nested in data
-        const overview = dataset.overview || {};
-        
-        // Extract features safely with fallbacks
-        const numericalFeatures = overview.numerical_features || [];
-        const categoricalFeatures = overview.categorical_features || [];
-        
-        const datasetOverview = {
-          num_rows: overview.num_rows || 0,
-          num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {},
-          numerical_features: numericalFeatures,
-          categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values || 0,
-          missing_values_count: overview.missing_values_count || {},
-          column_names: overview.column_names || [],
-          unique_values_count: overview.unique_values_count || {},
-          data_types: overview.data_types || {},
-          feature_classification: overview.feature_classification || {}
+        // Initialize overview with proper typing so TypeScript won't complain
+        const overview: DatasetOverview = {
+          num_rows: 0,
+          num_columns: 0,
+          missing_values: {},
+          numerical_features: [],
+          categorical_features: [],
+          total_missing_values: 0,
+          missing_values_count: {},
+          column_names: [],
+          unique_values_count: {},
+          data_types: {},
+          feature_classification: {}
         };
+        
+        // Populate overview with actual values from response if available
+        if (dataset.overview) {
+          if (dataset.overview.num_rows !== undefined) overview.num_rows = dataset.overview.num_rows;
+          if (dataset.overview.num_columns !== undefined) overview.num_columns = dataset.overview.num_columns;
+          if (dataset.overview.missing_values) overview.missing_values = dataset.overview.missing_values;
+          if (dataset.overview.numerical_features) overview.numerical_features = dataset.overview.numerical_features;
+          if (dataset.overview.categorical_features) overview.categorical_features = dataset.overview.categorical_features;
+          if (dataset.overview.total_missing_values !== undefined) overview.total_missing_values = dataset.overview.total_missing_values;
+          if (dataset.overview.missing_values_count) overview.missing_values_count = dataset.overview.missing_values_count;
+          if (dataset.overview.column_names) overview.column_names = dataset.overview.column_names;
+          if (dataset.overview.unique_values_count) overview.unique_values_count = dataset.overview.unique_values_count;
+          if (dataset.overview.data_types) overview.data_types = dataset.overview.data_types;
+          if (dataset.overview.feature_classification) overview.feature_classification = dataset.overview.feature_classification;
+        }
+        
+        const numericalFeatures = overview.numerical_features;
+        const categoricalFeatures = overview.categorical_features;
         
         updateState({
           datasetId: dataset.dataset_id,
           fileUrl: dataset.file_url,
-          overview: datasetOverview,
+          overview: overview,
           previewColumns: [...numericalFeatures, ...categoricalFeatures],
           processingStage: 'raw',
         });
@@ -148,28 +160,43 @@ const FileUpload: React.FC = () => {
           overview: response.data.overview || {}
         };
         
-        const overview = dataset.overview;
-        const numericalFeatures = overview.numerical_features || [];
-        const categoricalFeatures = overview.categorical_features || [];
-        
-        const datasetOverview = {
-          num_rows: overview.num_rows || 0,
-          num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {},
-          numerical_features: numericalFeatures,
-          categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values || 0,
-          missing_values_count: overview.missing_values_count || {},
-          column_names: overview.column_names || [],
-          unique_values_count: overview.unique_values_count || {},
-          data_types: overview.data_types || {},
-          feature_classification: overview.feature_classification || {}
+        // Initialize overview with proper typing
+        const overview: DatasetOverview = {
+          num_rows: 0,
+          num_columns: 0,
+          missing_values: {},
+          numerical_features: [],
+          categorical_features: [],
+          total_missing_values: 0,
+          missing_values_count: {},
+          column_names: [],
+          unique_values_count: {},
+          data_types: {},
+          feature_classification: {}
         };
+        
+        // Populate overview with actual values from response if available
+        if (dataset.overview) {
+          if (dataset.overview.num_rows !== undefined) overview.num_rows = dataset.overview.num_rows;
+          if (dataset.overview.num_columns !== undefined) overview.num_columns = dataset.overview.num_columns;
+          if (dataset.overview.missing_values) overview.missing_values = dataset.overview.missing_values;
+          if (dataset.overview.numerical_features) overview.numerical_features = dataset.overview.numerical_features;
+          if (dataset.overview.categorical_features) overview.categorical_features = dataset.overview.categorical_features;
+          if (dataset.overview.total_missing_values !== undefined) overview.total_missing_values = dataset.overview.total_missing_values;
+          if (dataset.overview.missing_values_count) overview.missing_values_count = dataset.overview.missing_values_count;
+          if (dataset.overview.column_names) overview.column_names = dataset.overview.column_names;
+          if (dataset.overview.unique_values_count) overview.unique_values_count = dataset.overview.unique_values_count;
+          if (dataset.overview.data_types) overview.data_types = dataset.overview.data_types;
+          if (dataset.overview.feature_classification) overview.feature_classification = dataset.overview.feature_classification;
+        }
+        
+        const numericalFeatures = overview.numerical_features;
+        const categoricalFeatures = overview.categorical_features;
         
         updateState({
           datasetId: dataset.dataset_id,
           fileUrl: dataset.file_url,
-          overview: datasetOverview,
+          overview: overview,
           previewColumns: [...numericalFeatures, ...categoricalFeatures],
           processingStage: 'raw',
         });
