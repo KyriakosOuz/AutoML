@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import ExperimentResults from '../results/ExperimentResults';
 import StatusBadge, { Status } from './StatusBadge';
-import { useTraining } from '@/contexts/TrainingContext';
+import { useTraining } from '@/contexts/training/TrainingContext';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -20,7 +19,6 @@ const ModelTrainingContent: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'automl' | 'custom' | 'results'>('automl');
   
-  // Effect to switch to results tab when experiment completes
   useEffect(() => {
     if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && experimentResults) {
       setActiveTab('results');
@@ -36,16 +34,13 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab('automl');
   };
   
-  // Only show results tab when we have an active experiment
   const showResults = activeExperimentId !== null;
   
-  // Don't allow clicking the results tab while processing/running or if we have an error
   const isResultsDisabled = 
     experimentStatus === 'processing' || 
     experimentStatus === 'running' || 
     (error !== null && experimentStatus !== 'completed' && experimentStatus !== 'success');
   
-  // Map context status to StatusBadge status
   const badgeStatus: Status = experimentStatus as Status;
   
   return (
