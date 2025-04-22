@@ -33,7 +33,8 @@ const CustomTraining: React.FC = () => {
     activeExperimentId,
     setActiveExperimentId,
     experimentResults,
-    isLoadingResults
+    isLoadingResults,
+    startPolling
   } = useTraining();
   
   const { toast } = useToast();
@@ -140,15 +141,16 @@ const CustomTraining: React.FC = () => {
         description: `Starting custom training with ${customParameters.algorithm}...`,
       });
 
-      const response = await trainingApi.customTrain(formData);
+      const { experiment_id, experiment_name } = await trainingApi.customTrain(formData);
       
-      if (response?.experiment_id) {
+      if (experiment_id) {
+        setActiveExperimentId(experiment_id);
+        startPolling(experiment_id);
+        
         toast({
           title: "Training Submitted",
-          description: `Custom training job submitted successfully.`,
+          description: `Experiment ${experiment_name} (${experiment_id}) started.`,
         });
-        setActiveExperimentId(response.experiment_id);
-        navigate(`/results/${response?.experiment_id}`);
       } else {
         throw new Error('No experiment ID returned from the server');
       }
@@ -161,7 +163,6 @@ const CustomTraining: React.FC = () => {
         description: errorMessage,
         variant: "destructive"
       });
-    } finally {
       setIsTraining(false);
     }
   };
