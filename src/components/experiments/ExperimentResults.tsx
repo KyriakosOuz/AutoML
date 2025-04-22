@@ -375,10 +375,10 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             </span>
           )}
           
-          {training_time_sec && (
+          {training_time_sec !== undefined && (
             <span className="inline-flex items-center">
               <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{training_time_sec.toFixed(1)}s</span>
+              Time: <span className="font-semibold ml-1">{typeof training_time_sec === 'number' ? `${training_time_sec.toFixed(1)}s` : 'N/A'}</span>
             </span>
           )}
           
@@ -779,3 +779,4 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
+

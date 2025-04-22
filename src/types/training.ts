@@ -39,6 +39,13 @@ export interface TrainingResults {
   y_probs?: number[][] | number[];
   classification_report?: string | Record<string, any>;
   confusion_matrix?: number[][];
+  shap_values?: any;
+  fpr?: number[];
+  tpr?: number[];
+  auc?: number;
+  precision?: number[];
+  recall?: number[];
+  f1_score?: number[];
 }
 
 export interface ExperimentResults {
@@ -101,3 +108,4 @@ export interface CustomTrainingResult {
   modelFormat: string;
   experimentName: string;
 }
+
