@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -17,29 +16,26 @@ interface PredictionPanelProps {
 }
 
 type ManualForm = {
-  features: string[];
+  allColumns: string[]; // all columns including target
+  features: string[];   // features, excluding target column
   sampleRow: Record<string, string>;
   targetColumn: string;
 };
 
 const parseCsvSample = (csvText: string, targetColumn: string) => {
   const rows = csvText.trim().split('\n');
-  if (rows.length < 2) return { features: [], sampleRow: {} };
+  if (rows.length < 2) return { allColumns: [], features: [], sampleRow: {}, target: '' };
 
   const header = rows[0].split(',').map(col => col.trim());
   const firstRow = rows[1].split(',');
 
-  // Remove target_column from features
   const features = header.filter(f => f !== targetColumn);
-
-  // Map features to sample values
   const sampleRow: Record<string, string> = {};
-  features.forEach((feature, idx) => {
-    const colIdx = header.indexOf(feature);
-    sampleRow[feature] = (firstRow[colIdx] ?? '').trim();
+  header.forEach((col, idx) => {
+    sampleRow[col] = (firstRow[idx] ?? '').trim();
   });
 
-  return { features, sampleRow };
+  return { allColumns: header, features, sampleRow };
 };
 
 const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
@@ -67,11 +63,11 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
         const target_column = result.target_column ?? '';
         setTaskType(result.task_type || '');
 
+        let allColumns: string[] = [];
         let features: string[] = [];
         let sampleRow: Record<string, string> = {};
 
         // 2. Get dataset_file_url and sample row
-        // Prefer result.files to locate dataset file
         let datasetFileUrl: string | undefined;
         if (result.files?.length) {
           const datasetFile = result.files.find(f => f.file_type === 'dataset');
@@ -79,39 +75,19 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
             datasetFileUrl = datasetFile.file_url;
           }
         }
-        // fallback for direct property
         if (!datasetFileUrl && (result as any).dataset_file_url) {
           datasetFileUrl = (result as any).dataset_file_url;
         }
 
-        // Directly use X_sample if available
-        if ((result.training_results as any)?.X_sample && Array.isArray((result.training_results as any).X_sample)) {
-          // Use header from CSV still for safety
-          if (datasetFileUrl) {
-            try {
-              const resp = await fetch(datasetFileUrl);
-              const text = await resp.text();
-              const header = text.split('\n')[0].split(',').map(col => col.trim());
-              features = header.filter(f => f !== target_column);
-              const xArr = (result.training_results as any).X_sample[0] || [];
-              features.forEach((feature, idx) => {
-                sampleRow[feature] = xArr[header.indexOf(feature)] ?? '';
-              });
-            } catch (e) {
-              // fallback: just show empty values
-              features = (result.columns_to_keep ?? []).filter(f => f !== target_column);
-              features.forEach(f => sampleRow[f] = '');
-            }
-          }
-        }
-        // Else, fetch from dataset CSV
-        else if (datasetFileUrl) {
+        if (datasetFileUrl) {
           const resp = await fetch(datasetFileUrl);
           const text = await resp.text();
           const res = parseCsvSample(text, target_column);
+          allColumns = res.allColumns;
           features = res.features;
           sampleRow = res.sampleRow;
         } else if (result.columns_to_keep && result.columns_to_keep.length > 0) {
+          allColumns = result.columns_to_keep;
           features = result.columns_to_keep.filter(f => f !== target_column);
           features.forEach(f => sampleRow[f] = '');
         } else {
@@ -119,6 +95,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
         }
 
         setManualForm({
+          allColumns,
           features,
           sampleRow,
           targetColumn: target_column
@@ -143,7 +120,6 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     }
   }, [experimentId]);
 
-  // --- Form Handlers ---
   const handleInputChange = (feature: string, value: string) => {
     setInputValues(prev => ({
       ...prev,
@@ -160,6 +136,7 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
     setPredicting(true);
     setPrediction(null);
     setConfidence(null);
+    setError(null);
 
     try {
       // Number parse attempt
@@ -233,66 +210,87 @@ const PredictionPanel: React.FC<PredictionPanelProps> = ({ experimentId }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Generate Prediction</CardTitle>
+        <CardTitle>Manual Input</CardTitle>
         <CardDescription>
-          Enter values for each feature to generate a prediction
+          Enter values for each feature to generate a prediction.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4">
-          {/* --- Dynamically generated input form based on dataset --- */}
-          {manualForm && manualForm.features.map((feature) => (
-            <div key={feature} className="space-y-2">
-              <Label htmlFor={`feature-${feature}`}>{feature}</Label>
-              <Input
-                id={`feature-${feature}`}
-                placeholder={manualForm.sampleRow[feature] || `Enter ${feature}`}
-                value={inputValues[feature]}
-                onChange={(e) => handleInputChange(feature, e.target.value)}
-              />
+        <div className="w-full overflow-auto">
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              handlePredict();
+            }}
+          >
+            <div className="flex flex-row gap-4 items-end mb-4">
+              {manualForm &&
+                manualForm.allColumns.map((col) => {
+                  const isTarget = col === manualForm.targetColumn;
+                  if (isTarget) {
+                    // Prediction output field (different color & disabled)
+                    return (
+                      <div key={col} className="flex flex-col items-start" style={{ minWidth: 140 }}>
+                        <Label htmlFor={`manual-${col}`}>{col}</Label>
+                        <Input
+                          id={`manual-${col}`}
+                          placeholder={manualForm.sampleRow[col] || ''}
+                          value={
+                            prediction !== null
+                              ? typeof prediction === 'number'
+                                ? prediction.toFixed(4)
+                                : prediction
+                              : ''
+                          }
+                          readOnly
+                          disabled
+                          className="bg-primary/10 text-primary focus:shadow-none opacity-90 font-semibold ring-0 border-2 border-primary/20"
+                        />
+                        {taskType.includes('classification') && confidence !== null && (
+                          <Badge variant="outline" className="mt-1 bg-primary/10 text-primary text-xs">
+                            {(confidence * 100).toFixed(1)}% confidence
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  } else {
+                    // Editable feature input
+                    return (
+                      <div key={col} className="flex flex-col items-start" style={{ minWidth: 140 }}>
+                        <Label htmlFor={`manual-${col}`}>{col}</Label>
+                        <Input
+                          id={`manual-${col}`}
+                          placeholder={manualForm.sampleRow[col] || `Enter ${col}`}
+                          value={inputValues[col] || ''}
+                          onChange={e => handleInputChange(col, e.target.value)}
+                          className=""
+                          disabled={predicting}
+                          autoComplete="off"
+                        />
+                      </div>
+                    );
+                  }
+                })}
             </div>
-          ))}
-
-          <div className="space-y-2 mt-4 pt-4 border-t">
-            <Label htmlFor="prediction">{manualForm?.targetColumn || 'Prediction'}</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="prediction"
-                value={prediction !== null && typeof prediction === "number" ? prediction.toFixed(4) : prediction ?? ''}
-                placeholder="Prediction will appear here"
-                readOnly
-                disabled
-                className={prediction ? "bg-primary/5 font-medium" : ""}
-              />
-
-              {taskType.includes('classification') && confidence !== null && (
-                <Badge variant="outline" className="bg-primary/10 text-primary">
-                  {(confidence * 100).toFixed(1)}% confidence
-                </Badge>
+            <Button
+              type="submit"
+              disabled={predicting || !areAllInputsFilled()}
+              className="w-full"
+            >
+              {predicting ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Prediction...
+                </>
+              ) : (
+                'Generate Prediction'
               )}
-            </div>
-          </div>
+            </Button>
+          </form>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handlePredict}
-          disabled={predicting || !areAllInputsFilled()}
-          className="w-full"
-        >
-          {predicting ? (
-            <>
-              <Loader className="mr-2 h-4 w-4 animate-spin" />
-              Generating Prediction...
-            </>
-          ) : (
-            'Generate Prediction'
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
 
 export default PredictionPanel;
-
