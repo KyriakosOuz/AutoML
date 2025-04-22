@@ -63,6 +63,7 @@ export interface ExperimentResults {
   hyperparameters?: Record<string, any>;
   message?: string;
   automl_engine?: string;
+  class_labels?: string[]; // Added missing property
 }
 
 export interface AutoMLResult {

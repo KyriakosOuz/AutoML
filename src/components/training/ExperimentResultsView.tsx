@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -314,7 +313,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                   <div className="mt-6">
                     <ConfusionMatrixChart 
                       matrix={confusion_matrix}
-                      labels={results.class_labels || ['Negative', 'Positive']}
+                      labels={results.class_labels || (isBinaryClassification ? ['Negative', 'Positive'] : [])}
                     />
                   </div>
                 )}
