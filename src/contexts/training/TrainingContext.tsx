@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -64,7 +65,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeExperimentId, state.lastTrainingType]);
 
-  // --- Refactored polling success handler to handle hasTrainingResults=false properly ---
+  // --- Refactored polling success handler to handle results properly ---
   const handlePollingSuccess = useCallback(async (experimentId: string) => {
     let tryCount = 0;
     const maxTries = 8;
@@ -79,10 +80,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       try {
         results = await trainingApi.getExperimentResults(experimentId);
 
-        // Only accept results if they're truly complete (hasTrainingResults && status completed/success)
+        // Check if results are complete - we check for status and training_results
+        // instead of hasTrainingResults which is not part of ExperimentResults type
         if (
-          (results.hasTrainingResults === true) &&
-          (results.status === "completed" || results.status === "success")
+          results &&
+          (results.status === "completed" || results.status === "success") &&
+          (results.training_results || results.metrics)
         ) {
           setState(prev => ({
             ...prev,
@@ -166,7 +169,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
-  // --- Remove any extraneous/duplicated experimentResults fetch logic: keep only one canonical fetch ---
+  // --- Improved experimentResults fetch logic with proper error handling ---
   const getExperimentResults = useCallback(async () => {
     if (!state.activeExperimentId) return;
     setState(prev => ({ ...prev, isLoadingResults: true }));
@@ -174,9 +177,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
 
+      // Check if results are complete by verifying status and either training_results or metrics
       if (
-        results.hasTrainingResults &&
-        (results.status === "completed" || results.status === "success")
+        results &&
+        (results.status === "completed" || results.status === "success") &&
+        (results.training_results || results.metrics)
       ) {
         setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false, error: null }));
       } else {

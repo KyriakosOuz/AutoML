@@ -101,7 +101,7 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
       return resultData as ExperimentResults;
     }
     
-    // If it has hasTrainingResults: false, the results aren't ready
+    // Handle case with hasTrainingResults flag in the API response
     if (apiResponse.hasTrainingResults === false) {
       throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
     }
