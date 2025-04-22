@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -23,12 +22,13 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
   try {
     console.log('[API] Fetching results for experiment:', experimentId);
     const headers = await getAuthHeaders();
+    // Update fetch endpoint to use correct backend route
     const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
       headers
     });
 
     const apiResponse = await handleApiResponse<ExperimentResults>(response);
-    
+
     if (apiResponse.status === 'success' && apiResponse.data) {
       return apiResponse.data;
     }
