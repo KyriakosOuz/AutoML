@@ -7,7 +7,7 @@ interface ApiResponse<T = any> {
 
 interface ExperimentStatusResponse {
   experiment_id: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'success';
   error_message: string | null;
   completed_at: string | null;
   hasTrainingResults: boolean;
