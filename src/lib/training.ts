@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -25,33 +24,70 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
   try {
     console.log('[API] Fetching results for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    // Ensure we call the correct backend route
     const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
       headers
     });
 
-    const apiResponse = await handleApiResponse<ExperimentResults>(response);
+    // Defensive: try parsing, but catch invalid formatting
+    let apiResponse: any;
+    try {
+      apiResponse = await handleApiResponse<ExperimentResults>(response);
+    } catch (err: any) {
+      // If handleApiResponse threw due to invalid JSON/HTML, log, then throw normal error
+      console.error('[API] handleApiResponse error (likely non-JSON):', err);
+      // Edge-case: try to extract any text error from response
+      const text = await response.text().catch(() => "");
+      if (text.startsWith('<!DOCTYPE')) {
+        throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
+      }
+      throw err;
+    }
 
     // Log the full structure for debugging:
     console.log('[API] Results data received:', apiResponse);
 
-    // Defensive check for result presence
+    // Validate structure: should be an object with key fields for ExperimentResults
     if (
-      apiResponse.status === 'success' &&
-      ((apiResponse.data && (apiResponse as any).hasTrainingResults !== false) || apiResponse.data)
+      apiResponse &&
+      typeof apiResponse === "object" &&
+      (apiResponse.status === 'success' || apiResponse.status === 'completed' || apiResponse.status === 'failed')
     ) {
-      return apiResponse.data;
+      // Some backends may wrap "data" under apiResponse.data, some may not.
+      const hasExperimentFields = (
+        (apiResponse.data && apiResponse.data.experiment_name) ||
+        apiResponse.experiment_name
+      );
+
+      // If this is the old/bad shape, surface a helpful error
+      if (
+        apiResponse.hasTrainingResults !== undefined &&
+        !hasExperimentFields
+      ) {
+        throw new Error('Training results are not yet available. The server replied with a non-standard result object. Please wait a few more moments and retry, or check backend status.');
+      }
+
+      // If we detect a success + missing results payload, inform user
+      if (apiResponse.status === 'success' && apiResponse.hasTrainingResults === false) {
+        throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
+      }
+
+      // Defensive: return .data if present, else the root object if conformant
+      const pruned =
+        apiResponse.data && hasExperimentFields
+          ? apiResponse.data
+          : hasExperimentFields
+            ? apiResponse
+            : null;
+
+      if (pruned) {
+        return pruned as ExperimentResults;
+      }
     }
 
-    // If training results not yet ready, throw a user-friendly error
-    if ((apiResponse as any).status === "success" && (apiResponse as any).hasTrainingResults === false) {
-      throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
-    }
-
+    // Fallback error if nothing matches above
     throw new Error('Invalid response format from experiment results endpoint');
   } catch (error) {
     console.error('[API] Error fetching experiment results:', error);
     throw error;
   }
 };
-
