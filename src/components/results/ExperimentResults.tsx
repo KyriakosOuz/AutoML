@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -23,6 +22,7 @@ import {
   Image as ImageIcon,
   AlertTriangle
 } from 'lucide-react';
+import { ExperimentStatus } from '@/contexts/TrainingContext';
 
 interface ExperimentMetadata {
   experiment_id: string;
@@ -45,19 +45,20 @@ interface ExperimentFile {
   file_name: string;
 }
 
-interface ExperimentResults {
+interface ExperimentResultsProps {
+  experimentId: string | null;
+  status: ExperimentStatus;
+  onReset?: () => void;
+}
+
+interface ExperimentResultsData {
   experiment_metadata: ExperimentMetadata;
   metrics: Record<string, number>;
   files: ExperimentFile[];
 }
 
-interface ExperimentResultsProps {
-  experimentId: string | null;
-  onReset?: () => void;
-}
-
-const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, onReset }) => {
-  const [results, setResults] = useState<ExperimentResults | null>(null);
+const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, status, onReset }) => {
+  const [results, setResults] = useState<ExperimentResultsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('metrics');
@@ -138,7 +139,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, onR
   };
   
   // Loading state
-  if (isLoading) {
+  if (isLoading || status === 'processing' || status === 'running') {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
         <CardHeader>
@@ -170,7 +171,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, onR
   }
   
   // Error state
-  if (error || (results?.experiment_metadata.status === 'failed' && results?.experiment_metadata.error_message)) {
+  if (error || status === 'failed') {
     const errorMessage = results?.experiment_metadata.error_message || error;
     
     return (

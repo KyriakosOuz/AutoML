@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import ExperimentResults from '../results/ExperimentResults';
+import StatusBadge from './StatusBadge';
 import { useTraining } from '@/contexts/TrainingContext';
 
 const ModelTrainingContent: React.FC = () => {
@@ -13,6 +13,7 @@ const ModelTrainingContent: React.FC = () => {
     activeExperimentId,
     isLoadingResults,
     experimentResults,
+    experimentStatus,
     error
   } = useTraining();
   
@@ -26,9 +27,11 @@ const ModelTrainingContent: React.FC = () => {
     resetTrainingState();
   };
   
-  // Only show results tab if we have active experiment results, are loading results, or have an error
-  // The key is to not attempt to render the actual results until they're fully loaded
-  const showResults = activeExperimentId && (experimentResults || isLoadingResults || error);
+  // Only show results tab when we have an active experiment
+  const showResults = activeExperimentId !== null;
+  
+  // Don't allow clicking the results tab while processing
+  const isResultsDisabled = experimentStatus === 'processing';
   
   return (
     <div className="w-full">
@@ -38,7 +41,14 @@ const ModelTrainingContent: React.FC = () => {
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="automl">AutoML Training</TabsTrigger>
               <TabsTrigger value="custom">Custom Training</TabsTrigger>
-              <TabsTrigger value="results">Results</TabsTrigger>
+              <TabsTrigger value="results" disabled={isResultsDisabled}>
+                Results 
+                {experimentStatus && (
+                  <div className="ml-2">
+                    <StatusBadge status={experimentStatus} />
+                  </div>
+                )}
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="automl" className="p-4 pt-6">
@@ -51,8 +61,9 @@ const ModelTrainingContent: React.FC = () => {
             
             <TabsContent value="results" className="pt-4">
               <ExperimentResults 
-                experimentId={activeExperimentId} 
-                onReset={handleReset} 
+                experimentId={activeExperimentId}
+                status={experimentStatus}
+                onReset={handleReset}
               />
             </TabsContent>
           </Tabs>

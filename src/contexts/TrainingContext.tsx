@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { trainingApi } from '@/lib/api';
+
 import { 
   TrainingEngine, 
   TaskType,
@@ -9,11 +12,8 @@ import {
   ExperimentResults,
   ExperimentStatus
 } from '@/types/training';
-import { useToast } from '@/hooks/use-toast';
-import { trainingApi } from '@/lib/api';
 
-const EXPERIMENT_STORAGE_KEY = 'last_experiment_id';
-const EXPERIMENT_TYPE_STORAGE_KEY = 'last_training_type';
+export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed';
 
 export interface TrainingContextProps {
   isTraining: boolean;
@@ -32,6 +32,9 @@ export interface TrainingContextProps {
   testSize: number;
   stratify: boolean;
   randomSeed: number;
+  
+  experimentStatus: ExperimentStatus;
+  setExperimentStatus: (status: ExperimentStatus) => void;
   
   setIsTraining: (isTraining: boolean) => void;
   setLastTrainingType: (type: 'automl' | 'custom' | null) => void;
@@ -95,7 +98,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
-  
+  const [experimentStatus, setExperimentStatus] = useState<ExperimentStatus>('processing');
+
   useEffect(() => {
     try {
       const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
@@ -140,16 +144,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoadingResults(true);
     setActiveExperimentId(experimentId);
     setPollingAttempts(0);
+    setExperimentStatus('processing');
 
     const interval = setInterval(async () => {
       try {
-        console.log('[TrainingContext] Polling attempt', pollingAttempts + 1, 'for experiment:', experimentId);
         const statusResponse = await trainingApi.checkStatus(experimentId);
         console.log('[TrainingContext] Status response:', {
           status: statusResponse.status,
           experimentId,
           response: statusResponse
         });
+        
+        setExperimentStatus(statusResponse.status as ExperimentStatus);
         
         if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
           console.log('[TrainingContext] Training completed successfully');
@@ -176,28 +182,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             description: results.error_message || 'An error occurred during training',
             variant: "destructive"
           });
-        } else {
-          // Still processing
-          console.log('[TrainingContext] Training still in progress, attempt:', pollingAttempts + 1);
-          setPollingAttempts(prev => {
-            if (prev >= MAX_POLL_ATTEMPTS) {
-              console.error('[TrainingContext] Training timed out after', MAX_POLL_ATTEMPTS, 'attempts');
-              stopPolling();
-              setError('Training timeout - please check results page later');
-              setIsLoadingResults(false);
-              setIsTraining(false);
-              return prev;
-            }
-            return prev + 1;
-          });
         }
       } catch (error) {
-        console.error('[TrainingContext] Polling error:', {
-          error,
-          experimentId,
-          attempt: pollingAttempts + 1
-        });
-        // Don't stop polling on network errors, but log them
+        console.error('[TrainingContext] Polling error:', error);
+        setExperimentStatus('failed');
+        setError('Failed to check experiment status');
+        stopPolling();
       }
     }, POLL_INTERVAL);
 
@@ -297,6 +287,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     testSize: automlParameters.testSize,
     stratify: automlParameters.stratify,
     randomSeed: automlParameters.randomSeed,
+    
+    experimentStatus,
+    setExperimentStatus,
     
     setIsTraining,
     setLastTrainingType,
