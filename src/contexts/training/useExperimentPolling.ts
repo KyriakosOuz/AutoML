@@ -50,21 +50,36 @@ export const useExperimentPolling = ({
           experimentId,
           response: statusResponse
         });
+
+        if (!statusResponse) {
+          throw new Error('Invalid status response from server');
+        }
         
         setExperimentStatus(statusResponse.status as ExperimentStatus);
         
+        // Stop polling on completed or failed status
         if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
           console.log('[TrainingContext] Training completed successfully');
           stopPolling();
           onSuccess(experimentId);
         } else if (statusResponse.status === 'failed') {
-          console.error('[TrainingContext] Training failed');
+          console.error('[TrainingContext] Training failed:', statusResponse.error_message);
           stopPolling();
-          onError('Training failed');
+          onError(statusResponse.error_message || 'Training failed');
+          toast({
+            title: "Training Failed",
+            description: statusResponse.error_message || "An error occurred during training",
+            variant: "destructive"
+          });
         } else if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           stopPolling();
           onError('Timeout while waiting for training completion');
+          toast({
+            title: "Training Timeout",
+            description: "The training process took too long to complete",
+            variant: "destructive"
+          });
         } else {
           setPollingAttempts(prev => prev + 1);
         }
@@ -73,7 +88,13 @@ export const useExperimentPolling = ({
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
           stopPolling();
-          onError('Failed to check experiment status after multiple attempts');
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          onError(`Failed to check experiment status: ${errorMessage}`);
+          toast({
+            title: "Error",
+            description: `Failed to check experiment status: ${errorMessage}`,
+            variant: "destructive"
+          });
         } else {
           setPollingAttempts(prev => prev + 1);
         }
