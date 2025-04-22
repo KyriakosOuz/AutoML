@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -229,7 +228,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     
     // If it's an object, convert it to a more readable format
     try {
-      const reportObj = metrics.classification_report;
+      // Safely cast the classification_report to a Record type
+      const reportObj = metrics.classification_report as Record<string, any>;
+      
       return (
         <div className="overflow-x-auto">
           <Table>
@@ -247,18 +248,27 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
                 // Skip if value is not an object or doesn't have expected properties
                 if (typeof value !== 'object' || value === null) return null;
                 
-                // Extract metrics safely with defaults
-                const precision = 'precision' in value ? value.precision : '-';
-                const recall = 'recall' in value ? value.recall : '-';
-                const f1Score = 'f1-score' in value ? value['f1-score'] : '-';
-                const support = 'support' in value ? value.support : '-';
+                // Safely cast value to avoid TypeScript errors
+                const reportValue = value as Record<string, any>;
+                
+                // Extract metrics safely with proper type checking
+                const precision = 'precision' in reportValue ? String(reportValue.precision) : '-';
+                const recall = 'recall' in reportValue ? String(reportValue.recall) : '-';
+                const f1Score = 'f1-score' in reportValue ? String(reportValue['f1-score']) : '-';
+                const support = 'support' in reportValue ? String(reportValue.support) : '-';
+                
+                // Format numbers if they are numeric
+                const formatValue = (val: string): string => {
+                  const num = parseFloat(val);
+                  return !isNaN(num) ? (num >= 0 && num <= 1 ? num.toFixed(2) : num.toFixed(4)) : val;
+                };
                 
                 return (
                   <TableRow key={key}>
                     <TableCell className="font-medium">{key}</TableCell>
-                    <TableCell>{typeof precision === 'number' ? precision.toFixed(2) : precision}</TableCell>
-                    <TableCell>{typeof recall === 'number' ? recall.toFixed(2) : recall}</TableCell>
-                    <TableCell>{typeof f1Score === 'number' ? f1Score.toFixed(2) : f1Score}</TableCell>
+                    <TableCell>{precision !== '-' ? formatValue(precision) : precision}</TableCell>
+                    <TableCell>{recall !== '-' ? formatValue(recall) : recall}</TableCell>
+                    <TableCell>{f1Score !== '-' ? formatValue(f1Score) : f1Score}</TableCell>
                     <TableCell>{support}</TableCell>
                   </TableRow>
                 );
