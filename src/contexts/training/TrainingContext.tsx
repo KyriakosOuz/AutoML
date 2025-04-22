@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -29,7 +28,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     randomSeed: defaultAutomlParameters.randomSeed,
   });
 
-  // Load experiment ID from storage on mount
   useEffect(() => {
     try {
       const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
@@ -48,7 +46,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, []);
 
-  // Save experiment ID to storage when it changes
   useEffect(() => {
     try {
       if (state.activeExperimentId) {
@@ -65,86 +62,53 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeExperimentId, state.lastTrainingType]);
 
-  // --- Refactored polling success handler to handle results properly ---
-  const handlePollingSuccess = useCallback(async (experimentId: string) => {
-    let tryCount = 0;
-    const maxTries = 8;
-    let results: ExperimentResults | null = null;
-
+  const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
     setState(prev => ({
       ...prev,
       isLoadingResults: true
     }));
+    try {
+      const results = await trainingApi.getExperimentResults(experimentId);
+      if (results) {
+        setState(prev => ({
+          ...prev,
+          experimentResults: results,
+          isLoadingResults: false,
+          isTraining: false,
+          error: null,
+        }));
 
-    while (tryCount < maxTries) {
-      try {
-        results = await trainingApi.getExperimentResults(experimentId);
-
-        // Check if results are complete - we check for status and training_results
-        // instead of hasTrainingResults which is not part of ExperimentResults type
-        if (
-          results &&
-          (results.status === "completed" || results.status === "success") &&
-          (results.training_results || results.metrics)
-        ) {
-          setState(prev => ({
-            ...prev,
-            experimentResults: results,
-            isLoadingResults: false,
-            isTraining: false,
-            error: null
-          }));
-
-          toast({
-            title: "Training Complete",
-            description: "Your model has finished training successfully!"
-          });
-          return; // Finished
-        } else {
-          // Still incomplete/partial - keep trying
-          tryCount++;
-          await new Promise(res => setTimeout(res, 1800));
-        }
-      } catch (error) {
-        // If server still isn't ready, retry (as long as it's not fatal)
-        tryCount++;
-        if (tryCount >= maxTries) {
-          const errMsg =
-            error instanceof Error
-              ? error.message
-              : 'Failed to fetch results after training completion (server not ready)';
-          setState(prev => ({
-            ...prev,
-            error: errMsg,
-            isLoadingResults: false,
-            isTraining: false
-          }));
-
-          toast({
-            title: "Error Fetching Results",
-            description: errMsg,
-            variant: "destructive"
-          });
-          return;
-        }
-        // Wait and try again
-        await new Promise(res => setTimeout(res, 1800));
+        toast({
+          title: "Training Complete",
+          description: "Your model has finished training successfully!"
+        });
+        return;
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoadingResults: false
+        }));
+        return;
       }
+    } catch (error) {
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch results after training completion (server not ready)';
+      setState(prev => ({
+        ...prev,
+        error: errMsg,
+        isLoadingResults: false,
+        isTraining: false
+      }));
+
+      toast({
+        title: "Error Fetching Results",
+        description: errMsg,
+        variant: "destructive"
+      });
+      return;
     }
-
-    // After exhausting tries without real results
-    setState(prev => ({
-      ...prev,
-      error: "Results are not yet ready. Please try again in a few seconds.",
-      isLoadingResults: false,
-      isTraining: false
-    }));
-
-    toast({
-      title: "Results Not Ready",
-      description: "Your results aren't available yet. Please retry after a few moments.",
-      variant: "destructive"
-    });
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
@@ -169,23 +133,17 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
-  // --- Improved experimentResults fetch logic with proper error handling ---
-  const getExperimentResults = useCallback(async () => {
+  const getExperimentResults = React.useCallback(async () => {
     if (!state.activeExperimentId) return;
     setState(prev => ({ ...prev, isLoadingResults: true }));
 
     try {
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
 
-      // Check if results are complete by verifying status and either training_results or metrics
-      if (
-        results &&
-        (results.status === "completed" || results.status === "success") &&
-        (results.training_results || results.metrics)
-      ) {
+      if (results) {
         setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false, error: null }));
       } else {
-        throw new Error("Results are not ready yet");
+        setState(prev => ({ ...prev, isLoadingResults: false }));
       }
     } catch (error) {
       const errorMessage =

@@ -20,58 +20,50 @@ export const checkStatus = async (experimentId: string): Promise<ApiResponse<Exp
 };
 
 // Fetch experiment results endpoint (returns detailed results for experiment)
-export const getExperimentResults = async (experimentId: string): Promise<ExperimentResults> => {
+export const getExperimentResults = async (
+  experimentId: string
+): Promise<ExperimentResults | null> => {
   try {
     console.log('[API] Fetching results for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    
-    // First try using the /experiments/experiment-results endpoint
-    let response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
-      headers
-    });
-    
-    // If response is not ok, try fallback endpoint as a last resort
-    if (!response.ok && response.status !== 401) { // Don't retry on auth errors
-      console.warn('[API] Primary endpoint failed, status:', response.status);
-      
-      // Only log the error, don't throw yet - we'll try the fallback
-      const errorText = await response.text().catch(() => "");
-      console.error('[API] Error response text:', errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
-      
-      // Try alternative endpoint as fallback
-      response = await fetch(`${API_BASE_URL}/training/experiment-results/${experimentId}`, {
-        headers
-      });
+
+    // Only use the correct endpoint, retry once on non-401 error
+    let response = await fetch(
+      `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
+      { headers }
+    );
+
+    if (!response.ok && response.status !== 401) {
+      console.warn('[API] Primary endpoint failed, retrying...');
+      response = await fetch(
+        `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
+        { headers }
+      );
     }
 
-    // If we still have a non-OK response, handle the error
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error('Unauthorized: Your session has expired. Please log in again.');
       }
-      
       const errorText = await response.text().catch(() => "");
       if (errorText.startsWith('<!DOCTYPE')) {
         throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
       }
-      
+      console.error('[API] Error fetching results:', errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
       throw new Error(`Failed to fetch experiment results: ${response.status} ${response.statusText}`);
     }
-    
-    // Try to parse the JSON - get the raw text first to help with debugging
+
+    // Always try to parse the response as JSON
+    let apiResponse: any;
     const responseText = await response.text();
-    
     if (!responseText || responseText.trim() === '') {
       throw new Error('Server returned an empty response');
     }
-    
-    // Check if it's HTML (which would cause JSON.parse to fail)
+    // check for HTML response
     if (responseText.startsWith('<!DOCTYPE') || responseText.startsWith('<html')) {
       throw new Error('Server returned HTML instead of JSON. Check server configuration.');
     }
-    
-    // Parse the text as JSON, expect only the canonical format
-    let apiResponse: any;
+
     try {
       apiResponse = JSON.parse(responseText);
     } catch (err) {
@@ -80,32 +72,17 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
       throw new Error('Invalid JSON response from server');
     }
 
-    // Log the full structure for debugging
-    // console.log('[API] Results data received:', apiResponse);
+    // Unwrap envelope: { status, data }
+    const payload = apiResponse.data ?? apiResponse;
 
-    // Accept ONLY the canonical format: { experiment_id, status, ... }
-    if (
-      typeof apiResponse === 'object' &&
-      (apiResponse.experiment_id || apiResponse.experiment_name)
-    ) {
-      // If we receive hasTrainingResults: false, indicate results not ready yet
-      if (apiResponse.hasTrainingResults === false) {
-        throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
-      }
-      // Otherwise, treat as valid results object
-      return apiResponse as ExperimentResults;
+    // If results aren't ready yet, just return null (not an error!)
+    if (payload.hasTrainingResults === false) {
+      return null;
     }
 
-    // As a safety, check old data-wrapping (should not happen in new backend structure)
-    if (apiResponse.status === 'success' && typeof apiResponse.data === 'object') {
-      const data = apiResponse.data;
-      if (data.hasTrainingResults === false) {
-        throw new Error('Training completed, but results are not yet available. Please wait a few moments.');
-      }
-      return data as ExperimentResults;
-    }
-    
-    throw new Error('Invalid or empty response format from experiment results endpoint');
+    // At this point, payload should be a full ExperimentResults with training_results, etc.
+    console.log('[API] Results data received:', payload);
+    return payload as ExperimentResults;
   } catch (error) {
     console.error('[API] Error fetching experiment results:', error);
     throw error;
