@@ -81,7 +81,7 @@ export const getExperimentResults = async (experimentId: string): Promise<Experi
     }
 
     // Log the full structure for debugging
-    console.log('[API] Results data received:', apiResponse);
+    // console.log('[API] Results data received:', apiResponse);
 
     // Accept ONLY the canonical format: { experiment_id, status, ... }
     if (
