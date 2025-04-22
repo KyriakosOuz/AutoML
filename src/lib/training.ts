@@ -76,6 +76,10 @@ export interface PredictionSchema {
   features: string[];
   target_column: string;
   sample_row: Record<string, any>;
+  // Add the properties needed by DynamicPredictionForm
+  columns: string[];
+  target: string;
+  example: Record<string, any>;
 }
 
 export const getPredictionSchema = async (experimentId: string): Promise<PredictionSchema> => {
@@ -96,7 +100,19 @@ export const getPredictionSchema = async (experimentId: string): Promise<Predict
     
     const data = await response.json();
     console.log('[API] Prediction schema:', data);
-    return data;
+    
+    // Map the response to the expected interface format if needed
+    const result: PredictionSchema = {
+      features: data.features || [],
+      target_column: data.target_column || '',
+      sample_row: data.sample_row || {},
+      // Map to the properties used in DynamicPredictionForm
+      columns: data.columns || data.features || [],
+      target: data.target || data.target_column || '',
+      example: data.example || data.sample_row || {}
+    };
+    
+    return result;
   } catch (error) {
     console.error('[API] Error in getPredictionSchema:', error);
     throw error;
