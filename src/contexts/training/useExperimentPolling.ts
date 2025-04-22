@@ -45,10 +45,9 @@ export const useExperimentPolling = ({
 
     const interval = setInterval(async () => {
       try {
-        console.log('[TrainingContext] Status response data:', data);
         const response = await checkStatus(experimentId);
-
         const data = response.data;
+        console.log('[TrainingContext] Status response data:', data);
 
         if (data.status === 'failed' || !!data.error_message) {
           setExperimentStatus('failed');
