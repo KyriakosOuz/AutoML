@@ -36,12 +36,14 @@ export interface TrainingResults {
   metrics: Record<string, any>;
   y_true?: number[] | string[];
   y_pred?: number[] | string[];
-  y_probs?: number[][];
+  y_probs?: number[][] | number[];
   classification_report?: string | Record<string, any>;
+  confusion_matrix?: number[][];
 }
 
 export interface ExperimentResults {
-  id: string;
+  id?: string;
+  experimentId: string;
   experiment_id?: string;
   experiment_name: string;
   status: ExperimentStatus;
