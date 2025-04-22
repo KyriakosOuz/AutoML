@@ -2,13 +2,16 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
+import { supabase } from "@/integrations/supabase/client"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
+export const getAuthHeaders = async () => {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',

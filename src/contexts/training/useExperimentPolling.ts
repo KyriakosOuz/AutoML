@@ -39,7 +39,7 @@ export const useExperimentPolling = ({
     setExperimentStatus('processing');
 
     toast({
-      title: "Training in Progress",
+      title: "Training Started",
       description: "Your model training has started. Please wait while we process your request."
     });
 
@@ -56,7 +56,7 @@ export const useExperimentPolling = ({
         setExperimentStatus(data.status as ExperimentStatus);
 
         if (data.status === 'completed' && data.hasTrainingResults) {
-          console.log('[TrainingContext] Training completed successfully, fetching results');
+          console.log('[TrainingContext] Training completed successfully');
           stopPolling();
           onSuccess(experimentId);
         } else if (data.status === 'failed') {

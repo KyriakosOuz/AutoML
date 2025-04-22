@@ -7,8 +7,9 @@ import { API_BASE_URL } from './constants';
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
     console.log('[API] Checking status for experiment:', experimentId);
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/training/check-status/${experimentId}`, {
-      headers: getAuthHeaders(),
+      headers
     });
 
     return handleApiResponse<ExperimentStatusResponse>(response);
@@ -21,8 +22,9 @@ export const checkStatus = async (experimentId: string): Promise<ApiResponse<Exp
 export const getExperimentResults = async (experimentId: string): Promise<ExperimentResults> => {
   try {
     console.log('[API] Fetching results for experiment:', experimentId);
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
-      headers: getAuthHeaders()
+      headers
     });
 
     const apiResponse = await handleApiResponse<ExperimentResults>(response);
