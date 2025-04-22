@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import DatasetPage from "./pages/DatasetPage";
 import ModelTrainingPage from "./pages/ModelTrainingPage";
+import ExperimentDetailPage from "./pages/ExperimentDetailPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
@@ -31,6 +33,11 @@ const App = () => (
             <Route path="/training" element={
               <ProtectedRoute>
                 <ModelTrainingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/experiment/:experimentId" element={
+              <ProtectedRoute>
+                <ExperimentDetailPage />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
