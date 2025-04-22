@@ -1,43 +1,24 @@
 
-import React, { useState } from 'react';
-import { useTraining } from '@/contexts/training/TrainingContext';
-import MainLayout from '@/components/layout/MainLayout';
-import TrainingTabs from '@/components/training/TrainingTabs';
-import TrainingSteps from '@/components/training/TrainingSteps';
-import ExperimentResultsView from '@/components/training/ExperimentResultsView';
+import React from 'react';
+import { DatasetProvider } from '@/contexts/DatasetContext';
+import { TrainingProvider } from '@/contexts/training/TrainingContext';
+import ModelTrainingContent from '@/components/training/ModelTrainingContent';
+import TrainingHeader from '@/components/training/TrainingHeader';
+import { Toaster } from '@/components/ui/toaster';
 
-const ModelTrainingPage = () => {
-  const { 
-    activeExperimentId, 
-    experimentStatus, 
-    isTraining, 
-    resetTrainingState 
-  } = useTraining();
-  
-  const handleReset = () => {
-    resetTrainingState();
-  };
-  
-  const showResults = activeExperimentId && experimentStatus === 'completed';
-  
+const ModelTrainingPage: React.FC = () => {
   return (
-    <MainLayout>
-      <div className="container py-6">
-        <h1 className="text-3xl font-bold mb-6">Model Training</h1>
-        
-        {showResults ? (
-          <ExperimentResultsView 
-            experimentId={activeExperimentId} 
-            onReset={handleReset}
-          />
-        ) : (
-          <>
-            <TrainingTabs />
-            {isTraining && <TrainingSteps />}
-          </>
-        )}
-      </div>
-    </MainLayout>
+    <DatasetProvider>
+      <TrainingProvider>
+        <div className="flex flex-col min-h-screen">
+          <TrainingHeader />
+          <div className="flex-1 p-6">
+            <ModelTrainingContent />
+          </div>
+          <Toaster />
+        </div>
+      </TrainingProvider>
+    </DatasetProvider>
   );
 };
 

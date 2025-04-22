@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -64,18 +63,52 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [state.activeExperimentId, state.lastTrainingType]);
 
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
-    // When polling succeeds, we don't need to fetch results here
-    // The ExperimentResultsView component will handle that
     setState(prev => ({
       ...prev,
-      isTraining: false,
-      error: null,
+      isLoadingResults: true
     }));
-    
-    toast({
-      title: "Training Complete",
-      description: "Your model has finished training successfully!"
-    });
+    try {
+      const results = await trainingApi.getExperimentResults(experimentId);
+      if (results) {
+        setState(prev => ({
+          ...prev,
+          experimentResults: results,
+          isLoadingResults: false,
+          isTraining: false,
+          error: null,
+        }));
+
+        toast({
+          title: "Training Complete",
+          description: "Your model has finished training successfully!"
+        });
+        return;
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoadingResults: false
+        }));
+        return;
+      }
+    } catch (error) {
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch results after training completion (server not ready)';
+      setState(prev => ({
+        ...prev,
+        error: errMsg,
+        isLoadingResults: false,
+        isTraining: false
+      }));
+
+      toast({
+        title: "Error Fetching Results",
+        description: errMsg,
+        variant: "destructive"
+      });
+      return;
+    }
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
@@ -100,7 +133,31 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
-  // No longer need getExperimentResults here - the hook handles it
+  const getExperimentResults = React.useCallback(async () => {
+    if (!state.activeExperimentId) return;
+    setState(prev => ({ ...prev, isLoadingResults: true }));
+
+    try {
+      const results = await trainingApi.getExperimentResults(state.activeExperimentId);
+
+      if (results) {
+        setState(prev => ({ ...prev, experimentResults: results, isLoadingResults: false, error: null }));
+      } else {
+        setState(prev => ({ ...prev, isLoadingResults: false }));
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch experiment results';
+      setState(prev => ({ ...prev, error: errorMessage, isLoadingResults: false }));
+      toast({
+        title: "Error Fetching Results",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  }, [state.activeExperimentId, toast]);
 
   const contextValue: TrainingContextValue = {
     ...state,
@@ -149,7 +206,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
     },
-    getExperimentResults: async () => {}, // Simplified as we'll use the hook
+    getExperimentResults,
     startPolling,
     stopPolling,
   };

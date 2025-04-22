@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -25,15 +24,15 @@ export const getExperimentResults = async (
   experimentId: string
 ): Promise<ExperimentResults | null> => {
   try {
+    console.log('[API] Fetching results for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    
-    // Fetch results from the canonical endpoint
+
+    // Only use the correct endpoint, retry once on non-401 error
     let response = await fetch(
       `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
       { headers }
     );
 
-    // On non-401, you could retry once more
     if (!response.ok && response.status !== 401) {
       console.warn('[API] Primary endpoint failed, retrying...');
       response = await fetch(
@@ -42,32 +41,34 @@ export const getExperimentResults = async (
       );
     }
 
-    // Handle non-OK responses
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error('Unauthorized: Your session has expired. Please log in again.');
       }
-      
       const errorText = await response.text().catch(() => "");
       if (errorText.startsWith('<!DOCTYPE')) {
         throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
       }
-      
       console.error('[API] Error fetching results:', errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
       throw new Error(`Failed to fetch experiment results: ${response.status} ${response.statusText}`);
     }
 
-    // Parse the response
+    // Always try to parse the response as JSON
+    let apiResponse: any;
     const responseText = await response.text();
     if (!responseText || responseText.trim() === '') {
       throw new Error('Server returned an empty response');
     }
-    
-    let apiResponse: any;
+    // check for HTML response
+    if (responseText.startsWith('<!DOCTYPE') || responseText.startsWith('<html')) {
+      throw new Error('Server returned HTML instead of JSON. Check server configuration.');
+    }
+
     try {
       apiResponse = JSON.parse(responseText);
     } catch (err) {
       console.error('[API] JSON parse error:', err);
+      console.error('[API] Failed to parse response text:', responseText.substring(0, 200) + '...');
       throw new Error('Invalid JSON response from server');
     }
 
@@ -79,6 +80,8 @@ export const getExperimentResults = async (
       return null;
     }
 
+    // At this point, payload should be a full ExperimentResults with training_results, etc.
+    console.log('[API] Results data received:', payload);
     return payload as ExperimentResults;
   } catch (error) {
     console.error('[API] Error fetching experiment results:', error);
