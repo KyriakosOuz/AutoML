@@ -4,6 +4,7 @@ import { trainingApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from './types';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
+import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 
 export interface UseExperimentPollingProps {
   onSuccess: (experimentId: string) => void;
@@ -44,31 +45,27 @@ export const useExperimentPolling = ({
 
     const interval = setInterval(async () => {
       try {
-        const statusResponse = await trainingApi.checkStatus(experimentId);
-        console.log('[TrainingContext] Status response:', {
-          status: statusResponse.status,
-          experimentId,
-          response: statusResponse
-        });
-
-        if (!statusResponse) {
-          throw new Error('Invalid status response from server');
+        const response = await trainingApi.checkStatus(experimentId);
+        console.log('[TrainingContext] Status response:', response);
+        
+        if (!response || response.status === 'error') {
+          throw new Error(response?.message || 'Invalid status response from server');
         }
-        
-        setExperimentStatus(statusResponse.status as ExperimentStatus);
-        
-        // Stop polling on completed or failed status
-        if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
-          console.log('[TrainingContext] Training completed successfully');
+
+        const data = response.data as ExperimentStatusResponse;
+        setExperimentStatus(data.status as ExperimentStatus);
+
+        if (data.status === 'completed' && data.hasTrainingResults) {
+          console.log('[TrainingContext] Training completed successfully, fetching results');
           stopPolling();
           onSuccess(experimentId);
-        } else if (statusResponse.status === 'failed') {
-          console.error('[TrainingContext] Training failed:', statusResponse.error_message);
+        } else if (data.status === 'failed' || data.error_message) {
+          console.error('[TrainingContext] Training failed:', data.error_message);
           stopPolling();
-          onError(statusResponse.error_message || 'Training failed');
+          onError(data.error_message || 'Training failed');
           toast({
             title: "Training Failed",
-            description: statusResponse.error_message || "An error occurred during training",
+            description: data.error_message || "An error occurred during training",
             variant: "destructive"
           });
         } else if (pollingAttempts >= MAX_POLL_ATTEMPTS) {

@@ -4,3 +4,37 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+export const handleApiResponse = async <T>(response: Response): Promise<T> => {
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type');
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Server returned non-JSON response:', {
+        status: response.status,
+        contentType,
+        text: text.substring(0, 200)
+      });
+      throw new Error(`Server returned non-JSON response (${response.status})`);
+    }
+    
+    const errorData = await response.json();
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error('Server returned non-JSON content type');
+  }
+
+  return response.json();
+};
