@@ -46,4 +46,4 @@
       console.error('Error fetching experiment results:', error);
       throw error;
     }
-  },
+  }
