@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -76,7 +75,6 @@ export interface PredictionSchema {
   features: string[];
   target_column: string;
   sample_row: Record<string, any>;
-  // Add the properties needed by DynamicPredictionForm
   columns: string[];
   target: string;
   example: Record<string, any>;
@@ -86,32 +84,28 @@ export const getPredictionSchema = async (experimentId: string): Promise<Predict
   try {
     console.log('[API] Fetching prediction schema for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    
+    // Use GET with auth headers
     const response = await fetch(
       `${API_BASE_URL}/prediction/schema/${experimentId}`,
       { headers }
     );
-    
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
       console.error('[API] Error fetching prediction schema:', errorText.substring(0, 200));
       throw new Error(`Failed to fetch prediction schema: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
     console.log('[API] Prediction schema:', data);
-    
     // Map the response to the expected interface format if needed
+    const payload = data.data ?? data;
     const result: PredictionSchema = {
-      features: data.features || [],
-      target_column: data.target_column || '',
-      sample_row: data.sample_row || {},
-      // Map to the properties used in DynamicPredictionForm
-      columns: data.columns || data.features || [],
-      target: data.target || data.target_column || '',
-      example: data.example || data.sample_row || {}
+      features: payload.features || [],
+      target_column: payload.target_column || '',
+      sample_row: payload.sample_row || {},
+      columns: payload.columns || payload.features || [],
+      target: payload.target || payload.target_column || '',
+      example: payload.example || payload.sample_row || {}
     };
-    
     return result;
   } catch (error) {
     console.error('[API] Error in getPredictionSchema:', error);
@@ -127,31 +121,25 @@ export const submitManualPrediction = async (
   try {
     console.log('[API] Submitting manual prediction for experiment:', experimentId);
     console.log('[API] Input values:', inputValues);
-    
     const headers = await getAuthHeaders();
     const formData = new FormData();
-    
     formData.append('experiment_id', experimentId);
     formData.append('input_values', JSON.stringify(inputValues));
-    
     const response = await fetch(
       `${API_BASE_URL}/prediction/predict-manual/`,
       { 
         method: 'POST',
         headers: {
           ...headers,
-          // Don't set Content-Type as the browser will set it with the boundary
         },
         body: formData
       }
     );
-    
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
       console.error('[API] Error submitting prediction:', errorText.substring(0, 200));
       throw new Error(`Failed to submit prediction: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
     console.log('[API] Prediction response:', data);
     return data.data || data;
@@ -161,21 +149,18 @@ export const submitManualPrediction = async (
   }
 };
 
-// New utility for manual prediction; uses FormData instead of JSON in body
+// Manual prediction helper: POST with FormData and auth headers
 export async function predictManual(experimentId: string, inputs: Record<string, any>) {
   const headers = await getAuthHeaders();
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('input_values', JSON.stringify(inputs));
-
-  // Always use the same endpoint; uses API_BASE_URL from constants
   const url = `${API_BASE_URL}/prediction/predict-manual/`;
-
   const res = await fetch(
     url,
     { 
       method: 'POST', 
-      headers,  // Include auth headers
+      headers,
       body: form 
     }
   );

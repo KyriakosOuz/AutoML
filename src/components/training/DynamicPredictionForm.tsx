@@ -24,7 +24,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch prediction schema on mount
+  // Fetch prediction schema on mount/experiment change
   useEffect(() => {
     setIsLoading(true);
     setError(null);
@@ -36,17 +36,17 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     if (!experimentId) return;
     const fetchSchema = async () => {
       try {
-        const data = await getPredictionSchema(experimentId);
-        
-        setColumns(data.columns || []);
-        setTarget(data.target || '');
-        setExample(data.example || {});
-        // Set blank inputs
-        const blankInputs: Record<string, any> = {};
-        (data.columns || []).forEach((col: string) => {
-          if (col !== data.target) blankInputs[col] = '';
+        // Fetch schema using helper (includes auth header)
+        const schema = await getPredictionSchema(experimentId);
+        // Backend schema normalization
+        setColumns(Array.isArray(schema.columns) ? schema.columns : []);
+        setTarget(schema.target ?? '');
+        setExample(schema.example ?? {});
+        const newInputs: Record<string, any> = {};
+        (schema.columns ?? []).forEach(col => {
+          if (col !== schema.target) newInputs[col] = '';
         });
-        setManualInputs(blankInputs);
+        setManualInputs(newInputs);
         setPrediction('');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to fetch prediction schema';
@@ -73,15 +73,12 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setError(null);
     setPrediction('');
     try {
-      // Prepare input values as numbers where possible
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
-
       const resp = await predictManual(experimentId, processedInputs);
-      // Accept both .data and direct .prediction for robustness
       const newPrediction = resp?.prediction ?? resp?.data?.prediction ?? '';
       setPrediction(newPrediction);
       toast({
@@ -134,7 +131,6 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  // Remove target column from regular input fields
   const inputColumns = columns.filter(col => col !== target);
 
   return (
@@ -166,10 +162,14 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             <Label htmlFor="field-target" className="text-primary">{target} (Target)</Label>
             <Input
               id="field-target"
-              value={typeof prediction !== 'undefined' ? String(prediction) : ''}
+              value={
+                prediction !== undefined && prediction !== ''
+                  ? String(prediction)
+                  : (typeof example[target] !== 'undefined' ? String(example[target]) : '')
+              }
               placeholder={String(example[target] ?? '')}
               disabled
-              className="bg-gray-100 text-gray-500"
+              className="bg-gray-100 text-gray-500 cursor-not-allowed"
               readOnly
             />
           </div>
