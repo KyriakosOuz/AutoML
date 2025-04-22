@@ -334,6 +334,29 @@ export const trainingApi = {
         throw new Error('No experiment ID returned from the server');
       }
 
+      // Start polling for status immediately after successful training start
+      const pollingInterval = setInterval(async () => {
+        try {
+          console.log('[API] Polling status for experiment:', data.experiment_id);
+          const statusResponse = await trainingApi.checkStatus(data.experiment_id);
+          console.log('[API] Status response:', statusResponse);
+
+          if (statusResponse.status === 'completed' || statusResponse.status === 'success') {
+            console.log('[API] Training completed successfully');
+            clearInterval(pollingInterval);
+            // Results will be fetched by the component
+          } else if (statusResponse.status === 'failed') {
+            console.log('[API] Training failed:', statusResponse.error_message);
+            clearInterval(pollingInterval);
+            throw new Error(statusResponse.error_message || 'Training failed');
+          }
+        } catch (error) {
+          console.error('[API] Error polling status:', error);
+          clearInterval(pollingInterval);
+          throw error;
+        }
+      }, 3000);
+
       return data;
     } catch (error) {
       console.error('[API] Error starting custom training:', {
