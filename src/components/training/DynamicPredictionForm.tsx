@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPredictionSchema, predictManual } from '@/lib/training'; // Ensure predictManual comes from lib/training.ts
+import { getPredictionSchema, predictManual } from '@/lib/training';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -73,18 +73,17 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setError(null);
     setPrediction('');
     try {
-      // Coerce numeric if appropriate, otherwise leave as string
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
-      // Use the FormData-based version (headers ok but no 'Content-Type' set!)
       const resp = await predictManual(experimentId, processedInputs);
-      // The backend responds with { status, message, data: { prediction } }
+      
+      // Updated to handle the new response format
       const newPrediction = resp?.data?.prediction ?? '';
+      console.log('Prediction response:', resp);
       setPrediction(newPrediction);
-
       toast({
         title: "Prediction Success",
         description: "Prediction generated.",
@@ -201,4 +200,3 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 };
 
 export default DynamicPredictionForm;
-

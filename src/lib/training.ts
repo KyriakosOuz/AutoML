@@ -150,24 +150,20 @@ export const submitManualPrediction = async (
 };
 
 // Manual prediction helper: POST with FormData and auth headers
-export async function predictManual(experimentId: string, inputValues: Record<string, any>) {
+export async function predictManual(experimentId: string, inputs: Record<string, any>) {
+  const headers = await getAuthHeaders();
   const form = new FormData();
   form.append('experiment_id', experimentId);
-  form.append('input_values', JSON.stringify(inputValues));
-
-  // don’t set Content-Type — the browser will add the correct multipart boundary for you
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE_URL}/prediction/predict-manual/`, {
-    method: 'POST',
-    headers,
-    body: form,
-  });
-
-  if (!res.ok) {
-    // extract a nice error message
-    const text = await res.text();
-    throw new Error(text);
-  }
-
-  return await res.json();
+  form.append('input_values', JSON.stringify(inputs));
+  const url = `${API_BASE_URL}/prediction/predict-manual/`;
+  const res = await fetch(
+    url,
+    { 
+      method: 'POST', 
+      headers,
+      body: form 
+    }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }

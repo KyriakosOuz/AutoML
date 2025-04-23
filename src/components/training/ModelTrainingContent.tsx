@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -22,11 +21,11 @@ const ModelTrainingContent: React.FC = () => {
 
   const [showResults, setShowResults] = useState(false);
 
-  // Only show "Results" tab when training is completed and there is an experiment
   useEffect(() => {
     if (experimentStatus === 'completed' && activeExperimentId) {
       setShowResults(true);
     }
+    
     if (!activeExperimentId) {
       setShowResults(false);
     }
@@ -38,13 +37,6 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab('automl');
   };
 
-  // Prevent switching to Predict if no model; reset to automl if forced
-  useEffect(() => {
-    if (activeTab === "predict" && !activeExperimentId) {
-      setActiveTab("automl");
-    }
-  }, [activeTab, activeExperimentId, setActiveTab]);
-  
   return (
     <div className="space-y-6">
       <DatasetSummary />
@@ -58,7 +50,7 @@ const ModelTrainingContent: React.FC = () => {
                 Results
               </TabsTrigger>
             )}
-            <TabsTrigger value="predict" disabled={!activeExperimentId}>
+            <TabsTrigger value="predict">
               Predict
             </TabsTrigger>
           </TabsList>
