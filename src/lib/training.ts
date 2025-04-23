@@ -154,15 +154,20 @@ export async function predictManual(experimentId: string, inputValues: Record<st
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('input_values', JSON.stringify(inputValues));
+
+  // don’t set Content-Type — the browser will add the correct multipart boundary for you
   const headers = await getAuthHeaders();
-  const res = await fetch(
-    `${API_BASE_URL}/prediction/predict-manual/`,
-    { 
-      method: 'POST',
-      headers,
-      body: form
-    }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const res = await fetch(`${API_BASE_URL}/prediction/predict-manual/`, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+
+  if (!res.ok) {
+    // extract a nice error message
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return await res.json();
 }

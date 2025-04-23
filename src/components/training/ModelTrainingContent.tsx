@@ -38,6 +38,13 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab('automl');
   };
 
+  // Prevent switching to Predict if no model; reset to automl if forced
+  useEffect(() => {
+    if (activeTab === "predict" && !activeExperimentId) {
+      setActiveTab("automl");
+    }
+  }, [activeTab, activeExperimentId, setActiveTab]);
+  
   return (
     <div className="space-y-6">
       <DatasetSummary />
@@ -51,7 +58,7 @@ const ModelTrainingContent: React.FC = () => {
                 Results
               </TabsTrigger>
             )}
-            <TabsTrigger value="predict">
+            <TabsTrigger value="predict" disabled={!activeExperimentId}>
               Predict
             </TabsTrigger>
           </TabsList>
@@ -79,7 +86,6 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
-          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
           {activeExperimentId ? (
