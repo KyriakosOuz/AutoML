@@ -3,13 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, Download, FileText, InfoIcon } from 'lucide-react';
+import { Upload, Download, FileText, InfoIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import { BatchPredictionResponse } from './PredictionResponse.types';
+import { ClassProbabilities } from './ClassProbabilities';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface BatchPredictionViewProps {
@@ -91,40 +92,6 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     }
   };
 
-  const renderPredictionCell = (value: any, probabilities?: string) => {
-    if (!probabilities) {
-      return String(value);
-    }
-
-    try {
-      const probs = JSON.parse(probabilities);
-      return (
-        <div className="flex items-center gap-2">
-          <span>{String(value)}</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <InfoIcon className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="space-y-1">
-                  {Object.entries(probs).map(([label, prob]) => (
-                    <div key={label} className="flex justify-between gap-4">
-                      <span className="font-medium">{label}:</span>
-                      <span>{(Number(prob) * 100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      );
-    } catch {
-      return String(value);
-    }
-  };
-
   const renderPredictionOnly = () => {
     if (!result?.filled_dataset_preview) return null;
     const target = Object.keys(result.filled_dataset_preview[0] || {}).pop();
@@ -143,26 +110,46 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
           <Table>
             <TableHeader>
               <TableRow>
-                {Object.keys(result.filled_dataset_preview[0] || {}).map((header) => (
-                  <TableHead key={header} className={header === target ? 'font-bold text-primary' : ''}>
-                    {header}
-                  </TableHead>
-                ))}
+                {Object.keys(result.filled_dataset_preview[0] || {}).map((header) => {
+                  if (header === 'class_probabilities') return null;
+                  return (
+                    <TableHead 
+                      key={header} 
+                      className={header === target ? 'font-bold text-primary' : ''}
+                    >
+                      {header}
+                    </TableHead>
+                  );
+                })}
+                {result.task_type !== 'regression' && (
+                  <TableHead>Confidence</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {result.filled_dataset_preview.map((row, index) => (
                 <TableRow key={index}>
                   {Object.entries(row).map(([key, value]) => {
+                    if (key === 'class_probabilities') return null;
                     const isTarget = key === target;
                     return (
                       <TableCell key={key} className={isTarget ? 'font-bold text-primary' : ''}>
-                        {isTarget && result.task_type !== 'regression' && 'class_probabilities' in row
-                          ? renderPredictionCell(value, row.class_probabilities as string)
-                          : String(value)}
+                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                       </TableCell>
                     );
                   })}
+                  {result.task_type !== 'regression' && row.class_probabilities && (
+                    <TableCell>
+                      <ClassProbabilities 
+                        probabilities={
+                          typeof row.class_probabilities === 'string' 
+                            ? JSON.parse(row.class_probabilities) 
+                            : row.class_probabilities
+                        } 
+                        displayMode="tooltip" 
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -182,9 +169,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
   const renderEvaluation = () => {
     if (!result?.metrics) return null;
 
-    const task = result.task_type;
-
-    if (task === 'regression') {
+    if (result.task_type === 'regression') {
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

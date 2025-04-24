@@ -213,7 +213,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
               </div>
               <div className="mt-4 space-y-2">
                 <Label htmlFor="field-target" className="text-primary">
-                  {target} (Prediction)
+                  {prediction?.task_type === 'regression' ? 'Predicted Value' : 'Prediction'}
                 </Label>
                 <Input
                   id="field-target"
@@ -223,16 +223,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
                   className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
                   readOnly
                 />
-                {prediction?.class_probabilities && (
-                  <div className="text-sm text-muted-foreground mt-1">
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(prediction.class_probabilities).map(([label, prob]) => (
-                        <div key={label} className="flex justify-between items-center">
-                          <span>{label}:</span>
-                          <span className="font-medium">{(prob * 100).toFixed(1)}%</span>
-                        </div>
-                      ))}
-                    </div>
+                {prediction?.class_probabilities && prediction.task_type !== 'regression' && (
+                  <div className="mt-2 border rounded-md p-3 bg-muted/30">
+                    <ClassProbabilities probabilities={prediction.class_probabilities} />
                   </div>
                 )}
               </div>

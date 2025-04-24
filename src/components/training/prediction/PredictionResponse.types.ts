@@ -28,4 +28,3 @@ export interface BatchPredictionResponse {
   y_true?: any[];
   y_pred?: any[];
 }
-
