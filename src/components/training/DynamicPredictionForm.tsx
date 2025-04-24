@@ -94,10 +94,17 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         console.log('FormData entry:', pair[0], pair[1]);
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = new Headers();
+      if (session?.access_token) {
+        headers.append('Authorization', `Bearer ${session.access_token}`);
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/prediction/predict-manual/`,
         {
           method: 'POST',
+          headers,
           body: formData,
           credentials: 'include'
         }
