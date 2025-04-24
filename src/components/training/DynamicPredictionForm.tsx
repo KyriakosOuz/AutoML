@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,6 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         setTarget(schema.target ?? '');
         setExample(schema.example ?? {});
         
-        // Initialize inputs with empty values
         const newInputs: Record<string, any> = {};
         (schema.columns ?? []).forEach(col => {
           if (col !== schema.target) newInputs[col] = '';
@@ -78,7 +76,6 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setPrediction(undefined);
 
     try {
-      // Log the input values for debugging
       console.log('Input values before processing:', manualInputs);
       
       const processedInputs: Record<string, any> = {};
@@ -93,18 +90,16 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       formData.append('experiment_id', experimentId);
       formData.append('input_values', JSON.stringify(processedInputs));
 
-      // Log FormData contents for debugging
       for (const pair of formData.entries()) {
         console.log('FormData entry:', pair[0], pair[1]);
       }
 
-      const headers = await getAuthHeaders();
       const response = await fetch(
         `${API_BASE_URL}/prediction/predict-manual/`,
         {
           method: 'POST',
-          headers,
-          body: formData
+          body: formData,
+          credentials: 'include'
         }
       );
 
