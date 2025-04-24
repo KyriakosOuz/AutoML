@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,6 +12,9 @@ import { getAuthHeaders } from '@/lib/utils';
 import { BatchPredictionResponse } from './PredictionResponse.types';
 import { ClassProbabilities } from './ClassProbabilities';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import MetricsBlock from './metrics/MetricsBlock';
+import { ProbabilitiesCell } from './table/ProbabilitiesCell';
+import { Badge } from '@/components/ui/badge';
 
 interface BatchPredictionViewProps {
   experimentId: string;
@@ -95,7 +97,12 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
 
   const renderPredictionOnly = () => {
     if (!result?.filled_dataset_preview) return null;
-    const target = Object.keys(result.filled_dataset_preview[0] || {}).pop();
+    
+    const columns = Object.keys(result.filled_dataset_preview[0] || {});
+    const target = columns[columns.length - 1];
+    const hasClassProbabilities = result.filled_dataset_preview.some(
+      row => 'class_probabilities' in row
+    );
     
     return (
       <div className="space-y-6">
@@ -111,7 +118,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
           <Table>
             <TableHeader>
               <TableRow>
-                {Object.keys(result.filled_dataset_preview[0] || {}).map((header) => {
+                {columns.map((header) => {
                   if (header === 'class_probabilities') return null;
                   return (
                     <TableHead 
@@ -122,8 +129,8 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
                     </TableHead>
                   );
                 })}
-                {result.task_type !== 'regression' && (
-                  <TableHead>Confidence</TableHead>
+                {hasClassProbabilities && result.task_type?.includes('classification') && (
+                  <TableHead>Prediction Probabilities</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -139,15 +146,14 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
                       </TableCell>
                     );
                   })}
-                  {result.task_type !== 'regression' && row.class_probabilities && (
+                  {hasClassProbabilities && result.task_type?.includes('classification') && (
                     <TableCell>
-                      <ClassProbabilities 
+                      <ProbabilitiesCell 
                         probabilities={
-                          typeof row.class_probabilities === 'string' 
-                            ? JSON.parse(row.class_probabilities) 
+                          typeof row.class_probabilities === 'string'
+                            ? JSON.parse(row.class_probabilities)
                             : row.class_probabilities
-                        } 
-                        displayMode="tooltip" 
+                        }
                       />
                     </TableCell>
                   )}
@@ -156,130 +162,14 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             </TableBody>
           </Table>
         </div>
-
-        <div className="flex justify-end">
-          <Button disabled variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Download Full Results
-          </Button>
-        </div>
       </div>
     );
   };
 
   const renderEvaluation = () => {
     if (!result?.metrics) return null;
-
-    if (result.task_type === 'regression') {
-      return (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">MAE</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {result.metrics.mae?.toFixed(4) ?? '–'}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">RMSE</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {result.metrics.rmse?.toFixed(4) ?? '–'}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">R² Score</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {result.metrics.r2?.toFixed(4) ?? '–'}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Accuracy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {(result.metrics.accuracy! * 100).toFixed(1)}%
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">F1 Score (Macro)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {(result.metrics.f1_macro! * 100).toFixed(1)}%
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {result.metrics.report && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Classification Report</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Label</TableHead>
-                      <TableHead>Precision</TableHead>
-                      <TableHead>Recall</TableHead>
-                      <TableHead>F1-Score</TableHead>
-                      <TableHead>Support</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(result.metrics.report).map(([label, metrics]) => {
-                      if (label === 'accuracy' && typeof metrics !== 'object') return null;
-                      const precision = isNaN(metrics.precision) ? 0 : metrics.precision * 100;
-                      const recall = isNaN(metrics.recall) ? 0 : metrics.recall * 100;
-                      const f1 = isNaN(metrics['f1-score']) ? 0 : metrics['f1-score'] * 100;
-                      const support = metrics.support ?? '-';
-
-                      return (
-                        <TableRow key={label}>
-                          <TableCell className="font-medium">{label}</TableCell>
-                          <TableCell>{precision.toFixed(1)}%</TableCell>
-                          <TableCell>{recall.toFixed(1)}%</TableCell>
-                          <TableCell>{f1.toFixed(1)}%</TableCell>
-                          <TableCell>{support}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    );
+    
+    return <MetricsBlock metrics={result.metrics} taskType={result.task_type} />;
   };
 
   return (

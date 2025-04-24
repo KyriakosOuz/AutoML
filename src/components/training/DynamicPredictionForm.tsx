@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
 import { ClassProbabilities } from './prediction/ClassProbabilities';
 import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
+import { ProbabilitiesCell } from './prediction/table/ProbabilitiesCell';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -139,12 +139,48 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
   const renderPredictionValue = (prediction: ManualPredictionResponse) => {
     const value = prediction.prediction;
+    const displayValue = prediction.task_type === 'regression' 
+      ? (typeof value === 'number' ? value.toFixed(4) : value)
+      : String(value);
     
-    if (prediction.task_type === 'regression') {
-      return typeof value === 'number' ? value.toFixed(4) : value;
+    if (!prediction.class_probabilities) {
+      return (
+        <Input
+          id="field-target"
+          value={displayValue}
+          placeholder="Prediction will appear here"
+          disabled
+          className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
+          readOnly
+        />
+      );
     }
-    
-    return String(value);
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Input
+            id="field-target"
+            value={displayValue}
+            placeholder="Prediction will appear here"
+            disabled
+            className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
+            readOnly
+          />
+          {prediction.confidence_score && (
+            <Badge variant="outline" className="shrink-0">
+              {(prediction.confidence_score * 100).toFixed(1)}% confident
+            </Badge>
+          )}
+        </div>
+        <div className="border rounded-md p-3 bg-muted/30">
+          <ProbabilitiesCell 
+            probabilities={prediction.class_probabilities} 
+            showInline={true}
+          />
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
