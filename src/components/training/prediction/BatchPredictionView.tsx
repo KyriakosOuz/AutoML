@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,18 +18,22 @@ interface PredictionResponse {
   mode: 'prediction_only' | 'evaluation';
   predictions?: string[];
   filled_dataset_preview?: Record<string, any>[];
+  task_type?: 'regression' | 'binary_classification' | 'multiclass_classification';
   metrics?: {
-    accuracy: number;
-    f1_macro: number;
-    report: Record<string, {
+    accuracy?: number;
+    f1_macro?: number;
+    mae?: number;
+    rmse?: number;
+    r2?: number;
+    report?: Record<string, {
       precision: number;
       recall: number;
       'f1-score': number;
       support: number;
     }>;
   };
-  y_true?: string[];
-  y_pred?: string[];
+  y_true?: any[];
+  y_pred?: any[];
 }
 
 const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId }) => {
@@ -69,7 +72,6 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       formData.append('experiment_id', experimentId);
       formData.append('file', selectedFile);
 
-      // ✅ Proper headers
       const token = (await getAuthHeaders())?.Authorization?.replace('Bearer ', '');
       const headers = new Headers();
       if (token) {
@@ -160,6 +162,49 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
   const renderEvaluation = () => {
     if (!result?.metrics) return null;
 
+    const task = result.task_type;
+
+    if (task === 'regression') {
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">MAE</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {result.metrics.mae?.toFixed(4) ?? '–'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">RMSE</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {result.metrics.rmse?.toFixed(4) ?? '–'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">R² Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {result.metrics.r2?.toFixed(4) ?? '–'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -169,54 +214,64 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {(result.metrics.accuracy * 100).toFixed(1)}%
+                {(result.metrics.accuracy! * 100).toFixed(1)}%
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">F1 Score (Macro)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {(result.metrics.f1_macro * 100).toFixed(1)}%
+                {(result.metrics.f1_macro! * 100).toFixed(1)}%
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Classification Report</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Precision</TableHead>
-                    <TableHead>Recall</TableHead>
-                    <TableHead>F1-Score</TableHead>
-                    <TableHead>Support</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries(result.metrics.report).map(([label, metrics]) => (
-                    <TableRow key={label}>
-                      <TableCell className="font-medium">{label}</TableCell>
-                      <TableCell>{(metrics.precision * 100).toFixed(1)}%</TableCell>
-                      <TableCell>{(metrics.recall * 100).toFixed(1)}%</TableCell>
-                      <TableCell>{(metrics['f1-score'] * 100).toFixed(1)}%</TableCell>
-                      <TableCell>{metrics.support}</TableCell>
+        {result.metrics.report && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Classification Report</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Label</TableHead>
+                      <TableHead>Precision</TableHead>
+                      <TableHead>Recall</TableHead>
+                      <TableHead>F1-Score</TableHead>
+                      <TableHead>Support</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(result.metrics.report).map(([label, metrics]) => {
+                      if (label === 'accuracy' && typeof metrics !== 'object') return null;
+                      const precision = isNaN(metrics.precision) ? 0 : metrics.precision * 100;
+                      const recall = isNaN(metrics.recall) ? 0 : metrics.recall * 100;
+                      const f1 = isNaN(metrics['f1-score']) ? 0 : metrics['f1-score'] * 100;
+                      const support = metrics.support ?? '-';
+
+                      return (
+                        <TableRow key={label}>
+                          <TableCell className="font-medium">{label}</TableCell>
+                          <TableCell>{precision.toFixed(1)}%</TableCell>
+                          <TableCell>{recall.toFixed(1)}%</TableCell>
+                          <TableCell>{f1.toFixed(1)}%</TableCell>
+                          <TableCell>{support}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };
