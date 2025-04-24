@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -114,88 +113,57 @@ export const getPredictionSchema = async (experimentId: string): Promise<Predict
   }
 };
 
-// Submit manual prediction using FormData as required
-export async function predictManual(experimentId: string, inputs: Record<string, any>) {
-  try {
-    console.log('[API] Submitting manual prediction for experiment:', experimentId);
-    console.log('[API] Input values:', inputs);
-    
-    const headers = await getAuthHeaders();
-    const form = new FormData();
-    form.append('experiment_id', experimentId);
-    form.append('input_values', JSON.stringify(inputs));
-    
-    const url = `${API_BASE_URL}/prediction/predict-manual/`;
-    const res = await fetch(
-      url,
-      { 
-        method: 'POST', 
-        headers,
-        body: form 
-      }
-    );
-    
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
-    }
-    
-    const response = await res.json();
-    console.log('[API] Prediction response:', response);
-    
-    // Return the unwrapped data object
-    return response.data;
-  } catch (error) {
-    console.error('[API] Error in predictManual:', error);
-    throw error;
-  }
-}
-
-// Add batch CSV prediction function
-export async function predictBatchCsv(experimentId: string, file: File) {
-  try {
-    console.log('[API] Submitting batch CSV prediction for experiment:', experimentId);
-    
-    const headers = await getAuthHeaders();
-    const form = new FormData();
-    form.append('experiment_id', experimentId);
-    form.append('file', file);
-    
-    const url = `${API_BASE_URL}/prediction/predict-csv/`;
-    const res = await fetch(
-      url,
-      { 
-        method: 'POST', 
-        headers,
-        body: form 
-      }
-    );
-    
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
-    }
-    
-    const response = await res.json();
-    console.log('[API] Batch prediction response:', response);
-    
-    // Return the unwrapped data object
-    return response.data;
-  } catch (error) {
-    console.error('[API] Error in predictBatchCsv:', error);
-    throw error;
-  }
-}
-
-// Update the existing submitManualPrediction to use our new predictManual function
+// Submit manual prediction
 export const submitManualPrediction = async (
   experimentId: string, 
   inputValues: Record<string, any>
 ): Promise<any> => {
   try {
-    return await predictManual(experimentId, inputValues);
+    console.log('[API] Submitting manual prediction for experiment:', experimentId);
+    console.log('[API] Input values:', inputValues);
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append('experiment_id', experimentId);
+    formData.append('input_values', JSON.stringify(inputValues));
+    const response = await fetch(
+      `${API_BASE_URL}/prediction/predict-manual/`,
+      { 
+        method: 'POST',
+        headers: {
+          ...headers,
+        },
+        body: formData
+      }
+    );
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error('[API] Error submitting prediction:', errorText.substring(0, 200));
+      throw new Error(`Failed to submit prediction: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('[API] Prediction response:', data);
+    return data.data || data;
   } catch (error) {
     console.error('[API] Error in submitManualPrediction:', error);
     throw error;
   }
 };
+
+// Manual prediction helper: POST with FormData and auth headers
+export async function predictManual(experimentId: string, inputs: Record<string, any>) {
+  const headers = await getAuthHeaders();
+  const form = new FormData();
+  form.append('experiment_id', experimentId);
+  form.append('input_values', JSON.stringify(inputs));
+  const url = `${API_BASE_URL}/prediction/predict-manual/`;
+  const res = await fetch(
+    url,
+    { 
+      method: 'POST', 
+      headers,
+      body: form 
+    }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
