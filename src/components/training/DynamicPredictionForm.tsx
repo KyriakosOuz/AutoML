@@ -15,6 +15,7 @@ import BatchPredictionView from './prediction/BatchPredictionView';
 import { ClassProbabilities } from './prediction/ClassProbabilities';
 import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
 import { ProbabilitiesCell } from './prediction/table/ProbabilitiesCell';
+import { Badge } from '@/components/ui/badge';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -167,7 +168,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
             readOnly
           />
-          {prediction.confidence_score && (
+          {prediction.confidence_score !== undefined && (
             <Badge variant="outline" className="shrink-0">
               {(prediction.confidence_score * 100).toFixed(1)}% confident
             </Badge>
@@ -253,18 +254,17 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
                 <Label htmlFor="field-target" className="text-primary">
                   {prediction?.task_type === 'regression' ? 'Predicted Value' : 'Prediction'}
                 </Label>
-                <Input
-                  id="field-target"
-                  value={prediction ? renderPredictionValue(prediction) : ''}
-                  placeholder="Prediction will appear here"
-                  disabled
-                  className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
-                  readOnly
-                />
-                {prediction?.class_probabilities && prediction.task_type !== 'regression' && (
-                  <div className="mt-2 border rounded-md p-3 bg-muted/30">
-                    <ClassProbabilities probabilities={prediction.class_probabilities} />
-                  </div>
+                {prediction ? (
+                  renderPredictionValue(prediction)
+                ) : (
+                  <Input
+                    id="field-target"
+                    value=""
+                    placeholder="Prediction will appear here"
+                    disabled
+                    className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
+                    readOnly
+                  />
                 )}
               </div>
               <Button

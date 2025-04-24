@@ -5,6 +5,7 @@ export interface ManualPredictionResponse {
   prediction: string | number;
   task_type: TaskType;
   class_probabilities?: Record<string, number>;
+  confidence_score?: number;
 }
 
 export interface BatchPredictionResponse {
