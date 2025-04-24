@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
+import BatchPredictionView from './prediction/BatchPredictionView';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -76,19 +78,16 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setPrediction(undefined);
 
     try {
-      // Process inputs to handle numeric values
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
 
-      // Create FormData
       const formData = new FormData();
       formData.append('experiment_id', experimentId);
       formData.append('input_values', JSON.stringify(processedInputs));
 
-      // Make request
       const headers = await getAuthHeaders();
       const response = await fetch(
         `${API_BASE_URL}/prediction/predict-manual/`,
@@ -103,10 +102,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         throw new Error(await response.text());
       }
 
-      const data = await response.json();
-      const result = data.data?.prediction;
+      const json = await response.json();
+      setPrediction(json.data.prediction);
       
-      setPrediction(result);
       toast({
         title: "Success",
         description: "Prediction generated successfully",
@@ -160,57 +158,70 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const inputColumns = columns.filter(col => col !== target);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Make a Single Prediction</CardTitle>
-        <CardDescription>
-          Enter values for each feature to get a prediction for {target}.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {inputColumns.map(col => (
-              <div key={col} className="space-y-2">
-                <Label htmlFor={`field-${col}`}>{col}</Label>
+    <Tabs defaultValue="manual" className="w-full">
+      <TabsList className="mb-4">
+        <TabsTrigger value="manual">Predict Manually</TabsTrigger>
+        <TabsTrigger value="batch">Predict from CSV</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="manual">
+        <Card>
+          <CardHeader>
+            <CardTitle>Make a Single Prediction</CardTitle>
+            <CardDescription>
+              Enter values for each feature to get a prediction for {target}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {inputColumns.map(col => (
+                  <div key={col} className="space-y-2">
+                    <Label htmlFor={`field-${col}`}>{col}</Label>
+                    <Input
+                      id={`field-${col}`}
+                      placeholder={String(example[col] ?? '')}
+                      value={manualInputs[col] || ''}
+                      onChange={(e) => handleInputChange(col, e.target.value)}
+                      disabled={isPredicting}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="field-target" className="text-primary">{target} (Prediction)</Label>
                 <Input
-                  id={`field-${col}`}
-                  placeholder={String(example[col] ?? '')}
-                  value={manualInputs[col] || ''}
-                  onChange={(e) => handleInputChange(col, e.target.value)}
-                  disabled={isPredicting}
+                  id="field-target"
+                  value={prediction !== undefined ? String(prediction) : ''}
+                  placeholder="Prediction will appear here"
+                  disabled
+                  className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
+                  readOnly
                 />
               </div>
-            ))}
-          </div>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="field-target" className="text-primary">{target} (Prediction)</Label>
-            <Input
-              id="field-target"
-              value={prediction !== undefined ? String(prediction) : ''}
-              placeholder="Prediction will appear here"
-              disabled
-              className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
-              readOnly
-            />
-          </div>
-          <Button
-            type="submit"
-            className="mt-6 w-full"
-            disabled={isPredicting || inputColumns.some(col => manualInputs[col] === '')}
-          >
-            {isPredicting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              'Generate Prediction'
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+              <Button
+                type="submit"
+                className="mt-6 w-full"
+                disabled={isPredicting || inputColumns.some(col => manualInputs[col] === '')}
+              >
+                {isPredicting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Generate Prediction'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      
+      <TabsContent value="batch">
+        <BatchPredictionView experimentId={experimentId} />
+      </TabsContent>
+    </Tabs>
   );
 };
 
