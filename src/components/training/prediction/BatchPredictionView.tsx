@@ -69,11 +69,18 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       formData.append('experiment_id', experimentId);
       formData.append('file', selectedFile);
 
-      // Do NOT manually set Content-Type when using FormData
+      // ✅ Proper headers
+      const token = (await getAuthHeaders())?.Authorization?.replace('Bearer ', '');
+      const headers = new Headers();
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
+      }
+
       const response = await fetch(`${API_BASE_URL}/prediction/predict-csv/`, {
         method: 'POST',
+        headers,
         body: formData,
-        credentials: 'include' // important for auth context
+        credentials: 'include'
       });
 
       if (!response.ok) {
