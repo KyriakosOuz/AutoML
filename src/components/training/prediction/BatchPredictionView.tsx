@@ -69,11 +69,11 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       formData.append('experiment_id', experimentId);
       formData.append('file', selectedFile);
 
-      const headers = await getAuthHeaders();
+      // Do NOT manually set Content-Type when using FormData
       const response = await fetch(`${API_BASE_URL}/prediction/predict-csv/`, {
         method: 'POST',
-        headers,
-        body: formData
+        body: formData,
+        credentials: 'include' // important for auth context
       });
 
       if (!response.ok) {
@@ -85,9 +85,9 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
 
       toast({
         title: "Success",
-        description: json.mode === 'evaluation' ? 
-          "Evaluation completed successfully" : 
-          "Predictions generated successfully",
+        description: json.mode === 'evaluation'
+          ? "Evaluation completed successfully"
+          : "Predictions generated successfully",
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process CSV file';
