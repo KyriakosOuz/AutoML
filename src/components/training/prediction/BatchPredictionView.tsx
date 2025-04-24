@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import MetricsBlock from './metrics/MetricsBlock';
 import { ProbabilitiesCell } from './table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
+import { downloadCSV, downloadJSON } from './utils/downloadUtils';
 
 interface BatchPredictionViewProps {
   experimentId: string;
@@ -95,6 +96,36 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     }
   };
 
+  const handleDownloadPredictions = () => {
+    if (!result?.filled_dataset_preview?.length) return;
+    
+    const filename = `predictions_${new Date().toISOString().split('T')[0]}.csv`;
+    downloadCSV(result.filled_dataset_preview, filename);
+    
+    toast({
+      title: "Success",
+      description: "Predictions downloaded successfully",
+    });
+  };
+
+  const handleDownloadEvaluation = () => {
+    if (!result?.metrics) return;
+    
+    const evaluationData = {
+      metrics: result.metrics,
+      y_true: result.y_true,
+      y_pred: result.y_pred
+    };
+    
+    const filename = `evaluation_report_${new Date().toISOString().split('T')[0]}.json`;
+    downloadJSON(evaluationData, filename);
+    
+    toast({
+      title: "Success",
+      description: "Evaluation report downloaded successfully",
+    });
+  };
+
   const renderPredictionOnly = () => {
     if (!result?.filled_dataset_preview) return null;
     
@@ -108,9 +139,15 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       <div className="space-y-6">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6">
-            <p className="text-lg font-medium">
-              Predictions generated for {result.filled_dataset_preview.length} samples
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-lg font-medium">
+                Predictions generated for {result.filled_dataset_preview.length} samples
+              </p>
+              <Button variant="outline" onClick={handleDownloadPredictions}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Predictions
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -169,7 +206,23 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
   const renderEvaluation = () => {
     if (!result?.metrics) return null;
     
-    return <MetricsBlock metrics={result.metrics} taskType={result.task_type} />;
+    return (
+      <div className="space-y-6">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <p className="text-lg font-medium">Evaluation Results</p>
+              <Button variant="outline" onClick={handleDownloadEvaluation}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Evaluation Report
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <MetricsBlock metrics={result.metrics} taskType={result.task_type} />
+      </div>
+    );
   };
 
   return (
