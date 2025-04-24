@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
+import { ClassProbabilities } from './prediction/ClassProbabilities';
 import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
 
 interface DynamicPredictionFormProps {
