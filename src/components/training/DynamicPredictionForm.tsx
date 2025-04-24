@@ -78,15 +78,25 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setPrediction(undefined);
 
     try {
+      // Log the input values for debugging
+      console.log('Input values before processing:', manualInputs);
+      
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
+      
+      console.log('Processed inputs:', processedInputs);
 
       const formData = new FormData();
       formData.append('experiment_id', experimentId);
       formData.append('input_values', JSON.stringify(processedInputs));
+
+      // Log FormData contents for debugging
+      for (const pair of formData.entries()) {
+        console.log('FormData entry:', pair[0], pair[1]);
+      }
 
       const headers = await getAuthHeaders();
       const response = await fetch(
@@ -99,16 +109,23 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       );
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        console.error('Prediction error response:', errorText);
+        throw new Error(errorText);
       }
 
       const json = await response.json();
-      setPrediction(json.data.prediction);
+      console.log('Prediction response:', json);
       
-      toast({
-        title: "Success",
-        description: "Prediction generated successfully",
-      });
+      if (json.data && json.data.prediction !== undefined) {
+        setPrediction(json.data.prediction);
+        toast({
+          title: "Success",
+          description: "Prediction generated successfully",
+        });
+      } else {
+        throw new Error('Invalid prediction response format');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to generate prediction';
       setError(msg);

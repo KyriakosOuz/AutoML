@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -20,21 +19,18 @@ const ModelTrainingContent: React.FC = () => {
     experimentStatus,
   } = useTraining();
 
-  const [showResults, setShowResults] = useState(false);
+  // Show results and predict tabs only when experiment is completed
+  const showResultsAndPredict = experimentStatus === 'completed' && activeExperimentId;
 
-  // Only show "Results" tab when training is completed and there is an experiment
+  // If current tab is predict but experiment is not completed, switch to automl
   useEffect(() => {
-    if (experimentStatus === 'completed' && activeExperimentId) {
-      setShowResults(true);
+    if (activeTab === 'predict' && !showResultsAndPredict) {
+      setActiveTab('automl');
     }
-    if (!activeExperimentId) {
-      setShowResults(false);
-    }
-  }, [experimentStatus, activeExperimentId]);
+  }, [activeTab, showResultsAndPredict, setActiveTab]);
 
   const handleReset = () => {
     resetTrainingState();
-    setShowResults(false);
     setActiveTab('automl');
   };
 
@@ -46,22 +42,21 @@ const ModelTrainingContent: React.FC = () => {
           <TabsList>
             <TabsTrigger value="automl">AutoML</TabsTrigger>
             <TabsTrigger value="custom">Custom Training</TabsTrigger>
-            {showResults && (
-              <TabsTrigger value="results">
-                Results
-              </TabsTrigger>
+            {showResultsAndPredict && (
+              <>
+                <TabsTrigger value="results">Results</TabsTrigger>
+                <TabsTrigger value="predict">Predict</TabsTrigger>
+              </>
             )}
-            <TabsTrigger value="predict">
-              Predict
-            </TabsTrigger>
           </TabsList>
-          {(activeExperimentId || showResults) && (
+          {(activeExperimentId || showResultsAndPredict) && (
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RefreshCcw className="h-4 w-4 mr-2" />
               Reset
             </Button>
           )}
         </div>
+
         <TabsContent value="automl" className="space-y-4">
           <AutoMLTraining />
         </TabsContent>
@@ -69,7 +64,7 @@ const ModelTrainingContent: React.FC = () => {
           <CustomTraining />
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
-          {showResults && activeExperimentId ? (
+          {showResultsAndPredict && activeExperimentId ? (
             <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
@@ -82,7 +77,7 @@ const ModelTrainingContent: React.FC = () => {
           {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
-          {activeExperimentId ? (
+          {showResultsAndPredict && activeExperimentId ? (
             <DynamicPredictionForm experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
