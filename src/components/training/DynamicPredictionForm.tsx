@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
+import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -23,7 +23,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const [target, setTarget] = useState<string>('');
   const [example, setExample] = useState<Record<string, any>>({});
   const [manualInputs, setManualInputs] = useState<Record<string, any>>({});
-  const [prediction, setPrediction] = useState<any>(undefined);
+  const [prediction, setPrediction] = useState<ManualPredictionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPredicting, setIsPredicting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setTarget('');
     setExample({});
     setManualInputs({});
-    setPrediction(undefined);
+    setPrediction(null);
 
     if (!experimentId) return;
 
@@ -75,7 +75,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     e.preventDefault();
     setIsPredicting(true);
     setError(null);
-    setPrediction(undefined);
+    setPrediction(null);
 
     try {
       console.log('Input values before processing:', manualInputs);
@@ -86,20 +86,14 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
       
-      console.log('Processed inputs:', processedInputs);
-
       const formData = new FormData();
       formData.append('experiment_id', experimentId);
       formData.append('input_values', JSON.stringify(processedInputs));
 
-      for (const pair of formData.entries()) {
-        console.log('FormData entry:', pair[0], pair[1]);
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = (await getAuthHeaders())?.Authorization?.replace('Bearer ', '');
       const headers = new Headers();
-      if (session?.access_token) {
-        headers.append('Authorization', `Bearer ${session.access_token}`);
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
       }
 
       const response = await fetch(
@@ -113,16 +107,14 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Prediction error response:', errorText);
-        throw new Error(errorText);
+        throw new Error(await response.text());
       }
 
       const json = await response.json();
       console.log('Prediction response:', json);
       
-      if (json.data && json.data.prediction !== undefined) {
-        setPrediction(json.data.prediction);
+      if (json.data) {
+        setPrediction(json.data);
         toast({
           title: "Success",
           description: "Prediction generated successfully",
@@ -141,6 +133,16 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     } finally {
       setIsPredicting(false);
     }
+  };
+
+  const renderPredictionValue = (prediction: ManualPredictionResponse) => {
+    const value = prediction.prediction;
+    
+    if (prediction.task_type === 'regression') {
+      return typeof value === 'number' ? value.toFixed(4) : value;
+    }
+    
+    return String(value);
   };
 
   if (isLoading) {
@@ -210,15 +212,29 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
                 ))}
               </div>
               <div className="mt-4 space-y-2">
-                <Label htmlFor="field-target" className="text-primary">{target} (Prediction)</Label>
+                <Label htmlFor="field-target" className="text-primary">
+                  {target} (Prediction)
+                </Label>
                 <Input
                   id="field-target"
-                  value={prediction !== undefined ? String(prediction) : ''}
+                  value={prediction ? renderPredictionValue(prediction) : ''}
                   placeholder="Prediction will appear here"
                   disabled
                   className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
                   readOnly
                 />
+                {prediction?.class_probabilities && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(prediction.class_probabilities).map(([label, prob]) => (
+                        <div key={label} className="flex justify-between items-center">
+                          <span>{label}:</span>
+                          <span className="font-medium">{(prob * 100).toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <Button
                 type="submit"

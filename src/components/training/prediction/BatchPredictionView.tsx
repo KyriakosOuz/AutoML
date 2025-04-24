@@ -3,44 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, Download, FileText } from 'lucide-react';
+import { Loader2, Upload, Download, FileText, InfoIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
+import { BatchPredictionResponse } from './PredictionResponse.types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface BatchPredictionViewProps {
   experimentId: string;
-}
-
-interface PredictionResponse {
-  mode: 'prediction_only' | 'evaluation';
-  predictions?: string[];
-  filled_dataset_preview?: Record<string, any>[];
-  task_type?: 'regression' | 'binary_classification' | 'multiclass_classification';
-  metrics?: {
-    accuracy?: number;
-    f1_macro?: number;
-    mae?: number;
-    rmse?: number;
-    r2?: number;
-    report?: Record<string, {
-      precision: number;
-      recall: number;
-      'f1-score': number;
-      support: number;
-    }>;
-  };
-  y_true?: any[];
-  y_pred?: any[];
 }
 
 const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<PredictionResponse | null>(null);
+  const [result, setResult] = useState<BatchPredictionResponse | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,8 +91,43 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     }
   };
 
+  const renderPredictionCell = (value: any, probabilities?: string) => {
+    if (!probabilities) {
+      return String(value);
+    }
+
+    try {
+      const probs = JSON.parse(probabilities);
+      return (
+        <div className="flex items-center gap-2">
+          <span>{String(value)}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <InfoIcon className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="space-y-1">
+                  {Object.entries(probs).map(([label, prob]) => (
+                    <div key={label} className="flex justify-between gap-4">
+                      <span className="font-medium">{label}:</span>
+                      <span>{(Number(prob) * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      );
+    } catch {
+      return String(value);
+    }
+  };
+
   const renderPredictionOnly = () => {
     if (!result?.filled_dataset_preview) return null;
+    const target = Object.keys(result.filled_dataset_preview[0] || {}).pop();
     
     return (
       <div className="space-y-6">
@@ -129,7 +144,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             <TableHeader>
               <TableRow>
                 {Object.keys(result.filled_dataset_preview[0] || {}).map((header) => (
-                  <TableHead key={header} className={header === 'survived' ? 'font-bold text-primary' : ''}>
+                  <TableHead key={header} className={header === target ? 'font-bold text-primary' : ''}>
                     {header}
                   </TableHead>
                 ))}
@@ -138,11 +153,16 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             <TableBody>
               {result.filled_dataset_preview.map((row, index) => (
                 <TableRow key={index}>
-                  {Object.entries(row).map(([key, value]) => (
-                    <TableCell key={key} className={key === 'survived' ? 'font-bold text-primary' : ''}>
-                      {String(value)}
-                    </TableCell>
-                  ))}
+                  {Object.entries(row).map(([key, value]) => {
+                    const isTarget = key === target;
+                    return (
+                      <TableCell key={key} className={isTarget ? 'font-bold text-primary' : ''}>
+                        {isTarget && result.task_type !== 'regression' && 'class_probabilities' in row
+                          ? renderPredictionCell(value, row.class_probabilities as string)
+                          : String(value)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>
