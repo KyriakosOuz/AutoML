@@ -227,7 +227,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             <CardHeader>
               <CardTitle>Predictions Comparison</CardTitle>
               <CardDescription>
-                Comparison between true values and model predictions
+                Comparison between true values and model predictions (first 10 samples)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -242,7 +242,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {result.y_true.map((trueVal, index) => (
+                    {result.y_true.slice(0, 10).map((trueVal, index) => (
                       <TableRow key={index}>
                         <TableCell>#{index + 1}</TableCell>
                         <TableCell>
