@@ -7,7 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPredictionSchema, predictManual } from '@/lib/training';
+import { getPredictionSchema } from '@/lib/training';
+import { API_BASE_URL } from '@/lib/constants';
+import { getAuthHeaders } from '@/lib/utils';
 
 interface DynamicPredictionFormProps {
   experimentId: string;
@@ -18,13 +20,12 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const [target, setTarget] = useState<string>('');
   const [example, setExample] = useState<Record<string, any>>({});
   const [manualInputs, setManualInputs] = useState<Record<string, any>>({});
-  const [prediction, setPrediction] = useState<string | number | undefined>('');
+  const [prediction, setPrediction] = useState<any>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isPredicting, setIsPredicting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch prediction schema on mount/experiment change
   useEffect(() => {
     setIsLoading(true);
     setError(null);
@@ -32,27 +33,28 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setTarget('');
     setExample({});
     setManualInputs({});
-    setPrediction('');
+    setPrediction(undefined);
+
     if (!experimentId) return;
+
     const fetchSchema = async () => {
       try {
-        // Fetch schema using helper (includes auth header)
         const schema = await getPredictionSchema(experimentId);
-        // Backend schema normalization
         setColumns(Array.isArray(schema.columns) ? schema.columns : []);
         setTarget(schema.target ?? '');
         setExample(schema.example ?? {});
+        
+        // Initialize inputs with empty values
         const newInputs: Record<string, any> = {};
         (schema.columns ?? []).forEach(col => {
           if (col !== schema.target) newInputs[col] = '';
         });
         setManualInputs(newInputs);
-        setPrediction('');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to fetch prediction schema';
         setError(msg);
         toast({
-          title: "Prediction Form Error",
+          title: "Error",
           description: msg,
           variant: "destructive",
         });
@@ -71,28 +73,49 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     e.preventDefault();
     setIsPredicting(true);
     setError(null);
-    setPrediction('');
+    setPrediction(undefined);
+
     try {
+      // Process inputs to handle numeric values
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
         const numValue = Number(value);
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
-      const resp = await predictManual(experimentId, processedInputs);
+
+      // Create FormData
+      const formData = new FormData();
+      formData.append('experiment_id', experimentId);
+      formData.append('input_values', JSON.stringify(processedInputs));
+
+      // Make request
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `${API_BASE_URL}/prediction/predict-manual/`,
+        {
+          method: 'POST',
+          headers,
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      const result = data.data?.prediction;
       
-      // Updated to handle the new response format
-      const newPrediction = resp?.data?.prediction ?? '';
-      console.log('Prediction response:', resp);
-      setPrediction(newPrediction);
+      setPrediction(result);
       toast({
-        title: "Prediction Success",
-        description: "Prediction generated.",
+        title: "Success",
+        description: "Prediction generated successfully",
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to generate prediction';
       setError(msg);
       toast({
-        title: "Prediction Error",
+        title: "Error",
         description: msg,
         variant: "destructive",
       });
@@ -141,7 +164,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       <CardHeader>
         <CardTitle>Make a Single Prediction</CardTitle>
         <CardDescription>
-          Enter values for each feature to get a prediction.
+          Enter values for each feature to get a prediction for {target}.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -151,7 +174,6 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
               <div key={col} className="space-y-2">
                 <Label htmlFor={`field-${col}`}>{col}</Label>
                 <Input
-                  key={col}
                   id={`field-${col}`}
                   placeholder={String(example[col] ?? '')}
                   value={manualInputs[col] || ''}
@@ -162,27 +184,20 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             ))}
           </div>
           <div className="mt-4 space-y-2">
-            <Label htmlFor="field-target" className="text-primary">{target} (Target)</Label>
+            <Label htmlFor="field-target" className="text-primary">{target} (Prediction)</Label>
             <Input
               id="field-target"
-              value={
-                prediction !== undefined && prediction !== ''
-                  ? String(prediction)
-                  : (typeof example[target] !== 'undefined' ? String(example[target]) : '')
-              }
-              placeholder={String(example[target] ?? '')}
+              value={prediction !== undefined ? String(prediction) : ''}
+              placeholder="Prediction will appear here"
               disabled
-              className="bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="bg-gray-100 text-gray-500 cursor-not-allowed font-medium"
               readOnly
             />
           </div>
           <Button
             type="submit"
             className="mt-6 w-full"
-            disabled={
-              isPredicting ||
-              inputColumns.some(col => manualInputs[col] === '' || manualInputs[col] === undefined)
-            }
+            disabled={isPredicting || inputColumns.some(col => manualInputs[col] === '')}
           >
             {isPredicting ? (
               <>
@@ -190,7 +205,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
                 Processing...
               </>
             ) : (
-              <>Generate Prediction</>
+              'Generate Prediction'
             )}
           </Button>
         </form>
