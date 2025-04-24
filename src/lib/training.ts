@@ -155,6 +155,7 @@ export async function predictManual(experimentId: string, inputs: Record<string,
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('input_values', JSON.stringify(inputs));
+  
   const url = `${API_BASE_URL}/prediction/predict-manual/`;
   const res = await fetch(
     url,
@@ -164,6 +165,11 @@ export async function predictManual(experimentId: string, inputs: Record<string,
       body: form 
     }
   );
-  if (!res.ok) throw new Error(await res.text());
+  
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+  
   return res.json();
 }

@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { RefreshCcw } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
-import { useToast } from '@/hooks/use-toast';
 import DynamicPredictionForm from './DynamicPredictionForm';
 
 const ModelTrainingContent: React.FC = () => {
@@ -38,30 +37,52 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab('automl');
   };
 
+  // Check if we should show the predict tab
+  const showPredict = activeExperimentId && experimentStatus === 'completed';
+
   return (
     <div className="space-y-6">
       <DatasetSummary />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="automl">AutoML</TabsTrigger>
-            <TabsTrigger value="custom">Custom Training</TabsTrigger>
+          <TabsList className="w-full bg-gray-100 p-1">
+            <TabsTrigger 
+              value="automl" 
+              className="flex-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              AutoML
+            </TabsTrigger>
+            <TabsTrigger 
+              value="custom"
+              className="flex-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              Custom Training
+            </TabsTrigger>
             {showResults && (
-              <TabsTrigger value="results">
+              <TabsTrigger 
+                value="results"
+                className="flex-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
                 Results
               </TabsTrigger>
             )}
-            <TabsTrigger value="predict">
-              Predict
-            </TabsTrigger>
+            {showPredict && (
+              <TabsTrigger 
+                value="predict"
+                className="flex-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                Predict
+              </TabsTrigger>
+            )}
           </TabsList>
           {(activeExperimentId || showResults) && (
-            <Button variant="outline" size="sm" onClick={handleReset}>
+            <Button variant="outline" size="sm" onClick={handleReset} className="ml-4">
               <RefreshCcw className="h-4 w-4 mr-2" />
               Reset
             </Button>
           )}
         </div>
+
         <TabsContent value="automl" className="space-y-4">
           <AutoMLTraining />
         </TabsContent>
@@ -79,20 +100,12 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
-          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
-        <TabsContent value="predict" className="space-y-4">
-          {activeExperimentId ? (
+        {showPredict && (
+          <TabsContent value="predict" className="space-y-4">
             <DynamicPredictionForm experimentId={activeExperimentId} />
-          ) : (
-            <div className="text-center py-12 bg-muted/30 rounded-lg">
-              <h3 className="text-lg font-medium mb-2">No Model Available</h3>
-              <p className="text-muted-foreground">
-                Complete a training run to make predictions
-              </p>
-            </div>
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
