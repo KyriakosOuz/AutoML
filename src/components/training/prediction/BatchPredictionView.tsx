@@ -221,6 +221,59 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
         </Card>
         
         <MetricsBlock metrics={result.metrics} taskType={result.task_type} />
+
+        {result.y_true && result.y_pred && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Predictions Comparison</CardTitle>
+              <CardDescription>
+                Comparison between true values and model predictions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Sample</TableHead>
+                      <TableHead>True Value</TableHead>
+                      <TableHead>Predicted</TableHead>
+                      <TableHead>Correct?</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.y_true.map((trueVal, index) => (
+                      <TableRow key={index}>
+                        <TableCell>#{index + 1}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {trueVal}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {result.y_pred[index]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {trueVal === result.y_pred[index] ? (
+                            <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
+                              Correct
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="opacity-80">
+                              Incorrect
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };

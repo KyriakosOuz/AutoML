@@ -1,15 +1,17 @@
-
 export const convertToCSV = (data: Record<string, any>[]): string => {
   if (!data.length) return '';
   
-  const headers = Object.keys(data[0]);
+  // Filter out class_probabilities from headers
+  const headers = Object.keys(data[0]).filter(header => header !== 'class_probabilities');
   const csvRows = [headers.join(',')];
   
   for (const row of data) {
     const values = headers.map(header => {
       const val = row[header];
-      // Handle objects (like class_probabilities) by stringifying them
-      const cellValue = typeof val === 'object' ? JSON.stringify(val) : val;
+      // Only stringify objects that aren't class_probabilities
+      const cellValue = typeof val === 'object' && header !== 'class_probabilities' 
+        ? JSON.stringify(val) 
+        : val;
       // Escape quotes and wrap in quotes if contains comma
       return `"${String(cellValue).replace(/"/g, '""')}"`;
     });
