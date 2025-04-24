@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
 
 interface DynamicPredictionFormProps {
