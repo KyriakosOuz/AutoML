@@ -18,11 +18,11 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-10 bg-gray-200">
+        <TabsList className="grid w-full grid-cols-3 h-10 bg-gray-100">
           <TabsTrigger 
             value="datasets" 
             className="rounded-none shadow-none 
-              bg-gray-200 text-gray-700 
+              bg-gray-100 text-gray-700 
               data-[state=active]:bg-black data-[state=active]:text-white"
           >
             Datasets
@@ -30,7 +30,7 @@ const DashboardPage: React.FC = () => {
           <TabsTrigger 
             value="experiments" 
             className="rounded-none shadow-none 
-              bg-gray-200 text-gray-700 
+              bg-gray-100 text-gray-700 
               data-[state=active]:bg-black data-[state=active]:text-white"
           >
             Experiments
@@ -38,7 +38,7 @@ const DashboardPage: React.FC = () => {
           <TabsTrigger 
             value="comparisons" 
             className="rounded-none shadow-none 
-              bg-gray-200 text-gray-700 
+              bg-gray-100 text-gray-700 
               data-[state=active]:bg-black data-[state=active]:text-white"
           >
             Comparisons
