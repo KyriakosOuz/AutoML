@@ -1,48 +1,48 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge } from '@/components/training/StatusBadge';
 import { API_BASE_URL } from '@/lib/constants';
 import { handleApiResponse, getAuthHeaders } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, RefreshCcw, Settings } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import StatusBadge from '@/components/training/StatusBadge';
-import { Link } from 'react-router-dom';
+
+interface Experiment {
+  experiment_id: string;
+  experiment_name: string;
+  task_type: string;
+  algorithm: string;
+  status: 'running' | 'completed' | 'failed' | 'success';
+  created_at: string;
+  completed_at: string | null;
+  dataset_id: string;
+  dataset_name: string;
+  model_file_url?: string;
+}
 
 interface ExperimentDetailsDialogProps {
-  experiment: {
-    experiment_id: string;
-    experiment_name: string;
-    task_type: string;
-    algorithm: string;
-    status: 'running' | 'completed' | 'failed' | 'success';
-    created_at: string;
-    completed_at: string | null;
-    dataset_id: string;
-    dataset_name: string;
-    model_file_url?: string;
-  };
+  experiment: Experiment;
   open: boolean;
   onClose: () => void;
 }
 
 interface ExperimentDetails {
-  metrics?: Record<string, number>;
-  hyperparameters?: Record<string, any>;
-  feature_importance?: Record<string, number>;
+  experiment_id: string;
+  experiment_name: string;
+  task_type: string;
+  algorithm: string;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+  dataset_name: string;
   training_time_sec?: number;
-  error_message?: string;
-  charts?: {
-    confusion_matrix?: number[][];
-    roc_curve?: { fpr: number[]; tpr: number[]; auc: number };
-    precision_recall?: { precision: number[]; recall: number[]; f1_score: number[] };
-  };
-  predictions_sample?: Record<string, any>[];
+  hyperparameters?: Record<string, any>;
+  metrics?: Record<string, any>;
+  confusion_matrix?: number[][];
+  feature_importance?: Array<{ feature: string; importance: number }>;
 }
 
 const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
@@ -50,18 +50,30 @@ const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
   open,
   onClose
 }) => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [details, setDetails] = useState<ExperimentDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) {
-      fetchExperimentResults(experiment.experiment_id);
+    if (open && experiment.experiment_id) {
+      fetchExperimentDetails(experiment.experiment_id);
     }
   }, [open, experiment.experiment_id]);
 
-  const fetchExperimentResults = async (experimentId: string) => {
+  const fetchExperimentDetails = async (experimentId: string) => {
+    if (!experimentId) {
+      toast({
+        title: 'Error',
+        description: 'Invalid experiment ID',
+        variant: 'destructive'
+      });
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Fetching details for experiment ID:', experimentId);
+    
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
@@ -71,9 +83,14 @@ const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
       });
       
       const result = await handleApiResponse<ExperimentDetails>(response);
-      setDetails(result.data as ExperimentDetails);
+      
+      if (result.data) {
+        setDetails(result.data as ExperimentDetails);
+      } else {
+        setDetails(result as ExperimentDetails);
+      }
     } catch (error) {
-      console.error('Error fetching experiment results:', error);
+      console.error('Error fetching experiment details:', error);
       toast({
         title: 'Failed to load experiment details',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -278,7 +295,7 @@ const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
           <div className="flex gap-2">
             <Button 
               variant="outline"
-              onClick={() => fetchExperimentResults(experiment.experiment_id)}
+              onClick={() => fetchExperimentDetails(experiment.experiment_id)}
             >
               <RefreshCcw className="h-4 w-4 mr-2" />
               Refresh

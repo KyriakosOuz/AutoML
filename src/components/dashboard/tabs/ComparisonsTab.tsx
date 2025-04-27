@@ -47,12 +47,15 @@ const ComparisonsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<ComparisonsResponse>(response);
-      const comparisonsArray = result.data?.comparisons || [];
       
-      if (Array.isArray(comparisonsArray)) {
-        setComparisons(comparisonsArray);
+      // Check if result.data exists and has a comparisons property that is an array
+      if (result.data && Array.isArray(result.data.comparisons)) {
+        setComparisons(result.data.comparisons);
+      } else if (Array.isArray(result.comparisons)) {
+        // Handle case where response has direct comparisons array
+        setComparisons(result.comparisons);
       } else {
-        console.warn('Invalid comparisons data structure:', result.data);
+        console.warn('Invalid comparisons data structure:', result);
         setComparisons([]);
       }
     } catch (error) {
@@ -69,6 +72,18 @@ const ComparisonsTab: React.FC = () => {
   };
 
   const handleDeleteComparison = async (comparisonId: string) => {
+    // Ensure we have a valid comparison ID
+    if (!comparisonId) {
+      toast({
+        title: 'Error',
+        description: 'Invalid comparison ID',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    console.log('Deleting comparison with ID:', comparisonId);
+    
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/delete/${comparisonId}`, {

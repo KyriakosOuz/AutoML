@@ -22,10 +22,12 @@ const SaveComparisonDialog: React.FC<SaveComparisonDialogProps> = ({
   onSaved
 }) => {
   const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!name.trim()) {
       toast({
         title: 'Name required',
@@ -34,27 +36,36 @@ const SaveComparisonDialog: React.FC<SaveComparisonDialogProps> = ({
       });
       return;
     }
-
-    setSaving(true);
+    
+    setSubmitting(true);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
+      
+      // Create FormData and append each experiment ID individually
+      const formData = new FormData();
+      formData.append('name', name);
+      
+      // Important: Append each experiment_ids separately, not as an array
+      experimentIds.forEach(id => {
+        formData.append('experiment_ids', id);
+      });
+      
+      // Remove the Content-Type header to let the browser set it with the boundary
+      const { 'Content-Type': _, ...headerWithoutContentType } = headers;
+      
+      const response = await fetch(`${API_BASE_URL}/comparisons/create/`, {
         method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: name,
-          experiment_ids: experimentIds
-        })
+        headers: headerWithoutContentType, // Use headers without Content-Type
+        body: formData
       });
       
       await handleApiResponse(response);
+      
       toast({
         title: 'Comparison saved',
-        description: 'Your comparison has been successfully saved'
+        description: 'The comparison has been successfully saved'
       });
+      
       onSaved();
       onClose();
     } catch (error) {
@@ -65,50 +76,43 @@ const SaveComparisonDialog: React.FC<SaveComparisonDialogProps> = ({
         variant: 'destructive'
       });
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Save Comparison</DialogTitle>
           <DialogDescription>
-            Create a new comparison with {experimentIds.length} selected experiments.
+            Save a comparison of {experimentIds.length} experiments for future reference.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Comparison Name</Label>
-            <Input 
-              id="name" 
-              placeholder="Enter a descriptive name" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="off"
-            />
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="comparison-name">Comparison Name</Label>
+              <Input
+                id="comparison-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter a descriptive name"
+                autoFocus
+              />
+            </div>
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save Comparison'}
-          </Button>
-        </DialogFooter>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : 'Save Comparison'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

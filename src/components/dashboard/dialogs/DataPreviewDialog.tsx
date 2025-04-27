@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -37,12 +36,24 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) {
+    if (open && datasetId) {
       fetchPreview(datasetId, stage);
     }
   }, [open, datasetId, stage]);
 
   const fetchPreview = async (datasetId: string, stage: string) => {
+    if (!datasetId) {
+      toast({
+        title: 'Error',
+        description: 'Invalid dataset ID',
+        variant: 'destructive'
+      });
+      setLoading(false);
+      return;
+    }
+    
+    console.log(`Fetching ${stage} preview for dataset ID:`, datasetId);
+    
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
@@ -52,7 +63,12 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
       });
       
       const result = await handleApiResponse<DataPreview>(response);
-      setPreview(result.data as DataPreview);
+      
+      if (result.data) {
+        setPreview(result.data as DataPreview);
+      } else {
+        setPreview(result as DataPreview);
+      }
     } catch (error) {
       console.error('Error fetching dataset preview:', error);
       toast({

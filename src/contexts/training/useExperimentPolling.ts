@@ -2,7 +2,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
+import { ExperimentStatus } from '@/types/training';
+import { ExperimentStatusResponse } from '@/types/api';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
 
 export interface UseExperimentPollingProps {
@@ -46,8 +47,18 @@ export const useExperimentPolling = ({
     const poller = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
-        const statusData = response.data as ExperimentStatusResponse;
-        console.log('[TrainingContext] Status response data:', statusData);
+        console.log('[TrainingContext] Status response:', response);
+        
+        // Handle different response formats to extract the status data
+        let statusData: ExperimentStatusResponse;
+        
+        if (response.data) {
+          statusData = response.data as ExperimentStatusResponse;
+        } else {
+          statusData = response as any as ExperimentStatusResponse;
+        }
+        
+        console.log('[TrainingContext] Status data extracted:', statusData);
 
         if (statusData.status === 'failed' || !!statusData.error_message) {
           setExperimentStatus('failed');
