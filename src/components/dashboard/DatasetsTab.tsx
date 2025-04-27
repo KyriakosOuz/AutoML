@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
@@ -63,7 +62,6 @@ const DatasetsTab: React.FC = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch datasets with updated URL
   const { data: datasetsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['datasets'],
     queryFn: async () => {
@@ -75,13 +73,11 @@ const DatasetsTab: React.FC = () => {
     },
   });
 
-  // Format the date for better display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
-  // Handle preview dataset
   const handlePreviewDataset = async (dataset: Dataset, stage: string) => {
     setSelectedDataset(dataset);
     setPreviewStage(stage);
@@ -119,12 +115,10 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  // Generate download URL for dataset
   const getDownloadUrl = (dataset: Dataset, stage: string) => {
     return `${API_BASE_URL}/dataset-management/download/${dataset.id}?stage=${stage}`;
   };
 
-  // Handle delete dataset
   const openDeleteDialog = (datasetId: string) => {
     setDeleteTargetId(datasetId);
     setIsDeleteDialogOpen(true);
@@ -149,7 +143,6 @@ const DatasetsTab: React.FC = () => {
         description: "The dataset has been successfully deleted",
       });
       
-      // Refresh the dataset list
       refetch();
     } catch (error) {
       console.error('Error deleting dataset:', error);
@@ -164,7 +157,6 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  // Get stage availability
   const getStageStatus = (dataset: Dataset, stage: 'raw' | 'cleaned' | 'final' | 'processed') => {
     const stageMap = {
       raw: dataset.has_raw,
@@ -227,7 +219,6 @@ const DatasetsTab: React.FC = () => {
     setPreviewStage(null);
   };
 
-  // Ensure we limit to 100 rows
   const datasets = datasetsData?.data.datasets?.slice(0, 100) || [];
 
   return (
@@ -312,7 +303,6 @@ const DatasetsTab: React.FC = () => {
         </div>
       )}
       
-      {/* Preview Dialog */}
       <Dialog open={!!previewData} onOpenChange={(open) => !open && closePreview()}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
@@ -366,13 +356,17 @@ const DatasetsTab: React.FC = () => {
           <DialogFooter className="sm:justify-between">
             <div className="flex items-center">
               {selectedDataset && previewStage && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDownloadDataset(selectedDataset, previewStage)}
+                <a 
+                  href={getDownloadUrl(selectedDataset, previewStage)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
                 >
-                  <DownloadCloud className="mr-2 h-4 w-4" />
-                  Download Full Dataset
-                </Button>
+                  <Button variant="outline">
+                    <DownloadCloud className="mr-2 h-4 w-4" />
+                    Download Full Dataset
+                  </Button>
+                </a>
               )}
             </div>
             <Button onClick={closePreview}>Close</Button>
@@ -380,7 +374,6 @@ const DatasetsTab: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
