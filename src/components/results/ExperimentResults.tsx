@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -286,23 +287,23 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
-            <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
+          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12 bg-gray-100">
+            <TabsTrigger value="metrics" className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
             </TabsTrigger>
             
-            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white">
               <BarChart4 className="h-4 w-4" />
               <span>Visualizations</span>
             </TabsTrigger>
             
-            <TabsTrigger value="details" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="details" className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white">
               <Settings className="h-4 w-4" />
               <span>Details</span>
             </TabsTrigger>
             
-            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white">
               <DownloadCloud className="h-4 w-4" />
               <span>Downloads</span>
             </TabsTrigger>
@@ -448,6 +449,74 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
                 </p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="details" className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Experiment Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">Task Type</TableCell>
+                        <TableCell>{formatTaskType(task_type)}</TableCell>
+                      </TableRow>
+                      {target_column && (
+                        <TableRow>
+                          <TableCell className="font-medium">Target Column</TableCell>
+                          <TableCell>{target_column}</TableCell>
+                        </TableRow>
+                      )}
+                      {experiment_id && (
+                        <TableRow>
+                          <TableCell className="font-medium">Experiment ID</TableCell>
+                          <TableCell className="font-mono text-xs">{experiment_id}</TableCell>
+                        </TableRow>
+                      )}
+                      {completed_at && (
+                        <TableRow>
+                          <TableCell className="font-medium">Completed At</TableCell>
+                          <TableCell>{new Date(completed_at).toLocaleString()}</TableCell>
+                        </TableRow>
+                      )}
+                      {training_time_sec && (
+                        <TableRow>
+                          <TableCell className="font-medium">Training Time</TableCell>
+                          <TableCell>{training_time_sec.toFixed(1)} seconds</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Downloads</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {getDownloadableFiles().map((file, index) => (
+                      <Button key={index} variant="outline" className="w-full justify-start" asChild>
+                        <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                          <DownloadCloud className="h-4 w-4 mr-2" /> 
+                          Download {file.file_type.replace(/_/g, ' ')}
+                        </a>
+                      </Button>
+                    ))}
+                    
+                    {getDownloadableFiles().length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No downloadable files available
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -82,7 +82,6 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
-          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
