@@ -1,6 +1,7 @@
 
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { API_BASE_URL } from './constants';
+import { ApiResponse } from '@/types/api';
 
 export interface Dataset {
   dataset_id: string;
@@ -50,13 +51,19 @@ export interface ComparisonResult {
   task_type: string;
 }
 
+export interface DatasetPreview {
+  rows: any[];
+  columns: string[];
+}
+
 // Datasets API
 export const datasetsApi = {
-  listDatasets: async () => {
+  listDatasets: async (): Promise<Dataset[]> => {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/dataset-management/list-datasets/`, { headers });
-      return handleApiResponse<Dataset[]>(response);
+      const apiResponse = await handleApiResponse<Dataset[]>(response);
+      return apiResponse.data;
     } catch (error) {
       console.error('Error listing datasets:', error);
       throw error;
@@ -77,14 +84,15 @@ export const datasetsApi = {
     }
   },
 
-  previewDataset: async (datasetId: string, stage: 'raw' | 'cleaned' | 'final' | 'processed' = 'raw') => {
+  previewDataset: async (datasetId: string, stage: 'raw' | 'cleaned' | 'final' | 'processed' = 'raw'): Promise<DatasetPreview> => {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(
         `${API_BASE_URL}/dataset-management/preview-dataset/${datasetId}?stage=${stage}`,
         { headers }
       );
-      return handleApiResponse(response);
+      const apiResponse = await handleApiResponse<DatasetPreview>(response);
+      return apiResponse.data;
     } catch (error) {
       console.error('Error previewing dataset:', error);
       throw error;
@@ -94,11 +102,12 @@ export const datasetsApi = {
 
 // Experiments API
 export const experimentsApi = {
-  listExperiments: async () => {
+  listExperiments: async (): Promise<Experiment[]> => {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/experiments/list-experiments/`, { headers });
-      return handleApiResponse<Experiment[]>(response);
+      const apiResponse = await handleApiResponse<Experiment[]>(response);
+      return apiResponse.data;
     } catch (error) {
       console.error('Error listing experiments:', error);
       throw error;
@@ -151,11 +160,12 @@ export const experimentsApi = {
 
 // Comparisons API
 export const comparisonsApi = {
-  listComparisons: async () => {
+  listComparisons: async (): Promise<Comparison[]> => {
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/list/`, { headers });
-      return handleApiResponse<Comparison[]>(response);
+      const apiResponse = await handleApiResponse<Comparison[]>(response);
+      return apiResponse.data;
     } catch (error) {
       console.error('Error listing comparisons:', error);
       throw error;
@@ -180,7 +190,7 @@ export const comparisonsApi = {
     }
   },
 
-  compareExperiments: async (experimentIds: string[], taskType?: string) => {
+  compareExperiments: async (experimentIds: string[], taskType?: string): Promise<ComparisonResult> => {
     try {
       const headers = await getAuthHeaders();
       const body: { experiment_ids: string[], task_type?: string } = { experiment_ids: experimentIds };
@@ -192,7 +202,8 @@ export const comparisonsApi = {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-      return handleApiResponse<ComparisonResult>(response);
+      const apiResponse = await handleApiResponse<ComparisonResult>(response);
+      return apiResponse.data;
     } catch (error) {
       console.error('Error comparing experiments:', error);
       throw error;

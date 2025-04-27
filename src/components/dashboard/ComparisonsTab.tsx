@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -110,6 +109,7 @@ const ComparisonsTab = () => {
               <span className="ml-2">Comparing experiments...</span>
             </div>
           ) : comparisonResult ? (
+            
             <div className="space-y-6">
               <h3 className="text-lg font-medium">Metrics Comparison</h3>
               

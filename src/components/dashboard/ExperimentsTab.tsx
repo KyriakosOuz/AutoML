@@ -13,8 +13,11 @@ import { Input } from '@/components/ui/input';
 import { useQuery } from '@tanstack/react-query';
 import { experimentsApi, Experiment } from '@/lib/dashboardApi';
 import { comparisonsApi } from '@/lib/dashboardApi';
-import ExperimentResults from '@/components/experiments/ExperimentResults';
 import { Download, Eye, Trash2, Settings, Save, Loader } from 'lucide-react';
+import { ExperimentResults } from '@/types/training';
+
+// Import the actual ExperimentResults component
+import ExperimentResultsComponent from '@/components/experiments/ExperimentResults';
 
 const ExperimentsTab = () => {
   const { toast } = useToast();
@@ -22,6 +25,9 @@ const ExperimentsTab = () => {
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
   const [comparisonName, setComparisonName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [resultsError, setResultsError] = useState<Error | null>(null);
   
   const { 
     data: experiments = [], 
@@ -39,6 +45,43 @@ const ExperimentsTab = () => {
         ? prev.filter(id => id !== experimentId) 
         : [...prev, experimentId]
     );
+  };
+
+  const handleViewResults = async (experimentId: string) => {
+    setSelectedExperimentId(experimentId);
+    setIsLoadingResults(true);
+    setResultsError(null);
+    
+    try {
+      const response = await experimentsApi.getExperimentResults(experimentId);
+      const results = response.data;
+      
+      // Map API response to ExperimentResults type
+      const formattedResults: ExperimentResults = {
+        experimentId: results.experimentId,
+        experiment_id: results.experiment_id,
+        experiment_name: results.experiment_name,
+        status: results.status,
+        task_type: results.task_type,
+        target_column: results.target_column,
+        created_at: results.created_at,
+        completed_at: results.completed_at,
+        metrics: results.metrics,
+        training_results: {
+          metrics: results.metrics,
+        },
+        files: results.files,
+        algorithm: results.algorithm,
+        model_file_url: results.model_file_url,
+      };
+      
+      setExperimentResults(formattedResults);
+    } catch (error) {
+      console.error('Error fetching experiment results:', error);
+      setResultsError(error instanceof Error ? error : new Error('Failed to fetch results'));
+    } finally {
+      setIsLoadingResults(false);
+    }
   };
 
   const handleSaveComparison = async () => {
@@ -99,9 +142,9 @@ const ExperimentsTab = () => {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'success':
-        return 'success';
+        return 'default'; // Changed from 'success' to 'default' to match Badge variants
       case 'running':
-        return 'warning';
+        return 'secondary'; // Changed from 'warning' to 'secondary'
       case 'failed':
         return 'destructive';
       default:
@@ -221,7 +264,7 @@ const ExperimentsTab = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => setSelectedExperimentId(experiment.experiment_id)}
+                            onClick={() => handleViewResults(experiment.experiment_id)}
                             disabled={experiment.status !== 'completed' && experiment.status !== 'success'}
                           >
                             <Eye className="h-4 w-4" />
@@ -232,9 +275,11 @@ const ExperimentsTab = () => {
                             <DialogTitle>Experiment Results</DialogTitle>
                           </DialogHeader>
                           {selectedExperimentId && (
-                            <ExperimentResults 
+                            <ExperimentResultsComponent 
                               experimentId={selectedExperimentId}
-                              status={experiment.status} 
+                              experimentResults={experimentResults}
+                              isLoading={isLoadingResults}
+                              error={resultsError}
                             />
                           )}
                         </DialogContent>
