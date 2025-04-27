@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Trash2, Eye, List, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface Experiment {
   id: string;
@@ -40,7 +40,7 @@ const ExperimentsTab: React.FC = () => {
 
   const fetchExperiments = async () => {
     try {
-      const response = await fetch('/experiments/list-experiments/?limit=20&offset=0');
+      const response = await fetch(`${API_BASE_URL}/experiments/list-experiments/?limit=20&offset=0`);
       if (!response.ok) throw new Error('Failed to fetch experiments');
       
       const data = await response.json();
@@ -59,17 +59,76 @@ const ExperimentsTab: React.FC = () => {
     }
   };
 
-  const handleAddToComparison = (experimentId: string) => {
-    setSelectedExperiments(prev => {
-      const newSelected = [...prev, experimentId];
+  const handleAddToComparison = async (experimentId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ experiment_id: experimentId }),
+      });
+
+      if (!response.ok) throw new Error('Failed to add to comparison');
+
+      setSelectedExperiments(prev => {
+        const newSelected = [...prev, experimentId];
+        toast({
+          title: "Success",
+          description: "Experiment added to comparison list",
+        });
+        return newSelected;
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to add experiment to comparison",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (experimentId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/delete-experiment/${experimentId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete experiment');
       
       toast({
         title: "Success",
-        description: "Experiment added to comparison list",
+        description: "Experiment deleted successfully",
       });
+      
+      fetchExperiments();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete experiment",
+        variant: "destructive",
+      });
+    }
+  };
 
-      return newSelected;
-    });
+  const handleViewExperiment = async (experimentId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`);
+      if (!response.ok) throw new Error('Failed to fetch experiment details');
+      
+      const data = await response.json();
+      const experiment = data.data;
+      
+      if (experiment) {
+        setSelectedExperiment(experiment);
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to load experiment details",
+        variant: "destructive",
+      });
+    }
   };
 
   const renderMetricValue = (value: number | undefined) => {
@@ -189,7 +248,7 @@ const ExperimentsTab: React.FC = () => {
                         <List className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" onClick={() => handleDelete(experiment.id)} />
                       </Button>
                     </div>
                   </TableCell>
@@ -248,4 +307,3 @@ const ExperimentsTab: React.FC = () => {
 };
 
 export default ExperimentsTab;
-
