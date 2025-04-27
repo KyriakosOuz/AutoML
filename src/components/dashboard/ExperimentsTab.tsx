@@ -27,7 +27,7 @@ const ExperimentsTab = () => {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
-  const [resultsError, setResultsError] = useState<Error | null>(null);
+  const [resultsError, setResultsError] = useState<string | null>(null);
   
   const { 
     data: experiments = [], 
@@ -54,14 +54,30 @@ const ExperimentsTab = () => {
     
     try {
       const response = await experimentsApi.getExperimentResults(experimentId);
-      const results = response.data;
+      const results = response.data as {
+        experimentId: string;
+        experiment_id: string;
+        experiment_name: string;
+        status: string;
+        task_type: string;
+        target_column: string;
+        created_at: string;
+        completed_at: string;
+        metrics: Record<string, any>;
+        training_results: {
+          metrics: Record<string, any>;
+        };
+        files: any[];
+        algorithm: string;
+        model_file_url: string;
+      };
       
       // Map API response to ExperimentResults type
       const formattedResults: ExperimentResults = {
-        experimentId: results.experimentId,
+        experimentId: results.experimentId || results.experiment_id,
         experiment_id: results.experiment_id,
         experiment_name: results.experiment_name,
-        status: results.status,
+        status: results.status as any,  // Convert to ExperimentStatus type
         task_type: results.task_type,
         target_column: results.target_column,
         created_at: results.created_at,
@@ -78,7 +94,7 @@ const ExperimentsTab = () => {
       setExperimentResults(formattedResults);
     } catch (error) {
       console.error('Error fetching experiment results:', error);
-      setResultsError(error instanceof Error ? error : new Error('Failed to fetch results'));
+      setResultsError(error instanceof Error ? error.message : 'Failed to fetch results');
     } finally {
       setIsLoadingResults(false);
     }
