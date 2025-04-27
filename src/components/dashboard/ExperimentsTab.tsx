@@ -453,11 +453,15 @@ const ExperimentsTab: React.FC = () => {
                             <>
                               <div>R² Score: {renderMetricValue(experiment.metrics?.r2, false)}</div>
                               <div>MAE: {renderMetricValue(experiment.metrics?.mae, false)}</div>
+                              <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
+                              <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
                           ) : (
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(experiment.metrics?.f1_score)}</div>
+                              <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
+                              <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>
                           )}
                         </div>
@@ -534,10 +538,21 @@ const ExperimentsTab: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-2">Metrics</h4>
                   <div className="space-y-1">
-                    <p>Accuracy: {renderMetricValue(selectedExperiment.metrics?.accuracy)}</p>
-                    <p>F1 Score: {renderMetricValue(selectedExperiment.metrics?.f1_score)}</p>
-                    <p>Precision: {renderMetricValue(selectedExperiment.metrics?.precision)}</p>
-                    <p>Recall: {renderMetricValue(selectedExperiment.metrics?.recall)}</p>
+                    {selectedExperiment.task_type === 'regression' ? (
+                      <>
+                        <p>R² Score: {renderMetricValue(selectedExperiment.metrics?.r2, false)}</p>
+                        <p>MAE: {renderMetricValue(selectedExperiment.metrics?.mae, false)}</p>
+                        <p>MSE: {renderMetricValue(selectedExperiment.metrics?.mse, false)}</p>
+                        <p>RMSE: {renderMetricValue(selectedExperiment.metrics?.rmse, false)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>Accuracy: {renderMetricValue(selectedExperiment.metrics?.accuracy)}</p>
+                        <p>F1 Score: {renderMetricValue(selectedExperiment.metrics?.f1_score)}</p>
+                        <p>Precision: {renderMetricValue(selectedExperiment.metrics?.precision)}</p>
+                        <p>Recall: {renderMetricValue(selectedExperiment.metrics?.recall)}</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
