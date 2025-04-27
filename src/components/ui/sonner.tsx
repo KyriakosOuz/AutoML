@@ -24,7 +24,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       // Override the success icon with null to hide it
       icons={{
-        success: () => null,
+        success: null,
       }}
       {...props}
     />
