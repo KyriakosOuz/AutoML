@@ -10,8 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
-import { ManualPredictionResponse } from './prediction/PredictionResponse.types';
+import { ClassProbabilities } from './prediction/ClassProbabilities';
+import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
 import { ProbabilitiesCell } from './prediction/table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
 
@@ -219,19 +221,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
   return (
     <Tabs defaultValue="manual" className="w-full">
-      <TabsList className="mb-4 bg-gray-100">
-        <TabsTrigger 
-          value="manual"
-          className="data-[state=active]:bg-black data-[state=active]:text-white"
-        >
-          Predict Manually
-        </TabsTrigger>
-        <TabsTrigger 
-          value="batch"
-          className="data-[state=active]:bg-black data-[state=active]:text-white"
-        >
-          Predict from CSV
-        </TabsTrigger>
+      <TabsList className="mb-4">
+        <TabsTrigger value="manual">Predict Manually</TabsTrigger>
+        <TabsTrigger value="batch">Predict from CSV</TabsTrigger>
       </TabsList>
       
       <TabsContent value="manual">
