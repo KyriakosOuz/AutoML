@@ -23,7 +23,7 @@ export const getAuthHeaders = async () => {
   };
 };
 
-// Enhanced error handling for API responses
+// Enhanced error handling for API responses with connection checks
 export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
   // First check if the response is ok
   if (!response.ok) {
@@ -33,9 +33,17 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
       text: errorText.substring(0, 200)
     });
     
-    // Check if we received an HTML error page
+    // Check for common connection issues
+    if (response.status === 0 || response.status === 504) {
+      throw new Error('Connection error: Unable to reach the server. Please check your internet connection.');
+    }
+    
+    // Check if we received an HTML error page (like ngrok interstitial)
     if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
-      throw new Error('Connection error: The API server might be unavailable. Please try again.');
+      if (errorText.includes('ngrok')) {
+        throw new Error('Connection error: The API server needs to be restarted. Please contact support.');
+      }
+      throw new Error('Connection error: Received HTML instead of JSON response. The server might be down.');
     }
     
     try {
@@ -48,10 +56,13 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
 
   const contentType = response.headers.get('content-type');
   
-  // Handle non-JSON responses
+  // Handle non-JSON responses with more specific error messages
   if (!contentType || !contentType.includes('application/json')) {
     console.error('[API] Unexpected content type:', contentType);
-    throw new Error('Invalid response: Expected JSON but received different content type');
+    if (contentType?.includes('text/html')) {
+      throw new Error('Invalid response: Server returned an HTML page instead of JSON. Please try again.');
+    }
+    throw new Error(`Invalid response: Expected JSON but received ${contentType || 'unknown content type'}`);
   }
 
   try {
@@ -62,3 +73,6 @@ export const handleApiResponse = async <T>(response: Response): Promise<ApiRespo
     throw new Error('Failed to parse server response');
   }
 };
+
+// New utility to implement exponential backoff for retries
+export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
