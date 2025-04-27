@@ -22,12 +22,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch results only when experimentId is available and we don't already have results
-  // or when hasTrainingResults transitions to true
   useEffect(() => {
     if (!experimentId) return;
     
-    // Only fetch if we don't have results yet AND status indicates they're available
     if (!results && (status === 'completed' || status === 'success')) {
       fetchResults();
     }
@@ -36,7 +33,6 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const fetchResults = async () => {
     if (!experimentId) return;
     
-    // Don't refetch if we already have the results for this experiment
     if (results && results.experimentId === experimentId) {
       return;
     }
@@ -49,7 +45,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       const data = await getExperimentResults(experimentId);
       
       if (data) {
-        console.log("[ExperimentResultsContainer] Successfully fetched experiment results");
+        console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
         setResults(data);
       } else {
         console.log("[ExperimentResultsContainer] No results returned from API");

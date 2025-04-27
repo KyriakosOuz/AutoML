@@ -26,8 +26,6 @@ export const getExperimentResults = async (
   try {
     console.log('[API] Fetching full results for experiment:', experimentId);
     const headers = await getAuthHeaders();
-
-    // Always use the correct endpoint for full experiment results
     const response = await fetch(
       `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
       { headers }
@@ -38,32 +36,60 @@ export const getExperimentResults = async (
         throw new Error('Unauthorized: Your session has expired. Please log in again.');
       }
       const errorText = await response.text().catch(() => "");
-      console.error('[API] Error fetching results:', errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
+      console.error('[API] Error fetching results:', errorText.substring(0, 200));
       throw new Error(`Failed to fetch experiment results: ${response.status} ${response.statusText}`);
     }
 
-    // Always try to parse the response as JSON
-    let apiResponse: any;
     const responseText = await response.text();
+    let apiResponse: any;
     
     try {
       apiResponse = JSON.parse(responseText);
-      console.log('[API] Full API response structure:', {
-        keys: Object.keys(apiResponse),
-        hasStatus: 'status' in apiResponse,
-        hasData: 'data' in apiResponse
-      });
+      console.log('[API] Parsed API response:', apiResponse);
     } catch (err) {
       console.error('[API] JSON parse error:', err);
-      console.error('[API] Failed to parse response text:', responseText.substring(0, 200) + '...');
       throw new Error('Invalid JSON response from server');
     }
 
-    // Unwrap envelope: { status, data }
-    const result = apiResponse.data ?? apiResponse;
-    console.log('[API] Unwrapped payload keys:', Object.keys(result));
+    // Extract data from the response envelope
+    const result = apiResponse.data;
+    
+    if (!result) {
+      console.error('[API] No data in API response');
+      return null;
+    }
 
-    return result;
+    // Map the API response to our ExperimentResults type
+    const experimentResults: ExperimentResults = {
+      experimentId: result.experimentId || result.experiment_id,
+      experiment_id: result.experimentId || result.experiment_id,
+      experiment_name: result.experiment_name,
+      status: result.status,
+      task_type: result.task_type,
+      target_column: result.target_column,
+      created_at: result.created_at,
+      completed_at: result.completed_at,
+      error_message: result.error_message,
+      training_time_sec: result.training_time_sec,
+      metrics: result.metrics || {},
+      files: result.files || [],
+      algorithm: result.algorithm,
+      model_format: result.model_format,
+      model_file_url: result.files?.find(f => f.file_type === 'model')?.file_url,
+      report_file_url: result.files?.find(f => f.file_type === 'report')?.file_url,
+      hyperparameters: result.hyperparameters,
+      message: result.message,
+      automl_engine: result.automl_engine,
+      class_labels: result.class_labels,
+      training_results: {
+        metrics: result.metrics,
+        classification_report: result.metrics?.classification_report,
+        confusion_matrix: result.metrics?.confusion_matrix,
+      }
+    };
+
+    console.log('[API] Mapped experiment results:', experimentResults);
+    return experimentResults;
   } catch (error) {
     console.error('[API] Error in getExperimentResults:', error);
     throw error;
