@@ -13,4 +13,11 @@ interface ExperimentStatusResponse {
   hasTrainingResults: boolean;
 }
 
-export type { ApiResponse, ExperimentStatusResponse };
+interface ExperimentSearchParams {
+  engine?: string;
+  task_type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export type { ApiResponse, ExperimentStatusResponse, ExperimentSearchParams };

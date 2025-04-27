@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, loader } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface ClassificationReport {
   [key: string]: {
@@ -46,22 +48,56 @@ interface Experiment {
   automl_engine?: string;
 }
 
+type TrainingMethod = 'all' | 'automl' | 'custom';
+type TaskType = 'all' | 'binary_classification' | 'multiclass_classification' | 'regression';
+
 const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null);
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
+  
+  // New state for filters
+  const [trainingMethod, setTrainingMethod] = useState<TrainingMethod>('all');
+  const [taskType, setTaskType] = useState<TaskType>('all');
+  
   const { toast } = useToast();
 
   useEffect(() => {
     fetchExperiments();
-  }, []);
+  }, [trainingMethod, taskType]);
+
+  // Reset selected experiments when filters change
+  useEffect(() => {
+    setSelectedExperiments([]);
+  }, [trainingMethod, taskType]);
 
   const fetchExperiments = async () => {
     try {
+      setIsLoading(true);
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/experiments/list-experiments/?limit=20&offset=0`, {
+      
+      // Build URL with query parameters
+      const url = new URL(`${API_BASE_URL}/experiments/search-experiments/`);
+      
+      // Add training method filter
+      if (trainingMethod === 'automl') {
+        url.searchParams.append("engine", "mljar,h2o");
+      } else if (trainingMethod === 'custom') {
+        url.searchParams.append("engine", "custom");
+      }
+      
+      // Add task type filter
+      if (taskType !== 'all') {
+        url.searchParams.append("task_type", taskType);
+      }
+      
+      // Add pagination
+      url.searchParams.append("limit", "20");
+      url.searchParams.append("offset", "0");
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: headers
       });
@@ -110,7 +146,34 @@ const ExperimentsTab: React.FC = () => {
     });
   };
 
+  const handleClearSelection = () => {
+    setSelectedExperiments([]);
+    toast({
+      title: "Selection Cleared",
+      description: "All selected experiments have been cleared",
+    });
+  };
+
   const handleCompareSelected = async () => {
+    // Check if filter conditions are met
+    if (trainingMethod === 'all') {
+      toast({
+        title: "Filter Required",
+        description: "Please filter experiments by training method before comparing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (selectedExperiments.length < 2) {
+      toast({
+        title: "Selection Required",
+        description: "Please select at least 2 experiments to compare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
@@ -120,7 +183,7 @@ const ExperimentsTab: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: `Comparison ${new Date().toLocaleDateString()}`,
+          name: `${trainingMethod === 'automl' ? 'AutoML' : 'Custom'} ${taskType !== 'all' ? taskType : ''} Comparison ${new Date().toLocaleDateString()}`,
           experiment_ids: selectedExperiments
         }),
       });
@@ -172,27 +235,10 @@ const ExperimentsTab: React.FC = () => {
     }
   };
 
-  const handleViewExperiment = async (experimentId: string) => {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
-        headers: headers
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch experiment details');
-      
-      const data = await response.json();
-      const experiment = data.data;
-      
-      if (experiment) {
-        setSelectedExperiment(experiment);
-      }
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to load experiment details",
-        variant: "destructive",
-      });
+  const handleViewExperiment = (experimentId: string) => {
+    const experiment = experiments.find(exp => exp.id === experimentId);
+    if (experiment) {
+      setSelectedExperiment(experiment);
     }
   };
 
@@ -200,6 +246,65 @@ const ExperimentsTab: React.FC = () => {
     if (typeof value === 'undefined') return 'N/A';
     return `${(value * 100).toFixed(2)}%`;
   };
+
+  const isCompareButtonEnabled = () => {
+    return trainingMethod !== 'all' && selectedExperiments.length >= 2;
+  };
+
+  // Filter buttons component
+  const FilterButtons = () => (
+    <div className="space-y-4">
+      {/* Top level filters */}
+      <div className="flex gap-2">
+        <Button 
+          variant={trainingMethod === 'all' ? "default" : "outline"} 
+          onClick={() => setTrainingMethod('all')}
+        >
+          All
+        </Button>
+        <Button 
+          variant={trainingMethod === 'automl' ? "default" : "outline"} 
+          onClick={() => setTrainingMethod('automl')}
+        >
+          AutoML
+        </Button>
+        <Button 
+          variant={trainingMethod === 'custom' ? "default" : "outline"} 
+          onClick={() => setTrainingMethod('custom')}
+        >
+          Custom Training
+        </Button>
+      </div>
+
+      {/* Secondary filters */}
+      <div className="flex gap-2">
+        <Button 
+          variant={taskType === 'all' ? "default" : "outline"} 
+          onClick={() => setTaskType('all')}
+        >
+          All Types
+        </Button>
+        <Button 
+          variant={taskType === 'binary_classification' ? "default" : "outline"} 
+          onClick={() => setTaskType('binary_classification')}
+        >
+          Binary Classification
+        </Button>
+        <Button 
+          variant={taskType === 'multiclass_classification' ? "default" : "outline"} 
+          onClick={() => setTaskType('multiclass_classification')}
+        >
+          Multiclass Classification
+        </Button>
+        <Button 
+          variant={taskType === 'regression' ? "default" : "outline"} 
+          onClick={() => setTaskType('regression')}
+        >
+          Regression
+        </Button>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -229,7 +334,24 @@ const ExperimentsTab: React.FC = () => {
     );
   }
 
-  if (experiments.length === 0) {
+  const renderEmptyState = () => {
+    if (trainingMethod !== 'all' || taskType !== 'all') {
+      return (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <List className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Experiments Found</h3>
+            <p className="text-center text-gray-500 mb-4 max-w-md">
+              No experiments match your current filter criteria. Try different filters or create a new experiment.
+            </p>
+            <Button variant="outline" onClick={() => { setTrainingMethod('all'); setTaskType('all'); }}>
+              Clear Filters
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -244,7 +366,7 @@ const ExperimentsTab: React.FC = () => {
         </CardContent>
       </Card>
     );
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -255,14 +377,22 @@ const ExperimentsTab: React.FC = () => {
         </div>
         <div className="flex gap-2">
           {selectedExperiments.length > 0 && (
-            <Button 
-              variant="outline"
-              onClick={handleCompareSelected}
-              disabled={selectedExperiments.length < 2}
-            >
-              <List className="h-4 w-4 mr-2" />
-              Compare ({selectedExperiments.length})
-            </Button>
+            <>
+              <Button 
+                variant="outline"
+                onClick={handleClearSelection}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear Selection
+              </Button>
+              <Button 
+                onClick={handleCompareSelected}
+                disabled={!isCompareButtonEnabled()}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Compare ({selectedExperiments.length})
+              </Button>
+            </>
           )}
           <Button asChild>
             <Link to="/training">
@@ -273,67 +403,93 @@ const ExperimentsTab: React.FC = () => {
         </div>
       </div>
 
-      <Card>
+      {/* Filter section */}
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Experiment Results</CardTitle>
+          <CardTitle>Filter Experiments</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Algorithm</TableHead>
-                <TableHead>Accuracy</TableHead>
-                <TableHead>F1 Score</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {experiments.map((experiment) => (
-                <TableRow key={experiment.id}>
-                  <TableCell>{experiment.experiment_name}</TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
-                  <TableCell>{experiment.task_type}</TableCell>
-                  <TableCell>{experiment.algorithm_choice}</TableCell>
-                  <TableCell>{renderMetricValue(experiment.metrics?.accuracy)}</TableCell>
-                  <TableCell>{renderMetricValue(experiment.metrics?.f1_score)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedExperiment(experiment)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleAddToComparison(experiment.id)}
-                      >
-                        {selectedExperiments.includes(experiment.id) ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <List className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDelete(experiment.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <FilterButtons />
         </CardContent>
       </Card>
+
+      {experiments.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {trainingMethod !== 'all' && (
+                <Badge className="mr-2">
+                  {trainingMethod === 'automl' ? 'AutoML' : 'Custom Training'}
+                </Badge>
+              )}
+              {taskType !== 'all' && (
+                <Badge variant="outline">
+                  {taskType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </Badge>
+              )}
+              Experiment Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Algorithm</TableHead>
+                  <TableHead>Accuracy</TableHead>
+                  <TableHead>F1 Score</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {experiments.map((experiment) => (
+                  <TableRow key={experiment.id}>
+                    <TableCell>{experiment.experiment_name}</TableCell>
+                    <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
+                    <TableCell>{experiment.task_type}</TableCell>
+                    <TableCell>{experiment.algorithm_choice}</TableCell>
+                    <TableCell>{renderMetricValue(experiment.metrics?.accuracy)}</TableCell>
+                    <TableCell>{renderMetricValue(experiment.metrics?.f1_score)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewExperiment(experiment.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleAddToComparison(experiment.id)}
+                        >
+                          {selectedExperiments.includes(experiment.id) ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <List className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDelete(experiment.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog 
         open={!!selectedExperiment} 
