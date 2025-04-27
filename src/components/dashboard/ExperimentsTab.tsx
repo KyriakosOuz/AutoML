@@ -90,13 +90,23 @@ const ExperimentsTab: React.FC = () => {
     }
   };
 
-  const handleAddToComparison = async (experimentId: string) => {
-    try {
-      const experimentToAdd = experiments.find(exp => exp.id === experimentId);
-      const comparisonName = experimentToAdd ? 
-        `Comparison of ${experimentToAdd.experiment_name}` : 
-        `Comparison ${new Date().toLocaleDateString()}`;
+  const handleAddToComparison = (experimentId: string) => {
+    setSelectedExperiments(prev => {
+      if (prev.includes(experimentId)) {
+        return prev;
+      }
       
+      toast({
+        title: "Success",
+        description: "Experiment added to comparison list",
+      });
+      
+      return [...prev, experimentId];
+    });
+  };
+
+  const handleCompareSelected = async () => {
+    try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
         method: 'POST',
@@ -105,30 +115,28 @@ const ExperimentsTab: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: comparisonName,
-          experiment_ids: [experimentId]
+          name: `Comparison ${new Date().toLocaleDateString()}`,
+          experiment_ids: selectedExperiments
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.error("Failed to add to comparison:", errorData);
-        throw new Error('Failed to add to comparison');
+        console.error("Failed to create comparison:", errorData);
+        throw new Error('Failed to create comparison');
       }
 
-      setSelectedExperiments(prev => {
-        const newSelected = [...prev, experimentId];
-        toast({
-          title: "Success",
-          description: "Experiment added to comparison list",
-        });
-        return newSelected;
+      toast({
+        title: "Success",
+        description: "Comparison created successfully",
       });
+
+      setSelectedExperiments([]);
     } catch (err) {
       console.error("Comparison error:", err);
       toast({
         title: "Error",
-        description: "Failed to add experiment to comparison",
+        description: "Failed to create comparison",
         variant: "destructive",
       });
     }
@@ -241,8 +249,12 @@ const ExperimentsTab: React.FC = () => {
           <p className="text-muted-foreground">View and manage your machine learning experiments</p>
         </div>
         <div className="flex gap-2">
-          {selectedExperiments.length >= 2 && (
-            <Button variant="outline">
+          {selectedExperiments.length > 0 && (
+            <Button 
+              variant="outline"
+              onClick={handleCompareSelected}
+              disabled={selectedExperiments.length < 2}
+            >
               <List className="h-4 w-4 mr-2" />
               Compare ({selectedExperiments.length})
             </Button>
