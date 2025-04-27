@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -5,10 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusBadge } from '@/components/training/StatusBadge';
+import StatusBadge from '@/components/training/StatusBadge';
 import { API_BASE_URL } from '@/lib/constants';
 import { handleApiResponse, getAuthHeaders } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { RefreshCw, Settings, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Experiment {
   experiment_id: string;
@@ -43,6 +47,7 @@ interface ExperimentDetails {
   metrics?: Record<string, any>;
   confusion_matrix?: number[][];
   feature_importance?: Array<{ feature: string; importance: number }>;
+  error_message?: string | null;
 }
 
 const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
@@ -297,7 +302,7 @@ const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
               variant="outline"
               onClick={() => fetchExperimentDetails(experiment.experiment_id)}
             >
-              <RefreshCcw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
             
