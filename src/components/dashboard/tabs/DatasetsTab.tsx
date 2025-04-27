@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DatasetsEmptyState from '../empty-states/DatasetsEmptyState';
 import DataPreviewDialog from '../dialogs/DataPreviewDialog';
 import { Badge } from '@/components/ui/badge';
-import { Dataset } from '@/types/api';
+import { Dataset, DatasetsResponse } from '@/types/api';
 
 const DatasetsTab: React.FC = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -34,13 +34,13 @@ const DatasetsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse(response);
+      const result = await handleApiResponse<DatasetsResponse>(response);
       
-      if (Array.isArray(result.datasets)) {
+      if (result?.data?.datasets) {
         // Only show first 100 datasets
-        setDatasets(result.datasets.slice(0, 100));
+        setDatasets(result.data.datasets.slice(0, 100));
       } else {
-        console.warn('Invalid datasets data structure:', result);
+        console.warn('Invalid or empty datasets response:', result);
         setDatasets([]);
       }
     } catch (error) {

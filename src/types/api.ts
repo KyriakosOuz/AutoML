@@ -1,4 +1,3 @@
-
 interface ApiResponse<T = any> {
   status?: string;
   message?: string;
@@ -30,7 +29,11 @@ interface DatasetPreview {
 }
 
 interface DatasetsResponse {
-  datasets: Dataset[];
+  status: string;
+  message: string;
+  data: {
+    datasets: Dataset[];
+  };
 }
 
 interface ExperimentsResponse {
