@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,6 @@ const MainHeader = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Define route-specific help content
   const getHelpContent = () => {
     if (currentPath.includes('/dataset')) {
       return {
@@ -70,7 +68,7 @@ const MainHeader = () => {
               <TabsTrigger 
                 value="dashboard" 
                 asChild 
-                className="data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
                   <PieChart className="h-4 w-4" />
@@ -81,7 +79,7 @@ const MainHeader = () => {
               <TabsTrigger 
                 value="dataset" 
                 asChild 
-                className="data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
                   <Database className="h-4 w-4" />
@@ -92,7 +90,7 @@ const MainHeader = () => {
               <TabsTrigger 
                 value="training" 
                 asChild 
-                className="data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
                   <BarChart2 className="h-4 w-4" />
