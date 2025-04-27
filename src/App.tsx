@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MainLayout from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 import DatasetPage from "./pages/DatasetPage";
 import ModelTrainingPage from "./pages/ModelTrainingPage";
@@ -25,26 +26,17 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dataset" element={
-              <ProtectedRoute>
-                <DatasetPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/training" element={
-              <ProtectedRoute>
-                <ModelTrainingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <div>Settings Page (Coming Soon)</div>
-              </ProtectedRoute>
-            } />
+            <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+              <Route path="/dataset" element={<DatasetPage />} />
+              <Route path="/training" element={<ModelTrainingPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/settings" element={
+                <div className="text-center py-12">
+                  <h1 className="text-2xl font-bold mb-4">Settings</h1>
+                  <p className="text-muted-foreground">Settings page is coming soon.</p>
+                </div>
+              } />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
