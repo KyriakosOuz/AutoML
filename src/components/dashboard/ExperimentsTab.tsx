@@ -40,7 +40,7 @@ const ExperimentsTab: React.FC = () => {
 
   const fetchExperiments = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/experiments/list-experiments/?limit=20&offset=0`);
+      const response = await fetch(`http://localhost:8000/experiments/list-experiments/?limit=20&offset=0`);
       if (!response.ok) throw new Error('Failed to fetch experiments');
       
       const data = await response.json();
@@ -61,7 +61,7 @@ const ExperimentsTab: React.FC = () => {
 
   const handleAddToComparison = async (experimentId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
+      const response = await fetch(`http://localhost:8000/comparisons/save/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ const ExperimentsTab: React.FC = () => {
 
   const handleDelete = async (experimentId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/experiments/delete-experiment/${experimentId}`, {
+      const response = await fetch(`http://localhost:8000/experiments/delete-experiment/${experimentId}`, {
         method: 'DELETE'
       });
       
@@ -113,7 +113,7 @@ const ExperimentsTab: React.FC = () => {
 
   const handleViewExperiment = async (experimentId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`);
+      const response = await fetch(`http://localhost:8000/experiments/experiment-results/${experimentId}`);
       if (!response.ok) throw new Error('Failed to fetch experiment details');
       
       const data = await response.json();
