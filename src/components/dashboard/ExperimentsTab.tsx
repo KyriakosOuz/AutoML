@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,7 @@ interface Experiment {
   dataset_filename: string;
   has_model: boolean;
   error_message: string | null;
-  automl_engine?: string; // Adding this optional property to fix the error
+  automl_engine?: string;
 }
 
 const ExperimentsTab: React.FC = () => {
@@ -70,7 +69,7 @@ const ExperimentsTab: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch experiments');
       
       const data = await response.json();
-      console.log('API Response:', data); // Debug log
+      console.log('API Response:', data);
 
       if (data.status === 'success' && data.data.experiments) {
         setExperiments(data.data.experiments);
@@ -93,6 +92,11 @@ const ExperimentsTab: React.FC = () => {
 
   const handleAddToComparison = async (experimentId: string) => {
     try {
+      const experimentToAdd = experiments.find(exp => exp.id === experimentId);
+      const comparisonName = experimentToAdd ? 
+        `Comparison of ${experimentToAdd.experiment_name}` : 
+        `Comparison ${new Date().toLocaleDateString()}`;
+      
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
         method: 'POST',
@@ -100,10 +104,17 @@ const ExperimentsTab: React.FC = () => {
           ...headers,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ experiment_id: experimentId }),
+        body: JSON.stringify({
+          name: comparisonName,
+          experiment_ids: [experimentId]
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to add to comparison');
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Failed to add to comparison:", errorData);
+        throw new Error('Failed to add to comparison');
+      }
 
       setSelectedExperiments(prev => {
         const newSelected = [...prev, experimentId];
@@ -114,6 +125,7 @@ const ExperimentsTab: React.FC = () => {
         return newSelected;
       });
     } catch (err) {
+      console.error("Comparison error:", err);
       toast({
         title: "Error",
         description: "Failed to add experiment to comparison",
@@ -328,7 +340,6 @@ const ExperimentsTab: React.FC = () => {
                   <div className="space-y-1">
                     <p>Task Type: {selectedExperiment.task_type}</p>
                     <p>Algorithm: {selectedExperiment.algorithm_choice}</p>
-                    {/* Handle cases where automl_engine might not exist */}
                     {selectedExperiment.automl_engine && (
                       <p>Engine: {selectedExperiment.automl_engine}</p>
                     )}
