@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -26,7 +27,9 @@ import {
 import { ExperimentStatus } from '@/contexts/training/types';
 import { cn } from '@/lib/utils';
 
+// Component to render the classification report as a table
 const ClassificationReportTable = ({ report }: { report: any }) => {
+  // Handle string format (from some APIs)
   if (typeof report === 'string') {
     return (
       <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto">
@@ -35,7 +38,9 @@ const ClassificationReportTable = ({ report }: { report: any }) => {
     );
   }
 
+  // Handle object format
   if (typeof report === 'object' && report !== null) {
+    // Filter out non-class keys (like 'accuracy', 'macro avg', etc.)
     const classKeys = Object.keys(report).filter(key => 
       !['accuracy', 'macro avg', 'weighted avg', 'samples avg', 'micro avg'].includes(key)
     );
@@ -66,6 +71,7 @@ const ClassificationReportTable = ({ report }: { report: any }) => {
             </TableRow>
           ))}
           
+          {/* Summary rows */}
           {summaryKeys.map(key => (
             <TableRow key={key} className="bg-muted/50">
               <TableCell className="font-medium">{key}</TableCell>
@@ -76,6 +82,7 @@ const ClassificationReportTable = ({ report }: { report: any }) => {
             </TableRow>
           ))}
           
+          {/* Accuracy row if available */}
           {report.accuracy && (
             <TableRow className="bg-primary/10">
               <TableCell className="font-medium">Accuracy</TableCell>
@@ -88,14 +95,17 @@ const ClassificationReportTable = ({ report }: { report: any }) => {
     );
   }
 
+  // Fallback if format is not recognized
   return <p>Classification report format not supported</p>;
 };
 
+// Component to render the confusion matrix as a table
 const ConfusionMatrixTable = ({ matrix, classLabels }: { matrix: number[][], classLabels?: string[] }) => {
   if (!matrix || !Array.isArray(matrix) || matrix.length === 0) {
     return <p className="text-muted-foreground">No confusion matrix data available</p>;
   }
 
+  // Generate labels if not provided (0, 1, 2, etc.)
   const labels = classLabels || matrix.map((_, i) => String(i));
 
   return (
@@ -132,11 +142,13 @@ const ConfusionMatrixTable = ({ matrix, classLabels }: { matrix: number[][], cla
   );
 };
 
+// Helper to format numeric values
 const formatValue = (value: number | undefined) => {
   if (value === undefined) return 'N/A';
   return value >= 0 && value <= 1 ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
 };
 
+// Helper to determine if a file is a visualization
 const isVisualizationFile = (fileType: string) => {
   const visualTypes = [
     'distribution', 
@@ -154,6 +166,7 @@ const isVisualizationFile = (fileType: string) => {
   return visualTypes.some(type => fileType.toLowerCase().includes(type));
 };
 
+// Helper to get the priority of a metric for display ordering
 const getMetricPriority = (metricName: string): number => {
   const priorities: Record<string, number> = {
     'accuracy': 1,
@@ -167,9 +180,10 @@ const getMetricPriority = (metricName: string): number => {
     'rmse': 4,
   };
   
-  return priorities[metricName] || 100;
+  return priorities[metricName] || 100; // Unknown metrics get lower priority
 };
 
+// Main component
 interface ExperimentResultsProps {
   experimentId: string | null;
   status: ExperimentStatus;
@@ -278,6 +292,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     );
   }
   
+  // Extract necessary data from experimentResults
   const {
     experiment_name,
     task_type,
@@ -294,6 +309,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     training_results = {} as TrainingResults
   } = experimentResults;
   
+  // Handle training results data safely with proper typing
   const metrics = training_results?.metrics || {};
   const confusionMatrix = training_results?.confusion_matrix || metrics?.confusion_matrix || [];
   const classificationReport = training_results?.classification_report || metrics?.classification_report;
@@ -301,8 +317,10 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const yPred = training_results?.y_pred || [];
   const yProbs = training_results?.y_probs || [];
   
+  // Determine if this is a classification or regression task
   const isClassification = task_type?.includes('classification');
   
+  // Sort metrics for display
   const sortedMetricEntries = Object.entries(metrics)
     .filter(([key, value]) => 
       typeof value === 'number' && 
@@ -313,8 +331,10 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     )
     .sort((a, b) => getMetricPriority(a[0]) - getMetricPriority(b[0]));
   
+  // Filter visualization files
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   
+  // Filter downloadable files
   const downloadableFiles = files.filter(file => 
     file.file_type === 'model' || 
     file.file_type === 'report' || 
@@ -322,6 +342,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     file.file_type.includes('model')
   );
 
+  // Format the task type for display
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -371,40 +392,29 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-gray-100 rounded-none border-b h-12">
-            <TabsTrigger 
-              value="metrics" 
-              className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white"
-            >
+          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+            <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
             </TabsTrigger>
             
-            <TabsTrigger 
-              value="visualizations" 
-              className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white"
-            >
+            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
               <span>Visualizations</span>
             </TabsTrigger>
             
-            <TabsTrigger 
-              value="details" 
-              className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white"
-            >
-              <FileText className="h-4 w-4" />
+            <TabsTrigger value="details" className="text-sm flex items-center gap-1">
+              <Settings className="h-4 w-4" />
               <span>Details</span>
             </TabsTrigger>
             
-            <TabsTrigger 
-              value="downloads" 
-              className="text-sm flex items-center gap-1 data-[state=active]:bg-black data-[state=active]:text-white"
-            >
+            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1">
               <Download className="h-4 w-4" />
               <span>Downloads</span>
             </TabsTrigger>
           </TabsList>
           
+          {/* Metrics Tab */}
           <TabsContent value="metrics" className="p-6">
             {sortedMetricEntries.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -414,11 +424,13 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                     'r2', 'r2_score'
                   ].some(m => key.toLowerCase().includes(m));
                   
+                  // Format the metric name for display
                   const displayName = key.replace(/_/g, ' ')
                     .split(' ')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' ');
                     
+                  // Ensure value is a number before formatting
                   const numericValue = typeof value === 'number' ? value : 0;
                   
                   return (
@@ -445,6 +457,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
               </p>
             )}
             
+            {/* Confusion Matrix (for classification tasks) */}
             {isClassification && confusionMatrix.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Confusion Matrix</h3>
@@ -457,6 +470,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
               </div>
             )}
             
+            {/* Classification Report (for classification tasks) */}
             {isClassification && classificationReport && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
@@ -466,6 +480,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
               </div>
             )}
             
+            {/* Predictions Table (for both classification and regression) */}
             {yTrue.length > 0 && yPred.length > 0 && (
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-2">
@@ -519,6 +534,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             )}
           </TabsContent>
           
+          {/* Visualizations Tab */}
           <TabsContent value="visualizations" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -585,6 +601,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             )}
           </TabsContent>
           
+          {/* Details Tab */}
           <TabsContent value="details" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
@@ -622,6 +639,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
+              {/* Feature columns */}
               {columns_to_keep && columns_to_keep.length > 0 && (
                 <Card className="shadow-sm">
                   <CardHeader className="pb-2">
@@ -639,6 +657,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 </Card>
               )}
               
+              {/* Hyperparameters */}
               {hyperparameters && Object.keys(hyperparameters).length > 0 && (
                 <Card className="shadow-sm md:col-span-2">
                   <CardHeader className="pb-2">
@@ -671,10 +690,12 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
+          {/* Downloads Tab */}
           <TabsContent value="downloads" className="p-6">
             {downloadableFiles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {downloadableFiles.map((file, index) => {
+                  // Create a user-friendly name for the file
                   const displayName = file.file_type
                     .replace(/_/g, ' ')
                     .split(' ')
@@ -708,6 +729,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
               </div>
             )}
             
+            {/* All files */}
             {files.length > downloadableFiles.length && (
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-4">All Files</h3>
