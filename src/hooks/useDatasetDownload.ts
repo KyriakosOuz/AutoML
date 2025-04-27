@@ -4,7 +4,6 @@ import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ApiResponse } from '@/types/api';
 
-// Define the expected response type
 interface DownloadResponse {
   download_url: string;
 }
@@ -14,7 +13,6 @@ export const useDatasetDownload = () => {
 
   const downloadDataset = async (datasetId: string, stage: string, fileName?: string) => {
     try {
-      // First get the download URL with proper authentication
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`, {
         headers
@@ -27,13 +25,21 @@ export const useDatasetDownload = () => {
         throw new Error('No download URL received');
       }
 
-      // Create a temporary link to trigger the download
+      // Fetch the file content using the download URL
+      const fileResponse = await fetch(downloadUrl);
+      const blob = await fileResponse.blob();
+      
+      // Create a blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName || `dataset_${stage}.csv`; // Default filename if none provided
+      link.href = blobUrl;
+      link.download = fileName || `dataset_${stage}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
 
       toast({
         title: "Download Started",
