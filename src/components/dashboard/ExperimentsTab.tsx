@@ -412,8 +412,10 @@ const ExperimentsTab: React.FC = () => {
             <Info className="h-5 w-5 flex-shrink-0" />
             <p>
               Browse and manage your machine learning experiments here. Filter experiments by training method and task type,
-              compare multiple experiments, or view detailed results for each experiment. Click on the view icon to see full metrics,
-              the compare icon to add to comparison, or the delete icon to remove an experiment.
+              compare multiple experiments, or view detailed results for each experiment. To compare experiments, first select either AutoML
+              or Custom Training method (mixing comparison between methods is not allowed), then select your task type. You can then select multiple
+              experiments to compare by clicking the compare icon. Click on the view icon to see full metrics,
+              or the delete icon to remove an experiment.
             </p>
           </div>
         </CardContent>
