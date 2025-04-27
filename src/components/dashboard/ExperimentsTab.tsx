@@ -9,8 +9,9 @@ import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
-import { getAuthHeaders } from '@/lib/utils';
+import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ApiResponse, ExperimentListResponse } from '@/types/api';
 
 interface ClassificationReport {
   [key: string]: {
@@ -73,6 +74,7 @@ const ExperimentsTab: React.FC = () => {
   const fetchExperiments = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const headers = await getAuthHeaders();
       
       const url = new URL(`${API_BASE_URL}/experiments/search-experiments/`);
@@ -94,24 +96,22 @@ const ExperimentsTab: React.FC = () => {
         method: 'GET',
         headers: headers
       });
-      
-      if (!response.ok) throw new Error('Failed to fetch experiments');
-      
-      const data = await response.json();
+
+      const data = await handleApiResponse<ExperimentListResponse>(response);
       console.log('API Response:', data);
 
-      if (data.status === 'success' && data.data.experiments) {
-        setExperiments(data.data.experiments);
+      if (data.data.results) {
+        setExperiments(data.data.results);
       } else {
         console.error('Unexpected API response structure:', data);
         throw new Error('Invalid API response format');
       }
     } catch (err) {
       console.error('Error fetching experiments:', err);
-      setError('Failed to load experiments');
+      setError(err instanceof Error ? err.message : 'Failed to load experiments');
       toast({
         title: "Error",
-        description: "Failed to load experiments",
+        description: "Failed to load experiments. Please try again.",
         variant: "destructive",
       });
     } finally {
