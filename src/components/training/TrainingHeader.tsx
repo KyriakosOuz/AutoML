@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowLeft, Settings } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,17 +23,6 @@ const TrainingHeader: React.FC = () => {
             Train and evaluate machine learning models
           </p>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => navigate('/settings')}
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Button>
       </div>
     </div>
   );
