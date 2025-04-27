@@ -2,8 +2,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus } from '@/types/training';
-import { wait } from '@/lib/utils';
+import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
+import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
 
 export interface UseExperimentPollingProps {
   onSuccess: (experimentId: string) => void;
@@ -12,11 +12,6 @@ export interface UseExperimentPollingProps {
   setIsLoading: (loading: boolean) => void;
 }
 
-const MAX_RETRIES = 5;
-const INITIAL_RETRY_DELAY = 2000;
-const MAX_RETRY_DELAY = 30000;
-const POLL_INTERVAL = 2000;
-
 export const useExperimentPolling = ({
   onSuccess,
   onError,
@@ -24,8 +19,7 @@ export const useExperimentPolling = ({
   setIsLoading
 }: UseExperimentPollingProps) => {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [retryDelay, setRetryDelay] = useState(INITIAL_RETRY_DELAY);
+  const [pollingAttempts, setPollingAttempts] = useState(0);
   const { toast } = useToast();
 
   const stopPolling = useCallback(() => {
@@ -35,78 +29,98 @@ export const useExperimentPolling = ({
     }
   }, [pollingInterval]);
 
+  // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string) => {
     stopPolling();
+
+    console.log('[TrainingContext] Starting polling for experiment:', experimentId);
     setIsLoading(true);
-    setRetryCount(0);
-    setRetryDelay(INITIAL_RETRY_DELAY);
+    setPollingAttempts(0);
     setExperimentStatus('processing');
 
-    const poll = async () => {
+    toast({
+      title: "Training Started",
+      description: "Your model training has started. Please wait while we process your request."
+    });
+
+    const poller = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
         const data = response.data;
-        
-        // Reset retry counters on successful response
-        setRetryCount(0);
-        setRetryDelay(INITIAL_RETRY_DELAY);
-        
+        console.log('[TrainingContext] Status response data:', data);
+
         if (data.status === 'failed' || !!data.error_message) {
-          stopPolling();
           setExperimentStatus('failed');
-          onError(data.error_message || 'Training failed');
-          return;
-        }
-
-        setExperimentStatus(data.status);
-        
-        if (data.hasTrainingResults === true) {
           stopPolling();
-          onSuccess(experimentId);
-        }
-      } catch (error) {
-        console.error('[Polling] Error:', error);
-        
-        // Increment retry count and implement exponential backoff
-        setRetryCount(prev => {
-          const newCount = prev + 1;
-          if (newCount >= MAX_RETRIES) {
-            stopPolling();
-            onError('Failed to check experiment status after multiple attempts. The server might be unavailable.');
-            return prev;
-          }
-          return newCount;
-        });
-
-        // Calculate next retry delay with exponential backoff
-        setRetryDelay(prev => {
-          const newDelay = Math.min(prev * 2, MAX_RETRY_DELAY);
-          return newDelay;
-        });
-
-        // Show toast with retry information
-        if (error instanceof Error) {
+          onError(data.error_message || 'Training failed.');
           toast({
-            title: "Connection Error",
-            description: `${error.message}. Retrying in ${retryDelay / 1000} seconds...`,
+            title: "Training Failed",
+            description: data.error_message || "An error occurred during training.",
             variant: "destructive"
           });
+          return;
         }
+        setExperimentStatus(data.status);
 
-        // Wait before next retry using exponential backoff
-        await wait(retryDelay);
+        // Stop polling immediately if results are available
+        if (data.hasTrainingResults === true) {
+          console.log('[TrainingContext] Results ready — stopping poller');
+          clearInterval(poller);
+          setPollingInterval(null);
+
+          setTimeout(() => {
+            onSuccess(experimentId);
+          }, 1000); // (optional: allow backend ready time)
+          return;
+        }
+        if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          console.warn('[TrainingContext] Reached maximum polling attempts');
+          setExperimentStatus('failed');
+          stopPolling();
+          onError('Timeout while waiting for training completion');
+          toast({
+            title: "Training Timeout",
+            description: "The training process took too long to complete",
+            variant: "destructive"
+          });
+          return;
+        }
+        setPollingAttempts(prev => prev + 1);
+      } catch (error: any) {
+        console.error('[TrainingContext] Polling error:', error);
+        if (
+          typeof error.message === 'string' &&
+          (error.message.includes('Unauthorized') || error.message.includes('401'))
+        ) {
+          stopPolling();
+          setExperimentStatus('failed');
+          onError('Your session has expired. Please log in again.');
+          toast({
+            title: "Session Expired",
+            description: "Please log in again to continue training.",
+            variant: "destructive"
+          });
+          return;
+        }
+        if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+          setExperimentStatus('failed');
+          stopPolling();
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          onError(`Failed to check experiment status: ${errorMessage}`);
+          toast({
+            title: "Error",
+            description: `Failed to check experiment status: ${errorMessage}`,
+            variant: "destructive"
+          });
+        } else {
+          setPollingAttempts(prev => prev + 1);
+        }
       }
-    };
+    }, POLL_INTERVAL);
 
-    // Initial poll
-    await poll();
-    
-    // Set up polling interval
-    const interval = setInterval(poll, POLL_INTERVAL);
-    setPollingInterval(interval);
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, retryDelay]);
+    setPollingInterval(poller);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopPolling();

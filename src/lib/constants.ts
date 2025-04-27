@@ -69,4 +69,4 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   return `${prefix}_${identifier}_${year}_${month}_${day}`;
 };
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "https://smart-whole-cockatoo.ngrok-free.app";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";

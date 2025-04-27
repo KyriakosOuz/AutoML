@@ -11,7 +11,6 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import DashboardPage from "./pages/DashboardPage";
 
 const queryClient = new QueryClient();
 
@@ -35,11 +34,7 @@ const App = () => (
                 <ModelTrainingPage />
               </ProtectedRoute>
             } />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } />
+            {/* REMOVED: <Route path="/results/:experimentId" ... /> */}
             <Route path="/settings" element={
               <ProtectedRoute>
                 <div>Settings Page (Coming Soon)</div>
