@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart2, Eye, FileText, Plus, RefreshCw, Trash2, Compare } from 'lucide-react';
+import { BarChart2, Eye, FileText, Plus, RefreshCw, Trash2, Combine } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -125,16 +124,12 @@ const ExperimentsTab: React.FC = () => {
         throw new Error(data.detail || 'Failed to compare experiments');
       }
 
-      // Handle successful comparison - you could navigate to a results page or show in a modal
       toast({
         title: "Comparison successful",
         description: "Your experiments have been compared",
       });
       
-      // Here you could navigate to a comparison results page or show results in a modal
-      // For now, we'll just console log the results
       console.log("Comparison results:", data);
-      
     } catch (err) {
       toast({
         title: "Error",
@@ -218,7 +213,7 @@ const ExperimentsTab: React.FC = () => {
                 onClick={handleCompare}
                 disabled={selectedForComparison.length < 2}
               >
-                <Compare className="h-4 w-4 mr-2" />
+                <Combine className="h-4 w-4 mr-2" />
                 Compare
               </Button>
               <Button asChild variant="default" size="sm">
@@ -294,7 +289,7 @@ const ExperimentsTab: React.FC = () => {
                           size="sm" 
                           onClick={() => handleAddToComparison(experiment.id)}
                         >
-                          <Compare className="h-4 w-4" />
+                          <Combine className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm">
                           <Trash2 className="h-4 w-4 text-destructive" />
