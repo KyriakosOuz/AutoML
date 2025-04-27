@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
+import { getAuthHeaders } from '@/lib/utils';
 
 interface Experiment {
   id: string;
@@ -40,7 +42,12 @@ const ExperimentsTab: React.FC = () => {
 
   const fetchExperiments = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/experiments/list-experiments/?limit=20&offset=0`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/experiments/list-experiments/?limit=20&offset=0`, {
+        method: 'GET',
+        headers: headers
+      });
+      
       if (!response.ok) throw new Error('Failed to fetch experiments');
       
       const data = await response.json();
@@ -61,9 +68,11 @@ const ExperimentsTab: React.FC = () => {
 
   const handleAddToComparison = async (experimentId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/comparisons/save/`, {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
         method: 'POST',
         headers: {
+          ...headers,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ experiment_id: experimentId }),
@@ -90,8 +99,10 @@ const ExperimentsTab: React.FC = () => {
 
   const handleDelete = async (experimentId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/experiments/delete-experiment/${experimentId}`, {
-        method: 'DELETE'
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/experiments/delete-experiment/${experimentId}`, {
+        method: 'DELETE',
+        headers: headers
       });
       
       if (!response.ok) throw new Error('Failed to delete experiment');
@@ -113,7 +124,11 @@ const ExperimentsTab: React.FC = () => {
 
   const handleViewExperiment = async (experimentId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/experiments/experiment-results/${experimentId}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
+        headers: headers
+      });
+      
       if (!response.ok) throw new Error('Failed to fetch experiment details');
       
       const data = await response.json();
