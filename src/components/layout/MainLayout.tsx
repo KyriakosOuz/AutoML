@@ -7,7 +7,11 @@ import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuL
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, FileSpreadsheet, PlayCircle, Settings, LogOut } from 'lucide-react';
 
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { signOut } = useAuth();
   const location = useLocation();
 
