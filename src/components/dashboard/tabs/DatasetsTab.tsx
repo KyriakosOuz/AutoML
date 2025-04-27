@@ -47,10 +47,12 @@ const DatasetsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Dataset[]>(response);
-      if (Array.isArray(result.data)) {
-        setDatasets(result.data);
+      const datasetsArray = result.data?.datasets || [];
+      
+      if (Array.isArray(datasetsArray)) {
+        setDatasets(datasetsArray);
       } else {
-        console.warn('Datasets data is not an array:', result.data);
+        console.warn('Invalid datasets data structure:', result.data);
         setDatasets([]);
       }
     } catch (error) {

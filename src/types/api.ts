@@ -1,8 +1,12 @@
 
 interface ApiResponse<T = any> {
-  status: 'success' | 'error';
+  status?: string;
   message?: string;
-  data: T;
+  data: {
+    datasets?: T[];
+    experiments?: T[];
+    comparisons?: T[];
+  } | T;
 }
 
 interface ExperimentStatusResponse {

@@ -43,10 +43,12 @@ const ComparisonsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Comparison[]>(response);
-      if (Array.isArray(result.data)) {
-        setComparisons(result.data);
+      const comparisonsArray = result.data?.comparisons || [];
+      
+      if (Array.isArray(comparisonsArray)) {
+        setComparisons(comparisonsArray);
       } else {
-        console.warn('Comparisons data is not an array:', result.data);
+        console.warn('Invalid comparisons data structure:', result.data);
         setComparisons([]);
       }
     } catch (error) {

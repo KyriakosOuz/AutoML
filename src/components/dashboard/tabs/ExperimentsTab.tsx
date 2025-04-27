@@ -53,10 +53,12 @@ const ExperimentsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Experiment[]>(response);
-      if (Array.isArray(result.data)) {
-        setExperiments(result.data);
+      const experimentsArray = result.data?.experiments || [];
+      
+      if (Array.isArray(experimentsArray)) {
+        setExperiments(experimentsArray);
       } else {
-        console.warn('Experiments data is not an array:', result.data);
+        console.warn('Invalid experiments data structure:', result.data);
         setExperiments([]);
       }
     } catch (error) {
