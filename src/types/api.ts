@@ -13,9 +13,24 @@ interface ExperimentStatusResponse {
   hasTrainingResults: boolean;
 }
 
-// Add more specific response types for the different endpoints
+interface Dataset {
+  id: string;
+  dataset_name: string;
+  created_at: string;
+  has_raw: boolean;
+  has_cleaned: boolean;
+  has_final: boolean;
+  has_processed: boolean;
+}
+
+interface DatasetPreview {
+  stage: 'raw' | 'cleaned' | 'final' | 'processed';
+  preview: Record<string, any>[];
+  columns: string[];
+}
+
 interface DatasetsResponse {
-  datasets: Array<any>;
+  datasets: Dataset[];
 }
 
 interface ExperimentsResponse {
@@ -29,6 +44,8 @@ interface ComparisonsResponse {
 export type { 
   ApiResponse, 
   ExperimentStatusResponse,
+  Dataset,
+  DatasetPreview,
   DatasetsResponse,
   ExperimentsResponse,
   ComparisonsResponse

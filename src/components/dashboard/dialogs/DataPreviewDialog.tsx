@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { API_BASE_URL } from '@/lib/constants';
 import { handleApiResponse, getAuthHeaders } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Download } from 'lucide-react';
+import { DatasetPreview } from '@/types/api';
 
 interface DataPreviewDialogProps {
   datasetId: string;
@@ -15,12 +16,6 @@ interface DataPreviewDialogProps {
   stage: 'raw' | 'cleaned' | 'final' | 'processed';
   open: boolean;
   onClose: () => void;
-}
-
-interface DataPreview {
-  columns: string[];
-  data: Record<string, any>[];
-  file_url?: string;
 }
 
 const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
@@ -31,7 +26,7 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
   onClose
 }) => {
   const [stage, setStage] = useState<'raw' | 'cleaned' | 'final' | 'processed'>(initialStage);
-  const [preview, setPreview] = useState<DataPreview | null>(null);
+  const [preview, setPreview] = useState<DatasetPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -52,23 +47,16 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
       return;
     }
     
-    console.log(`Fetching ${stage} preview for dataset ID:`, datasetId);
-    
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/dataset-management/preview-dataset/${datasetId}?stage=${stage}`, {
-        method: 'GET',
-        headers
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/dataset-management/preview-dataset/${datasetId}?stage=${stage}`,
+        { headers }
+      );
       
-      const result = await handleApiResponse<DataPreview>(response);
-      
-      if (result.data) {
-        setPreview(result.data as DataPreview);
-      } else {
-        setPreview(result as DataPreview);
-      }
+      const result = await handleApiResponse(response);
+      setPreview(result.data);
     } catch (error) {
       console.error('Error fetching dataset preview:', error);
       toast({
@@ -112,10 +100,8 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
             </div>
-          ) : !preview || !preview.columns || !preview.data ? (
+          ) : !preview || !preview.preview || preview.preview.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               No preview available for this stage.
             </div>
@@ -129,7 +115,8 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {preview.data.map((row, rowIdx) => (
+                {/* Show only first 10 rows */}
+                {preview.preview.slice(0, 10).map((row, rowIdx) => (
                   <TableRow key={rowIdx}>
                     {preview.columns.map((column, colIdx) => (
                       <TableCell key={`${rowIdx}-${colIdx}`} className="truncate max-w-[200px]">
@@ -144,23 +131,6 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
         </div>
         
         <DialogFooter className="pt-4">
-          {preview && preview.file_url && (
-            <Button 
-              variant="outline" 
-              asChild
-              className="mr-auto"
-            >
-              <a 
-                href={preview.file_url} 
-                download 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download {stage.charAt(0).toUpperCase() + stage.slice(1)} Data
-              </a>
-            </Button>
-          )}
           <Button onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>

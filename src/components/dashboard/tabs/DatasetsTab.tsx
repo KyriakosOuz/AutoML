@@ -6,34 +6,18 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Download, Trash2 } from 'lucide-react';
+import { Eye, Download, Trash2, Check } from 'lucide-react';
 import { handleApiResponse, getAuthHeaders } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import DatasetsEmptyState from '../empty-states/DatasetsEmptyState';
 import DataPreviewDialog from '../dialogs/DataPreviewDialog';
-
-interface Dataset {
-  id: string;
-  name: string;
-  created_at: string;
-  file_size: number;
-  num_rows?: number;
-  num_columns?: number;
-  file_url?: string;
-  cleaned_file_url?: string;
-  final_file_url?: string;
-  processed_file_url?: string;
-}
-
-interface DatasetsResponse {
-  datasets: Dataset[];
-}
+import { Badge } from '@/components/ui/badge';
+import { Dataset } from '@/types/api';
 
 const DatasetsTab: React.FC = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
-  const [previewStage, setPreviewStage] = useState<'raw' | 'cleaned' | 'final' | 'processed'>('raw');
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
 
@@ -50,13 +34,13 @@ const DatasetsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse<DatasetsResponse>(response);
-      const datasetsArray = result.data?.datasets || [];
+      const result = await handleApiResponse(response);
       
-      if (Array.isArray(datasetsArray)) {
-        setDatasets(datasetsArray);
+      if (Array.isArray(result.datasets)) {
+        // Only show first 100 datasets
+        setDatasets(result.datasets.slice(0, 100));
       } else {
-        console.warn('Invalid datasets data structure:', result.data);
+        console.warn('Invalid datasets data structure:', result);
         setDatasets([]);
       }
     } catch (error) {
@@ -85,7 +69,7 @@ const DatasetsTab: React.FC = () => {
         title: 'Dataset deleted',
         description: 'The dataset has been successfully deleted'
       });
-      fetchDatasets(); // Refresh list
+      fetchDatasets();
     } catch (error) {
       console.error('Error deleting dataset:', error);
       toast({
@@ -94,30 +78,6 @@ const DatasetsTab: React.FC = () => {
         variant: 'destructive'
       });
     }
-  };
-
-  const openPreview = (dataset: Dataset, stage: 'raw' | 'cleaned' | 'final' | 'processed') => {
-    setSelectedDataset(dataset);
-    setPreviewStage(stage);
-    setShowPreview(true);
-  };
-
-  const getDownloadUrl = (dataset: Dataset, stage: 'raw' | 'cleaned' | 'final' | 'processed') => {
-    switch (stage) {
-      case 'raw': return dataset.file_url;
-      case 'cleaned': return dataset.cleaned_file_url;
-      case 'final': return dataset.final_file_url;
-      case 'processed': return dataset.processed_file_url;
-      default: return dataset.file_url;
-    }
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'N/A';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    if (bytes === 0) return '0 Byte';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -151,40 +111,63 @@ const DatasetsTab: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Dataset Name</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Rows</TableHead>
-              <TableHead>Columns</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {datasets.map((dataset) => (
               <TableRow key={dataset.id}>
-                <TableCell className="font-medium">{dataset.name}</TableCell>
+                <TableCell className="font-medium">{dataset.dataset_name}</TableCell>
                 <TableCell>{formatDate(dataset.created_at)}</TableCell>
-                <TableCell>{formatFileSize(dataset.file_size)}</TableCell>
-                <TableCell>{dataset.num_rows ?? 'N/A'}</TableCell>
-                <TableCell>{dataset.num_columns ?? 'N/A'}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    {dataset.has_raw && (
+                      <Badge variant="secondary">Raw</Badge>
+                    )}
+                    {dataset.has_cleaned && (
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        <Check className="h-3 w-3 mr-1" />
+                        Cleaned
+                      </Badge>
+                    )}
+                    {dataset.has_final && (
+                      <Badge variant="outline" className="bg-green-100 text-green-800">
+                        <Check className="h-3 w-3 mr-1" />
+                        Selected
+                      </Badge>
+                    )}
+                    {dataset.has_processed && (
+                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                        <Check className="h-3 w-3 mr-1" />
+                        Processed
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => openPreview(dataset, 'raw')}
+                      onClick={() => {
+                        setSelectedDataset(dataset);
+                        setShowPreview(true);
+                      }}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
                     
-                    {dataset.file_url && (
+                    {dataset.has_raw && (
                       <Button
                         variant="outline"
                         size="sm"
                         asChild
                       >
                         <a 
-                          href={dataset.file_url} 
+                          href={`${API_BASE_URL}/dataset-management/download-dataset/${dataset.id}`} 
                           download
                           target="_blank"
                           rel="noopener noreferrer"
@@ -204,7 +187,7 @@ const DatasetsTab: React.FC = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Dataset</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete "{dataset.name}"? This action cannot be undone.
+                            Are you sure you want to delete "{dataset.dataset_name}"? This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -229,8 +212,8 @@ const DatasetsTab: React.FC = () => {
       {showPreview && selectedDataset && (
         <DataPreviewDialog 
           datasetId={selectedDataset.id}
-          datasetName={selectedDataset.name}
-          stage={previewStage}
+          datasetName={selectedDataset.dataset_name}
+          stage="raw"
           open={showPreview}
           onClose={() => setShowPreview(false)}
         />
