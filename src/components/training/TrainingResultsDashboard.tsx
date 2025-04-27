@@ -3,8 +3,9 @@ import React from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, Award } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Award, PieChart } from 'lucide-react';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
+import { Link } from 'react-router-dom';
 
 interface TrainingResultsDashboardProps {
   onReset: () => void;
@@ -65,11 +66,28 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
   }
 
   return (
-    <ExperimentResultsContainer 
-      experimentId={activeExperimentId}
-      status={experimentStatus}
-      onReset={onReset}
-    />
+    <div className="space-y-4">
+      <ExperimentResultsContainer 
+        experimentId={activeExperimentId}
+        status={experimentStatus}
+        onReset={onReset}
+      />
+      
+      {experimentStatus === 'success' && (
+        <div className="flex justify-end mt-4">
+          <Button 
+            asChild
+            className="bg-white text-black border border-black hover:bg-black hover:text-white"
+            size="lg"
+          >
+            <Link to="/dashboard">
+              <PieChart className="h-4 w-4 mr-2" /> 
+              Go to Dashboard
+            </Link>
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
