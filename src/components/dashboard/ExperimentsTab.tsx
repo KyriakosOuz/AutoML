@@ -1,74 +1,61 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart2, Eye, FileText, Plus, RefreshCw, Trash2, Combine } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Eye, 
+  Trash2, 
+  BarChart4, 
+  AlertCircle
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import ExperimentResults from '@/components/results/ExperimentResults';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface Experiment {
-  id: string;
-  experiment_name: string;
-  created_at: string;
-  task_type: string;
-  algorithm_choice: string;
-  automl_engine: string;
-  auto_tune: boolean;
-  status: 'completed' | 'running' | 'failed';
-  error_message: string | null;
-  dataset_name: string;
-  model_file_url: string;
-  report_file_url: string;
-  metrics: {
-    recall?: number;
-    accuracy?: number;
-    f1_score?: number;
-    precision?: number;
-    [key: string]: number | undefined;
-  };
-}
-
-interface ExperimentsResponse {
-  results: Experiment[];
-}
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import ExperimentResults from '@/components/experiments/ExperimentResults';
+import type { Experiment } from '@/types/experiments';
 
 const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedExperimentId, setSelectedExperimentId] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
+  const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
+  const [viewingExperiment, setViewingExperiment] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchExperiments = async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
+    
     try {
-      const response = await fetch('/experiments/search-experiments/');
-      if (!response.ok) {
-        throw new Error('Failed to fetch experiments');
-      }
-      const data = await response.json();
-      if (data?.data?.results) {
-        setExperiments(data.data.results);
-      } else {
-        setExperiments([]);
-      }
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/experiments/search-experiments/`, {
+        headers
+      });
+      
+      const result = await handleApiResponse(response);
+      setExperiments(result.data.results || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching experiments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load experiments');
       toast({
         title: "Error",
-        description: "Failed to load experiments",
+        description: "Failed to load experiments. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -76,64 +63,37 @@ const ExperimentsTab: React.FC = () => {
     fetchExperiments();
   }, []);
 
-  const handleViewExperiment = (id: string) => {
-    setSelectedExperimentId(id);
-    setIsDialogOpen(true);
+  const handleViewExperiment = (experimentId: string) => {
+    setViewingExperiment(experimentId);
+    setDialogOpen(true);
   };
 
-  const handleAddToComparison = (id: string) => {
-    if (selectedForComparison.includes(id)) {
-      setSelectedForComparison(selectedForComparison.filter(expId => expId !== id));
-      toast({
-        title: "Removed from comparison",
-        description: "Experiment removed from comparison list",
-      });
-    } else {
-      setSelectedForComparison([...selectedForComparison, id]);
-      toast({
-        title: "Added to comparison",
-        description: "Experiment added to comparison list",
-      });
-    }
-  };
-
-  const handleCompare = async () => {
-    if (selectedForComparison.length < 2) {
-      toast({
-        title: "Cannot compare",
-        description: "You must select at least 2 experiments",
-        variant: "destructive",
-      });
+  const handleDeleteExperiment = async (experimentId: string) => {
+    if (!confirm('Are you sure you want to delete this experiment?')) {
       return;
     }
-
+    
     try {
-      const formData = new FormData();
-      selectedForComparison.forEach(id => {
-        formData.append('experiment_ids', id);
-      });
-
-      const response = await fetch('/comparisons/compare/', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to compare experiments');
-      }
-
-      toast({
-        title: "Comparison successful",
-        description: "Your experiments have been compared",
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/experiments/delete-experiment/${experimentId}`, {
+        method: 'DELETE',
+        headers
       });
       
-      console.log("Comparison results:", data);
+      await handleApiResponse(response);
+      
+      setSelectedExperiments(prev => prev.filter(id => id !== experimentId));
+      setExperiments(prev => prev.filter(exp => exp.id !== experimentId));
+      
+      toast({
+        title: "Success",
+        description: "Experiment deleted successfully",
+      });
     } catch (err) {
+      console.error('Error deleting experiment:', err);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to compare experiments',
+        description: "Failed to delete experiment. Please try again.",
         variant: "destructive",
       });
     }
@@ -141,38 +101,40 @@ const ExperimentsTab: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
+      return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
     } catch (e) {
       return dateString;
     }
   };
 
-  if (isLoading) {
+  const formatTaskType = (type: string) => {
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  if (loading && experiments.length === 0) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin">
-            <RefreshCw className="h-12 w-12 text-gray-400 mb-4" />
+      <Card className="w-full">
+        <CardContent className="flex justify-center items-center py-12">
+          <div className="animate-spin mr-2">
+            <BarChart4 className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium mb-2">Loading Experiments</h3>
-          <p className="text-center text-gray-500 mb-4 max-w-md">
-            Retrieving your machine learning experiments...
-          </p>
+          <div className="text-lg font-medium">Loading experiments...</div>
         </CardContent>
       </Card>
     );
   }
 
-  if (error) {
+  if (error && experiments.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="w-full">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-          <Button onClick={fetchExperiments}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-          </Button>
+          <AlertCircle className="h-8 w-8 text-red-400 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Error Loading Experiments</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Button onClick={fetchExperiments}>Try Again</Button>
         </CardContent>
       </Card>
     );
@@ -180,15 +142,15 @@ const ExperimentsTab: React.FC = () => {
 
   if (experiments.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="w-full">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <BarChart2 className="h-12 w-12 text-gray-400 mb-4" />
+          <BarChart4 className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">No Experiments Yet</h3>
-          <p className="text-center text-gray-500 mb-4 max-w-md">
-            You haven't created any machine learning experiments yet. Start your first training to see results here.
+          <p className="text-gray-500 max-w-md text-center mb-4">
+            You haven't created any machine learning experiments yet. Start training models to see them here.
           </p>
           <Button asChild>
-            <Link to="/training">Start New Training</Link>
+            <a href="/training">Start New Training</a>
           </Button>
         </CardContent>
       </Card>
@@ -196,134 +158,67 @@ const ExperimentsTab: React.FC = () => {
   }
 
   return (
-    <>
+    <div className="space-y-4">
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Your Experiments</CardTitle>
-            <div className="flex items-center gap-2">
-              {selectedForComparison.length > 0 && (
-                <Badge className="mr-2" variant="outline">
-                  {selectedForComparison.length} Experiment{selectedForComparison.length > 1 ? 's' : ''} Selected
-                </Badge>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCompare}
-                disabled={selectedForComparison.length < 2}
-              >
-                <Combine className="h-4 w-4 mr-2" />
-                Compare
-              </Button>
-              <Button asChild variant="default" size="sm">
-                <Link to="/training">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Experiment
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Experiment Name</TableHead>
-                  <TableHead>Date Created</TableHead>
-                  <TableHead>Task Type</TableHead>
-                  <TableHead>Algorithm</TableHead>
-                  <TableHead>Engine</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Metrics</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {experiments.map((experiment) => (
-                  <TableRow key={experiment.id}>
-                    <TableCell className="font-medium">{experiment.experiment_name}</TableCell>
-                    <TableCell>{formatDate(experiment.created_at)}</TableCell>
-                    <TableCell>{experiment.task_type.replace('_', ' ')}</TableCell>
-                    <TableCell>{experiment.algorithm_choice}</TableCell>
-                    <TableCell>{experiment.automl_engine}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          experiment.status === 'completed' ? 'default' : 
-                          experiment.status === 'running' ? 'outline' : 
-                          'destructive'
-                        }
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Experiment Name</TableHead>
+                <TableHead>Date Created</TableHead>
+                <TableHead>Task Type</TableHead>
+                <TableHead>Algorithm</TableHead>
+                <TableHead>Engine</TableHead>
+                <TableHead>Dataset</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {experiments.map((experiment) => (
+                <TableRow key={experiment.id}>
+                  <TableCell className="font-medium">{experiment.experiment_name}</TableCell>
+                  <TableCell>{formatDate(experiment.created_at)}</TableCell>
+                  <TableCell>{formatTaskType(experiment.task_type)}</TableCell>
+                  <TableCell>{experiment.algorithm_choice}</TableCell>
+                  <TableCell>{experiment.automl_engine}</TableCell>
+                  <TableCell>{experiment.dataset_name}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewExperiment(experiment.id)}
                       >
-                        {experiment.status.charAt(0).toUpperCase() + experiment.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {experiment.metrics && (
-                        <div className="flex flex-col gap-1">
-                          {experiment.metrics.accuracy !== undefined && (
-                            <span className="text-xs">
-                              Accuracy: {(experiment.metrics.accuracy * 100).toFixed(2)}%
-                            </span>
-                          )}
-                          {experiment.metrics.f1_score !== undefined && (
-                            <span className="text-xs">
-                              F1: {(experiment.metrics.f1_score * 100).toFixed(2)}%
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleViewExperiment(experiment.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant={selectedForComparison.includes(experiment.id) ? "default" : "ghost"} 
-                          size="sm" 
-                          onClick={() => handleAddToComparison(experiment.id)}
-                        >
-                          <Combine className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteExperiment(experiment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Experiment Results</DialogTitle>
-            <DialogDescription>
-              View detailed metrics and visualizations for this experiment
-            </DialogDescription>
-          </DialogHeader>
-          {selectedExperimentId && (
-            <div className="mt-4">
-              <ExperimentResults 
-                experimentId={selectedExperimentId} 
-                status="completed"
-                onReset={() => setIsDialogOpen(false)} 
-              />
-            </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          {viewingExperiment && (
+            <ExperimentResults
+              experimentId={viewingExperiment}
+              status="completed"
+              onReset={() => setDialogOpen(false)}
+            />
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 

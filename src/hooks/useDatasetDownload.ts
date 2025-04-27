@@ -39,7 +39,9 @@ export const useDatasetDownload = () => {
       document.body.removeChild(link);
       
       // Clean up the blob URL
-      window.URL.revokeObjectURL(blobUrl);
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
 
       toast({
         title: "Download Started",
