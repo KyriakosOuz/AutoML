@@ -67,21 +67,33 @@ const MainHeader = () => {
             className="w-full max-w-md"
           >
             <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
-              <TabsTrigger value="dashboard" asChild className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger 
+                value="dashboard" 
+                asChild 
+                className="data-[state=active]:bg-black data-[state=active]:text-white"
+              >
                 <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
                   <PieChart className="h-4 w-4" />
                   <span className="hidden sm:inline">Dashboard</span>
                 </Link>
               </TabsTrigger>
               
-              <TabsTrigger value="dataset" asChild className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger 
+                value="dataset" 
+                asChild 
+                className="data-[state=active]:bg-black data-[state=active]:text-white"
+              >
                 <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
                   <Database className="h-4 w-4" />
                   <span className="hidden sm:inline">Dataset</span>
                 </Link>
               </TabsTrigger>
               
-              <TabsTrigger value="training" asChild className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger 
+                value="training" 
+                asChild 
+                className="data-[state=active]:bg-black data-[state=active]:text-white"
+              >
                 <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
                   <BarChart2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Training</span>

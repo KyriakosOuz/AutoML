@@ -18,14 +18,23 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="h-12 bg-black text-white">
-          <TabsTrigger value="datasets" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
+          <TabsTrigger 
+            value="datasets" 
+            className="data-[state=active]:bg-black data-[state=active]:text-white"
+          >
             Datasets
           </TabsTrigger>
-          <TabsTrigger value="experiments" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="experiments" 
+            className="data-[state=active]:bg-black data-[state=active]:text-white"
+          >
             Experiments
           </TabsTrigger>
-          <TabsTrigger value="comparisons" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="comparisons" 
+            className="data-[state=active]:bg-black data-[state=active]:text-white"
+          >
             Comparisons
           </TabsTrigger>
         </TabsList>
