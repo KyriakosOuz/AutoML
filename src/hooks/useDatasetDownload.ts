@@ -2,6 +2,12 @@
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { ApiResponse } from '@/types/api';
+
+// Define the expected response type
+interface DownloadResponse {
+  download_url: string;
+}
 
 export const useDatasetDownload = () => {
   const { toast } = useToast();
@@ -14,8 +20,8 @@ export const useDatasetDownload = () => {
         headers
       });
       
-      const result = await handleApiResponse(response);
-      const downloadUrl = result.download_url;
+      const result = await handleApiResponse<DownloadResponse>(response);
+      const downloadUrl = result.data.download_url;
 
       if (!downloadUrl) {
         throw new Error('No download URL received');
