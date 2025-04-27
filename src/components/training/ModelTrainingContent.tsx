@@ -5,10 +5,11 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, ArrowRight } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import { useToast } from '@/hooks/use-toast';
 import DynamicPredictionForm from './DynamicPredictionForm';
+import { useNavigate } from 'react-router-dom';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -18,11 +19,12 @@ const ModelTrainingContent: React.FC = () => {
     activeExperimentId,
     experimentStatus,
   } = useTraining();
+  const navigate = useNavigate();
 
-  // Show results and predict tabs only when experiment is completed
-  const showResultsAndPredict = experimentStatus === 'completed' && activeExperimentId;
+  // Show results and predict tabs when experiment is completed or successful
+  const showResultsAndPredict = (experimentStatus === 'completed' || experimentStatus === 'success') && activeExperimentId;
 
-  // If current tab is predict but experiment is not completed, switch to automl
+  // If current tab is predict but experiment is not completed/successful, switch to automl
   useEffect(() => {
     if (activeTab === 'predict' && !showResultsAndPredict) {
       setActiveTab('automl');
@@ -32,6 +34,10 @@ const ModelTrainingContent: React.FC = () => {
   const handleReset = () => {
     resetTrainingState();
     setActiveTab('automl');
+  };
+
+  const handleGotoDashboard = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -65,7 +71,14 @@ const ModelTrainingContent: React.FC = () => {
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
-            <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+            <div className="space-y-4">
+              <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+              <div className="flex justify-end">
+                <Button onClick={handleGotoDashboard} className="flex items-center gap-2">
+                  Go to Dashboard <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Results Available</h3>
@@ -74,11 +87,17 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
-          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
-            <DynamicPredictionForm experimentId={activeExperimentId} />
+            <div className="space-y-4">
+              <DynamicPredictionForm experimentId={activeExperimentId} />
+              <div className="flex justify-end">
+                <Button onClick={handleGotoDashboard} className="flex items-center gap-2">
+                  Go to Dashboard <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Model Available</h3>
