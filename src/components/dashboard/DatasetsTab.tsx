@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
@@ -88,12 +89,20 @@ const DatasetsTab: React.FC = () => {
     
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`/dataset-management/preview-dataset/${dataset.id}?stage=${stage}`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/preview-dataset/${dataset.id}?stage=${stage}`, {
         headers
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Preview error response:', errorText);
         throw new Error(`Failed to load ${stage} dataset preview`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Expected JSON but received:', contentType);
+        throw new Error('Server returned invalid content type. Expected JSON.');
       }
       
       const data = await response.json();
@@ -110,35 +119,9 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  // Handle download dataset
-  const handleDownloadDataset = async (dataset: Dataset, stage: string) => {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/dataset-management/download/${dataset.id}?stage=${stage}`, {
-        headers
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get download URL for ${stage} dataset`);
-      }
-      
-      const data = await response.json();
-      
-      // Open download URL in new tab or trigger browser download
-      window.open(data.data.download_url, '_blank');
-      
-      toast({
-        title: "Download Started",
-        description: `${dataset.dataset_name} (${stage}) is being downloaded`,
-      });
-    } catch (error) {
-      console.error('Error downloading dataset:', error);
-      toast({
-        title: "Download Failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
-      });
-    }
+  // Generate download URL for dataset
+  const getDownloadUrl = (dataset: Dataset, stage: string) => {
+    return `${API_BASE_URL}/dataset-management/download/${dataset.id}?stage=${stage}`;
   };
 
   // Handle delete dataset
@@ -152,7 +135,7 @@ const DatasetsTab: React.FC = () => {
     
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`/dataset-management/delete-dataset/${deleteTargetId}`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/delete-dataset/${deleteTargetId}`, {
         method: 'DELETE',
         headers
       });
@@ -207,15 +190,33 @@ const DatasetsTab: React.FC = () => {
         >
           <Eye className="h-4 w-4" />
         </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => handleDownloadDataset(dataset, stage)}
-          disabled={!isAvailable}
-          className={!isAvailable ? "opacity-50 cursor-not-allowed" : ""}
-        >
-          <Download className="h-4 w-4" />
-        </Button>
+        {isAvailable && (
+          <a 
+            href={getDownloadUrl(dataset, stage)}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+          >
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="cursor-pointer"
+              type="button"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </a>
+        )}
+        {!isAvailable && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled
+            className="opacity-50 cursor-not-allowed"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     );
   };
