@@ -36,9 +36,9 @@ const DatasetsTab: React.FC = () => {
       
       const result = await handleApiResponse<DatasetsResponse>(response);
       
-      if (result?.data?.datasets) {
+      if (result?.datasets) {
         // Only show first 100 datasets
-        setDatasets(result.data.datasets.slice(0, 100));
+        setDatasets(result.datasets.slice(0, 100));
       } else {
         console.warn('Invalid or empty datasets response:', result);
         setDatasets([]);

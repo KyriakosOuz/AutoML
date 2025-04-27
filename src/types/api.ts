@@ -29,11 +29,9 @@ interface DatasetPreview {
 }
 
 interface DatasetsResponse {
-  status: string;
-  message: string;
-  data: {
-    datasets: Dataset[];
-  };
+  status?: string;
+  message?: string;
+  datasets: Dataset[];
 }
 
 interface ExperimentsResponse {
