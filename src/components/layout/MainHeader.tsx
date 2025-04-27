@@ -64,11 +64,11 @@ const MainHeader = () => {
             } 
             className="w-full max-w-md"
           >
-            <TabsList className="grid w-full grid-cols-3 h-10 bg-gray-100">
+            <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
               <TabsTrigger 
                 value="dashboard" 
                 asChild 
-                className="rounded-none shadow-none bg-gray-100 text-gray-700 data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
                   <PieChart className="h-4 w-4" />
@@ -79,7 +79,7 @@ const MainHeader = () => {
               <TabsTrigger 
                 value="dataset" 
                 asChild 
-                className="rounded-none shadow-none bg-gray-100 text-gray-700 data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
                   <Database className="h-4 w-4" />
@@ -90,7 +90,7 @@ const MainHeader = () => {
               <TabsTrigger 
                 value="training" 
                 asChild 
-                className="rounded-none shadow-none bg-gray-100 text-gray-700 data-[state=active]:bg-black data-[state=active]:text-white"
+                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
                   <BarChart2 className="h-4 w-4" />
