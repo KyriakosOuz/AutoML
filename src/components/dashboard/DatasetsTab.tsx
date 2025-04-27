@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
+import { useDatasetDownload } from '@/hooks/useDatasetDownload';
 import { 
   Table, 
   TableBody, 
@@ -61,6 +62,7 @@ const DatasetsTab: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { downloadDataset } = useDatasetDownload();
 
   const { data: datasetsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['datasets'],
@@ -182,33 +184,15 @@ const DatasetsTab: React.FC = () => {
         >
           <Eye className="h-4 w-4" />
         </Button>
-        {isAvailable && (
-          <a 
-            href={getDownloadUrl(dataset, stage)}
-            target="_blank"
-            rel="noopener noreferrer"
-            download
-          >
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="cursor-pointer"
-              type="button"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </a>
-        )}
-        {!isAvailable && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            disabled
-            className="opacity-50 cursor-not-allowed"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        )}
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => downloadDataset(dataset.id, stage, `${dataset.dataset_name}_${stage}.csv`)}
+          disabled={!isAvailable}
+          className={!isAvailable ? "opacity-50 cursor-not-allowed" : ""}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
       </div>
     );
   };
@@ -356,17 +340,17 @@ const DatasetsTab: React.FC = () => {
           <DialogFooter className="sm:justify-between">
             <div className="flex items-center">
               {selectedDataset && previewStage && (
-                <a 
-                  href={getDownloadUrl(selectedDataset, previewStage)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
+                <Button 
+                  variant="outline"
+                  onClick={() => downloadDataset(
+                    selectedDataset.id, 
+                    previewStage, 
+                    `${selectedDataset.dataset_name}_${previewStage}.csv`
+                  )}
                 >
-                  <Button variant="outline">
-                    <DownloadCloud className="mr-2 h-4 w-4" />
-                    Download Full Dataset
-                  </Button>
-                </a>
+                  <DownloadCloud className="mr-2 h-4 w-4" />
+                  Download Full Dataset
+                </Button>
               )}
             </div>
             <Button onClick={closePreview}>Close</Button>
