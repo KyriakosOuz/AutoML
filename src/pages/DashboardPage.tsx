@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import DashboardTabNavigation from '@/components/dashboard/DashboardTabNavigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DatasetsTab from '@/components/dashboard/DatasetsTab';
 import ExperimentsTab from '@/components/dashboard/ExperimentsTab';
 import ComparisonsTab from '@/components/dashboard/ComparisonsTab';
@@ -19,7 +18,26 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <DashboardTabNavigation />
+        <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
+          <TabsTrigger 
+            value="datasets" 
+            className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+          >
+            Datasets
+          </TabsTrigger>
+          <TabsTrigger 
+            value="experiments" 
+            className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+          >
+            Experiments
+          </TabsTrigger>
+          <TabsTrigger 
+            value="comparisons" 
+            className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+          >
+            Comparisons
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="datasets" className="pt-4">
           <DatasetsTab />

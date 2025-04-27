@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -40,17 +39,16 @@ const ModelTrainingContent: React.FC = () => {
       <DatasetSummary />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between mb-4">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-            <TabsTrigger value="automl" className="data-[state=active]:bg-black data-[state=active]:text-white">AutoML</TabsTrigger>
-            <TabsTrigger value="custom" className="data-[state=active]:bg-black data-[state=active]:text-white">Custom Training</TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="automl">AutoML</TabsTrigger>
+            <TabsTrigger value="custom">Custom Training</TabsTrigger>
             {showResultsAndPredict && (
               <>
-                <TabsTrigger value="results" className="data-[state=active]:bg-black data-[state=active]:text-white">Results</TabsTrigger>
-                <TabsTrigger value="predict" className="data-[state=active]:bg-black data-[state=active]:text-white">Predict</TabsTrigger>
+                <TabsTrigger value="results">Results</TabsTrigger>
+                <TabsTrigger value="predict">Predict</TabsTrigger>
               </>
             )}
           </TabsList>
-          
           {(activeExperimentId || showResultsAndPredict) && (
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RefreshCcw className="h-4 w-4 mr-2" />
@@ -96,4 +94,3 @@ const ModelTrainingContent: React.FC = () => {
 };
 
 export default ModelTrainingContent;
-
