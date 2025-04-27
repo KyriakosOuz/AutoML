@@ -117,10 +117,6 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  const getDownloadUrl = (dataset: Dataset, stage: string) => {
-    return `${API_BASE_URL}/dataset-management/download/${dataset.id}?stage=${stage}`;
-  };
-
   const openDeleteDialog = (datasetId: string) => {
     setDeleteTargetId(datasetId);
     setIsDeleteDialogOpen(true);

@@ -21,12 +21,14 @@ export const useDatasetDownload = () => {
       });
       
       const result = await handleApiResponse<DownloadResponse>(response);
-      const downloadUrl = result.data.download_url;
-
-      if (!downloadUrl) {
+      
+      if (!result.data || !result.data.download_url) {
+        console.error('Download error: Missing download URL in response', result);
         throw new Error('No download URL received');
       }
-
+      
+      const downloadUrl = result.data.download_url;
+      
       // Create a temporary link to trigger the download
       const link = document.createElement('a');
       link.href = downloadUrl;
