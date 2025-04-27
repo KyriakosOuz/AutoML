@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
@@ -24,31 +23,42 @@ export const getAuthHeaders = async () => {
   };
 };
 
-// Ensure we only process JSON, handle errors clearly, and log non-JSON responses
+// Enhanced error handling for API responses
 export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
-  const contentType = response.headers.get('content-type') || '';
-  
-  // More strict content-type check to ensure we only process JSON
-  if (!contentType.includes('application/json')) {
-    const text = await response.text();
-    console.error('[API] Non-JSON response:', text);
-    throw new Error('Expected JSON but received non-JSON response');
-  }
-
-  const json = await response.json();
-  
+  // First check if the response is ok
   if (!response.ok) {
-    throw new Error(json.message || 'Request failed');
+    const errorText = await response.text();
+    console.error('[API] Error response:', {
+      status: response.status,
+      text: errorText.substring(0, 200)
+    });
+    
+    // Check if we received an HTML error page
+    if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+      throw new Error('Connection error: The API server might be unavailable. Please try again.');
+    }
+    
+    try {
+      const errorJson = JSON.parse(errorText);
+      throw new Error(errorJson.message || `Request failed: ${response.status}`);
+    } catch (e) {
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
   }
 
-  // If missing the expected fields, still coerce to ApiResponse
-  // This handles inconsistent API responses
-  if (!json.hasOwnProperty('status') || !json.hasOwnProperty('data')) {
-    return {
-      status: 'success',
-      data: json as T
-    };
-  }
+  const contentType = response.headers.get('content-type');
   
-  return json as ApiResponse<T>;
+  // Handle non-JSON responses
+  if (!contentType || !contentType.includes('application/json')) {
+    console.error('[API] Unexpected content type:', contentType);
+    throw new Error('Invalid response: Expected JSON but received different content type');
+  }
+
+  try {
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('[API] JSON parse error:', error);
+    throw new Error('Failed to parse server response');
+  }
 };
