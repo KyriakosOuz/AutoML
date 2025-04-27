@@ -43,7 +43,12 @@ const ComparisonsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Comparison[]>(response);
-      setComparisons(result.data || []);
+      if (Array.isArray(result.data)) {
+        setComparisons(result.data);
+      } else {
+        console.warn('Comparisons data is not an array:', result.data);
+        setComparisons([]);
+      }
     } catch (error) {
       console.error('Error fetching comparisons:', error);
       toast({
@@ -51,6 +56,7 @@ const ComparisonsTab: React.FC = () => {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive'
       });
+      setComparisons([]);
     } finally {
       setLoading(false);
     }

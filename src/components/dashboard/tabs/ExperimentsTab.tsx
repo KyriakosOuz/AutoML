@@ -53,7 +53,12 @@ const ExperimentsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Experiment[]>(response);
-      setExperiments(result.data || []);
+      if (Array.isArray(result.data)) {
+        setExperiments(result.data);
+      } else {
+        console.warn('Experiments data is not an array:', result.data);
+        setExperiments([]);
+      }
     } catch (error) {
       console.error('Error fetching experiments:', error);
       toast({
@@ -61,6 +66,7 @@ const ExperimentsTab: React.FC = () => {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive'
       });
+      setExperiments([]);
     } finally {
       setLoading(false);
     }

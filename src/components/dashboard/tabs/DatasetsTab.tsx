@@ -47,7 +47,12 @@ const DatasetsTab: React.FC = () => {
       });
       
       const result = await handleApiResponse<Dataset[]>(response);
-      setDatasets(result.data || []);
+      if (Array.isArray(result.data)) {
+        setDatasets(result.data);
+      } else {
+        console.warn('Datasets data is not an array:', result.data);
+        setDatasets([]);
+      }
     } catch (error) {
       console.error('Error fetching datasets:', error);
       toast({
@@ -55,6 +60,7 @@ const DatasetsTab: React.FC = () => {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive'
       });
+      setDatasets([]);
     } finally {
       setLoading(false);
     }
