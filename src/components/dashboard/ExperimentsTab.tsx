@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, Loader } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,6 +29,10 @@ interface ExperimentMetrics {
   recall?: number;
   confusion_matrix?: number[][];
   classification_report?: ClassificationReport;
+  r2?: number;
+  mae?: number;
+  mse?: number;
+  rmse?: number;
 }
 
 interface Experiment {
@@ -235,9 +238,9 @@ const ExperimentsTab: React.FC = () => {
     }
   };
 
-  const renderMetricValue = (value: number | undefined) => {
+  const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
     if (typeof value === 'undefined') return 'N/A';
-    return `${(value * 100).toFixed(2)}%`;
+    return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
   const isCompareButtonEnabled = () => {
@@ -402,24 +405,26 @@ const ExperimentsTab: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Info Card */}
+      <Card className="mb-6 bg-muted/50">
+        <CardContent className="py-4">
+          <div className="flex gap-2 text-sm text-muted-foreground">
+            <Info className="h-5 w-5 flex-shrink-0" />
+            <p>
+              Browse and manage your machine learning experiments here. Filter experiments by training method and task type,
+              compare multiple experiments, or view detailed results for each experiment. Click on the view icon to see full metrics,
+              the compare icon to add to comparison, or the delete icon to remove an experiment.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {experiments.length === 0 ? (
         renderEmptyState()
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {trainingMethod !== 'all' && (
-                <Badge className="mr-2">
-                  {trainingMethod === 'automl' ? 'AutoML' : 'Custom Training'}
-                </Badge>
-              )}
-              {taskType !== 'all' && (
-                <Badge variant="outline">
-                  {taskType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </Badge>
-              )}
-              Experiment Results
-            </CardTitle>
+            <CardTitle>Experiment Results</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -429,51 +434,66 @@ const ExperimentsTab: React.FC = () => {
                   <TableHead>Created</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Algorithm</TableHead>
-                  <TableHead>Accuracy</TableHead>
-                  <TableHead>F1 Score</TableHead>
+                  <TableHead>Metrics</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {experiments.map((experiment) => (
-                  <TableRow key={experiment.id}>
-                    <TableCell>{experiment.experiment_name}</TableCell>
-                    <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
-                    <TableCell>{experiment.task_type}</TableCell>
-                    <TableCell>{experiment.algorithm_choice}</TableCell>
-                    <TableCell>{renderMetricValue(experiment.metrics?.accuracy)}</TableCell>
-                    <TableCell>{renderMetricValue(experiment.metrics?.f1_score)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleViewExperiment(experiment.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleAddToComparison(experiment.id)}
-                        >
-                          {selectedExperiments.includes(experiment.id) ? (
-                            <Check className="h-4 w-4" />
+                {experiments.map((experiment) => {
+                  const isRegression = experiment.task_type === 'regression';
+                  return (
+                    <TableRow key={experiment.id}>
+                      <TableCell>{experiment.experiment_name}</TableCell>
+                      <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
+                      <TableCell>{experiment.task_type}</TableCell>
+                      <TableCell>{experiment.algorithm_choice}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {isRegression ? (
+                            <>
+                              <div>R² Score: {renderMetricValue(experiment.metrics?.r2, false)}</div>
+                              <div>MAE: {renderMetricValue(experiment.metrics?.mae, false)}</div>
+                            </>
                           ) : (
-                            <List className="h-4 w-4" />
+                            <>
+                              <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
+                              <div>F1 Score: {renderMetricValue(experiment.metrics?.f1_score)}</div>
+                            </>
                           )}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleDelete(experiment.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewExperiment(experiment.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleAddToComparison(experiment.id)}
+                          >
+                            {selectedExperiments.includes(experiment.id) ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <List className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDelete(experiment.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
