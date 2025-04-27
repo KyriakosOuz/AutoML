@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,10 +24,10 @@ interface ClassificationReport {
 }
 
 interface ExperimentMetrics {
-  accuracy: number;
-  f1_score: number;
-  precision: number;
-  recall: number;
+  accuracy?: number;
+  f1_score?: number;
+  precision?: number;
+  recall?: number;
   confusion_matrix?: number[][];
   classification_report?: ClassificationReport;
 }
