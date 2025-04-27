@@ -12,20 +12,38 @@ import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 
+interface ClassificationReport {
+  [key: string]: {
+    precision: number;
+    recall: number;
+    'f1-score': number;
+    support: number;
+  } | number;
+}
+
+interface ExperimentMetrics {
+  accuracy: number;
+  f1_score: number;
+  precision: number;
+  recall: number;
+  confusion_matrix?: number[][];
+  classification_report?: ClassificationReport;
+}
+
 interface Experiment {
   id: string;
   experiment_name: string;
   created_at: string;
   task_type: string;
   algorithm_choice: string;
-  automl_engine: string;
   status: string;
-  metrics?: {
-    accuracy?: number;
-    f1_score?: number;
-    precision?: number;
-    recall?: number;
-  };
+  metrics: ExperimentMetrics;
+  target_column: string;
+  auto_tune: boolean;
+  dataset_id: string;
+  dataset_filename: string;
+  has_model: boolean;
+  error_message: string | null;
 }
 
 const ExperimentsTab: React.FC = () => {
@@ -51,10 +69,16 @@ const ExperimentsTab: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch experiments');
       
       const data = await response.json();
-      if (data.status === 'success' && data.data.results) {
-        setExperiments(data.data.results);
+      console.log('API Response:', data); // Debug log
+
+      if (data.status === 'success' && data.data.experiments) {
+        setExperiments(data.data.experiments);
+      } else {
+        console.error('Unexpected API response structure:', data);
+        throw new Error('Invalid API response format');
       }
     } catch (err) {
+      console.error('Error fetching experiments:', err);
       setError('Failed to load experiments');
       toast({
         title: "Error",
@@ -262,8 +286,12 @@ const ExperimentsTab: React.FC = () => {
                       >
                         <List className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" onClick={() => handleDelete(experiment.id)} />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDelete(experiment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
