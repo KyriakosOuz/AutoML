@@ -44,6 +44,7 @@ interface Experiment {
   dataset_filename: string;
   has_model: boolean;
   error_message: string | null;
+  automl_engine?: string; // Adding this optional property to fix the error
 }
 
 const ExperimentsTab: React.FC = () => {
@@ -327,7 +328,10 @@ const ExperimentsTab: React.FC = () => {
                   <div className="space-y-1">
                     <p>Task Type: {selectedExperiment.task_type}</p>
                     <p>Algorithm: {selectedExperiment.algorithm_choice}</p>
-                    <p>Engine: {selectedExperiment.automl_engine}</p>
+                    {/* Handle cases where automl_engine might not exist */}
+                    {selectedExperiment.automl_engine && (
+                      <p>Engine: {selectedExperiment.automl_engine}</p>
+                    )}
                   </div>
                 </div>
                 
