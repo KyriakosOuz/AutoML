@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BarChart2, Trash2, Eye, List, Plus } from 'lucide-react';
+import { Trash2, Eye, List, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -109,7 +109,7 @@ const ExperimentsTab: React.FC = () => {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <BarChart2 className="h-12 w-12 text-gray-400 mb-4" />
+          <Eye className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">No Experiments Yet</h3>
           <p className="text-center text-gray-500 mb-4 max-w-md">
             Start training models to see your experiments here. You can compare results and manage your models.
@@ -205,9 +205,11 @@ const ExperimentsTab: React.FC = () => {
         onOpenChange={() => setSelectedExperiment(null)}
       >
         <DialogContent className="sm:max-w-[800px]">
-          <DialogTitle>
-            Experiment Details
-          </DialogTitle>
+          <DialogHeader>
+            <DialogTitle>
+              Experiment Details
+            </DialogTitle>
+          </DialogHeader>
           {selectedExperiment && (
             <div className="grid gap-4">
               <div>
@@ -246,3 +248,4 @@ const ExperimentsTab: React.FC = () => {
 };
 
 export default ExperimentsTab;
+
