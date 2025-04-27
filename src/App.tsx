@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import DatasetPage from "./pages/DatasetPage";
 import ModelTrainingPage from "./pages/ModelTrainingPage";
+import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
@@ -34,7 +35,11 @@ const App = () => (
                 <ModelTrainingPage />
               </ProtectedRoute>
             } />
-            {/* REMOVED: <Route path="/results/:experimentId" ... /> */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
             <Route path="/settings" element={
               <ProtectedRoute>
                 <div>Settings Page (Coming Soon)</div>

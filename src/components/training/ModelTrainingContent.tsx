@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -5,10 +6,11 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, LayoutDashboard } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import { useToast } from '@/hooks/use-toast';
 import DynamicPredictionForm from './DynamicPredictionForm';
+import { Link } from 'react-router-dom';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -65,7 +67,17 @@ const ModelTrainingContent: React.FC = () => {
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
-            <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+            <>
+              <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+              <div className="flex justify-center mt-8">
+                <Button asChild variant="outline">
+                  <Link to="/dashboard?tab=experiments">
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Go to Dashboard
+                  </Link>
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Results Available</h3>
@@ -74,11 +86,20 @@ const ModelTrainingContent: React.FC = () => {
               </p>
             </div>
           )}
-          {/* REMOVED: The Predict content/tab from inside Results tab */}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
-            <DynamicPredictionForm experimentId={activeExperimentId} />
+            <>
+              <DynamicPredictionForm experimentId={activeExperimentId} />
+              <div className="flex justify-center mt-8">
+                <Button asChild variant="outline">
+                  <Link to="/dashboard?tab=experiments">
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Go to Dashboard
+                  </Link>
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Model Available</h3>
