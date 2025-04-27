@@ -2,8 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus } from '@/types/training';
-import { ExperimentStatusResponse } from '@/types/api';
+import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
 
 export interface UseExperimentPollingProps {
@@ -47,34 +46,24 @@ export const useExperimentPolling = ({
     const poller = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
-        console.log('[TrainingContext] Status response:', response);
-        
-        // Handle different response formats to extract the status data
-        let statusData: ExperimentStatusResponse;
-        
-        if (response.data) {
-          statusData = response.data as ExperimentStatusResponse;
-        } else {
-          statusData = response as any as ExperimentStatusResponse;
-        }
-        
-        console.log('[TrainingContext] Status data extracted:', statusData);
+        const data = response.data;
+        console.log('[TrainingContext] Status response data:', data);
 
-        if (statusData.status === 'failed' || !!statusData.error_message) {
+        if (data.status === 'failed' || !!data.error_message) {
           setExperimentStatus('failed');
           stopPolling();
-          onError(statusData.error_message || 'Training failed.');
+          onError(data.error_message || 'Training failed.');
           toast({
             title: "Training Failed",
-            description: statusData.error_message || "An error occurred during training.",
+            description: data.error_message || "An error occurred during training.",
             variant: "destructive"
           });
           return;
         }
-        setExperimentStatus(statusData.status);
+        setExperimentStatus(data.status);
 
         // Stop polling immediately if results are available
-        if (statusData.hasTrainingResults === true) {
+        if (data.hasTrainingResults === true) {
           console.log('[TrainingContext] Results ready — stopping poller');
           clearInterval(poller);
           setPollingInterval(null);

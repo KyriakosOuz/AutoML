@@ -24,38 +24,31 @@ export const getAuthHeaders = async () => {
   };
 };
 
-// Enhanced API response handler with better error handling and flexibility
-export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T> & any> => {
-  // Check if the response is successful
-  if (!response.ok) {
-    const contentType = response.headers.get('content-type') || '';
-    
-    // Try to parse error details
-    if (contentType.includes('application/json')) {
-      const errorJson = await response.json();
-      throw new Error(errorJson.message || errorJson.detail || `Request failed: ${response.status} ${response.statusText}`);
-    } else {
-      const text = await response.text();
-      throw new Error(`Request failed: ${response.status} ${response.statusText} - ${text.substring(0, 200)}`);
-    }
+// Ensure we only process JSON, handle errors clearly, and log non-JSON responses
+export const handleApiResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
+  const contentType = response.headers.get('content-type') || '';
+  
+  // More strict content-type check to ensure we only process JSON
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('[API] Non-JSON response:', text);
+    throw new Error('Expected JSON but received non-JSON response');
   }
 
-  // Handle empty responses
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    console.warn('[API] Non-JSON response:', contentType);
-    return { status: 'success' };
+  const json = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(json.message || 'Request failed');
+  }
+
+  // If missing the expected fields, still coerce to ApiResponse
+  // This handles inconsistent API responses
+  if (!json.hasOwnProperty('status') || !json.hasOwnProperty('data')) {
+    return {
+      status: 'success',
+      data: json as T
+    };
   }
   
-  try {
-    const result = await response.json();
-    console.log('[API] Response received:', result);
-    
-    // Return the full response object to allow access to all properties
-    // This allows components to handle both nested and direct response structures
-    return result;
-  } catch (err) {
-    console.error('[API] Failed to parse JSON response:', err);
-    throw new Error('Invalid JSON response from server');
-  }
+  return json as ApiResponse<T>;
 };
