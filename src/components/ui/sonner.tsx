@@ -21,9 +21,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
-        icons: {
-          success: () => null, // Remove success icon
-        }
+      }}
+      // Override the success icon with null to hide it
+      icons={{
+        success: () => null,
       }}
       {...props}
     />
