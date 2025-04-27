@@ -3,38 +3,27 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  BarChart2, 
-  RefreshCw, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
   Eye, 
-  FileText, 
   Trash2, 
   BarChart4, 
-  Check,
-  AlertCircle,
-  Clock
+  AlertCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import ExperimentResults from '../experiments/ExperimentResults';
-import { ExperimentResults as ExperimentResultsType } from '@/types/training';
-import { format } from 'date-fns';
-
-interface Experiment {
-  experiment_id: string;
-  experiment_name: string;
-  created_at: string;
-  task_type: string;
-  algorithm: string;
-  automl_engine: string;
-  status: 'completed' | 'running' | 'failed';
-  target_column?: string;
-}
+import ExperimentResults from '@/components/experiments/ExperimentResults';
+import type { Experiment } from '@/types/experiments';
 
 const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
@@ -42,9 +31,7 @@ const ExperimentsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
   const [viewingExperiment, setViewingExperiment] = useState<string | null>(null);
-  const [experimentResult, setExperimentResult] = useState<ExperimentResultsType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [loadingResult, setLoadingResult] = useState(false);
   const { toast } = useToast();
 
   const fetchExperiments = async () => {
@@ -57,8 +44,8 @@ const ExperimentsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse<{ experiments: Experiment[] }>(response);
-      setExperiments(result.data.experiments || []);
+      const result = await handleApiResponse(response);
+      setExperiments(result.data.results || []);
     } catch (err) {
       console.error('Error fetching experiments:', err);
       setError(err instanceof Error ? err.message : 'Failed to load experiments');
@@ -76,29 +63,9 @@ const ExperimentsTab: React.FC = () => {
     fetchExperiments();
   }, []);
 
-  const handleViewExperiment = async (experimentId: string) => {
+  const handleViewExperiment = (experimentId: string) => {
     setViewingExperiment(experimentId);
-    setLoadingResult(true);
     setDialogOpen(true);
-    
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/experiments/experiment-results/${experimentId}`, {
-        headers
-      });
-      
-      const result = await handleApiResponse<ExperimentResultsType>(response);
-      setExperimentResult(result.data);
-    } catch (err) {
-      console.error('Error fetching experiment details:', err);
-      toast({
-        title: "Error",
-        description: "Failed to load experiment details. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingResult(false);
-    }
   };
 
   const handleDeleteExperiment = async (experimentId: string) => {
@@ -115,13 +82,8 @@ const ExperimentsTab: React.FC = () => {
       
       await handleApiResponse(response);
       
-      // Remove from selection if selected
-      if (selectedExperiments.includes(experimentId)) {
-        setSelectedExperiments(selectedExperiments.filter(id => id !== experimentId));
-      }
-      
-      // Remove from experiments list
-      setExperiments(experiments.filter(exp => exp.experiment_id !== experimentId));
+      setSelectedExperiments(prev => prev.filter(id => id !== experimentId));
+      setExperiments(prev => prev.filter(exp => exp.id !== experimentId));
       
       toast({
         title: "Success",
@@ -132,68 +94,6 @@ const ExperimentsTab: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to delete experiment. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleToggleSelect = (experimentId: string) => {
-    setSelectedExperiments(prev => 
-      prev.includes(experimentId) 
-        ? prev.filter(id => id !== experimentId) 
-        : [...prev, experimentId]
-    );
-  };
-
-  const handleCompare = async () => {
-    if (selectedExperiments.length < 2) {
-      toast({
-        title: "Error",
-        description: "Please select at least 2 experiments to compare",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Check if all selected experiments have the same task type
-    const selectedExps = experiments.filter(exp => selectedExperiments.includes(exp.experiment_id));
-    const taskTypes = new Set(selectedExps.map(exp => exp.task_type));
-    
-    if (taskTypes.size > 1) {
-      toast({
-        title: "Error",
-        description: "All experiments must have the same task type for comparison",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ experiment_ids: selectedExperiments })
-      });
-      
-      const result = await handleApiResponse(response);
-      
-      // Navigate to comparison result or display it
-      toast({
-        title: "Success",
-        description: "Comparison created successfully",
-      });
-      
-      // Here you might want to navigate to a comparison view
-      // or open a dialog showing the comparison results
-    } catch (err) {
-      console.error('Error comparing experiments:', err);
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to compare experiments",
         variant: "destructive",
       });
     }
@@ -214,45 +114,14 @@ const ExperimentsTab: React.FC = () => {
       .join(' ');
   };
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <Check size={12} className="mr-1" />
-            Completed
-          </Badge>
-        );
-      case 'running':
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <Clock size={12} className="mr-1" />
-            Running
-          </Badge>
-        );
-      case 'failed':
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-            <AlertCircle size={12} className="mr-1" />
-            Failed
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">{status}</Badge>
-        );
-    }
-  };
-
   if (loading && experiments.length === 0) {
     return (
-      <Card className="border">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <RefreshCw className="h-8 w-8 text-gray-400 mb-4 animate-spin" />
-          <h3 className="text-lg font-medium mb-2">Loading Experiments</h3>
-          <p className="text-center text-gray-500 mb-4 max-w-md">
-            Fetching your machine learning experiments...
-          </p>
+      <Card className="w-full">
+        <CardContent className="flex justify-center items-center py-12">
+          <div className="animate-spin mr-2">
+            <BarChart4 className="h-8 w-8 text-gray-400" />
+          </div>
+          <div className="text-lg font-medium">Loading experiments...</div>
         </CardContent>
       </Card>
     );
@@ -260,17 +129,12 @@ const ExperimentsTab: React.FC = () => {
 
   if (error && experiments.length === 0) {
     return (
-      <Card className="border">
+      <Card className="w-full">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-8 w-8 text-red-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">Error Loading Experiments</h3>
-          <p className="text-center text-gray-500 mb-4 max-w-md">
-            {error}
-          </p>
-          <Button onClick={fetchExperiments}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Button onClick={fetchExperiments}>Try Again</Button>
         </CardContent>
       </Card>
     );
@@ -278,15 +142,15 @@ const ExperimentsTab: React.FC = () => {
 
   if (experiments.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="w-full">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <BarChart2 className="h-12 w-12 text-gray-400 mb-4" />
+          <BarChart4 className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">No Experiments Yet</h3>
-          <p className="text-center text-gray-500 mb-4 max-w-md">
+          <p className="text-gray-500 max-w-md text-center mb-4">
             You haven't created any machine learning experiments yet. Start training models to see them here.
           </p>
           <Button asChild>
-            <Link to="/training">Start New Training</Link>
+            <a href="/training">Start New Training</a>
           </Button>
         </CardContent>
       </Card>
@@ -295,80 +159,51 @@ const ExperimentsTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Your Experiments</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchExperiments}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {selectedExperiments.length > 0 && (
-            <Button onClick={handleCompare}>
-              <BarChart4 className="h-4 w-4 mr-2" />
-              Compare ({selectedExperiments.length})
-            </Button>
-          )}
-        </div>
-      </div>
-
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[30px]"></TableHead>
-                  <TableHead>Experiment Name</TableHead>
-                  <TableHead>Date Created</TableHead>
-                  <TableHead>Task Type</TableHead>
-                  <TableHead>Algorithm</TableHead>
-                  <TableHead>Engine</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Experiment Name</TableHead>
+                <TableHead>Date Created</TableHead>
+                <TableHead>Task Type</TableHead>
+                <TableHead>Algorithm</TableHead>
+                <TableHead>Engine</TableHead>
+                <TableHead>Dataset</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {experiments.map((experiment) => (
+                <TableRow key={experiment.id}>
+                  <TableCell className="font-medium">{experiment.experiment_name}</TableCell>
+                  <TableCell>{formatDate(experiment.created_at)}</TableCell>
+                  <TableCell>{formatTaskType(experiment.task_type)}</TableCell>
+                  <TableCell>{experiment.algorithm_choice}</TableCell>
+                  <TableCell>{experiment.automl_engine}</TableCell>
+                  <TableCell>{experiment.dataset_name}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewExperiment(experiment.id)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteExperiment(experiment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {experiments.map((experiment) => (
-                  <TableRow key={experiment.experiment_id}>
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedExperiments.includes(experiment.experiment_id)} 
-                        onCheckedChange={() => handleToggleSelect(experiment.experiment_id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{experiment.experiment_name}</TableCell>
-                    <TableCell>{formatDate(experiment.created_at)}</TableCell>
-                    <TableCell>{formatTaskType(experiment.task_type || '')}</TableCell>
-                    <TableCell>{experiment.algorithm || 'N/A'}</TableCell>
-                    <TableCell>{experiment.automl_engine || 'Custom'}</TableCell>
-                    <TableCell>{renderStatusBadge(experiment.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewExperiment(experiment.experiment_id)}
-                        >
-                          <Eye size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteExperiment(experiment.experiment_id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -377,10 +212,8 @@ const ExperimentsTab: React.FC = () => {
           {viewingExperiment && (
             <ExperimentResults
               experimentId={viewingExperiment}
-              status={loadingResult ? "running" : "completed"}
-              experimentResults={experimentResult}
-              isLoading={loadingResult}
-              error={null}
+              status="completed"
+              onReset={() => setDialogOpen(false)}
             />
           )}
         </DialogContent>
