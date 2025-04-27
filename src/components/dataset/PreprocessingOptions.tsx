@@ -40,6 +40,7 @@ const PreprocessingOptions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Smart logic for numerical features and balancing
   const numericalFeatures = overview?.numerical_features || [];
   
   const hasNumericalToNormalize = useMemo(() => {
@@ -74,10 +75,13 @@ const PreprocessingOptions: React.FC = () => {
         balanceStrategy
       );
       
+      // CRITICAL FIX: Just update the processingStage to 'processed'
+      // This preserves all other state data and prevents tab navigation from breaking
       updateState({
         processingStage: 'processed'
       });
       
+      // Extract message from the appropriate location in the response
       const responseData = response.data || response;
       const message = responseData.message || response.message || 'Data preprocessing completed successfully';
       setSuccess(message);
@@ -112,6 +116,7 @@ const PreprocessingOptions: React.FC = () => {
         
         {success && (
           <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+            <Sparkles className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
         )}
