@@ -1,7 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Table, 
@@ -62,12 +62,12 @@ const DatasetsTab: React.FC = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch datasets
+  // Fetch datasets with updated URL
   const { data: datasetsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['datasets'],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch('/dataset-management/list-datasets/', {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/list-datasets/`, {
         headers
       });
       return handleApiResponse<{ datasets: Dataset[] }>(response);
