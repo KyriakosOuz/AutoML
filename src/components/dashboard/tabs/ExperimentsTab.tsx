@@ -30,6 +30,10 @@ interface Experiment {
   model_file_url?: string;
 }
 
+interface ExperimentsResponse {
+  experiments: Experiment[];
+}
+
 const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +56,7 @@ const ExperimentsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse<Experiment[]>(response);
+      const result = await handleApiResponse<ExperimentsResponse>(response);
       const experimentsArray = result.data?.experiments || [];
       
       if (Array.isArray(experimentsArray)) {

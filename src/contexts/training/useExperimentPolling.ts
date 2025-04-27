@@ -46,24 +46,24 @@ export const useExperimentPolling = ({
     const poller = setInterval(async () => {
       try {
         const response = await checkStatus(experimentId);
-        const data = response.data;
-        console.log('[TrainingContext] Status response data:', data);
+        const statusData = response.data as ExperimentStatusResponse;
+        console.log('[TrainingContext] Status response data:', statusData);
 
-        if (data.status === 'failed' || !!data.error_message) {
+        if (statusData.status === 'failed' || !!statusData.error_message) {
           setExperimentStatus('failed');
           stopPolling();
-          onError(data.error_message || 'Training failed.');
+          onError(statusData.error_message || 'Training failed.');
           toast({
             title: "Training Failed",
-            description: data.error_message || "An error occurred during training.",
+            description: statusData.error_message || "An error occurred during training.",
             variant: "destructive"
           });
           return;
         }
-        setExperimentStatus(data.status);
+        setExperimentStatus(statusData.status);
 
         // Stop polling immediately if results are available
-        if (data.hasTrainingResults === true) {
+        if (statusData.hasTrainingResults === true) {
           console.log('[TrainingContext] Results ready — stopping poller');
           clearInterval(poller);
           setPollingInterval(null);

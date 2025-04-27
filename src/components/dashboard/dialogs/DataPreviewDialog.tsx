@@ -52,7 +52,7 @@ const DataPreviewDialog: React.FC<DataPreviewDialogProps> = ({
       });
       
       const result = await handleApiResponse<DataPreview>(response);
-      setPreview(result.data);
+      setPreview(result.data as DataPreview);
     } catch (error) {
       console.error('Error fetching dataset preview:', error);
       toast({

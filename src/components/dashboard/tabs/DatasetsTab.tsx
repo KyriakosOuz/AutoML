@@ -25,6 +25,10 @@ interface Dataset {
   processed_file_url?: string;
 }
 
+interface DatasetsResponse {
+  datasets: Dataset[];
+}
+
 const DatasetsTab: React.FC = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +50,7 @@ const DatasetsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse<Dataset[]>(response);
+      const result = await handleApiResponse<DatasetsResponse>(response);
       const datasetsArray = result.data?.datasets || [];
       
       if (Array.isArray(datasetsArray)) {

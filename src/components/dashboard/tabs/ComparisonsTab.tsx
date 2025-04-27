@@ -22,6 +22,10 @@ interface Comparison {
   experiment_ids: string[];
 }
 
+interface ComparisonsResponse {
+  comparisons: Comparison[];
+}
+
 const ComparisonsTab: React.FC = () => {
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +46,7 @@ const ComparisonsTab: React.FC = () => {
         headers
       });
       
-      const result = await handleApiResponse<Comparison[]>(response);
+      const result = await handleApiResponse<ComparisonsResponse>(response);
       const comparisonsArray = result.data?.comparisons || [];
       
       if (Array.isArray(comparisonsArray)) {

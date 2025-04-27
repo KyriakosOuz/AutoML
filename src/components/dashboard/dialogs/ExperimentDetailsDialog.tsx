@@ -71,7 +71,7 @@ const ExperimentDetailsDialog: React.FC<ExperimentDetailsDialogProps> = ({
       });
       
       const result = await handleApiResponse<ExperimentDetails>(response);
-      setDetails(result.data);
+      setDetails(result.data as ExperimentDetails);
     } catch (error) {
       console.error('Error fetching experiment results:', error);
       toast({

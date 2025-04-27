@@ -68,7 +68,7 @@ const ComparisonDetailsDialog: React.FC<ComparisonDetailsDialogProps> = ({
       });
       
       const result = await handleApiResponse<ComparisonDetails>(response);
-      setDetails(result.data);
+      setDetails(result.data as ComparisonDetails);
     } catch (error) {
       console.error('Error fetching comparison details:', error);
       toast({

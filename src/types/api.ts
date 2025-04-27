@@ -2,11 +2,7 @@
 interface ApiResponse<T = any> {
   status?: string;
   message?: string;
-  data: {
-    datasets?: T[];
-    experiments?: T[];
-    comparisons?: T[];
-  } | T;
+  data: T;
 }
 
 interface ExperimentStatusResponse {
