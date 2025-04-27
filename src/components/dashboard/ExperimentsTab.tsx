@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, loader } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -58,7 +57,6 @@ const ExperimentsTab: React.FC = () => {
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null);
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
   
-  // New state for filters
   const [trainingMethod, setTrainingMethod] = useState<TrainingMethod>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
   
@@ -68,7 +66,6 @@ const ExperimentsTab: React.FC = () => {
     fetchExperiments();
   }, [trainingMethod, taskType]);
 
-  // Reset selected experiments when filters change
   useEffect(() => {
     setSelectedExperiments([]);
   }, [trainingMethod, taskType]);
@@ -78,22 +75,18 @@ const ExperimentsTab: React.FC = () => {
       setIsLoading(true);
       const headers = await getAuthHeaders();
       
-      // Build URL with query parameters
       const url = new URL(`${API_BASE_URL}/experiments/search-experiments/`);
       
-      // Add training method filter
       if (trainingMethod === 'automl') {
         url.searchParams.append("engine", "mljar,h2o");
       } else if (trainingMethod === 'custom') {
         url.searchParams.append("engine", "custom");
       }
       
-      // Add task type filter
       if (taskType !== 'all') {
         url.searchParams.append("task_type", taskType);
       }
       
-      // Add pagination
       url.searchParams.append("limit", "20");
       url.searchParams.append("offset", "0");
       
@@ -155,7 +148,6 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    // Check if filter conditions are met
     if (trainingMethod === 'all') {
       toast({
         title: "Filter Required",
@@ -251,10 +243,8 @@ const ExperimentsTab: React.FC = () => {
     return trainingMethod !== 'all' && selectedExperiments.length >= 2;
   };
 
-  // Filter buttons component
   const FilterButtons = () => (
     <div className="space-y-4">
-      {/* Top level filters */}
       <div className="flex gap-2">
         <Button 
           variant={trainingMethod === 'all' ? "default" : "outline"} 
@@ -276,7 +266,6 @@ const ExperimentsTab: React.FC = () => {
         </Button>
       </div>
 
-      {/* Secondary filters */}
       <div className="flex gap-2">
         <Button 
           variant={taskType === 'all' ? "default" : "outline"} 
@@ -403,7 +392,6 @@ const ExperimentsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter section */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Filter Experiments</CardTitle>
