@@ -8,7 +8,6 @@ interface ComparisonMetrics {
   f1_score?: number;
   precision?: number;
   recall?: number;
-  auc?: number;
   r2?: number;
   mae?: number;
   mse?: number;
@@ -47,11 +46,11 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
     return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
-  // Get metric badge color (green >90%, yellow >70%, red <70%)
+  // Get metric badge color (green >90%, yellow >60%, red <60%)
   const getMetricBadgeVariant = (value: number | undefined) => {
     if (value === undefined || value === null) return "outline";
     if (value >= 0.9) return "default"; // Green
-    if (value >= 0.7) return "secondary"; // Yellow
+    if (value >= 0.6) return "secondary"; // Yellow - changed from 0.7 to 0.6
     return "destructive"; // Red
   };
 
@@ -223,22 +222,6 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
                     >
                       <Badge variant={getMetricBadgeVariant(exp.metrics.recall)}>
                         {formatMetric(exp.metrics.recall)}
-                      </Badge>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">AUC</TableCell>
-                {experiments.map(exp => {
-                  const isBest = isBestMetricValue(exp.metrics.auc, 'auc');
-                  return (
-                    <TableCell 
-                      key={`${exp.experiment_id}-auc`}
-                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
-                    >
-                      <Badge variant={getMetricBadgeVariant(exp.metrics.auc)}>
-                        {formatMetric(exp.metrics.auc)}
                       </Badge>
                     </TableCell>
                   );
