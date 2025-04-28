@@ -65,6 +65,8 @@ interface ExperimentMetadata {
   created_at: string;
   completed_at: string;
   error_message: string | null;
+  training_type?: 'automl' | 'custom'; // Add training_type property
+  algorithm_choice?: string; // Add algorithm_choice property
 }
 
 interface ExperimentFile {
@@ -231,6 +233,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               created_at: payload.created_at,
               completed_at: payload.completed_at,
               error_message: payload.error_message ?? null,
+              training_type: payload.training_type,
+              algorithm_choice: payload.algorithm_choice,
             },
             metrics: numericMetrics,
             classificationReport,
