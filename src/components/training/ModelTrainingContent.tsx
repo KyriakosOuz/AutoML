@@ -6,7 +6,7 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, CircleSlash } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 
@@ -46,16 +46,22 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger value="custom" className="data-[state=active]:bg-black data-[state=active]:text-white">
               Custom Training
             </TabsTrigger>
-            {showResultsAndPredict && (
-              <>
-                <TabsTrigger value="results" className="data-[state=active]:bg-black data-[state=active]:text-white">
-                  Results
-                </TabsTrigger>
-                <TabsTrigger value="predict" className="data-[state=active]:bg-black data-[state=active]:text-white">
-                  Predict
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger 
+              value="results" 
+              className="data-[state=active]:bg-black data-[state=active]:text-white"
+              disabled={!showResultsAndPredict}
+            >
+              {!showResultsAndPredict && <CircleSlash className="h-4 w-4 mr-2" />}
+              Results
+            </TabsTrigger>
+            <TabsTrigger 
+              value="predict" 
+              className="data-[state=active]:bg-black data-[state=active]:text-white"
+              disabled={!showResultsAndPredict}
+            >
+              {!showResultsAndPredict && <CircleSlash className="h-4 w-4 mr-2" />}
+              Predict
+            </TabsTrigger>
           </TabsList>
           {(activeExperimentId || showResultsAndPredict) && (
             <Button variant="outline" size="sm" onClick={handleReset} className="ml-4">
