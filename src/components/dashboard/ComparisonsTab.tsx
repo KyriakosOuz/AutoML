@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -135,9 +136,8 @@ const ComparisonsTab: React.FC = () => {
       const headers = await getAuthHeaders();
       const formData = new FormData();
       
-      experimentIds.forEach(id => {
-        formData.append('experiment_ids', id);
-      });
+      // FIXED: Pass experiment_ids as a single JSON string
+      formData.append('experiment_ids', JSON.stringify(experimentIds));
       
       const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
         method: 'POST',

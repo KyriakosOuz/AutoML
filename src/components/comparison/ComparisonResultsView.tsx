@@ -55,6 +55,38 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
     return "destructive"; // Red
   };
 
+  // Find best metric value among experiments
+  const findBestMetric = (metricKey: keyof ComparisonMetrics): number | undefined => {
+    const values = experiments
+      .map(exp => exp.metrics[metricKey])
+      .filter((val): val is number => val !== undefined);
+      
+    if (values.length === 0) return undefined;
+    
+    // For error metrics like MAE, MSE, RMSE - lower is better
+    if (['mae', 'mse', 'rmse'].includes(metricKey)) {
+      return Math.min(...values);
+    }
+    
+    // For all other metrics - higher is better
+    return Math.max(...values);
+  };
+
+  // Check if this is the best value for highlighting
+  const isBestMetricValue = (value: number | undefined, metricKey: keyof ComparisonMetrics): boolean => {
+    if (value === undefined) return false;
+    const bestValue = findBestMetric(metricKey);
+    if (bestValue === undefined) return false;
+    
+    // For error metrics, lowest is best
+    if (['mae', 'mse', 'rmse'].includes(metricKey)) {
+      return value === bestValue;
+    }
+    
+    // For other metrics, highest is best
+    return value === bestValue;
+  };
+
   // Format task type for display
   const formatTaskType = (taskType: string) => {
     switch (taskType) {
@@ -66,6 +98,16 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
         return 'Regression';
       default:
         return taskType;
+    }
+  };
+  
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return dateStr;
     }
   };
 
@@ -93,10 +135,12 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
             ))}
           </TableRow>
           <TableRow>
-            <TableCell className="font-medium">Algorithm</TableCell>
+            <TableCell className="font-medium">
+              {experiments.some(exp => exp.engine) ? 'Engine/Algorithm' : 'Algorithm'}
+            </TableCell>
             {experiments.map(exp => (
               <TableCell key={`${exp.experiment_id}-alg`}>
-                {exp.algorithm || exp.engine || 'Unknown'}
+                {exp.engine || exp.algorithm || 'Unknown'}
               </TableCell>
             ))}
           </TableRow>
@@ -108,59 +152,97 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
               </TableCell>
             ))}
           </TableRow>
+          <TableRow>
+            <TableCell className="font-medium">Created At</TableCell>
+            {experiments.map(exp => (
+              <TableCell key={`${exp.experiment_id}-created`}>
+                {formatDate(exp.created_at)}
+              </TableCell>
+            ))}
+          </TableRow>
           
           {/* Classification Metrics */}
           {isClassification && (
             <>
               <TableRow>
                 <TableCell className="font-medium">Accuracy</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-acc`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.accuracy)}>
-                      {formatMetric(exp.metrics.accuracy)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.accuracy, 'accuracy');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-acc`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.accuracy)}>
+                        {formatMetric(exp.metrics.accuracy)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">F1 Score</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-f1`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.f1_score)}>
-                      {formatMetric(exp.metrics.f1_score)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.f1_score, 'f1_score');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-f1`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.f1_score)}>
+                        {formatMetric(exp.metrics.f1_score)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Precision</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-prec`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.precision)}>
-                      {formatMetric(exp.metrics.precision)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.precision, 'precision');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-prec`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.precision)}>
+                        {formatMetric(exp.metrics.precision)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Recall</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-recall`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.recall)}>
-                      {formatMetric(exp.metrics.recall)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.recall, 'recall');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-recall`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.recall)}>
+                        {formatMetric(exp.metrics.recall)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">AUC</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-auc`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.auc)}>
-                      {formatMetric(exp.metrics.auc)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.auc, 'auc');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-auc`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.auc)}>
+                        {formatMetric(exp.metrics.auc)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             </>
           )}
@@ -170,37 +252,61 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
             <>
               <TableRow>
                 <TableCell className="font-medium">R² Score</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-r2`}>
-                    <Badge variant={getMetricBadgeVariant(exp.metrics.r2)}>
-                      {formatMetric(exp.metrics.r2, false)}
-                    </Badge>
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.r2, 'r2');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-r2`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      <Badge variant={getMetricBadgeVariant(exp.metrics.r2)}>
+                        {formatMetric(exp.metrics.r2, false)}
+                      </Badge>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">MAE</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-mae`}>
-                    {formatMetric(exp.metrics.mae, false)}
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.mae, 'mae');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-mae`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      {formatMetric(exp.metrics.mae, false)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">MSE</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-mse`}>
-                    {formatMetric(exp.metrics.mse, false)}
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.mse, 'mse');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-mse`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      {formatMetric(exp.metrics.mse, false)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">RMSE</TableCell>
-                {experiments.map(exp => (
-                  <TableCell key={`${exp.experiment_id}-rmse`}>
-                    {formatMetric(exp.metrics.rmse, false)}
-                  </TableCell>
-                ))}
+                {experiments.map(exp => {
+                  const isBest = isBestMetricValue(exp.metrics.rmse, 'rmse');
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-rmse`}
+                      className={isBest ? 'font-bold border border-green-500 bg-green-50' : ''}
+                    >
+                      {formatMetric(exp.metrics.rmse, false)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             </>
           )}
