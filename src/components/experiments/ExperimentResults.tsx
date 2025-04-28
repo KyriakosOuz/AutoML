@@ -21,10 +21,12 @@ import {
   Loader,
   Image as ImageIcon,
   AlertTriangle,
+  PieChart,
   Info
 } from 'lucide-react';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { cn } from '@/lib/utils';
+import DynamicPredictionForm from '@/components/training/DynamicPredictionForm';
 
 const ClassificationReportTable = ({ report }: { report: any }) => {
   if (typeof report === 'string') {
@@ -373,7 +375,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
             <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
               <Activity className="h-4 w-4" />
               <span>Metrics</span>
@@ -382,6 +384,11 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
               <span>Visualizations</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="predict" className="text-sm flex items-center gap-1">
+              <PieChart className="h-4 w-4" />
+              <span>Predict</span>
             </TabsTrigger>
             
             <TabsTrigger value="details" className="text-sm flex items-center gap-1">
@@ -570,6 +577,20 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 <h3 className="text-lg font-medium mb-2">No Visualizations Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
                   No visualizations were found for this experiment.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="predict" className="p-6">
+            {experimentId && experimentResults.status === 'completed' ? (
+              <DynamicPredictionForm experimentId={experimentId} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Predictions Unavailable</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Predictions are only available for completed experiments.
                 </p>
               </div>
             )}

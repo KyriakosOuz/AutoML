@@ -1,85 +1,125 @@
 
-import React, { useEffect, useState } from 'react';
-import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults as ExperimentResultsType } from '@/types/training';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getExperimentResults, checkStatus } from '@/lib/training';
+import { ExperimentResults } from '@/types/training';
+import ExperimentResultsComponent from './ExperimentResults';
 import { ExperimentStatus } from '@/contexts/training/types';
-import ExperimentResults from './ExperimentResults';
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
-  status: ExperimentStatus;
-  onReset?: () => void;
+  status?: ExperimentStatus;
   onRefresh?: () => void;
 }
 
 const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   experimentId,
-  status,
-  onReset,
+  status: initialStatus = 'completed',
   onRefresh
 }) => {
-  const [results, setResults] = useState<ExperimentResultsType | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
+  const [status, setStatus] = useState<ExperimentStatus>(initialStatus);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pollTimeout, setPollTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!experimentId) return;
-    
-    if (!results && (status === 'completed' || status === 'success')) {
-      fetchResults();
-    }
-  }, [experimentId, status]);
-
   const fetchResults = async () => {
-    if (!experimentId) return;
-    
-    if (results && results.experimentId === experimentId) {
+    if (!experimentId) {
+      setIsLoading(false);
       return;
     }
-    
-    setIsLoading(true);
-    setError(null);
-    
+
     try {
-      console.log("[ExperimentResultsContainer] Fetching results for experiment:", experimentId);
-      const data = await getExperimentResults(experimentId);
+      setIsLoading(true);
       
-      if (data) {
-        console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
-        setResults(data);
-      } else {
-        console.log("[ExperimentResultsContainer] No results returned from API");
-        setError("Failed to load experiment results");
+      // First check status to see if the experiment is completed
+      const statusResponse = await checkStatus(experimentId);
+      if (!statusResponse.success) {
+        throw new Error(statusResponse.message || 'Failed to check experiment status');
       }
+      
+      const experimentStatus = statusResponse.data.status;
+      setStatus(experimentStatus);
+      
+      // If experiment is still running, we'll poll for updates
+      if (experimentStatus === 'running' || experimentStatus === 'processing') {
+        return; // Don't fetch results yet, wait for next poll
+      }
+      
+      // Fetch full results if experiment is completed or failed
+      const results = await getExperimentResults(experimentId);
+      setExperimentResults(results);
+      setError(null);
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load experiment results';
-      console.error("[ExperimentResultsContainer] Error fetching results:", errorMessage);
-      setError(errorMessage);
+      console.error('Error fetching experiment results:', err);
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to load experiment results',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Poll for updates if experiment is still running
+  useEffect(() => {
+    if (!experimentId) return;
+
+    // Clean up previous timeout if it exists
+    if (pollTimeout) {
+      clearTimeout(pollTimeout);
+    }
+
+    // Set up polling if experiment is still running
+    if (status === 'running' || status === 'processing') {
+      const timeout = setTimeout(fetchResults, 3000); // Poll every 3 seconds
+      setPollTimeout(timeout);
+    }
+
+    return () => {
+      if (pollTimeout) {
+        clearTimeout(pollTimeout);
+      }
+    };
+  }, [experimentId, status, fetchResults]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchResults();
+    
+    return () => {
+      if (pollTimeout) {
+        clearTimeout(pollTimeout);
+      }
+    };
+  }, [experimentId]);
+
   const handleRefresh = () => {
     fetchResults();
-    if (onRefresh) onRefresh();
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  const handleReset = () => {
+    setExperimentResults(null);
+    setIsLoading(false);
+    setError(null);
   };
 
   return (
-    <ExperimentResults
+    <ExperimentResultsComponent
       experimentId={experimentId}
       status={status}
-      experimentResults={results}
+      experimentResults={experimentResults}
       isLoading={isLoading}
       error={error}
-      onReset={onReset}
+      onReset={handleReset}
       onRefresh={handleRefresh}
     />
   );
