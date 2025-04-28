@@ -107,20 +107,6 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     setHyperparameters({ ...hyperparameters, [key]: value });
   };
   
-  const handleKeyChange = (oldKey: string, newKey: string) => {
-    if (newKey === oldKey || newKey.trim() === '') return;
-    
-    const updatedParams = { ...hyperparameters };
-    const value = updatedParams[oldKey];
-    delete updatedParams[oldKey];
-    updatedParams[newKey] = value;
-    
-    const updatedKeys = paramKeys.map(k => k === oldKey ? newKey : k);
-    
-    setHyperparameters(updatedParams);
-    setParamKeys(updatedKeys);
-  };
-  
   const parseHyperparameters = () => {
     const parsedParams: Record<string, any> = {};
     
@@ -154,7 +140,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/experiments/tune-model/`, {
+      const response = await fetch(`http://localhost:8000/experiments/tune-model/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,8 +211,8 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
                   <Input
                     id={`key-${key}`}
                     value={key}
-                    onChange={(e) => handleKeyChange(key, e.target.value)}
-                    placeholder="e.g. max_depth"
+                    readOnly
+                    className="bg-muted/50"
                   />
                 </div>
                 <div>
