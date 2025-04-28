@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -75,7 +74,6 @@ export const getExperimentResults = async (
       metrics: result.metrics || {},
       files: result.files || [],
       algorithm: result.algorithm,
-      algorithm_choice: result.algorithm_choice,
       model_format: result.model_format,
       model_file_url: result.files?.find(f => f.file_type === 'model')?.file_url,
       report_file_url: result.files?.find(f => f.file_type === 'report')?.file_url,

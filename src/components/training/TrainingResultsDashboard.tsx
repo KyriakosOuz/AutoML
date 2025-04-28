@@ -70,7 +70,6 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
       <ExperimentResultsContainer 
         experimentId={activeExperimentId}
         status={experimentStatus}
-        onRefresh={onReset}
         onReset={onReset}
       />
       

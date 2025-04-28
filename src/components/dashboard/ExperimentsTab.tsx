@@ -12,7 +12,6 @@ import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
-import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 
 interface ClassificationReport {
   [key: string]: {
@@ -60,9 +59,8 @@ const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedExperimentId, setSelectedExperimentId] = useState<string | null>(null);
+  const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null);
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
-  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   
   const [trainingMethod, setTrainingMethod] = useState<TrainingMethod>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
@@ -234,13 +232,10 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleViewExperiment = (experimentId: string) => {
-    setSelectedExperimentId(experimentId);
-    setIsDetailDrawerOpen(true);
-  };
-
-  const handleCloseDetailDrawer = () => {
-    setIsDetailDrawerOpen(false);
-    setSelectedExperimentId(null);
+    const experiment = experiments.find(exp => exp.id === experimentId);
+    if (experiment) {
+      setSelectedExperiment(experiment);
+    }
   };
 
   const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -511,12 +506,62 @@ const ExperimentsTab: React.FC = () => {
         </Card>
       )}
 
-      {/* Experiment Detail Drawer */}
-      <ExperimentDetailDrawer
-        experimentId={selectedExperimentId}
-        isOpen={isDetailDrawerOpen}
-        onClose={handleCloseDetailDrawer}
-      />
+      <Dialog 
+        open={!!selectedExperiment} 
+        onOpenChange={() => setSelectedExperiment(null)}
+      >
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>
+              Experiment Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedExperiment && (
+            <div className="grid gap-4">
+              <div>
+                <h3 className="font-semibold">{selectedExperiment.experiment_name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Created {formatDistanceToNow(new Date(selectedExperiment.created_at))} ago
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Configuration</h4>
+                  <div className="space-y-1">
+                    <p>Task Type: {selectedExperiment.task_type}</p>
+                    <p>Algorithm: {selectedExperiment.algorithm_choice}</p>
+                    {selectedExperiment.automl_engine && (
+                      <p>Engine: {selectedExperiment.automl_engine}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">Metrics</h4>
+                  <div className="space-y-1">
+                    {selectedExperiment.task_type === 'regression' ? (
+                      <>
+                        <p>R² Score: {renderMetricValue(selectedExperiment.metrics?.r2, false)}</p>
+                        <p>MAE: {renderMetricValue(selectedExperiment.metrics?.mae, false)}</p>
+                        <p>MSE: {renderMetricValue(selectedExperiment.metrics?.mse, false)}</p>
+                        <p>RMSE: {renderMetricValue(selectedExperiment.metrics?.rmse, false)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>Accuracy: {renderMetricValue(selectedExperiment.metrics?.accuracy)}</p>
+                        <p>F1 Score: {renderMetricValue(selectedExperiment.metrics?.f1_score)}</p>
+                        <p>Precision: {renderMetricValue(selectedExperiment.metrics?.precision)}</p>
+                        <p>Recall: {renderMetricValue(selectedExperiment.metrics?.recall)}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
