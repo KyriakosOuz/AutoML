@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -93,7 +93,12 @@ const ExperimentsTab: React.FC = () => {
   const handleAddToComparison = (experimentId: string) => {
     setSelectedExperiments(prev => {
       if (prev.includes(experimentId)) {
-        return prev;
+        const newSelected = prev.filter(id => id !== experimentId);
+        toast({
+          title: "Success",
+          description: "Experiment removed from comparison list",
+        });
+        return newSelected;
       }
       
       toast({
@@ -304,12 +309,15 @@ const ExperimentsTab: React.FC = () => {
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button 
-                        variant="outline" 
+                        variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleAddToComparison(experiment.id)}
-                        disabled={selectedExperiments.includes(experiment.id)}
                       >
-                        <List className="h-4 w-4" />
+                        {selectedExperiments.includes(experiment.id) ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <List className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button 
                         variant="outline" 
