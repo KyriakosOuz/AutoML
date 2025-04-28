@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ExperimentResults from '@/components/results/ExperimentResults';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
+import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
@@ -24,7 +24,7 @@ const ExperimentDetailPage: React.FC = () => {
         <h1 className="text-2xl font-bold">Experiment Results</h1>
       </div>
       
-      <ExperimentResults 
+      <ExperimentResultsContainer 
         experimentId={experimentId || null} 
         status={status}
       />
