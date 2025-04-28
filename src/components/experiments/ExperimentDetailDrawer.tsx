@@ -135,6 +135,12 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   };
 
   const canTuneModel = () => {
+    console.log("canTuneModel check:", {
+      hasAutoML: !!results?.automl_engine,
+      algorithm: results?.algorithm,
+      status: results?.status
+    });
+    
     return results && 
            !results.automl_engine && 
            results.algorithm && 
@@ -263,7 +269,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       </div>
                       
                       <div className="text-muted-foreground">Algorithm:</div>
-                      <div className="font-medium">{results.algorithm || 'Auto-selected'}</div>
+                      <div className="font-medium">{results.algorithm_choice || results.algorithm || 'Auto-selected'}</div>
                       
                       {results.automl_engine && (
                         <>
@@ -656,14 +662,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                 alt="Visualization"
                 className="w-full h-auto"
               />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="absolute top-2 right-2"
-                onClick={() => setSelectedImage(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
