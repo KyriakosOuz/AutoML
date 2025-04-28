@@ -15,6 +15,7 @@ import { Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/utils';
 import { trainingApi } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 interface TuneModelModalProps {
   experimentId: string;
@@ -39,6 +40,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
   initialHyperparameters = {},
   algorithm
 }) => {
+  const navigate = useNavigate();
   const [hyperparameters, setHyperparameters] = useState<Record<string, any>>(
     () => {
       const initialParams: Record<string, string> = {};
@@ -174,12 +176,21 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
           title: "Success",
           description: "Model tuning started successfully!",
         });
+        
+        // Get the new experiment ID from the response
+        const newExperimentId = data.data?.experiment_id;
+        
         onSuccess();
         onClose();
         
         // Small delay to ensure the backend has time to process before refreshing
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('refresh-experiments'));
+          
+          // Navigate to the experiment detail page if we received an experiment_id
+          if (newExperimentId) {
+            navigate(`/experiments/${newExperimentId}`);
+          }
         }, 500);
       } else {
         toast({

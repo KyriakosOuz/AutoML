@@ -4,19 +4,50 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
+import { checkStatus } from '@/lib/training';
+import { useToast } from '@/hooks/use-toast';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'processing' | 'running' | 'completed' | 'failed' | 'success'>('completed');
+  const [status, setStatus] = useState<'processing' | 'running' | 'completed' | 'failed' | 'success'>('processing');
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    if (experimentId) {
+      fetchExperimentStatus();
+    }
+  }, [experimentId]);
+  
+  const fetchExperimentStatus = async () => {
+    if (!experimentId) return;
+    
+    try {
+      setIsLoading(true);
+      const statusResponse = await checkStatus(experimentId);
+      
+      if (statusResponse?.data) {
+        setStatus(statusResponse.data.status as any);
+      }
+    } catch (error) {
+      console.error("Error fetching experiment status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch experiment status",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const goBack = () => {
     navigate('/training');
   };
   
   const handleRefresh = () => {
-    // If needed, you could add additional refresh logic here
-    console.log("Refreshing experiment data");
+    fetchExperimentStatus();
   };
   
   return (
