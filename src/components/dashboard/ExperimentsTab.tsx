@@ -13,6 +13,7 @@ import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
+import ComparisonResultsView from '../comparison/ComparisonResultsView';
 
 const formatTaskType = (taskType: string): string => {
   const taskTypeMap: Record<string, string> = {
@@ -66,6 +67,27 @@ interface Experiment {
 type TrainingMethod = 'all' | 'automl' | 'custom';
 type TaskType = 'all' | 'binary_classification' | 'multiclass_classification' | 'regression';
 
+interface ComparisonExperiment {
+  experiment_id: string;
+  experiment_name: string;
+  created_at: string;
+  task_type: string;
+  algorithm: string;
+  engine: string | null;
+  metrics: {
+    accuracy?: number;
+    f1_score?: number;
+    precision?: number;
+    recall?: number;
+    auc?: number;
+    r2?: number;
+    mae?: number;
+    mse?: number;
+    rmse?: number;
+  };
+  dataset_name: string;
+}
+
 const ExperimentsTab: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +98,11 @@ const ExperimentsTab: React.FC = () => {
   
   const [trainingMethod, setTrainingMethod] = useState<TrainingMethod>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
+
+  const [comparisonResults, setComparisonResults] = useState<ComparisonExperiment[]>([]);
+  const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
+  const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
   
   const { toast } = useToast();
 
@@ -192,16 +219,51 @@ const ExperimentsTab: React.FC = () => {
       });
       return;
     }
-    
-    const adHocCompareEvent = new CustomEvent('ad-hoc-compare', {
-      detail: { experimentIds: selectedExperiments }
-    });
-    window.dispatchEvent(adHocCompareEvent);
-    
-    const comparisonsTab = document.querySelector('[value="comparisons"]') as HTMLButtonElement;
-    if (comparisonsTab) {
-      comparisonsTab.click();
+
+    try {
+      setIsLoadingComparison(true);
+      setComparisonError(null);
+      const headers = await getAuthHeaders();
+      
+      const formData = new FormData();
+      formData.append("experiment_ids", JSON.stringify(selectedExperiments));
+      
+      const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to compare experiments: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Comparison API Response:', data);
+      
+      if (data && data.comparison) {
+        setComparisonResults(data.comparison);
+        setIsComparisonDialogOpen(true);
+      } else {
+        throw new Error('Invalid comparison data format from API');
+      }
+    } catch (err) {
+      console.error('Error comparing experiments:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to compare experiments';
+      setComparisonError(errorMessage);
+      toast({
+        title: "Comparison Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingComparison(false);
     }
+  };
+
+  const handleCloseComparisonDialog = () => {
+    setIsComparisonDialogOpen(false);
   };
 
   const handleDelete = async (experimentId: string) => {
@@ -381,9 +443,13 @@ const ExperimentsTab: React.FC = () => {
               </Button>
               <Button 
                 onClick={handleCompareSelected}
-                disabled={!isCompareButtonEnabled()}
+                disabled={!isCompareButtonEnabled() || isLoadingComparison}
               >
-                <List className="h-4 w-4 mr-2" />
+                {isLoadingComparison ? (
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <List className="h-4 w-4 mr-2" />
+                )}
                 Compare ({selectedExperiments.length})
               </Button>
             </>
@@ -511,6 +577,24 @@ const ExperimentsTab: React.FC = () => {
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
       />
+
+      <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Experiment Comparison</DialogTitle>
+          </DialogHeader>
+
+          {comparisonError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{comparisonError}</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="mt-4">
+              <ComparisonResultsView experiments={comparisonResults} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
