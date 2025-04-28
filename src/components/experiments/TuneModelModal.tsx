@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -46,7 +45,6 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
 }) => {
   const [hyperparameters, setHyperparameters] = useState<Record<string, any>>(
     () => {
-      // Convert all values to strings for the form
       const initialParams: Record<string, string> = {};
       Object.entries(initialHyperparameters || {}).forEach(([key, value]) => {
         initialParams[key] = String(value);
@@ -63,7 +61,6 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
   const [isFetchingParams, setIsFetchingParams] = useState(false);
   const { toast } = useToast();
   
-  // Fetch hyperparameters when the modal opens
   useEffect(() => {
     if (isOpen && algorithm) {
       fetchHyperparameters();
@@ -78,7 +75,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         method: 'GET',
         headers: headers
       });
@@ -90,7 +87,6 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
       const data: HyperparameterResponse = await response.json();
       
       if (data && data.hyperparameters) {
-        // Convert all values to strings for the form
         const fetchedParams: Record<string, string> = {};
         Object.entries(data.hyperparameters).forEach(([key, value]) => {
           fetchedParams[key] = String(value);
@@ -149,11 +145,9 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
       
       let parsedValue: any = valueStr;
       
-      // Try to parse as number
       if (!isNaN(Number(valueStr))) {
         parsedValue = Number(valueStr);
       } 
-      // Try to parse as boolean
       else if (valueStr.toLowerCase() === 'true') {
         parsedValue = true;
       } 
