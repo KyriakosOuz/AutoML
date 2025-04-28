@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -53,7 +52,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Reset state when a new experiment is selected
   useEffect(() => {
     if (isOpen && experimentId) {
       setActiveTab('info');
@@ -95,13 +93,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
-  // Format a metric value for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     return (value >= 0 && value <= 1) ? (value * 100).toFixed(2) + '%' : value.toFixed(4);
   };
   
-  // Get color class based on metric value
   const getMetricColor = (value: number | undefined) => {
     if (value === undefined) return 'text-gray-400';
     if (value >= 0.9) return 'text-green-600';
@@ -110,13 +106,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     return 'text-red-600';
   };
 
-  // Format task type string for display
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
   
-  // Get only visualization files (exclude model and report files)
   const getVisualizationFiles = () => {
     if (!results?.files) return [];
     
@@ -126,7 +120,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     );
   };
   
-  // Get model download file
   const getModelFile = () => {
     if (!results?.files) return null;
     
@@ -164,10 +157,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     </div>
   );
   
-  // Determine if the experiment is still running
   const isExperimentRunning = results?.status === 'running';
   
-  // Check if this is a regression task
   const isRegression = results?.task_type === 'regression';
   
   return (
@@ -247,7 +238,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       <div className="text-muted-foreground">Status:</div>
                       <div>
                         <Badge 
-                          variant={results.status === 'completed' || results.status === 'success' ? 'success' : 'secondary'}
+                          variant={results.status === 'completed' || results.status === 'success' ? 'default' : 'secondary'}
                         >
                           {results.status}
                         </Badge>
@@ -323,7 +314,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                   </CardHeader>
                   <CardContent>
                     {isRegression ? (
-                      // Regression metrics
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {results.metrics?.r2 !== undefined && (
                           <Card className="bg-muted/40">
@@ -382,7 +372,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         )}
                       </div>
                     ) : (
-                      // Classification metrics
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {results.metrics?.accuracy !== undefined && (
                           <Card className="bg-muted/40">
@@ -456,11 +445,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       </div>
                     )}
                     
-                    {/* Show all other numeric metrics that weren't specifically handled */}
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
-                          // Skip metrics we already displayed
                           const skipKeys = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse'];
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
@@ -629,7 +616,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
         </SheetContent>
       </Sheet>
       
-      {/* Full-size image viewer */}
       {selectedImage && (
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
           <DialogContent className="max-w-4xl">
