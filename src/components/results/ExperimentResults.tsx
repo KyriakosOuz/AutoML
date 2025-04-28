@@ -23,47 +23,28 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { ExperimentStatus } from '@/contexts/training/types';
+import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import ClassificationReportTable from '../training/ClassificationReportTable';
-
-interface ExperimentMetadata {
-  experiment_id: string;
-  experiment_name: string;
-  status: 'completed' | 'running' | 'failed';
-  task_type: string;
-  algorithm: string;
-  automl_engine: string;
-  target_column: string;
-  hyperparameters: Record<string, any>;
-  training_time_sec: number;
-  created_at: string;
-  completed_at: string;
-  error_message: string | null;
-  training_type: 'automl' | 'manual';
-}
-
-interface ExperimentFile {
-  file_type: string;
-  file_url: string;
-  file_name: string;
-}
 
 interface ExperimentResultsProps {
   experimentId: string | null;
   status: ExperimentStatus;
+  experimentResults: ExperimentResultsType | null;
+  isLoading: boolean;
+  error: string | null;
   onReset?: () => void;
   onRefresh?: () => void;
 }
 
-interface ExperimentResultsData {
-  experiment_metadata: ExperimentMetadata;
-  metrics: Record<string, number>;
-  files: ExperimentFile[];
-}
-
-const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, status, onReset, onRefresh }) => {
-  const [results, setResults] = useState<ExperimentResultsData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+const ExperimentResults: React.FC<ExperimentResultsProps> = ({ 
+  experimentId, 
+  status, 
+  experimentResults,
+  isLoading,
+  error,
+  onReset,
+  onRefresh
+}) => {
   const [activeTab, setActiveTab] = useState<string>('metrics');
   const { toast } = useToast();
 
