@@ -513,7 +513,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
             <CardTitle className="text-xl">{experiment_metadata.experiment_name || 'Experiment Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {experiment_metadata.algorithm || experiment_metadata.automl_engine || formatTaskType(experiment_metadata.task_type)}
+            {experiment_metadata.training_type === 'automl' || experiment_metadata.automl_engine 
+              ? `Engine: ${experiment_metadata.automl_engine}` 
+              : `Algorithm: ${experiment_metadata.algorithm_choice || experiment_metadata.algorithm || 'Auto-selected'}`}
           </Badge>
         </div>
         <CardDescription className="flex flex-wrap gap-x-4 mt-2">

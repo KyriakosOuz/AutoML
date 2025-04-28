@@ -83,6 +83,7 @@ export const getExperimentResults = async (
       message: result.message,
       automl_engine: result.automl_engine,
       class_labels: result.class_labels,
+      training_type: result.training_type || (result.automl_engine ? 'automl' : 'custom'),
       training_results: {
         metrics: result.metrics,
         classification_report: result.metrics?.classification_report,

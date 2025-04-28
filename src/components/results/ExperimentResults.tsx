@@ -38,6 +38,7 @@ interface ExperimentMetadata {
   created_at: string;
   completed_at: string;
   error_message: string | null;
+  training_type: 'automl' | 'manual';
 }
 
 interface ExperimentFile {
@@ -102,7 +103,17 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
 
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    
+    switch (type) {
+      case 'binary_classification':
+        return 'Binary Classification';
+      case 'multiclass_classification':
+        return 'Multiclass Classification';
+      case 'regression':
+        return 'Regression';
+      default:
+        return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
   };
   
   const formatMetric = (value: number | undefined) => {
@@ -241,7 +252,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
     hyperparameters,
     training_time_sec,
     created_at,
-    completed_at
+    completed_at,
+    training_type
   } = results.experiment_metadata;
   
   const metrics = results.metrics || {};
@@ -263,7 +275,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
           </div>
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {algorithm || automl_engine || formatTaskType(task_type)}
+            {training_type === 'automl' || automl_engine 
+              ? `Engine: ${automl_engine}` 
+              : `Algorithm: ${algorithm || 'Auto-selected'}`}
           </Badge>
         </div>
         

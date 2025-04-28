@@ -113,7 +113,17 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
 
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    
+    switch (type) {
+      case 'binary_classification':
+        return 'Binary Classification';
+      case 'multiclass_classification':
+        return 'Multiclass Classification';
+      case 'regression':
+        return 'Regression';
+      default:
+        return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
   };
   
   const getVisualizationFiles = () => {
@@ -138,12 +148,14 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     console.log("canTuneModel check:", {
       hasAutoML: !!results?.automl_engine,
       algorithm: results?.algorithm,
+      algorithm_choice: results?.algorithm_choice,
+      training_type: results?.training_type,
       status: results?.status
     });
     
     return results && 
-           !results.automl_engine && 
-           results.algorithm && 
+           ((results.training_type === 'custom') || (!results.automl_engine)) && 
+           (results.algorithm || results.algorithm_choice) && 
            (results.status === 'completed' || results.status === 'success');
   };
   
@@ -268,13 +280,15 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Badge>
                       </div>
                       
-                      <div className="text-muted-foreground">Algorithm:</div>
-                      <div className="font-medium">{results.algorithm_choice || results.algorithm || 'Auto-selected'}</div>
-                      
-                      {results.automl_engine && (
+                      {results.training_type === 'automl' || results.automl_engine ? (
                         <>
                           <div className="text-muted-foreground">Engine:</div>
                           <div className="font-medium">{results.automl_engine}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-muted-foreground">Algorithm:</div>
+                          <div className="font-medium">{results.algorithm_choice || results.algorithm || 'Auto-selected'}</div>
                         </>
                       )}
                       
