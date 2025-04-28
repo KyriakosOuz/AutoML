@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -225,13 +226,16 @@ const ExperimentsTab: React.FC = () => {
       setComparisonError(null);
       const headers = await getAuthHeaders();
       
-      const formData = new FormData();
-      formData.append("experiment_ids", JSON.stringify(selectedExperiments));
-      
+      // UPDATED: Using JSON body instead of FormData
       const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
         method: 'POST',
-        headers: headers,
-        body: formData
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          experiment_ids: selectedExperiments
+        })
       });
       
       if (!response.ok) {

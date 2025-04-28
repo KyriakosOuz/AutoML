@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -134,18 +133,16 @@ const ComparisonsTab: React.FC = () => {
       setComparisonResults(null);
       
       const headers = await getAuthHeaders();
-      const formData = new FormData();
-      
-      // FIXED: Pass experiment_ids as a single JSON string
-      formData.append('experiment_ids', JSON.stringify(experimentIds));
       
       const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
         method: 'POST',
         headers: {
           ...headers,
-          // FormData sets its own content-type
+          'Content-Type': 'application/json',
         },
-        body: formData
+        body: JSON.stringify({
+          experiment_ids: experimentIds
+        })
       });
       
       if (!response.ok) {
