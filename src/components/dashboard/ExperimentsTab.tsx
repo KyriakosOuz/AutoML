@@ -193,39 +193,14 @@ const ExperimentsTab: React.FC = () => {
       return;
     }
     
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: `${trainingMethod === 'automl' ? 'AutoML' : 'Custom'} ${taskType !== 'all' ? taskType : ''} Comparison ${new Date().toLocaleDateString()}`,
-          experiment_ids: selectedExperiments
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Failed to create comparison:", errorData);
-        throw new Error('Failed to create comparison');
-      }
-
-      toast({
-        title: "Success",
-        description: "Comparison created successfully",
-      });
-
-      setSelectedExperiments([]);
-    } catch (err) {
-      console.error("Comparison error:", err);
-      toast({
-        title: "Error",
-        description: "Failed to create comparison",
-        variant: "destructive",
-      });
+    const adHocCompareEvent = new CustomEvent('ad-hoc-compare', {
+      detail: { experimentIds: selectedExperiments }
+    });
+    window.dispatchEvent(adHocCompareEvent);
+    
+    const comparisonsTab = document.querySelector('[value="comparisons"]') as HTMLButtonElement;
+    if (comparisonsTab) {
+      comparisonsTab.click();
     }
   };
 
