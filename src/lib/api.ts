@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -502,7 +503,8 @@ export const trainingApi = {
 
   getAvailableHyperparameters: async (algorithm: string) => {
     try {
-      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+      // Use a fixed localhost URL for hyperparameters
+      const response = await fetch(`http://localhost:8000/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         headers: getAuthHeaders(),
       });
       
