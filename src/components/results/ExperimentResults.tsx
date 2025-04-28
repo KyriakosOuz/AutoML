@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -48,40 +49,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const [activeTab, setActiveTab] = useState<string>('metrics');
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!experimentId) return;
-    
-    const fetchResults = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const response = await fetch(`/experiments/experiment-results/${experimentId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching results: ${response.statusText}`);
-        }
-        
-        const envelope = await response.json();
-        setResults(envelope.data);
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (err) {
-        console.error('Error fetching experiment results:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        toast({
-          title: 'Error',
-          description: 'Failed to load experiment results',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchResults();
-  }, [experimentId, toast]);
-
   const formatTaskType = (type: string = '') => {
     if (!type) return "Unknown";
     
@@ -116,9 +83,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   };
   
   const getDownloadableFiles = () => {
-    if (!results) return [];
+    if (!experimentResults) return [];
     
-    return results.files.filter(file => 
+    return experimentResults.files.filter(file => 
       file.file_type === 'model' || 
       file.file_type === 'report' || 
       file.file_type.includes('report')
@@ -157,7 +124,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }
   
   if (error || status === 'failed') {
-    const errorMessage = results?.experiment_metadata.error_message || error;
+    const errorMessage = experimentResults?.experiment_metadata?.error_message || error;
     
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
@@ -199,7 +166,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     );
   }
   
-  if (!results) {
+  if (!experimentResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
         <CardHeader>
@@ -235,10 +202,10 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     created_at,
     completed_at,
     training_type
-  } = results.experiment_metadata;
+  } = experimentResults.experiment_metadata;
   
-  const metrics = results.metrics || {};
-  const files = results.files || [];
+  const metrics = experimentResults.metrics || {};
+  const files = experimentResults.files || [];
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   
   const classificationReport = metrics.classification_report && 
