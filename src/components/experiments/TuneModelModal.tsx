@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/utils';
+import { trainingApi } from '@/lib/api';
 
 interface TuneModelModalProps {
   experimentId: string;
@@ -20,19 +21,13 @@ interface TuneModelModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialHyperparameters?: Record<string, any>;
-  algorithm: string; // Added to fetch hyperparameters
+  algorithm: string;
 }
 
 interface ApiResponse {
   status: string;
   message: string;
   data?: any;
-}
-
-interface HyperparameterResponse {
-  algorithm: string;
-  mode: string;
-  hyperparameters: Record<string, any>;
 }
 
 const TuneModelModal: React.FC<TuneModelModalProps> = ({
@@ -73,22 +68,11 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     setIsFetchingParams(true);
     
     try {
-      const headers = await getAuthHeaders();
+      const hyperparamsData = await trainingApi.getAvailableHyperparameters(algorithm);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
-        method: 'GET',
-        headers: headers
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch hyperparameters: ${response.status}`);
-      }
-      
-      const data: HyperparameterResponse = await response.json();
-      
-      if (data && data.hyperparameters) {
+      if (hyperparamsData) {
         const fetchedParams: Record<string, string> = {};
-        Object.entries(data.hyperparameters).forEach(([key, value]) => {
+        Object.entries(hyperparamsData).forEach(([key, value]) => {
           fetchedParams[key] = String(value);
         });
         
@@ -97,7 +81,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
         
         toast({
           title: "Hyperparameters loaded",
-          description: `Loaded default parameters for ${data.algorithm}`,
+          description: `Loaded default parameters for ${algorithm}`,
         });
       }
     } catch (error) {
