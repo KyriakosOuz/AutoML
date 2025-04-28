@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -176,14 +177,17 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
           description: "Model tuning started successfully!",
         });
         
+        // Get the new experiment ID from the response
         const newExperimentId = data.data?.experiment_id;
         
         onSuccess();
         onClose();
         
+        // Small delay to ensure the backend has time to process before refreshing
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('refresh-experiments'));
           
+          // Navigate to the experiment detail page if we received an experiment_id
           if (newExperimentId) {
             navigate(`/experiments/${newExperimentId}`);
           }

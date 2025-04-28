@@ -72,6 +72,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     <ExperimentResults
       experimentId={experimentId}
       status={status}
+      experimentResults={results}
+      isLoading={isLoading}
+      error={error}
       onReset={onReset}
       onRefresh={handleRefresh}
     />

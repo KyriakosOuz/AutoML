@@ -20,17 +20,6 @@ const ExperimentDetailPage: React.FC = () => {
     }
   }, [experimentId]);
   
-  // Set up polling for status updates
-  useEffect(() => {
-    if (!experimentId) return;
-    
-    // Only poll if status is processing or running
-    if (status === 'processing' || status === 'running') {
-      const intervalId = setInterval(fetchExperimentStatus, 5000);
-      return () => clearInterval(intervalId);
-    }
-  }, [experimentId, status]);
-  
   const fetchExperimentStatus = async () => {
     if (!experimentId) return;
     
