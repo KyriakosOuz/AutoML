@@ -64,6 +64,7 @@ export interface ExperimentResults {
   metrics?: Record<string, any>;
   files?: TrainingFile[];
   algorithm?: string;
+  algorithm_choice?: string;
   model_format?: string;
   model_file_url?: string;
   report_file_url?: string;
