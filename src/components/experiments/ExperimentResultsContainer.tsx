@@ -4,7 +4,7 @@ import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from '@/contexts/training/types';
-import ExperimentResults from '../results/ExperimentResults';  // Updated import path
+import ExperimentResults from './ExperimentResults';
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
@@ -27,13 +27,17 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   useEffect(() => {
     if (!experimentId) return;
     
-    if ((status === 'completed' || status === 'success')) {
+    if (!results && (status === 'completed' || status === 'success')) {
       fetchResults();
     }
   }, [experimentId, status]);
 
   const fetchResults = async () => {
     if (!experimentId) return;
+    
+    if (results && results.experimentId === experimentId) {
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
