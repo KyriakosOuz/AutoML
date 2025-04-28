@@ -50,6 +50,7 @@ interface ExperimentResultsProps {
   experimentId: string | null;
   status: ExperimentStatus;
   onReset?: () => void;
+  onRefresh?: () => void;
 }
 
 interface ExperimentResultsData {
@@ -58,7 +59,7 @@ interface ExperimentResultsData {
   files: ExperimentFile[];
 }
 
-const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, status, onReset }) => {
+const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, status, onReset, onRefresh }) => {
   const [results, setResults] = useState<ExperimentResultsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,16 +182,26 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({ experimentId, sta
           <Alert variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
-          {onReset && (
-            <Button 
-              variant="outline" 
-              className="mt-4" 
-              onClick={onReset}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          )}
+          <div className="flex space-x-2 mt-4">
+            {onReset && (
+              <Button 
+                variant="outline" 
+                onClick={onReset}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            )}
+            {onRefresh && (
+              <Button 
+                variant="secondary" 
+                onClick={onRefresh}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
