@@ -684,8 +684,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       {results && (
         <TuneModelModal 
           experimentId={experimentId || ''}
-          isOpen={isTuneModalOpen}
-          onClose={() => setIsTuneModalOpen(false)}
+          isOpen={isTuneModelOpen}
+          onClose={() => setIsTuneModelOpen(false)}
           onSuccess={handleTuneSuccess}
           initialHyperparameters={results.hyperparameters}
         />

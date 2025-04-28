@@ -14,6 +14,16 @@ import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 
+const formatTaskType = (taskType: string): string => {
+  const taskTypeMap: Record<string, string> = {
+    'binary_classification': 'Binary Classification',
+    'multiclass_classification': 'Multiclass Classification',
+    'regression': 'Regression'
+  };
+  
+  return taskTypeMap[taskType] || taskType;
+};
+
 interface ClassificationReport {
   [key: string]: {
     precision: number;
@@ -410,7 +420,6 @@ const ExperimentsTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Info Card */}
       <Card className="mb-6 bg-muted/50">
         <CardContent className="py-4">
           <div className="flex gap-2 text-sm text-muted-foreground">
@@ -452,7 +461,7 @@ const ExperimentsTab: React.FC = () => {
                     <TableRow key={experiment.id}>
                       <TableCell>{experiment.experiment_name}</TableCell>
                       <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
-                      <TableCell>{experiment.task_type}</TableCell>
+                      <TableCell>{formatTaskType(experiment.task_type)}</TableCell>
                       <TableCell>{experiment.algorithm_choice}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
@@ -511,7 +520,6 @@ const ExperimentsTab: React.FC = () => {
         </Card>
       )}
 
-      {/* Experiment Detail Drawer */}
       <ExperimentDetailDrawer
         experimentId={selectedExperimentId}
         isOpen={isDetailDrawerOpen}

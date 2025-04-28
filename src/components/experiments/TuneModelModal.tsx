@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -20,6 +20,7 @@ interface TuneModelModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialHyperparameters?: Record<string, any>;
+  algorithm: string; // Added to fetch hyperparameters
 }
 
 interface ApiResponse {
@@ -28,12 +29,19 @@ interface ApiResponse {
   data?: any;
 }
 
+interface HyperparameterResponse {
+  algorithm: string;
+  mode: string;
+  hyperparameters: Record<string, any>;
+}
+
 const TuneModelModal: React.FC<TuneModelModalProps> = ({
   experimentId,
   isOpen,
   onClose,
   onSuccess,
-  initialHyperparameters = {}
+  initialHyperparameters = {},
+  algorithm
 }) => {
   const [hyperparameters, setHyperparameters] = useState<Record<string, any>>(
     () => {
@@ -51,12 +59,60 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
   );
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingParams, setIsFetchingParams] = useState(false);
   const { toast } = useToast();
   
-  const handleAddParam = () => {
-    const newKey = `param_${paramKeys.length + 1}`;
-    setParamKeys([...paramKeys, newKey]);
-    setHyperparameters({ ...hyperparameters, [newKey]: '' });
+  // Fetch hyperparameters when the modal opens
+  useEffect(() => {
+    if (isOpen && algorithm) {
+      fetchHyperparameters();
+    }
+  }, [isOpen, algorithm]);
+  
+  const fetchHyperparameters = async () => {
+    if (!algorithm) return;
+    
+    setIsFetchingParams(true);
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+        method: 'GET',
+        headers: {
+          // Include auth headers if needed by your API
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch hyperparameters: ${response.status}`);
+      }
+      
+      const data: HyperparameterResponse = await response.json();
+      
+      if (data && data.hyperparameters) {
+        // Convert all values to strings for the form
+        const fetchedParams: Record<string, string> = {};
+        Object.entries(data.hyperparameters).forEach(([key, value]) => {
+          fetchedParams[key] = String(value);
+        });
+        
+        setHyperparameters(fetchedParams);
+        setParamKeys(Object.keys(fetchedParams));
+        
+        toast({
+          title: "Hyperparameters loaded",
+          description: `Loaded default parameters for ${data.algorithm}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching hyperparameters:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch hyperparameters. Using stored values instead.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetchingParams(false);
+    }
   };
   
   const handleDeleteParam = (key: string) => {
@@ -169,9 +225,14 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-          {paramKeys.length === 0 ? (
+          {isFetchingParams ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Loading hyperparameters...</span>
+            </div>
+          ) : paramKeys.length === 0 ? (
             <div className="text-center text-muted-foreground py-4">
-              No hyperparameters available. Add new ones below.
+              No hyperparameters available for this algorithm.
             </div>
           ) : (
             paramKeys.map((key) => (
@@ -209,22 +270,13 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
               </div>
             ))
           )}
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full mt-2"
-            onClick={handleAddParam}
-          >
-            + Add Parameter
-          </Button>
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || paramKeys.length === 0}>
             {isSubmitting ? (
               <>
                 <Loader className="h-4 w-4 animate-spin mr-2" />
