@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthHeaders } from '@/lib/utils';
 
 interface TuneModelModalProps {
   experimentId: string;
@@ -75,11 +76,11 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     setIsFetchingParams(true);
     
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         method: 'GET',
-        headers: {
-          // Include auth headers if needed by your API
-        }
+        headers: headers
       });
       
       if (!response.ok) {
@@ -173,11 +174,13 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     const parsedParams = parseHyperparameters();
     
     try {
+      const headers = await getAuthHeaders();
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/experiments/tune-model/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Include auth headers if needed by your API
+          ...headers
         },
         body: JSON.stringify({
           experiment_id: experimentId,
