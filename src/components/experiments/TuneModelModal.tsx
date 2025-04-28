@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -154,7 +155,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/experiments/tune-model/`, {
+      const response = await fetch(`http://localhost:8000/experiments/tune-model/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,8 +226,8 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
                   <Input
                     id={`key-${key}`}
                     value={key}
-                    onChange={(e) => handleKeyChange(key, e.target.value)}
-                    placeholder="e.g. max_depth"
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
                 <div>
