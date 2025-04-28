@@ -81,6 +81,17 @@ const ExperimentsTab: React.FC = () => {
 
   useEffect(() => {
     fetchExperiments();
+    
+    const handleRefreshExperiments = () => {
+      console.log("Refreshing experiments list after model tuning");
+      fetchExperiments();
+    };
+    
+    window.addEventListener('refresh-experiments', handleRefreshExperiments);
+    
+    return () => {
+      window.removeEventListener('refresh-experiments', handleRefreshExperiments);
+    };
   }, [trainingMethod, taskType]);
 
   useEffect(() => {

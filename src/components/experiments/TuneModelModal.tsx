@@ -176,6 +176,11 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
         });
         onSuccess();
         onClose();
+        
+        // Small delay to ensure the backend has time to process before refreshing
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('refresh-experiments'));
+        }, 500);
       } else {
         toast({
           title: "Error",
