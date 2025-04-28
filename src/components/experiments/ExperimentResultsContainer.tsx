@@ -10,12 +10,14 @@ interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status?: ExperimentStatus;
   onRefresh?: () => void;
+  onReset?: () => void;
 }
 
 const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   experimentId,
   status: initialStatus = 'completed',
-  onRefresh
+  onRefresh,
+  onReset
 }) => {
   const [experimentResults, setExperimentResults] = useState<ExperimentResults | null>(null);
   const [status, setStatus] = useState<ExperimentStatus>(initialStatus);
@@ -35,7 +37,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       
       // First check status to see if the experiment is completed
       const statusResponse = await checkStatus(experimentId);
-      if (!statusResponse.success) {
+      if (!statusResponse.status || statusResponse.status === 'error') {
         throw new Error(statusResponse.message || 'Failed to check experiment status');
       }
       
@@ -86,7 +88,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
         clearTimeout(pollTimeout);
       }
     };
-  }, [experimentId, status, fetchResults]);
+  }, [experimentId, status]);
 
   // Initial fetch
   useEffect(() => {
@@ -110,6 +112,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     setExperimentResults(null);
     setIsLoading(false);
     setError(null);
+    if (onReset) {
+      onReset();
+    }
   };
 
   return (
