@@ -10,12 +10,14 @@ interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
   onReset?: () => void;
+  onRefresh?: () => void;
 }
 
 const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   experimentId,
   status,
-  onReset
+  onReset,
+  onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -65,6 +67,11 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     }
   };
 
+  const handleRefresh = () => {
+    fetchResults();
+    if (onRefresh) onRefresh();
+  };
+
   return (
     <ExperimentResults
       experimentId={experimentId}
@@ -73,6 +80,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       isLoading={isLoading}
       error={error}
       onReset={onReset}
+      onRefresh={handleRefresh}
     />
   );
 };

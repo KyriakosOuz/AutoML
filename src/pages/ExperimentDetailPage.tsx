@@ -14,6 +14,11 @@ const ExperimentDetailPage: React.FC = () => {
     navigate('/training');
   };
   
+  const handleRefresh = () => {
+    // If needed, you could add additional refresh logic here
+    console.log("Refreshing experiment data");
+  };
+  
   return (
     <div className="container py-8">
       <div className="flex items-center mb-6">
@@ -27,6 +32,7 @@ const ExperimentDetailPage: React.FC = () => {
       <ExperimentResultsContainer 
         experimentId={experimentId || null} 
         status={status}
+        onRefresh={handleRefresh}
       />
     </div>
   );

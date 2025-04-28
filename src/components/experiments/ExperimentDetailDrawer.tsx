@@ -27,29 +27,34 @@ import {
   AlertTriangle,
   Download as DownloadIcon,
   Image as ImageIcon,
-  X
+  X,
+  Sliders
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import TuneModelModal from './TuneModelModal';
 
 interface ExperimentDetailDrawerProps {
   experimentId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   experimentId,
   isOpen,
-  onClose
+  onClose,
+  onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('info');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isTuneModalOpen, setIsTuneModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -127,6 +132,19 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       file.file_type === 'model' || 
       file.file_type.includes('model')
     );
+  };
+
+  const canTuneModel = () => {
+    return results && 
+           !results.automl_engine && 
+           results.algorithm && 
+           (results.status === 'completed' || results.status === 'success');
+  };
+  
+  const handleTuneSuccess = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
   };
   
   const renderLoadingState = () => (
@@ -278,6 +296,19 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </>
                       )}
                     </div>
+                    
+                    {canTuneModel() && (
+                      <div className="mt-4">
+                        <Button 
+                          onClick={() => setIsTuneModalOpen(true)}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          <Sliders className="h-4 w-4 mr-2" />
+                          Tune This Model
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 
@@ -636,6 +667,16 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
             </div>
           </DialogContent>
         </Dialog>
+      )}
+      
+      {results && (
+        <TuneModelModal 
+          experimentId={experimentId || ''}
+          isOpen={isTuneModalOpen}
+          onClose={() => setIsTuneModalOpen(false)}
+          onSuccess={handleTuneSuccess}
+          initialHyperparameters={results.hyperparameters}
+        />
       )}
     </>
   );
