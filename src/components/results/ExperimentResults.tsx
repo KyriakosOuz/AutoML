@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +123,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }
   
   if (error || status === 'failed') {
-    const errorMessage = experimentResults?.experiment_metadata?.error_message || error;
+    const errorMessage = experimentResults?.error_message || error;
     
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
@@ -202,7 +201,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     created_at,
     completed_at,
     training_type
-  } = experimentResults.experiment_metadata;
+  } = experimentResults;
   
   const metrics = experimentResults.metrics || {};
   const files = experimentResults.files || [];
