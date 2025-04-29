@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Database, PieChart, BarChart2, HelpCircle, User } from 'lucide-react';
+import { Cpu, BarChart2, Upload, HelpCircle } from 'lucide-react';
 import AuthHeader from '@/components/auth/AuthHeader';
 import {
   Dialog,
@@ -47,8 +48,8 @@ const MainHeader = () => {
     <header className="bg-white border-b border-gray-200 py-3 px-4 sm:px-6">
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          AutoML Web App
+          <Cpu className="h-5 w-5" />
+          KyrO AutoML
         </Link>
         
         <div className="flex-1 flex justify-center">
@@ -71,7 +72,7 @@ const MainHeader = () => {
                 className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
-                  <PieChart className="h-4 w-4" />
+                  <BarChart2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Dashboard</span>
                 </Link>
               </TabsTrigger>
@@ -82,7 +83,7 @@ const MainHeader = () => {
                 className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
-                  <Database className="h-4 w-4" />
+                  <Upload className="h-4 w-4" />
                   <span className="hidden sm:inline">Dataset</span>
                 </Link>
               </TabsTrigger>
@@ -93,7 +94,7 @@ const MainHeader = () => {
                 className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
               >
                 <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
-                  <BarChart2 className="h-4 w-4" />
+                  <Cpu className="h-4 w-4" />
                   <span className="hidden sm:inline">Training</span>
                 </Link>
               </TabsTrigger>
