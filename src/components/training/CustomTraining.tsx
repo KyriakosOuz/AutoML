@@ -20,7 +20,6 @@ import HyperParameterEditor from './HyperParameterEditor';
 import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 const CustomTraining: React.FC = () => {
   const { datasetId, taskType: datasetTaskType, targetColumn } = useDataset();
@@ -43,7 +42,6 @@ const CustomTraining: React.FC = () => {
   const [experimentName, setExperimentName] = useState('');
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
-  const isMobile = useIsMobile();
 
   const navigate = useNavigate();
 
@@ -185,21 +183,21 @@ const CustomTraining: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-6">
-      <Card className="overflow-hidden">
-        <CardHeader className="py-4 sm:py-6">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-primary">
-            <Beaker className="h-4 w-4 sm:h-5 sm:w-5" />
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl text-primary">
+            <Beaker className="h-5 w-5" />
             Custom Training
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
+          <CardDescription>
             Train models with custom algorithms and hyperparameters
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <div className="space-y-4 sm:space-y-6">
+        <CardContent>
+          <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-sm">Algorithm</Label>
+              <Label>Algorithm</Label>
               <Select
                 value={customParameters.algorithm}
                 onValueChange={(value) => setCustomParameters({ algorithm: value })}
@@ -232,14 +230,14 @@ const CustomTraining: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="experiment-name" className="flex items-center gap-1 text-sm">
+              <Label htmlFor="experiment-name" className="flex items-center gap-2">
                 Experiment Name
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
-                    <TooltipContent className="text-xs sm:text-sm">
+                    <TooltipContent>
                       <p>Name to identify this training experiment</p>
                     </TooltipContent>
                   </Tooltip>
@@ -251,14 +249,13 @@ const CustomTraining: React.FC = () => {
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
                 disabled={isTraining}
-                className="text-xs sm:text-sm"
               />
             </div>
 
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Test Set Split</Label>
-                <span className="text-xs sm:text-sm font-medium">{(customParameters.testSize * 100).toFixed(0)}%</span>
+                <Label>Test Set Split</Label>
+                <span className="text-sm font-medium">{(customParameters.testSize * 100).toFixed(0)}%</span>
               </div>
               <Slider
                 id="test-size"
@@ -274,20 +271,20 @@ const CustomTraining: React.FC = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
-                <Label htmlFor="stratify" className="flex items-center gap-1 text-sm">
+                <Label htmlFor="stratify" className="flex items-center gap-2">
                   Stratify Split
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
-                      <TooltipContent className="text-xs sm:text-sm max-w-[200px]">
+                      <TooltipContent>
                         <p>Maintains class distribution in train/test sets. Recommended for classification tasks.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </Label>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
+                <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
               </div>
               <Switch
                 id="stratify"
@@ -298,15 +295,15 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            <div className="space-y-1 sm:space-y-2">
-              <Label htmlFor="random-seed" className="flex items-center gap-1 text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="random-seed" className="flex items-center gap-2">
                 Random Seed
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
-                    <TooltipContent className="text-xs sm:text-sm max-w-[200px]">
+                    <TooltipContent>
                       <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                     </TooltipContent>
                   </Tooltip>
@@ -321,27 +318,26 @@ const CustomTraining: React.FC = () => {
                 disabled={isTraining}
                 placeholder="Enter random seed (e.g. 42)"
                 aria-label="Random seed for reproducibility"
-                className="text-xs sm:text-sm"
               />
-              <p className="text-[10px] sm:text-xs text-muted-foreground">For reproducible results</p>
+              <p className="text-xs text-muted-foreground">For reproducible results</p>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
-                <Label htmlFor="enable-analytics" className="flex items-center gap-1 text-sm">
+                <Label htmlFor="enable-analytics" className="flex items-center gap-2">
                   Enable Advanced Analytics
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
-                      <TooltipContent className="text-xs sm:text-sm max-w-[200px]">
+                      <TooltipContent>
                         <p>Enable advanced analytics and tracking during training</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </Label>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Enable or disable advanced analytics</p>
+                <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
               </div>
               <Switch
                 id="enable-analytics"
@@ -354,20 +350,20 @@ const CustomTraining: React.FC = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
-                <Label htmlFor="enable-visualization" className="flex items-center gap-1 text-sm">
+                <Label htmlFor="enable-visualization" className="flex items-center gap-2">
                   Enable Visualizations
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
-                      <TooltipContent className="text-xs sm:text-sm max-w-[200px]">
+                      <TooltipContent>
                         <p>Generate visualizations like confusion matrix, ROC curves, etc.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </Label>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Generate visual insights for model performance</p>
+                <p className="text-xs text-muted-foreground">Generate visual insights for model performance</p>
               </div>
               <Switch
                 id="enable-visualization"
@@ -382,30 +378,30 @@ const CustomTraining: React.FC = () => {
               onClick={handleTrainModel}
               disabled={isTraining || !isFormValid()}
               className="w-full mt-4"
-              size={isMobile ? "default" : "lg"}
+              size="lg"
             >
               {isTraining ? (
                 <>
-                  <Loader className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  <span className="text-xs sm:text-base">Training in Progress...</span>
+                  <Loader className="mr-2 h-5 w-5 animate-spin" />
+                  Training in Progress...
                 </>
               ) : (
                 <>
-                  <Play className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-xs sm:text-base">Train Model with {customParameters.algorithm}</span>
+                  <Play className="mr-2 h-5 w-5" />
+                  Train Model with {customParameters.algorithm}
                 </>
               )}
             </Button>
 
-            <div className="text-[10px] sm:text-sm text-muted-foreground bg-primary-foreground p-2 sm:p-3 rounded-md">
-              <p className="flex items-center gap-1 sm:gap-2">
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
+              <p className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
                 <span>Training might take several minutes depending on dataset size and complexity.</span>
               </p>
             </div>
             
             {activeExperimentId && (
-              <div className="text-[10px] sm:text-xs text-muted-foreground bg-muted p-2 rounded-md">
+              <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
                 <p className="font-mono">Experiment ID: {activeExperimentId}</p>
               </div>
             )}
@@ -414,9 +410,9 @@ const CustomTraining: React.FC = () => {
       </Card>
 
       {isLoadingResults && (
-        <div className="p-4 sm:p-8 text-center">
-          <Loader className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-xs sm:text-sm text-muted-foreground">Fetching experiment results...</p>
+        <div className="p-8 text-center">
+          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Fetching experiment results...</p>
         </div>
       )}
 
