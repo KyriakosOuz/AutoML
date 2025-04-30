@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
@@ -311,7 +311,7 @@ const ComparisonsTab: React.FC = () => {
               <TableRow key={comparison.id}>
                 <TableCell className="font-medium">{comparison.name}</TableCell>
                 <TableCell>{comparison.experiment_ids.length} experiments</TableCell>
-                <TableCell>{formatDistanceToNow(new Date(comparison.created_at))} ago</TableCell>
+                <TableCell>{format(new Date(comparison.created_at), 'MMM d, yyyy h:mm a')}</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button 
