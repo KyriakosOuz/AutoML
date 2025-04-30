@@ -220,15 +220,6 @@ const ComparisonsTab: React.FC = () => {
     }
   };
 
-  const formatDateConsistently = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return format(date, 'MM/dd/yyyy, hh:mm:ss a');
-    } catch (e) {
-      return dateStr;
-    }
-  };
-
   const handleSaveComparison = async () => {
     if (!comparisonName.trim() || !currentExperimentIds.length) {
       toast({
@@ -242,11 +233,6 @@ const ComparisonsTab: React.FC = () => {
     try {
       setSavingComparison(true);
       
-      // Format the current date for the comparison name if none is provided
-      const formattedName = comparisonName.trim() === '' 
-        ? `Comparison on ${formatDateConsistently(new Date().toISOString())}` 
-        : comparisonName;
-      
       const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
         method: 'POST',
@@ -255,7 +241,7 @@ const ComparisonsTab: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formattedName,
+          name: comparisonName,
           experiment_ids: currentExperimentIds
         })
       });
@@ -325,7 +311,7 @@ const ComparisonsTab: React.FC = () => {
               <TableRow key={comparison.id}>
                 <TableCell className="font-medium">{comparison.name}</TableCell>
                 <TableCell>{comparison.experiment_ids.length} experiments</TableCell>
-                <TableCell>{formatDateConsistently(comparison.created_at)}</TableCell>
+                <TableCell>{format(new Date(comparison.created_at), 'MMM d, yyyy h:mm a')}</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button 
