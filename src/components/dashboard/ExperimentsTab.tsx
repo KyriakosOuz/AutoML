@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,6 +103,7 @@ const ExperimentsTab: React.FC = () => {
   const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
   const [isLoadingComparison, setIsLoadingComparison] = useState(false);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [isSavingComparison, setIsSavingComparison] = useState(false);
   
   const { toast } = useToast();
 
@@ -202,6 +202,44 @@ const ExperimentsTab: React.FC = () => {
     });
   };
 
+  const saveComparisonToBackend = async (experimentIds: string[]) => {
+    try {
+      setIsSavingComparison(true);
+      const headers = await getAuthHeaders();
+      const currentDate = new Date().toLocaleString();
+      
+      const response = await fetch(`${API_BASE_URL}/comparisons/save/`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `Comparison on ${currentDate}`,
+          experiment_ids: experimentIds
+        })
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Comparison saved to your dashboard.",
+        });
+      } else {
+        throw new Error("Failed to save comparison");
+      }
+    } catch (err) {
+      console.error('Error saving comparison:', err);
+      toast({
+        title: "Error",
+        description: "Failed to save comparison.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingComparison(false);
+    }
+  };
+
   const handleCompareSelected = async () => {
     if (trainingMethod === 'all') {
       toast({
@@ -226,7 +264,6 @@ const ExperimentsTab: React.FC = () => {
       setComparisonError(null);
       const headers = await getAuthHeaders();
       
-      // UPDATED: Using JSON body instead of FormData
       const response = await fetch(`${API_BASE_URL}/comparisons/compare/`, {
         method: 'POST',
         headers: {
@@ -249,6 +286,9 @@ const ExperimentsTab: React.FC = () => {
       if (data && data.comparison) {
         setComparisonResults(data.comparison);
         setIsComparisonDialogOpen(true);
+        
+        // Save the comparison in the background (non-blocking)
+        saveComparisonToBackend(selectedExperiments);
       } else {
         throw new Error('Invalid comparison data format from API');
       }
