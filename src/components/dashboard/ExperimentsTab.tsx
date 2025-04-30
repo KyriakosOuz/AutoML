@@ -6,11 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Trash2, Eye, List, Plus, Check, X, Loader, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
@@ -105,8 +104,6 @@ const ExperimentsTab: React.FC = () => {
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [isSavingComparison, setIsSavingComparison] = useState(false);
   
-  const { toast } = useToast();
-
   useEffect(() => {
     fetchExperiments();
     
@@ -164,10 +161,8 @@ const ExperimentsTab: React.FC = () => {
     } catch (err) {
       console.error('Error fetching experiments:', err);
       setError(err instanceof Error ? err.message : 'Failed to load experiments');
-      toast({
-        title: "Error",
-        description: "Failed to load experiments. Please try again.",
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to load experiments. Please try again."
       });
     } finally {
       setIsLoading(false);
@@ -178,16 +173,14 @@ const ExperimentsTab: React.FC = () => {
     setSelectedExperiments(prev => {
       if (prev.includes(experimentId)) {
         const newSelected = prev.filter(id => id !== experimentId);
-        toast({
-          title: "Success",
-          description: "Experiment removed from comparison list",
+        toast.success("Success", {
+          description: "Experiment removed from comparison list"
         });
         return newSelected;
       }
       
-      toast({
-        title: "Success",
-        description: "Experiment added to comparison list",
+      toast.success("Success", {
+        description: "Experiment added to comparison list"
       });
       
       return [...prev, experimentId];
@@ -196,9 +189,8 @@ const ExperimentsTab: React.FC = () => {
 
   const handleClearSelection = () => {
     setSelectedExperiments([]);
-    toast({
-      title: "Selection Cleared",
-      description: "All selected experiments have been cleared",
+    toast.info("Selection Cleared", {
+      description: "All selected experiments have been cleared"
     });
   };
 
@@ -221,19 +213,16 @@ const ExperimentsTab: React.FC = () => {
       });
       
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Comparison saved to your dashboard.",
+        toast.success("Success", {
+          description: "Comparison saved to your dashboard."
         });
       } else {
         throw new Error("Failed to save comparison");
       }
     } catch (err) {
       console.error('Error saving comparison:', err);
-      toast({
-        title: "Error",
-        description: "Failed to save comparison.",
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to save comparison."
       });
     } finally {
       setIsSavingComparison(false);
@@ -242,19 +231,15 @@ const ExperimentsTab: React.FC = () => {
 
   const handleCompareSelected = async () => {
     if (trainingMethod === 'all') {
-      toast({
-        title: "Filter Required",
-        description: "Please filter experiments by training method before comparing.",
-        variant: "destructive",
+      toast.error("Filter Required", {
+        description: "Please filter experiments by training method before comparing."
       });
       return;
     }
     
     if (selectedExperiments.length < 2) {
-      toast({
-        title: "Selection Required",
-        description: "Please select at least 2 experiments to compare.",
-        variant: "destructive",
+      toast.error("Selection Required", {
+        description: "Please select at least 2 experiments to compare."
       });
       return;
     }
@@ -296,10 +281,8 @@ const ExperimentsTab: React.FC = () => {
       console.error('Error comparing experiments:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to compare experiments';
       setComparisonError(errorMessage);
-      toast({
-        title: "Comparison Error",
-        description: errorMessage,
-        variant: "destructive",
+      toast.error("Comparison Error", {
+        description: errorMessage
       });
     } finally {
       setIsLoadingComparison(false);
@@ -320,17 +303,14 @@ const ExperimentsTab: React.FC = () => {
       
       if (!response.ok) throw new Error('Failed to delete experiment');
       
-      toast({
-        title: "Success",
-        description: "Experiment deleted successfully",
+      toast.success("Success", {
+        description: "Experiment deleted successfully"
       });
       
       fetchExperiments();
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete experiment",
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Failed to delete experiment"
       });
     }
   };
