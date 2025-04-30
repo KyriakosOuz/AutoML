@@ -11,7 +11,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <MainHeader />
-      <main className="flex-1">
+      <main className="flex-1 w-full overflow-x-hidden">
         {children || <Outlet />}
       </main>
     </div>

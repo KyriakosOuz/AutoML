@@ -4,7 +4,7 @@ import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from '@/contexts/training/types';
-import ExperimentResults from '../results/ExperimentResults';  // Updated import path
+import ExperimentResults from '../results/ExperimentResults';
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
@@ -69,15 +69,17 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   };
 
   return (
-    <ExperimentResults
-      experimentId={experimentId}
-      status={status}
-      experimentResults={results}
-      isLoading={isLoading}
-      error={error}
-      onReset={onReset}
-      onRefresh={handleRefresh}
-    />
+    <div className="w-full overflow-x-hidden">
+      <ExperimentResults
+        experimentId={experimentId}
+        status={status}
+        experimentResults={results}
+        isLoading={isLoading}
+        error={error}
+        onReset={onReset}
+        onRefresh={handleRefresh}
+      />
+    </div>
   );
 };
 

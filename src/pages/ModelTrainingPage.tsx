@@ -12,7 +12,7 @@ const ModelTrainingPage: React.FC = () => {
       <TrainingProvider>
         <div className="flex flex-col min-h-screen">
           <TrainingHeader />
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
             <ModelTrainingContent />
           </div>
           <Toaster />

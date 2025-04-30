@@ -51,27 +51,29 @@ const ExperimentDetailPage: React.FC = () => {
   };
   
   return (
-    <div className="container py-8">
-      <div className="flex items-center mb-6 justify-between">
+    <div className="container py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
         <div className="flex items-center">
-          <Button variant="ghost" onClick={goBack} className="mr-4">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Training
+          <Button variant="ghost" onClick={goBack} className="mr-2 sm:mr-4 p-2 sm:p-3">
+            <ChevronLeft className="h-4 w-4 mr-0 sm:mr-1" />
+            <span className="hidden sm:inline">Back to Training</span>
           </Button>
-          <h1 className="text-2xl font-bold">Experiment Results</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Experiment Results</h1>
         </div>
         
-        <Button variant="outline" onClick={handleRefresh} size="sm">
+        <Button variant="outline" onClick={handleRefresh} size="sm" className="w-full sm:w-auto mt-2 sm:mt-0">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
       
-      <ExperimentResultsContainer 
-        experimentId={experimentId || null} 
-        status={status}
-        onRefresh={handleRefresh}
-      />
+      <div className="overflow-x-auto">
+        <ExperimentResultsContainer 
+          experimentId={experimentId || null} 
+          status={status}
+          onRefresh={handleRefresh}
+        />
+      </div>
     </div>
   );
 };

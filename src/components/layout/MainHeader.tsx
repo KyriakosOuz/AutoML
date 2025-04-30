@@ -13,10 +13,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import MobileNav from './MobileNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MainHeader = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const isMobile = useIsMobile();
 
   const getHelpContent = () => {
     if (currentPath.includes('/dataset')) {
@@ -47,60 +50,66 @@ const MainHeader = () => {
   return (
     <header className="bg-white border-b border-gray-200 py-3 px-4 sm:px-6">
       <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
-          <Cpu className="h-5 w-5" />
-          KyrO AutoML
-        </Link>
-        
-        <div className="flex-1 flex justify-center">
-          <Tabs 
-            value={
-              currentPath.includes('/dashboard') 
-                ? 'dashboard' 
-                : currentPath.includes('/dataset') 
-                  ? 'dataset' 
-                  : currentPath.includes('/training') 
-                    ? 'training' 
-                    : 'home'
-            } 
-            className="w-full max-w-md"
-          >
-            <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
-              <TabsTrigger 
-                value="dashboard" 
-                asChild 
-                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
-              >
-                <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
-                  <BarChart2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
-              </TabsTrigger>
-              
-              <TabsTrigger 
-                value="dataset" 
-                asChild 
-                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
-              >
-                <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
-                  <Upload className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dataset</span>
-                </Link>
-              </TabsTrigger>
-              
-              <TabsTrigger 
-                value="training" 
-                asChild 
-                className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
-              >
-                <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
-                  <Cpu className="h-4 w-4" />
-                  <span className="hidden sm:inline">Training</span>
-                </Link>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="flex items-center gap-2">
+          {isMobile && <MobileNav />}
+          <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
+            <span className="hidden sm:inline">KyrO AutoML</span>
+            <span className="sm:hidden">KyrO</span>
+          </Link>
         </div>
+        
+        {!isMobile && (
+          <div className="flex-1 flex justify-center max-w-md mx-4">
+            <Tabs 
+              value={
+                currentPath.includes('/dashboard') 
+                  ? 'dashboard' 
+                  : currentPath.includes('/dataset') 
+                    ? 'dataset' 
+                    : currentPath.includes('/training') 
+                      ? 'training' 
+                      : 'home'
+              } 
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-3 h-10 bg-black text-white">
+                <TabsTrigger 
+                  value="dashboard" 
+                  asChild 
+                  className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+                >
+                  <Link to="/dashboard" className="flex items-center justify-center gap-2 w-full h-full">
+                    <BarChart2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Link>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="dataset" 
+                  asChild 
+                  className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+                >
+                  <Link to="/dataset" className="flex items-center justify-center gap-2 w-full h-full">
+                    <Upload className="h-4 w-4" />
+                    <span className="hidden sm:inline">Dataset</span>
+                  </Link>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="training" 
+                  asChild 
+                  className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
+                >
+                  <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
+                    <Cpu className="h-4 w-4" />
+                    <span className="hidden sm:inline">Training</span>
+                  </Link>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
         
         <div className="flex items-center gap-2">
           <Dialog>
@@ -113,7 +122,7 @@ const MainHeader = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>{helpContent.title}</DialogTitle>
-                <DialogDescription className="mt-4 text-sm leading-relaxed whitespace-pre-wrap">
+                <DialogDescription className="mt-4 text-sm leading-relaxed whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
                   {helpContent.content}
                 </DialogDescription>
               </DialogHeader>
