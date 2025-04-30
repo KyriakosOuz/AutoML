@@ -6,9 +6,10 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, CircleSlash } from 'lucide-react';
+import { RefreshCcw, CircleSlash, Play } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -18,6 +19,8 @@ const ModelTrainingContent: React.FC = () => {
     activeExperimentId,
     experimentStatus,
   } = useTraining();
+  
+  const isMobile = useIsMobile();
 
   // Show results and predict tabs only when experiment is completed
   const showResultsAndPredict = experimentStatus === 'completed' && activeExperimentId;
@@ -38,34 +41,45 @@ const ModelTrainingContent: React.FC = () => {
     <div className="space-y-6">
       <DatasetSummary />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-            <TabsTrigger value="automl" className="data-[state=active]:bg-black data-[state=active]:text-white">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} bg-gray-100`}>
+            <TabsTrigger 
+              value="automl" 
+              className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
+            >
               AutoML
             </TabsTrigger>
-            <TabsTrigger value="custom" className="data-[state=active]:bg-black data-[state=active]:text-white">
-              Custom Training
+            <TabsTrigger 
+              value="custom" 
+              className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
+            >
+              Custom
             </TabsTrigger>
             <TabsTrigger 
               value="results" 
-              className="data-[state=active]:bg-black data-[state=active]:text-white"
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
               disabled={!showResultsAndPredict}
             >
-              {!showResultsAndPredict && <CircleSlash className="h-4 w-4 mr-2" />}
+              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Results
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
-              className="data-[state=active]:bg-black data-[state=active]:text-white"
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
               disabled={!showResultsAndPredict}
             >
-              {!showResultsAndPredict && <CircleSlash className="h-4 w-4 mr-2" />}
+              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Predict
             </TabsTrigger>
           </TabsList>
           {(activeExperimentId || showResultsAndPredict) && (
-            <Button variant="outline" size="sm" onClick={handleReset} className="ml-4">
-              <RefreshCcw className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              size={isMobile ? "sm" : "default"} 
+              onClick={handleReset} 
+              className={`${isMobile ? 'w-full' : 'ml-4'}`}
+            >
+              <RefreshCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Reset
             </Button>
           )}
