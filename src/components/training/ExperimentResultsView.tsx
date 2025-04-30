@@ -28,6 +28,9 @@ import {
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { trainingApi } from '@/lib/api';
+import ClassificationReportTable from './ClassificationReportTable';
+import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
+import PrecisionRecallChart from './charts/PrecisionRecallChart';
 
 const formatTaskType = (type: string = '') => {
   if (!type) return "Unknown";
