@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -66,12 +67,28 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       const response = await datasetApi.previewDataset(datasetId, stage);
       console.log('Preview response:', response);
       
+      // Handle the nested structure properly
       if (response && response.data) {
-        setPreviewData(response.data.preview || []);
-        setPreviewColumns(response.data.columns || []);
-      } else {
+        // Extract preview data from the nested structure
+        const previewRows = response.data.preview || [];
+        setPreviewData(previewRows);
+        
+        // Extract columns from overview if present, or from the first row as fallback
+        let columns = [];
+        if (response.data.overview && response.data.overview.column_names) {
+          columns = response.data.overview.column_names;
+        } else if (previewRows.length > 0) {
+          columns = Object.keys(previewRows[0]);
+        }
+        
+        setPreviewColumns(columns);
+      } else if (response && response.preview) {
+        // For backward compatibility with older API format
         setPreviewData(response.preview || []);
         setPreviewColumns(response.columns || []);
+      } else {
+        console.error('Invalid response format from API:', response);
+        setPreviewError('Invalid data format received from server');
       }
       
       setInitialLoadComplete(true);
