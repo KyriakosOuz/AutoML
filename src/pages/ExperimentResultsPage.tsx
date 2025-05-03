@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { trainingApi } from '@/lib/api';
@@ -644,7 +645,7 @@ function getVisualizationDescription(fileType: string): string {
     'learning_curve': 'Shows training and validation performance as training set size increases',
     'calibration_curve': 'Shows how well the model\'s predicted probabilities match actual outcomes',
     'prediction_error': 'Plots actual vs. predicted values to show prediction errors',
-    'residuals': 'Shows errors between predicted and actual values',
+    'residuals': 'Shows errors between predicted and actual values'
   };
   
   return descriptions[fileType.toLowerCase()] || 'Visualization of model performance metrics';
