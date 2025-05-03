@@ -76,24 +76,27 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
   const resetAllParameters = () => {
     if (useDefault || !defaultHyperparameters) return;
     
-    // Make a deep copy of default parameters
-    const resetParams = JSON.parse(JSON.stringify(defaultHyperparameters));
-    
-    // Ensure we're not losing any parameters that might exist in localParams but not in defaults
-    const updatedParams = { ...localParams };
-    Object.keys(resetParams).forEach(key => {
-      updatedParams[key] = resetParams[key];
-    });
-    
-    setLocalParams(updatedParams);
-    onChange(updatedParams);
+    if (Object.keys(defaultHyperparameters).length > 0) {
+      // Create a new object with defaults for safe state update
+      const resetParams = JSON.parse(JSON.stringify(defaultHyperparameters));
+      
+      // Update local state
+      setLocalParams(resetParams);
+      // Notify parent component
+      onChange(resetParams);
+    }
   };
 
   const resetParameter = (key: string) => {
     if (useDefault || !defaultHyperparameters || !(key in defaultHyperparameters)) return;
     
-    const updatedParams = { ...localParams };
-    updatedParams[key] = defaultHyperparameters[key];
+    // Get the default value for this particular parameter
+    const defaultValue = defaultHyperparameters[key];
+    
+    // Create new objects to avoid mutation
+    const updatedParams = { ...localParams, [key]: defaultValue };
+    
+    // Update both local state and parent
     setLocalParams(updatedParams);
     onChange(updatedParams);
   };
