@@ -91,7 +91,7 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
     try {
       // Use custom SQL query via RPC instead of direct table operation
       // This allows us to insert into the table without having updated TypeScript definitions
-      const { error } = await supabase.rpc('insert_user_feedback', {
+      const { error } = await (supabase.rpc as any)('insert_user_feedback', {
         p_user_id: user.id,
         p_responses: formValues,
         p_sus_score: susScore,
