@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Upload, Cpu, BarChart2, ChevronRight, FileSpreadsheet, FlaskConical, BarChart } from "lucide-react";
+import { ArrowRight, Upload, Cpu, BarChart2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -42,7 +42,7 @@ const Index = () => {
       
       <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-10">
         {/* Hero Section */}
-        <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
+        <div className="flex flex-col items-center text-center mb-8 sm:mb-16">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
             AutoML Web App for Supervised Learning
           </h1>
@@ -50,25 +50,6 @@ const Index = () => {
             A complete platform for automated machine learning — from dataset upload and cleaning 
             to training, evaluation, and prediction. No code required.
           </p>
-          
-          {/* User guidance steps */}
-          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-6 sm:mb-8 max-w-3xl">
-            <div className="flex items-center bg-gray-100 rounded-full py-2 px-4">
-              <FileSpreadsheet className="h-4 w-4 text-gray-600 mr-2" />
-              <span className="text-sm font-medium">Upload Data</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-            <div className="flex items-center bg-gray-100 rounded-full py-2 px-4">
-              <FlaskConical className="h-4 w-4 text-gray-600 mr-2" />
-              <span className="text-sm font-medium">Train Models</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-            <div className="flex items-center bg-gray-100 rounded-full py-2 px-4">
-              <BarChart className="h-4 w-4 text-gray-600 mr-2" />
-              <span className="text-sm font-medium">View Results & Predict</span>
-            </div>
-          </div>
-          
           <Link to={user ? "/dataset" : "/auth"}>
             <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 w-full sm:w-auto">
               {user ? "Get Started" : "Sign In to Start"}
@@ -86,7 +67,7 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Dataset Handling</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Inspect missing values, preview data, and prepare features for training.
+              Upload CSV files, handle missing values, and select key features for training.
             </p>
             <Link to={user ? "/dataset" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
               Upload & Prepare Data
@@ -101,10 +82,10 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Model Training</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Set up automated training or customize algorithms with fine-tuned parameters.
+              Run AutoML to discover the best model or configure custom training with your preferred algorithm.
             </p>
             <Link to={user ? "/training" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
-              Configure & Train Models
+              Train Your Model
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
@@ -116,10 +97,10 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Results & Predictions</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Review model performance, compare experiments, and make predictions with trained models.
+              Compare experiments, run predictions, and manage models — all in one place.
             </p>
             <Link to={user ? "/dashboard" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
-              Compare Results & Explore Datasets
+              Explore Dashboard
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>

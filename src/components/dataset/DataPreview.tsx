@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -15,19 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { 
   RefreshCw, 
   AlertCircle, 
   Loader2,
   XCircle,
   CheckCircle,
-  Info,
-  HelpCircle
+  Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type PreviewStage = 'raw' | 'cleaned' | 'final' | 'processed' | 'latest';
 type DataPreviewProps = {
@@ -67,28 +63,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       const response = await datasetApi.previewDataset(datasetId, stage);
       console.log('Preview response:', response);
       
-      // Handle the nested structure properly
       if (response && response.data) {
-        // Extract preview data from the nested structure
-        const previewRows = response.data.preview || [];
-        setPreviewData(previewRows);
-        
-        // Extract columns from overview if present, or from the first row as fallback
-        let columns = [];
-        if (response.data.overview && response.data.overview.column_names) {
-          columns = response.data.overview.column_names;
-        } else if (previewRows.length > 0) {
-          columns = Object.keys(previewRows[0]);
-        }
-        
-        setPreviewColumns(columns);
-      } else if (response && response.preview) {
-        // For backward compatibility with older API format
+        setPreviewData(response.data.preview || []);
+        setPreviewColumns(response.data.columns || []);
+      } else {
         setPreviewData(response.preview || []);
         setPreviewColumns(response.columns || []);
-      } else {
-        console.error('Invalid response format from API:', response);
-        setPreviewError('Invalid data format received from server');
       }
       
       setInitialLoadComplete(true);
@@ -155,9 +135,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     return labels[selectedStage];
   };
 
-  const selectedColumnsCount = previewColumns?.length || 0;
-  const totalColumnsCount = overview?.column_names?.length || 0;
-
   return (
     <Card className="w-full mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -223,14 +200,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         {!isLoadingPreview && !previewError && previewData && previewData.length > 0 && (
           <Alert className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertTitle className="text-green-700">First 10 Rows of Your Dataset</AlertTitle>
+            <AlertTitle className="text-green-700">Data Preview Loaded</AlertTitle>
             <AlertDescription className="text-green-600">
               Showing {previewData.length} rows and {previewColumns?.length || 0} columns
-              {selectedColumnsCount > 0 && totalColumnsCount > 0 && (
-                <Badge variant="outline" className="ml-2 bg-white">
-                  Selected Columns: {selectedColumnsCount} of {totalColumnsCount}
-                </Badge>
-              )}
             </AlertDescription>
           </Alert>
         )}
@@ -318,48 +290,20 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         )}
         
         {overview && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md text-sm text-gray-600 dark:text-gray-300 border">
-            <h3 className="font-medium mb-2 flex items-center gap-1">
-              <Info className="h-4 w-4" />
-              Dataset Summary
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-500">Rows</span>
-                <span className="font-medium">{overview.num_rows}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-500">Columns</span>
-                <span className="font-medium">{overview.num_columns}</span>
-              </div>
-              <div className="flex flex-col">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="flex items-center gap-1 text-left">
-                      <span className="text-xs text-gray-500">Numerical Features</span>
-                      <HelpCircle className="h-3 w-3 text-gray-400" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Columns containing numeric data that can be used as model inputs</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <span className="font-medium">{overview.numerical_features?.length || 0}</span>
-              </div>
-              <div className="flex flex-col">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="flex items-center gap-1 text-left">
-                      <span className="text-xs text-gray-500">Categorical Features</span>
-                      <HelpCircle className="h-3 w-3 text-gray-400" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Columns containing text/categorical data that can be used as model inputs</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <span className="font-medium">{overview.categorical_features?.length || 0}</span>
-              </div>
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm text-gray-600 dark:text-gray-300 border">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <p className="flex items-center gap-1">
+                <span className="font-medium">Rows:</span> {overview.num_rows}
+              </p>
+              <p className="flex items-center gap-1">
+                <span className="font-medium">Columns:</span> {overview.num_columns}
+              </p>
+              <p className="flex items-center gap-1">
+                <span className="font-medium">Numerical Features:</span> {overview.numerical_features?.length || 0}
+              </p>
+              <p className="flex items-center gap-1">
+                <span className="font-medium">Categorical Features:</span> {overview.categorical_features?.length || 0}
+              </p>
             </div>
           </div>
         )}
