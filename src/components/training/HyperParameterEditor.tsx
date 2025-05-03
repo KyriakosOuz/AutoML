@@ -181,7 +181,7 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
               </TooltipProvider>
             </div>
 
-            <ScrollArea className="max-h-[450px] pr-3">
+            <ScrollArea className="max-h-[500px] pr-3">
               <div className="space-y-4">
                 {Object.entries(localParams).length > 0 ? (
                   Object.entries(localParams).map(([key, value]) => (

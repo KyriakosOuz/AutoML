@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -214,7 +213,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md overflow-auto">
         <DialogHeader>
           <DialogTitle>Tune Model Hyperparameters</DialogTitle>
           <DialogDescription>
