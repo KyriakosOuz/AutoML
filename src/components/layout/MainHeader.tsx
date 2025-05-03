@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Cpu, BarChart2, Upload, HelpCircle } from 'lucide-react';
+import { Cpu, BarChart2, Upload, HelpCircle, Star } from 'lucide-react';
 import AuthHeader from '@/components/auth/AuthHeader';
 import {
   Dialog,
@@ -112,6 +112,24 @@ const MainHeader = () => {
         )}
         
         <div className="flex items-center gap-2">
+          <a 
+            href="https://docs.google.com/forms/d/e/1FAIpQLSeqZhZw6E08GzSNGTCZnVwGoJJktNCJRZSwaFdtDF4o2rFX-g/viewform?usp=dialog" 
+            target="_blank" 
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm" className="flex items-center gap-1 mr-2">
+              <Star className="h-4 w-4" />
+              <span className="hidden md:inline">Rate App</span>
+            </Button>
+          </a>
+          
+          <Link to="/feedback">
+            <Button variant="outline" size="sm" className="flex items-center gap-1 mr-2">
+              <Star className="h-4 w-4 text-amber-500" />
+              <span className="hidden md:inline">Feedback</span>
+            </Button>
+          </Link>
+          
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-1">
