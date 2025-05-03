@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -30,7 +31,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeTab: 'automl',
   });
 
-  // Load experiment ID from storage on initial load
   useEffect(() => {
     try {
       const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
@@ -49,7 +49,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, []);
 
-  // Save experiment ID to storage when it changes
   useEffect(() => {
     try {
       if (state.activeExperimentId) {

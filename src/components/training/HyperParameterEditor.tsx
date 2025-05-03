@@ -34,14 +34,6 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
     setLocalParams(hyperparameters);
   }, [hyperparameters]);
 
-  // Reset to default when algorithm changes
-  useEffect(() => {
-    // When algorithm changes, toggle useDefault to true
-    if (!useDefault) {
-      onToggleDefault();
-    }
-  }, [algorithm, onToggleDefault, useDefault]);
-
   const handleParamChange = (key: string, value: string) => {
     if (useDefault) return;
 

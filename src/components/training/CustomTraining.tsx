@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -119,6 +118,32 @@ const CustomTraining: React.FC = () => {
     }
   };
 
+  // Fixed hyperparameter fetching to prevent infinite loops
+  useEffect(() => {
+    if (
+      customParameters.algorithm && 
+      !customParameters.useDefaultHyperparameters && 
+      !hasFetchedParams &&
+      Object.keys(customParameters.hyperparameters || {}).length === 0
+    ) {
+      trainingApi.getAvailableHyperparameters(customParameters.algorithm)
+        .then(params => {
+          setCustomParameters({
+            hyperparameters: params
+          });
+          setHasFetchedParams(true);
+        })
+        .catch(error => {
+          console.error('Error fetching hyperparameters:', error);
+          const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
+          setCustomParameters({
+            hyperparameters: defaultParams
+          });
+          setHasFetchedParams(true);
+        });
+    }
+  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, customParameters.hyperparameters, hasFetchedParams, setCustomParameters]);
+
   const handleTrainModel = async () => {
     try {
       setActiveExperimentId(null);
@@ -139,8 +164,7 @@ const CustomTraining: React.FC = () => {
       formData.append('random_seed', String(customParameters.randomSeed));
       formData.append('experiment_name', experimentName || '');
       formData.append('enable_visualization', String(customParameters.enableVisualization));
-      // Comment out the advanced analytics option
-      // formData.append('advanced_analytics', String(customParameters.enableAnalytics));
+      formData.append('advanced_analytics', String(customParameters.enableAnalytics));
       formData.append('store_model', 'true');
 
       toast({
@@ -328,8 +352,6 @@ const CustomTraining: React.FC = () => {
               <p className="text-xs text-muted-foreground">For reproducible results</p>
             </div>
 
-            {/* Comment out the Enable Advanced Analytics section */}
-            {/* 
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="enable-analytics" className="flex items-center gap-2">
@@ -355,7 +377,6 @@ const CustomTraining: React.FC = () => {
                 aria-label="Enable advanced analytics"
               />
             </div>
-            */}
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
