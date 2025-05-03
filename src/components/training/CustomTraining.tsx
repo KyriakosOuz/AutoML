@@ -164,7 +164,6 @@ const CustomTraining: React.FC = () => {
       formData.append('random_seed', String(customParameters.randomSeed));
       formData.append('experiment_name', experimentName || '');
       formData.append('enable_visualization', String(customParameters.enableVisualization));
-      formData.append('advanced_analytics', String(customParameters.enableAnalytics));
       formData.append('store_model', 'true');
 
       toast({
@@ -350,32 +349,6 @@ const CustomTraining: React.FC = () => {
                 aria-label="Random seed for reproducibility"
               />
               <p className="text-xs text-muted-foreground">For reproducible results</p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="enable-analytics" className="flex items-center gap-2">
-                  Enable Advanced Analytics
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enable advanced analytics and tracking during training</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
-              </div>
-              <Switch
-                id="enable-analytics"
-                checked={customParameters.enableAnalytics}
-                onCheckedChange={(checked) => setCustomParameters({ enableAnalytics: checked })}
-                disabled={isTraining}
-                aria-label="Enable advanced analytics"
-              />
             </div>
 
             <div className="flex items-center justify-between">

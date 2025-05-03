@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -272,6 +271,35 @@ const AutoMLTraining: React.FC = () => {
               />
               <p className="text-xs text-muted-foreground">For reproducible results</p>
             </div>
+
+            {/* Comment out the Advanced Analytics section */}
+            {/*
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="enable-analytics" className="flex items-center gap-2">
+                  Enable Advanced Analytics
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enable advanced analytics and tracking during training</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <p className="text-xs text-muted-foreground">Enable or disable advanced analytics</p>
+              </div>
+              <Switch
+                id="enable-analytics"
+                checked={enableAnalytics}
+                onCheckedChange={(checked) => setEnableAnalytics(checked)}
+                disabled={isTraining || isSubmitting}
+                aria-label="Enable advanced analytics"
+              />
+            </div>
+            */}
 
             <Button
               onClick={handleTrainModel}

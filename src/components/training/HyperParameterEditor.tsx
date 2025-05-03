@@ -29,6 +29,19 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
   defaultHyperparameters = {},
 }) => {
   const [localParams, setLocalParams] = useState<HyperParameters>(hyperparameters);
+  const [prevAlgorithm, setPrevAlgorithm] = useState<string>(algorithm);
+
+  // Track algorithm changes and toggle to defaults when changed
+  useEffect(() => {
+    if (prevAlgorithm !== algorithm) {
+      setPrevAlgorithm(algorithm);
+      
+      // Toggle to default hyperparameters when algorithm changes
+      if (!useDefault) {
+        onToggleDefault();
+      }
+    }
+  }, [algorithm, prevAlgorithm, useDefault, onToggleDefault]);
 
   useEffect(() => {
     setLocalParams(hyperparameters);
