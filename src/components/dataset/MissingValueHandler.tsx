@@ -294,13 +294,13 @@ const MissingValueHandler: React.FC = () => {
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
         <Button 
           onClick={handleProcessMissingValues} 
-          disabled={isLoading || !hasMissingValues}
+          disabled={isLoading}
           variant="default"
           size="lg"
           type="button"
         >
           <Wand2 className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : 'Process Missing Values'}
+          {isLoading ? 'Processing...' : hasMissingValues ? 'Process Missing Values' : 'Mark As Processed'}
         </Button>
       </CardFooter>
     </Card>

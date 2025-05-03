@@ -130,12 +130,15 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
     
-    // Only update to final stage if we have the required data and are currently in cleaned stage
+    // Only update to final stage if we have the required data and explicitly set columnsToKeep
     // This prevents overriding the stage when it's already set to 'final' or another value
     if (datasetId && targetColumn && columnsToKeep && processingStage === 'cleaned') {
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
+    
+    // IMPORTANT: We're NOT automatically setting processingStage to 'cleaned' here anymore
+    // The 'cleaned' stage will only be set when the user explicitly clicks "Process Missing Values"
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
   // Individual setters - these will only update one property at a time

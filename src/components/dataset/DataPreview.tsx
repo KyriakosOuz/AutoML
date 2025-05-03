@@ -49,6 +49,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [stageOverview, setStageOverview] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchPreview = async () => {
@@ -69,14 +70,26 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       if (response && response.data) {
         setPreviewData(response.data.preview || []);
         setPreviewColumns(response.data.columns || []);
-        if (response.data.overview) {
-          setOverview(response.data.overview);
+        
+        // Store the overview specific to this stage
+        const stageSpecificOverview = response.data.overview || {};
+        setStageOverview(stageSpecificOverview);
+        
+        // Update global overview only when viewing the latest stage
+        if (stage === 'latest' || stage === processingStage) {
+          setOverview(stageSpecificOverview);
         }
       } else {
         setPreviewData(response.preview || []);
         setPreviewColumns(response.columns || []);
-        if (response.overview) {
-          setOverview(response.overview);
+        
+        // Store the overview specific to this stage
+        const stageSpecificOverview = response.overview || {};
+        setStageOverview(stageSpecificOverview);
+        
+        // Update global overview only when viewing the latest stage
+        if (stage === 'latest' || stage === processingStage) {
+          setOverview(stageSpecificOverview);
         }
       }
       
@@ -112,13 +125,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       if (processingStage === 'final' && stage !== 'final') {
         console.log('Setting stage to final');
         setStage('final');
-      } else if (processingStage === 'cleaned' && stage === 'raw') {
-        console.log('Setting stage to cleaned');
-        setStage('cleaned');
-      } else if (processingStage === 'raw' && stage !== 'raw') {
-        console.log('Setting stage to raw');
-        setStage('raw');
+      } else if (processingStage === 'processed' && stage !== 'processed') {
+        console.log('Setting stage to processed');
+        setStage('processed');
       }
+      // Don't automatically switch to cleaned stage - only set by button click
     }
   }, [processingStage]);
 
@@ -143,6 +154,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     };
     return labels[selectedStage];
   };
+
+  // Use the stage-specific overview if available, otherwise fall back to global overview
+  const currentOverview = stageOverview || overview;
 
   return (
     <Card className="w-full mt-6">
@@ -216,6 +230,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           </Alert>
         )}
         
+        {/* Table rendering section */}
         {!previewData || isLoadingPreview ? (
           <div className="space-y-2">
             <Skeleton className="h-8 w-full" />
@@ -298,28 +313,31 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           </div>
         )}
         
-        {overview && (
+        {/* Display statistics based on the current stage overview */}
+        {currentOverview && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm border">
             <div className="flex items-center gap-2 mb-2">
               <BarChart className="h-4 w-4 text-primary" />
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">Dataset Statistics</h4>
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                Dataset Statistics ({stage.charAt(0).toUpperCase() + stage.slice(1)} Stage)
+              </h4>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Rows:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{overview.num_rows}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentOverview.num_rows}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Columns:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{overview.num_columns}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentOverview.num_columns}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Numerical Features:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{overview.numerical_features?.length || 0}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentOverview.numerical_features?.length || 0}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Categorical Features:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{overview.categorical_features?.length || 0}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentOverview.categorical_features?.length || 0}</span>
               </p>
             </div>
           </div>
