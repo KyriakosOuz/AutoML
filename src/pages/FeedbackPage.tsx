@@ -5,12 +5,15 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SUSForm from '@/components/feedback/SUSForm';
 import ThankYouView from '@/components/feedback/ThankYouView';
+import { formatDateForGreece } from '@/lib/dateUtils';
 
 const FeedbackPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<Date | null>(null);
   const navigate = useNavigate();
 
   const handleSubmitSuccess = () => {
+    setSubmittedAt(new Date());
     setIsSubmitted(true);
   };
 
@@ -31,6 +34,11 @@ const FeedbackPage = () => {
       <div className="mb-8">
         <p className="text-gray-600">
           Please rate your experience with KyrO AutoML. Your feedback will help us improve the platform.
+          {submittedAt && (
+            <span className="block text-sm text-muted-foreground mt-2">
+              Last submitted: {formatDateForGreece(submittedAt)}
+            </span>
+          )}
         </p>
       </div>
 

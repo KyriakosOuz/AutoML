@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateForGreece } from '@/lib/dateUtils';
 import LikertScale from './LikertScale';
 
 // SUS questionnaire items
@@ -102,7 +103,7 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
 
       toast({
         title: "Feedback submitted",
-        description: "Thank you for your feedback!"
+        description: `Thank you for your feedback! Submitted on ${formatDateForGreece(new Date(), 'PPP')} at ${formatDateForGreece(new Date(), 'p')}`
       });
       
       onSubmitSuccess();

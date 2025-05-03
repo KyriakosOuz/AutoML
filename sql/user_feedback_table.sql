@@ -1,5 +1,5 @@
 
--- Create the user_feedback table
+-- Create the user_feedback table with proper timestamp handling
 CREATE TABLE IF NOT EXISTS public.user_feedback (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
@@ -28,13 +28,6 @@ CREATE POLICY read_own_feedback
   FOR SELECT 
   TO authenticated 
   USING (auth.uid() = user_id);
-
--- Policy for admins to read all feedback (replace 'admin' with your admin role)
--- CREATE POLICY admin_read_all_feedback 
---  ON public.user_feedback 
---  FOR SELECT 
---  TO authenticated 
---  USING (auth.jwt() ->> 'role' = 'admin');
 
 -- Create stored procedure for inserting feedback (to bypass TypeScript type issues)
 CREATE OR REPLACE FUNCTION insert_user_feedback(
