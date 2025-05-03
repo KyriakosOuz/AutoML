@@ -78,8 +78,15 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
     
     // Make a deep copy of default parameters
     const resetParams = JSON.parse(JSON.stringify(defaultHyperparameters));
-    setLocalParams(resetParams);
-    onChange(resetParams);
+    
+    // Ensure we're not losing any parameters that might exist in localParams but not in defaults
+    const updatedParams = { ...localParams };
+    Object.keys(resetParams).forEach(key => {
+      updatedParams[key] = resetParams[key];
+    });
+    
+    setLocalParams(updatedParams);
+    onChange(updatedParams);
   };
 
   const resetParameter = (key: string) => {
