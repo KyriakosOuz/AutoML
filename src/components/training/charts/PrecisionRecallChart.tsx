@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { InfoCircle } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PrPoint {
   recall: number;
@@ -33,7 +35,26 @@ const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Precision-Recall Curve {f1Score !== undefined && <span className="text-sm font-normal ml-2">(F1: {f1Score.toFixed(4)})</span>}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Precision-Recall Curve 
+            {f1Score !== undefined && <span className="text-sm font-normal ml-2">(F1: {f1Score.toFixed(4)})</span>}
+          </CardTitle>
+          
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-help">
+                <InfoCircle className="h-4 w-4 text-gray-400" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>What is F1 Score? It's the harmonic mean of precision and recall, providing a balance between them.</p>
+            </TooltipContent>
+          </UITooltip>
+        </div>
+        
+        <CardDescription>
+          This chart shows the tradeoff between precision (correct positive predictions) and recall (found positive samples).
+        </CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -41,12 +62,12 @@ const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, 
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="recall" 
-              label={{ value: 'Recall', position: 'insideBottom', offset: -15 }}
+              label={{ value: 'Recall (% of actual positives found)', position: 'insideBottom', offset: -15 }}
               domain={[0, 1]}
               tickFormatter={(value) => value.toFixed(1)}
             />
             <YAxis 
-              label={{ value: 'Precision', angle: -90, position: 'insideLeft', offset: -5 }}
+              label={{ value: 'Precision (% of predictions correct)', angle: -90, position: 'insideLeft', offset: -5 }}
               domain={[0, 1]}
               tickFormatter={(value) => value.toFixed(1)}
             />

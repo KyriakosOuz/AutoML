@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UploadCloud, X, AlertCircle, RotateCcw } from 'lucide-react';
+import { UploadCloud, X, AlertCircle, RotateCcw, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -217,10 +218,17 @@ const FileUpload: React.FC = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
-        <CardDescription>
-          Upload a CSV file to start analyzing and processing your dataset
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl text-primary">Dataset Upload</CardTitle>
+            <CardDescription>
+              Upload a CSV file to start analyzing and processing your dataset
+            </CardDescription>
+          </div>
+          <div className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            Step 1 of 5
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {error && (
@@ -231,8 +239,8 @@ const FileUpload: React.FC = () => {
         )}
         
         <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer mb-4 transition-colors
-            ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}
+          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer mb-4 transition-all
+            ${isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-gray-300 hover:border-primary hover:bg-gray-50'}
             ${isLoading ? 'opacity-50 pointer-events-none' : ''}
           `}
           onDragOver={handleDragOver}
@@ -249,7 +257,7 @@ const FileUpload: React.FC = () => {
             disabled={isLoading}
           />
           
-          <UploadCloud className="h-12 w-12 mx-auto mb-2 text-primary/60" />
+          <UploadCloud className={`h-12 w-12 mx-auto mb-2 transition-colors ${isDragging ? 'text-primary' : 'text-primary/60'}`} />
           
           {selectedFile ? (
             <div className="flex items-center justify-center gap-2">
@@ -267,13 +275,16 @@ const FileUpload: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div>
+            <div className="space-y-2">
               <p className="text-sm font-medium text-gray-700 mb-1">
                 Drag and drop your CSV file here
               </p>
               <p className="text-xs text-gray-500">
                 or click to browse your files
               </p>
+              <div className="inline-flex items-center justify-center px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
+                .CSV files only
+              </div>
             </div>
           )}
         </div>
@@ -288,13 +299,25 @@ const FileUpload: React.FC = () => {
         )}
         
         <div className="mb-4">
-          <Label htmlFor="missing-symbol" className="text-sm font-medium">
-            Custom Missing Value Symbol (Optional)
-          </Label>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Label htmlFor="missing-symbol" className="text-sm font-medium">
+              Custom Missing Value Symbol (Optional)
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Only enter if your dataset uses custom symbols (e.g. '?', '-', 'NA') for missing values</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <Input
             id="missing-symbol"
             type="text"
-            placeholder="e.g., NA, ?, -"
+            placeholder="e.g., NA, ?, --"
             value={customMissingSymbol}
             onChange={(e) => setCustomMissingSymbol(e.target.value)}
             className="mt-1"

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { 
   RefreshCw, 
   AlertCircle, 
@@ -39,7 +41,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setPreviewColumns,
     overview,
     processingStage,
-    targetColumn
+    targetColumn,
+    columnsToKeep
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -63,12 +66,23 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       const response = await datasetApi.previewDataset(datasetId, stage);
       console.log('Preview response:', response);
       
+      // Handle nested response structure
       if (response && response.data) {
         setPreviewData(response.data.preview || []);
-        setPreviewColumns(response.data.columns || []);
+        // Try to get columns from the preview response, or fall back to overview
+        if (response.data.columns) {
+          setPreviewColumns(response.data.columns || []);
+        } else if (response.data.overview && response.data.overview.column_names) {
+          setPreviewColumns(response.data.overview.column_names || []);
+        }
       } else {
+        // Try direct access for backward compatibility
         setPreviewData(response.preview || []);
-        setPreviewColumns(response.columns || []);
+        if (response.columns) {
+          setPreviewColumns(response.columns || []);
+        } else if (response.overview && response.overview.column_names) {
+          setPreviewColumns(response.overview.column_names || []);
+        }
       }
       
       setInitialLoadComplete(true);
@@ -134,11 +148,23 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     };
     return labels[selectedStage];
   };
+  
+  const selectedColumnsCount = columnsToKeep ? columnsToKeep.length : 0;
+  const totalColumnsCount = overview?.column_names ? overview.column_names.length : 0;
 
   return (
     <Card className="w-full mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-xl text-primary">Data Preview</CardTitle>
+        <div>
+          <CardTitle className="text-xl text-primary">Data Preview</CardTitle>
+          {columnsToKeep && (
+            <div className="flex items-center mt-1">
+              <Badge variant="outline" className="text-xs">
+                Selected Columns: {selectedColumnsCount} of {totalColumnsCount}
+              </Badge>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Select
             value={stage}
@@ -200,7 +226,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         {!isLoadingPreview && !previewError && previewData && previewData.length > 0 && (
           <Alert className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertTitle className="text-green-700">Data Preview Loaded</AlertTitle>
+            <AlertTitle className="text-green-700">First 10 Rows of Your Dataset</AlertTitle>
             <AlertDescription className="text-green-600">
               Showing {previewData.length} rows and {previewColumns?.length || 0} columns
             </AlertDescription>
