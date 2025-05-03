@@ -89,15 +89,14 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
     const susScore = calculateSUSScore();
 
     try {
-      // Submit to Supabase
-      const { error } = await supabase
-        .from('user_feedback')
-        .insert({
-          user_id: user.id,
-          responses: formValues,
-          sus_score: susScore,
-          additional_comments: comments
-        });
+      // Use custom SQL query via RPC instead of direct table operation
+      // This allows us to insert into the table without having updated TypeScript definitions
+      const { error } = await supabase.rpc('insert_user_feedback', {
+        p_user_id: user.id,
+        p_responses: formValues,
+        p_sus_score: susScore,
+        p_additional_comments: comments
+      });
 
       if (error) throw error;
 

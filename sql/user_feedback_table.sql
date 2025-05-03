@@ -36,5 +36,19 @@ CREATE POLICY read_own_feedback
 --  TO authenticated 
 --  USING (auth.jwt() ->> 'role' = 'admin');
 
+-- Create stored procedure for inserting feedback (to bypass TypeScript type issues)
+CREATE OR REPLACE FUNCTION insert_user_feedback(
+  p_user_id UUID,
+  p_responses JSONB,
+  p_sus_score NUMERIC,
+  p_additional_comments TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+BEGIN
+  INSERT INTO public.user_feedback (user_id, responses, sus_score, additional_comments)
+  VALUES (p_user_id, p_responses, p_sus_score, p_additional_comments);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Grant necessary permissions
 GRANT ALL ON public.user_feedback TO authenticated;
+GRANT EXECUTE ON FUNCTION insert_user_feedback TO authenticated;
