@@ -50,14 +50,6 @@ const Index = () => {
             A complete platform for automated machine learning — from dataset upload and cleaning 
             to training, evaluation, and prediction. No code required.
           </p>
-          
-          {/* User guidance bar */}
-          <div className="w-full max-w-3xl bg-gray-50 rounded-lg p-3 mb-6 sm:mb-8 flex items-center justify-center">
-            <p className="text-sm md:text-base text-gray-700 font-medium">
-              Follow 3 steps: Upload Data → Train Models → View Results & Predict
-            </p>
-          </div>
-          
           <Link to={user ? "/dataset" : "/auth"}>
             <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 w-full sm:w-auto">
               {user ? "Get Started" : "Sign In to Start"}
@@ -75,7 +67,7 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Dataset Handling</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Inspect missing values, preview data, and prepare features for training.
+              Upload CSV files, handle missing values, and select key features for training.
             </p>
             <Link to={user ? "/dataset" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
               Upload & Prepare Data
@@ -90,10 +82,10 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Model Training</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Select algorithms, configure parameters, and run automated model training.
+              Run AutoML to discover the best model or configure custom training with your preferred algorithm.
             </p>
             <Link to={user ? "/training" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
-              Configure & Train Models
+              Train Your Model
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
@@ -105,10 +97,10 @@ const Index = () => {
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Results & Predictions</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Compare experiments, analyze model performance, and make new predictions.
+              Compare experiments, run predictions, and manage models — all in one place.
             </p>
             <Link to={user ? "/dashboard" : "/auth"} className="text-gray-900 hover:text-gray-700 font-medium inline-flex items-center">
-              Compare Results & Run Predictions
+              Explore Dashboard
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>

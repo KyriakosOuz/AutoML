@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -28,9 +29,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
-    selectedAlgorithm: null,
-    targetColumn: null,
-    taskType: null,
   });
 
   useEffect(() => {
@@ -184,9 +182,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
-    setSelectedAlgorithm: (algorithm) => setState(prev => ({ ...prev, selectedAlgorithm: algorithm })),
-    setTargetColumn: (column) => setState(prev => ({ ...prev, targetColumn: column })),
-    setTaskType: (type) => setState(prev => ({ ...prev, taskType: type })),
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -206,9 +201,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
-        selectedAlgorithm: null,
-        targetColumn: null,
-        taskType: null,
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);

@@ -29,9 +29,6 @@ export interface TrainingContextState {
   stratify: boolean;
   randomSeed: number;
   activeTab: string;
-  selectedAlgorithm?: string | null;
-  targetColumn?: string | null;
-  taskType?: string | null;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -57,7 +54,4 @@ export interface TrainingContextValue extends TrainingContextState {
   setExperimentStatus: (status: ExperimentStatus) => void;
   setStatusResponse: (response: ExperimentStatusResponse | null) => void;
   setActiveTab: (tab: string) => void;
-  setSelectedAlgorithm?: (algorithm: string | null) => void;
-  setTargetColumn?: (column: string | null) => void;
-  setTaskType?: (type: string | null) => void;
 }

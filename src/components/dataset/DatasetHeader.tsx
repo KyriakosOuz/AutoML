@@ -26,9 +26,6 @@ const DatasetHeader: React.FC<DatasetHeaderProps> = ({
           Upload, explore, and preprocess your datasets for machine learning. 
           Handle missing values, analyze features, and prepare your data for modeling.
         </p>
-        <div className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium mt-3">
-          Step {activeStep + 1} of 4
-        </div>
       </div>
       
       <Steps active={activeStep}>
@@ -40,7 +37,7 @@ const DatasetHeader: React.FC<DatasetHeaderProps> = ({
         />
         <Step 
           title="Dataset" 
-          description="Analyze" 
+          description="Handle" 
           icon={<Table className="h-5 w-5" />} 
           status={datasetId && !targetColumn ? "current" : datasetId && targetColumn ? "complete" : "pending"} 
         />
