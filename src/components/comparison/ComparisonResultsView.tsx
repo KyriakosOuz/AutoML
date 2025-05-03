@@ -47,9 +47,15 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
     ? ['r2', 'mae', 'mse', 'rmse'] 
     : ['accuracy', 'precision', 'recall', 'f1_score']; // Removed 'auc'
   
+  // Calculate minimum width based on number of experiments
+  // Base width for metric column + each experiment takes approximately 180px
+  const experimentsCount = experiments.length;
+  const useScrolling = experimentsCount > 5;
+  const minWidth = useScrolling ? `${180 + (experimentsCount * 180)}px` : undefined;
+  
   return (
     <div className="space-y-6">
-      <ResponsiveTable>
+      <ResponsiveTable minWidth={minWidth}>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[180px] min-w-[180px] sticky left-0 bg-background z-20">Metric</TableHead>
