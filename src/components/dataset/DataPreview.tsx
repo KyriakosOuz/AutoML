@@ -67,10 +67,14 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   });
   const { toast } = useToast();
 
+  // Check if the dataset has any missing values
+  const hasMissingValues = overview?.total_missing_values && overview.total_missing_values > 0;
+
   // Check if a specific stage is available
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
+    // Only allow cleaned stage if processingStage is cleaned or higher OR if there are no missing values to handle
     if (checkStage === 'cleaned') {
       return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
     }

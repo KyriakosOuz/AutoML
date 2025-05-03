@@ -285,7 +285,7 @@ const MissingValueHandler: React.FC = () => {
             <AlertDescription>
               {processingStage === 'cleaned' 
                 ? 'Your dataset has been successfully processed. All missing values have been handled.'
-                : 'Your dataset has no missing values, but you still need to mark it as processed to continue.'}
+                : 'Your dataset has no missing values. You can continue to the next step or explicitly mark it as processed.'}
             </AlertDescription>
           </Alert>
         )}
@@ -293,7 +293,7 @@ const MissingValueHandler: React.FC = () => {
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
         <Button 
           onClick={handleProcessMissingValues} 
-          disabled={isLoading}
+          disabled={isLoading || (!hasMissingValues && processingStage === 'cleaned')}
           variant="default"
           size="lg"
           type="button"
