@@ -10,13 +10,15 @@ interface ResponsiveTableProps extends React.HTMLAttributes<HTMLTableElement> {
 
 const ResponsiveTable = React.forwardRef<HTMLTableElement, ResponsiveTableProps>(
   ({ className, children, ...props }, ref) => (
-    <ScrollArea className="w-full" type="always">
-      <div className="min-w-[650px]">
-        <Table ref={ref} className={cn("min-w-full", className)} {...props}>
-          {children}
-        </Table>
-      </div>
-    </ScrollArea>
+    <div className="relative w-full overflow-hidden">
+      <ScrollArea className="w-full" type="always">
+        <div className="min-w-[650px]">
+          <Table ref={ref} className={cn("min-w-full", className)} {...props}>
+            {children}
+          </Table>
+        </div>
+      </ScrollArea>
+    </div>
   )
 );
 

@@ -39,7 +39,7 @@ const DashboardPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <div className="overflow-hidden w-full">
+        <div className="w-full">
           <TabsContent value="datasets" className="pt-2 sm:pt-4">
             <DatasetsTab />
           </TabsContent>
