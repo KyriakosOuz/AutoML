@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Database, ListTree, Target, FileBarChart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { datasetApi } from '@/lib/api';
+import { useLocation } from 'react-router-dom';
 
 const DatasetSummary: React.FC = () => {
   const { 
@@ -21,21 +22,40 @@ const DatasetSummary: React.FC = () => {
   const [numericalFeatures, setNumericalFeatures] = useState<string[]>([]);
   const [categoricalFeatures, setCategoricalFeatures] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const location = useLocation();
+  
+  // Check if we're on the training route
+  const isTrainingRoute = location.pathname.includes('/training');
   
   // Fetch the processed data to get accurate feature information
   useEffect(() => {
-    const fetchProcessedData = async () => {
-      if (!datasetId) return;
-      
+    if (!datasetId) return;
+    
+    const fetchDatasetFeatures = async () => {
       try {
         setIsLoading(true);
-        const response = await datasetApi.previewDataset(datasetId, 'processed');
         
-        // Extract data from response
-        const responseData = response.data || response;
+        let responseData;
+        
+        // Use the appropriate API based on the route
+        if (isTrainingRoute) {
+          // For training route, use data-preprocess endpoint
+          const response = await datasetApi.preprocessDataset(datasetId, 'none', 'none');
+          
+          // Extract overview from the response
+          responseData = response.overview || response.data?.overview;
+          
+          console.log("Data preprocess response:", responseData);
+        } else {
+          // For other routes, use preview-dataset endpoint
+          const response = await datasetApi.previewDataset(datasetId, 'processed');
+          responseData = response.data || response;
+          
+          console.log("Preview dataset response:", responseData);
+        }
         
         // Handle numerical features
-        const numFeatures = responseData.numerical_features;
+        const numFeatures = responseData?.numerical_features;
         if (Array.isArray(numFeatures)) {
           setNumericalFeatures(numFeatures);
         } else if (typeof numFeatures === 'number') {
@@ -44,7 +64,7 @@ const DatasetSummary: React.FC = () => {
         }
         
         // Handle categorical features
-        const catFeatures = responseData.categorical_features;
+        const catFeatures = responseData?.categorical_features;
         if (Array.isArray(catFeatures)) {
           setCategoricalFeatures(catFeatures);
         } else if (typeof catFeatures === 'number') {
@@ -52,14 +72,14 @@ const DatasetSummary: React.FC = () => {
           setCategoricalFeatures([]);
         }
       } catch (error) {
-        console.error("Error fetching processed data:", error);
+        console.error("Error fetching dataset features:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchProcessedData();
-  }, [datasetId]);
+    fetchDatasetFeatures();
+  }, [datasetId, isTrainingRoute]);
   
   if (!datasetId || !overview) {
     return null;

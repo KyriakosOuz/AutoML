@@ -42,6 +42,7 @@ const CustomTraining: React.FC = () => {
   const [experimentName, setExperimentName] = useState('');
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
+  const [hasFetchedParams, setHasFetchedParams] = useState(false);
 
   const navigate = useNavigate();
 
@@ -73,6 +74,11 @@ const CustomTraining: React.FC = () => {
     }
   }, [customParameters.algorithm]);
 
+  // Reset hasFetchedParams when algorithm changes
+  useEffect(() => {
+    setHasFetchedParams(false);
+  }, [customParameters.algorithm]);
+
   useEffect(() => {
     if (customParameters.algorithm && customParameters.useDefaultHyperparameters) {
       const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
@@ -96,13 +102,20 @@ const CustomTraining: React.FC = () => {
     }
   };
 
+  // Fixed hyperparameter fetching to prevent infinite loops
   useEffect(() => {
-    if (customParameters.algorithm && !customParameters.useDefaultHyperparameters) {
+    if (
+      customParameters.algorithm && 
+      !customParameters.useDefaultHyperparameters && 
+      !hasFetchedParams &&
+      Object.keys(customParameters.hyperparameters || {}).length === 0
+    ) {
       trainingApi.getAvailableHyperparameters(customParameters.algorithm)
         .then(params => {
           setCustomParameters({
             hyperparameters: params
           });
+          setHasFetchedParams(true);
         })
         .catch(error => {
           console.error('Error fetching hyperparameters:', error);
@@ -110,9 +123,10 @@ const CustomTraining: React.FC = () => {
           setCustomParameters({
             hyperparameters: defaultParams
           });
+          setHasFetchedParams(true);
         });
     }
-  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, setCustomParameters]);
+  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, customParameters.hyperparameters, hasFetchedParams, setCustomParameters]);
 
   const handleTrainModel = async () => {
     try {
