@@ -49,14 +49,14 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   return (
     <div className="space-y-6">
       <ScrollArea className="w-full" type="always">
-        <div className="min-w-[650px]">
+        <div className="min-w-[800px]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[180px] min-w-[180px] sticky left-0 bg-background z-20">Metric</TableHead>
+                <TableHead className="w-[180px] min-w-[180px] sticky left-0 bg-background z-20 border-r">Metric</TableHead>
                 {experiments.map((exp) => (
-                  <TableHead key={exp.experiment_id} className="min-w-[150px]">
-                    <div className="truncate max-w-[150px]" title={exp.experiment_name}>
+                  <TableHead key={exp.experiment_id} className="min-w-[180px]">
+                    <div className="truncate max-w-[180px]" title={exp.experiment_name}>
                       {exp.experiment_name}
                     </div>
                   </TableHead>
@@ -65,7 +65,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="font-medium sticky left-0 bg-background z-10">Algorithm</TableCell>
+                <TableCell className="font-medium sticky left-0 bg-background z-10 border-r">Algorithm</TableCell>
                 {experiments.map((exp) => (
                   <TableCell key={`${exp.experiment_id}-algorithm`}>
                     <Badge variant="outline">{exp.algorithm}</Badge>
@@ -76,7 +76,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
                 ))}
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium sticky left-0 bg-background z-10">Dataset</TableCell>
+                <TableCell className="font-medium sticky left-0 bg-background z-10 border-r">Dataset</TableCell>
                 {experiments.map((exp) => (
                   <TableCell key={`${exp.experiment_id}-dataset`}>
                     {exp.dataset_name || 'Unknown dataset'}
@@ -84,7 +84,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
                 ))}
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium sticky left-0 bg-background z-10">Created</TableCell>
+                <TableCell className="font-medium sticky left-0 bg-background z-10 border-r">Created</TableCell>
                 {experiments.map((exp) => (
                   <TableCell key={`${exp.experiment_id}-created`}>
                     {format(new Date(exp.created_at), 'MMM d, yyyy')}
@@ -95,7 +95,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
               {/* Metrics rows - removed AUC */}
               {metrics.map((metric) => (
                 <TableRow key={metric}>
-                  <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize">
+                  <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize border-r">
                     {metric === 'r2' ? 'R²' : metric.replace('_', ' ')}
                   </TableCell>
                   {experiments.map((exp) => {
