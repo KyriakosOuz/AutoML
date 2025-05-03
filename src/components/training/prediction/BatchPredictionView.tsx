@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -126,6 +127,30 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     });
   };
 
+  const handleDownloadComparisonCSV = () => {
+    if (!result?.y_true || !result?.y_pred) return;
+    
+    const comparisonData = result.y_true.map((trueVal, index) => {
+      const predicted = result.y_pred[index];
+      const isCorrect = trueVal === predicted;
+      
+      return {
+        Sample: `#${index + 1}`,
+        TrueValue: trueVal,
+        PredictedValue: predicted,
+        Correct: isCorrect ? 'Yes' : 'No'
+      };
+    });
+    
+    const filename = `predictions_comparison_${new Date().toISOString().split('T')[0]}.csv`;
+    downloadCSV(comparisonData, filename);
+    
+    toast({
+      title: "Success",
+      description: "Comparison data downloaded successfully",
+    });
+  };
+
   const renderPredictionOnly = () => {
     if (!result?.filled_dataset_preview) return null;
     
@@ -224,11 +249,17 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
 
         {result.y_true && result.y_pred && (
           <Card>
-            <CardHeader>
-              <CardTitle>Predictions Comparison</CardTitle>
-              <CardDescription>
-                Comparison between true values and model predictions (first 10 samples)
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Predictions Comparison</CardTitle>
+                <CardDescription>
+                  Comparison between true values and model predictions (first 10 samples)
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleDownloadComparisonCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Download as CSV
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
