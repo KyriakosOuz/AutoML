@@ -74,8 +74,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Only allow cleaned stage if processingStage is cleaned or higher OR if there are no missing values to handle
+    // Only allow cleaned stage if processingStage is cleaned or higher AND there were missing values to handle
+    // OR if the processing stage is explicitly set to cleaned or higher
     if (checkStage === 'cleaned') {
+      if (!hasMissingValues && processingStage !== 'cleaned' && processingStage !== 'final' && processingStage !== 'processed') {
+        return false;
+      }
       return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
     }
     
@@ -231,7 +235,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="raw">Raw Data</SelectItem>
-              <SelectItem value="cleaned" disabled={!hasCleanedData}>Cleaned Data</SelectItem>
+              <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
               <SelectItem value="final" disabled={!hasFinalData}>Final Data</SelectItem>
               <SelectItem value="processed" disabled={!hasProcessedData}>Processed Data</SelectItem>
               <SelectItem value="latest">Latest Stage</SelectItem>

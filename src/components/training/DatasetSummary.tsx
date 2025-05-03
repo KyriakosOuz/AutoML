@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,13 +24,23 @@ const DatasetSummary: React.FC = () => {
   const numSelectedFeatures = columnsToKeep?.length || 0;
   const totalFeatures = previewColumns?.length || 0;
   
+  // Make sure we're correctly filtering numerical and categorical features to display only those that are selected
   const filteredNumericalFeatures = overview.numerical_features?.filter(
-    feat => columnsToKeep?.includes(feat)
+    feat => columnsToKeep?.includes(feat) || feat === targetColumn
   ) || [];
   
   const filteredCategoricalFeatures = overview.categorical_features?.filter(
-    feat => columnsToKeep?.includes(feat) && feat !== targetColumn
+    feat => columnsToKeep?.includes(feat) || feat === targetColumn
   ) || [];
+  
+  // Filter out the target column from features display (if it exists in the filtered arrays)
+  const displayNumericalFeatures = targetColumn ? 
+    filteredNumericalFeatures.filter(f => f !== targetColumn) : 
+    filteredNumericalFeatures;
+    
+  const displayCategoricalFeatures = targetColumn ? 
+    filteredCategoricalFeatures.filter(f => f !== targetColumn) : 
+    filteredCategoricalFeatures;
   
   const getTaskTypeBadge = () => {
     if (!taskType) return null;
@@ -104,8 +115,8 @@ const DatasetSummary: React.FC = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Numerical Features</p>
             <div className="flex flex-wrap gap-1">
-              {filteredNumericalFeatures.length ? (
-                filteredNumericalFeatures.map(feat => (
+              {displayNumericalFeatures.length ? (
+                displayNumericalFeatures.map(feat => (
                   <Badge key={feat} variant="outline" className="bg-blue-50">
                     {feat}
                   </Badge>
@@ -119,8 +130,8 @@ const DatasetSummary: React.FC = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Categorical Features</p>
             <div className="flex flex-wrap gap-1">
-              {filteredCategoricalFeatures.length ? (
-                filteredCategoricalFeatures
+              {displayCategoricalFeatures.length ? (
+                displayCategoricalFeatures
                   .slice(0, 5)
                   .map(feat => (
                     <Badge key={feat} variant="outline" className="bg-amber-50">
@@ -130,8 +141,8 @@ const DatasetSummary: React.FC = () => {
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
-              {filteredCategoricalFeatures.length > 5 && (
-                <Badge variant="outline">+{filteredCategoricalFeatures.length - 5} more</Badge>
+              {displayCategoricalFeatures.length > 5 && (
+                <Badge variant="outline">+{displayCategoricalFeatures.length - 5} more</Badge>
               )}
             </div>
           </div>

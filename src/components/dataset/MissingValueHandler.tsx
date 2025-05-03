@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -293,7 +292,7 @@ const MissingValueHandler: React.FC = () => {
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
         <Button 
           onClick={handleProcessMissingValues} 
-          disabled={isLoading || (!hasMissingValues && processingStage === 'cleaned')}
+          disabled={isLoading || !hasMissingValues}
           variant="default"
           size="lg"
           type="button"
