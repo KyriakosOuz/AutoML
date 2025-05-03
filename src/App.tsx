@@ -50,13 +50,11 @@ const App = () => (
                     <FeedbackPage />
                   </ProtectedRoute>
                 } />
-                {/* 
                 <Route path="/experiment/:experimentId" element={
                   <ProtectedRoute>
                     <ExperimentDetailPage />
                   </ProtectedRoute>
                 } />
-                */}
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">

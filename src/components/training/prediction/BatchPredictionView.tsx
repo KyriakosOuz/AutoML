@@ -1,22 +1,19 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileText, InfoIcon, Loader2 } from 'lucide-react';
+import { Upload, Download, FileText, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import { BatchPredictionResponse } from './PredictionResponse.types';
-import { ClassProbabilities } from './ClassProbabilities';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import MetricsBlock from './metrics/MetricsBlock';
 import { ProbabilitiesCell } from './table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
 import { downloadCSV, downloadJSON } from './utils/downloadUtils';
+import MetricsBlock from './metrics/MetricsBlock';
 
 interface BatchPredictionViewProps {
   experimentId: string;
@@ -54,6 +51,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     setResult(null);
 
     try {
+      // Use only experiment_id and file - let backend handle model loading
       const formData = new FormData();
       formData.append('experiment_id', experimentId);
       formData.append('file', selectedFile);
@@ -64,6 +62,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
         headers.append('Authorization', `Bearer ${token}`);
       }
 
+      // Call the backend prediction endpoint
       const response = await fetch(`${API_BASE_URL}/prediction/predict-csv/`, {
         method: 'POST',
         headers,
@@ -176,22 +175,23 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
           </CardContent>
         </Card>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((header) => {
-                  if (header === 'class_probabilities') return null;
-                  return (
+                {Object.keys(result.filled_dataset_preview[0] || {})
+                  .filter(header => header !== 'class_probabilities')
+                  .map((header) => (
                     <TableHead 
                       key={header} 
-                      className={header === target ? 'font-bold text-primary' : ''}
+                      className={header === result.target_column ? 'font-bold text-primary' : ''}
                     >
                       {header}
                     </TableHead>
-                  );
-                })}
-                {hasClassProbabilities && result.task_type?.includes('classification') && (
+                  ))
+                }
+                {result.filled_dataset_preview.some(row => 'class_probabilities' in row) && 
+                 result.task_type?.includes('classification') && (
                   <TableHead>Prediction Probabilities</TableHead>
                 )}
               </TableRow>
@@ -199,16 +199,18 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             <TableBody>
               {result.filled_dataset_preview.map((row, index) => (
                 <TableRow key={index}>
-                  {Object.entries(row).map(([key, value]) => {
-                    if (key === 'class_probabilities') return null;
-                    const isTarget = key === target;
-                    return (
-                      <TableCell key={key} className={isTarget ? 'font-bold text-primary' : ''}>
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </TableCell>
-                    );
-                  })}
-                  {hasClassProbabilities && result.task_type?.includes('classification') && (
+                  {Object.entries(row)
+                    .filter(([key]) => key !== 'class_probabilities')
+                    .map(([key, value]) => {
+                      const isTarget = key === result.target_column;
+                      return (
+                        <TableCell key={key} className={isTarget ? 'font-bold text-primary' : ''}>
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </TableCell>
+                      );
+                    })
+                  }
+                  {row.class_probabilities && result.task_type?.includes('classification') && (
                     <TableCell>
                       <ProbabilitiesCell 
                         probabilities={
@@ -262,7 +264,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

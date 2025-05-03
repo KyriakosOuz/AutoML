@@ -441,6 +441,7 @@ const ComparisonsTab: React.FC = () => {
                 </div>
               )}
               
+              {/* Using the new ComparisonResultsView component */}
               <ComparisonResultsView experiments={comparisonResults} />
             </CardContent>
           </Card>

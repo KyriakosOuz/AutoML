@@ -10,10 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import BatchPredictionView from './prediction/BatchPredictionView';
-import { ClassProbabilities } from './prediction/ClassProbabilities';
-import { ManualPredictionResponse, TaskType } from './prediction/PredictionResponse.types';
+import { ManualPredictionResponse } from './prediction/PredictionResponse.types';
 import { ProbabilitiesCell } from './prediction/table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
 
@@ -43,6 +41,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
     if (!experimentId) return;
 
+    // Always fetch the prediction schema directly from the backend
     const fetchSchema = async () => {
       try {
         const schema = await getPredictionSchema(experimentId);
@@ -89,6 +88,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         processedInputs[key] = isNaN(numValue) ? value : numValue;
       }
       
+      // Use only experiment_id and input_values - let backend handle model loading
       const formData = new FormData();
       formData.append('experiment_id', experimentId);
       formData.append('input_values', JSON.stringify(processedInputs));
@@ -99,6 +99,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         headers.append('Authorization', `Bearer ${token}`);
       }
 
+      // Call the backend prediction endpoint, passing only experiment_id and inputs
       const response = await fetch(
         `${API_BASE_URL}/prediction/predict-manual/`,
         {
