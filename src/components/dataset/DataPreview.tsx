@@ -73,10 +73,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Only allow cleaned stage if the user explicitly processed the data 
+    // Only allow cleaned stage if there are missing values AND the user explicitly processed the data
     // through the 'Process Missing Values' button (which sets processingStage to 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
+      return hasMissingValues && (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed');
     }
     
     if (checkStage === 'final') {

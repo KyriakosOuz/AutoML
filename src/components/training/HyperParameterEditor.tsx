@@ -170,49 +170,55 @@ const HyperParameterEditor: React.FC<HyperParameterEditorProps> = ({
 
             <ScrollArea className="max-h-[350px] pr-3">
               <div className="space-y-4">
-                {Object.entries(localParams).map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-[1fr,2fr] gap-4 items-center bg-card p-3 rounded-lg border border-border/60">
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="font-normal py-1 px-2">
-                        {formatParamName(key)}
-                      </Badge>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <p className="text-xs">
-                              {typeof value === 'number' ? 'Numeric parameter' : 
-                               typeof value === 'boolean' ? 'Boolean toggle' : 
-                               Array.isArray(value) ? 'Array of values' : 'Text parameter'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                {Object.entries(localParams).length > 0 ? (
+                  Object.entries(localParams).map(([key, value]) => (
+                    <div key={key} className="grid grid-cols-[1fr,2fr] gap-4 items-center bg-card p-3 rounded-lg border border-border/60">
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="font-normal py-1 px-2">
+                          {formatParamName(key)}
+                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <p className="text-xs">
+                                {typeof value === 'number' ? 'Numeric parameter' : 
+                                 typeof value === 'boolean' ? 'Boolean toggle' : 
+                                 Array.isArray(value) ? 'Array of values' : 'Text parameter'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {renderInput(key, value)}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7"
+                                onClick={() => resetParameter(key)}
+                              >
+                                <RotateCcw className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reset to default</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {renderInput(key, value)}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7"
-                              onClick={() => resetParameter(key)}
-                            >
-                              <RotateCcw className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Reset to default</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center p-4 text-muted-foreground">
+                    <p>Loading hyperparameters...</p>
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </>

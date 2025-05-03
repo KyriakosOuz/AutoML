@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,15 +36,13 @@ const DatasetSummary: React.FC = () => {
         
         let responseData;
         
-        // Use the appropriate API based on the route
+        // Always use the preview-dataset endpoint, but with 'processed' stage for training route
         if (isTrainingRoute) {
-          // For training route, use data-preprocess endpoint
-          const response = await datasetApi.preprocessDataset(datasetId, 'none', 'none');
+          // For training route, use preview-dataset with processed stage
+          const response = await datasetApi.previewDataset(datasetId, 'processed');
+          responseData = response.data || response;
           
-          // Extract overview from the response
-          responseData = response.overview || response.data?.overview;
-          
-          console.log("Data preprocess response:", responseData);
+          console.log("Training route - preview dataset response:", responseData);
         } else {
           // For other routes, use preview-dataset endpoint
           const response = await datasetApi.previewDataset(datasetId, 'processed');
@@ -55,21 +52,15 @@ const DatasetSummary: React.FC = () => {
         }
         
         // Handle numerical features
-        const numFeatures = responseData?.numerical_features;
+        const numFeatures = responseData?.numerical_columns || [];
         if (Array.isArray(numFeatures)) {
           setNumericalFeatures(numFeatures);
-        } else if (typeof numFeatures === 'number') {
-          // If it's a number (count), we'll show that later
-          setNumericalFeatures([]);
         }
         
         // Handle categorical features
-        const catFeatures = responseData?.categorical_features;
+        const catFeatures = responseData?.categorical_columns || [];
         if (Array.isArray(catFeatures)) {
           setCategoricalFeatures(catFeatures);
-        } else if (typeof catFeatures === 'number') {
-          // If it's a number (count), we'll show that later
-          setCategoricalFeatures([]);
         }
       } catch (error) {
         console.error("Error fetching dataset features:", error);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -79,14 +78,31 @@ const CustomTraining: React.FC = () => {
     setHasFetchedParams(false);
   }, [customParameters.algorithm]);
 
+  // Fixed hyperparameter fetching to prevent infinite loops
   useEffect(() => {
-    if (customParameters.algorithm && customParameters.useDefaultHyperparameters) {
-      const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
-      setCustomParameters({
-        hyperparameters: defaultParams
-      });
+    if (
+      customParameters.algorithm && 
+      !customParameters.useDefaultHyperparameters && 
+      !hasFetchedParams &&
+      Object.keys(customParameters.hyperparameters || {}).length === 0
+    ) {
+      trainingApi.getAvailableHyperparameters(customParameters.algorithm)
+        .then(params => {
+          setCustomParameters({
+            hyperparameters: params
+          });
+          setHasFetchedParams(true);
+        })
+        .catch(error => {
+          console.error('Error fetching hyperparameters:', error);
+          const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
+          setCustomParameters({
+            hyperparameters: defaultParams
+          });
+          setHasFetchedParams(true);
+        });
     }
-  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, setCustomParameters]);
+  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, customParameters.hyperparameters, hasFetchedParams, setCustomParameters]);
 
   const toggleDefaultHyperparameters = () => {
     const newValue = !customParameters.useDefaultHyperparameters;
