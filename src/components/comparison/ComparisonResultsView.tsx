@@ -1,11 +1,9 @@
 
-// This is a new file that will be used to show comparison results with proper scrolling
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Maximize } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ComparisonExperiment {
   experiment_id: string;
@@ -43,21 +41,22 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   const firstExperiment = experiments[0];
   const isRegression = firstExperiment.task_type.includes('regression');
   
+  // Remove AUC from metrics list
   const metrics = isRegression 
     ? ['r2', 'mae', 'mse', 'rmse'] 
-    : ['accuracy', 'precision', 'recall', 'f1_score', 'auc'];
+    : ['accuracy', 'precision', 'recall', 'f1_score']; // Removed 'auc'
   
   return (
     <div className="space-y-6">
-      <div className="overflow-auto pb-4">
-        <div className="min-w-max">
+      <ScrollArea className="w-full" type="always">
+        <div className="min-w-[650px]">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[180px] min-w-[180px] sticky left-0 bg-background z-20">Metric</TableHead>
                 {experiments.map((exp) => (
-                  <TableHead key={exp.experiment_id} className="min-w-[180px]">
-                    <div className="truncate max-w-[180px]" title={exp.experiment_name}>
+                  <TableHead key={exp.experiment_id} className="min-w-[150px]">
+                    <div className="truncate max-w-[150px]" title={exp.experiment_name}>
                       {exp.experiment_name}
                     </div>
                   </TableHead>
@@ -93,7 +92,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
                 ))}
               </TableRow>
               
-              {/* Metrics rows */}
+              {/* Metrics rows - removed AUC */}
               {metrics.map((metric) => (
                 <TableRow key={metric}>
                   <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize">
@@ -126,7 +125,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
             </TableBody>
           </Table>
         </div>
-      </div>
+      </ScrollArea>
       
       <div className="text-sm text-muted-foreground">
         <p>* Best values for each metric are highlighted.</p>

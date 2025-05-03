@@ -5,6 +5,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -297,7 +298,7 @@ const ComparisonsTab: React.FC = () => {
         <CardTitle>Saved Comparisons</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
+        <ResponsiveTable>
           <TableHeader>
             <TableRow>
               <TableHead>Comparison Name</TableHead>
@@ -333,7 +334,7 @@ const ComparisonsTab: React.FC = () => {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </ResponsiveTable>
       </CardContent>
     </Card>
   );
