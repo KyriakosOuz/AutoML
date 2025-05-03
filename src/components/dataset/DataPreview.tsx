@@ -32,6 +32,15 @@ type DataPreviewProps = {
   highlightTargetColumn?: string | null;
 };
 
+interface StageData {
+  preview: Record<string, any>[] | null;
+  columns: string[] | null;
+  numRows: number;
+  numColumns: number;
+  numericalFeatures: number;
+  categoricalFeatures: number;
+}
+
 const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const { 
     datasetId, 
@@ -49,8 +58,33 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [stageOverview, setStageOverview] = useState<any>(null);
+  const [stageData, setStageData] = useState<Record<PreviewStage, StageData | null>>({
+    raw: null,
+    cleaned: null,
+    final: null,
+    processed: null,
+    latest: null
+  });
   const { toast } = useToast();
+
+  // Check if a specific stage is available
+  const isStageAvailable = (checkStage: PreviewStage): boolean => {
+    if (checkStage === 'raw' || checkStage === 'latest') return true;
+    
+    if (checkStage === 'cleaned') {
+      return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
+    }
+    
+    if (checkStage === 'final') {
+      return processingStage === 'final' || processingStage === 'processed';
+    }
+    
+    if (checkStage === 'processed') {
+      return processingStage === 'processed';
+    }
+    
+    return false;
+  };
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -67,30 +101,50 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       const response = await datasetApi.previewDataset(datasetId, stage);
       console.log('Preview response:', response);
       
-      if (response && response.data) {
-        setPreviewData(response.data.preview || []);
-        setPreviewColumns(response.data.columns || []);
+      // Extract data from the response
+      const responseData = response.data || response;
+      const previewRows = responseData.preview || [];
+      const previewCols = responseData.columns || [];
+      
+      // Extract statistics
+      const currentStageData: StageData = {
+        preview: previewRows,
+        columns: previewCols,
+        numRows: responseData.num_rows || 0,
+        numColumns: responseData.num_columns || 0,
+        numericalFeatures: responseData.numerical_features || 0,
+        categoricalFeatures: responseData.categorical_features || 0
+      };
+      
+      // Update the state with the current stage data
+      setStageData(prev => ({
+        ...prev,
+        [stage]: currentStageData
+      }));
+      
+      // Update the current view
+      setPreviewData(previewRows);
+      setPreviewColumns(previewCols);
+      
+      // Update global overview only when viewing the latest stage
+      if (stage === 'latest' || stage === processingStage) {
+        const overviewData = {
+          num_rows: responseData.num_rows,
+          num_columns: responseData.num_columns,
+          missing_values: responseData.missing_values || {},
+          numerical_features: Array.isArray(responseData.numerical_features) 
+            ? responseData.numerical_features 
+            : [],
+          categorical_features: Array.isArray(responseData.categorical_features) 
+            ? responseData.categorical_features 
+            : [],
+          // Include additional properties if available
+          total_missing_values: responseData.total_missing_values,
+          missing_values_count: responseData.missing_values_count,
+          column_names: responseData.column_names || previewCols,
+        };
         
-        // Store the overview specific to this stage
-        const stageSpecificOverview = response.data.overview || {};
-        setStageOverview(stageSpecificOverview);
-        
-        // Update global overview only when viewing the latest stage
-        if (stage === 'latest' || stage === processingStage) {
-          setOverview(stageSpecificOverview);
-        }
-      } else {
-        setPreviewData(response.preview || []);
-        setPreviewColumns(response.columns || []);
-        
-        // Store the overview specific to this stage
-        const stageSpecificOverview = response.overview || {};
-        setStageOverview(stageSpecificOverview);
-        
-        // Update global overview only when viewing the latest stage
-        if (stage === 'latest' || stage === processingStage) {
-          setOverview(stageSpecificOverview);
-        }
+        setOverview(overviewData);
       }
       
       setInitialLoadComplete(true);
@@ -140,6 +194,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     }
   }, [datasetId, stage]);
 
+  // Get current stage data or fallback to current state
+  const currentStageData = stageData[stage];
+
   if (!datasetId) {
     return null;
   }
@@ -154,9 +211,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     };
     return labels[selectedStage];
   };
-
-  // Use the stage-specific overview if available, otherwise fall back to global overview
-  const currentOverview = stageOverview || overview;
 
   return (
     <Card className="w-full mt-6">
@@ -313,8 +367,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           </div>
         )}
         
-        {/* Display statistics based on the current stage overview */}
-        {currentOverview && (
+        {/* Display statistics based on the current stage data */}
+        {currentStageData && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm border">
             <div className="flex items-center gap-2 mb-2">
               <BarChart className="h-4 w-4 text-primary" />
@@ -325,19 +379,19 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Rows:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{currentOverview.num_rows}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentStageData.numRows}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Columns:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{currentOverview.num_columns}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentStageData.numColumns}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Numerical Features:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{currentOverview.numerical_features?.length || 0}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentStageData.numericalFeatures}</span>
               </p>
               <p className="flex items-center gap-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Categorical Features:</span> 
-                <span className="text-gray-900 dark:text-gray-100">{currentOverview.categorical_features?.length || 0}</span>
+                <span className="text-gray-900 dark:text-gray-100">{currentStageData.categoricalFeatures}</span>
               </p>
             </div>
           </div>

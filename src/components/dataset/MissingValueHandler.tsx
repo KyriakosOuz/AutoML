@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -44,7 +44,6 @@ const MissingValueHandler: React.FC = () => {
     overview, 
     updateState,
     processingStage,
-    setProcessingStage,
     previewData,
     setPreviewData,
     previewColumns,
@@ -286,7 +285,7 @@ const MissingValueHandler: React.FC = () => {
             <AlertDescription>
               {processingStage === 'cleaned' 
                 ? 'Your dataset has been successfully processed. All missing values have been handled.'
-                : 'Your dataset has no missing values.'}
+                : 'Your dataset has no missing values, but you still need to mark it as processed to continue.'}
             </AlertDescription>
           </Alert>
         )}
@@ -300,7 +299,9 @@ const MissingValueHandler: React.FC = () => {
           type="button"
         >
           <Wand2 className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : hasMissingValues ? 'Process Missing Values' : 'Mark As Processed'}
+          {isLoading ? 'Processing...' : processingStage === 'cleaned' 
+            ? 'Re-process Missing Values' 
+            : 'Process Missing Values'}
         </Button>
       </CardFooter>
     </Card>
