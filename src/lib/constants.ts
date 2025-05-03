@@ -1,3 +1,4 @@
+
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
@@ -54,9 +55,17 @@ export const DEFAULT_HYPERPARAMETERS = {
     metric: "minkowski",
     weights: "uniform"
   },
-  "Linear": {
+  "Linear Regression": {
     fit_intercept: true,
-    normalize: false
+    n_jobs: null
+  },
+  "Logistic Regression": {
+    penalty: "l2",
+    C: 1.0,
+    solver: "lbfgs",
+    max_iter: 100,
+    fit_intercept: true,
+    class_weight: null
   },
   "Baseline": {}
 } as const;
