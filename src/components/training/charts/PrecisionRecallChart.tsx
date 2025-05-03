@@ -2,7 +2,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PrPoint {
@@ -43,7 +43,7 @@ const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, 
           <UITooltip>
             <TooltipTrigger asChild>
               <div className="cursor-help">
-                <InfoCircle className="h-4 w-4 text-gray-400" />
+                <Info className="h-4 w-4 text-gray-400" />
               </div>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
