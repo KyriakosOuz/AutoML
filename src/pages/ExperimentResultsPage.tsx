@@ -639,7 +639,7 @@ const ExperimentResultsPage: React.FC = () => {
 function getVisualizationDescription(fileType: string): string {
   const descriptions = {
     'confusion_matrix': 'Shows predicted vs. actual class counts, helping identify common misclassifications',
-    'roc_curve': 'Receiver Operating Characteristic curve showing model's true positive vs. false positive rate',
+    'roc_curve': 'Receiver Operating Characteristic curve showing model\'s true positive vs. false positive rate',
     'precision_recall': 'Shows the trade-off between precision and recall at different thresholds',
     'feature_importance': 'Ranks features by their importance in the model\'s predictions',
     'learning_curve': 'Shows training and validation performance as training set size increases',
