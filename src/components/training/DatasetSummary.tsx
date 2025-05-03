@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Database, ListTree, Target, FileBarChart, Table } from 'lucide-react';
+import { Database, ListTree, Target, FileBarChart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { datasetApi } from '@/lib/api';
 
 const DatasetSummary: React.FC = () => {
   const { 
@@ -17,6 +18,49 @@ const DatasetSummary: React.FC = () => {
     numClasses
   } = useDataset();
   
+  const [numericalFeatures, setNumericalFeatures] = useState<string[]>([]);
+  const [categoricalFeatures, setCategoricalFeatures] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  // Fetch the processed data to get accurate feature information
+  useEffect(() => {
+    const fetchProcessedData = async () => {
+      if (!datasetId) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await datasetApi.previewDataset(datasetId, 'processed');
+        
+        // Extract data from response
+        const responseData = response.data || response;
+        
+        // Handle numerical features
+        const numFeatures = responseData.numerical_features;
+        if (Array.isArray(numFeatures)) {
+          setNumericalFeatures(numFeatures);
+        } else if (typeof numFeatures === 'number') {
+          // If it's a number (count), we'll show that later
+          setNumericalFeatures([]);
+        }
+        
+        // Handle categorical features
+        const catFeatures = responseData.categorical_features;
+        if (Array.isArray(catFeatures)) {
+          setCategoricalFeatures(catFeatures);
+        } else if (typeof catFeatures === 'number') {
+          // If it's a number (count), we'll show that later
+          setCategoricalFeatures([]);
+        }
+      } catch (error) {
+        console.error("Error fetching processed data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProcessedData();
+  }, [datasetId]);
+  
   if (!datasetId || !overview) {
     return null;
   }
@@ -24,14 +68,23 @@ const DatasetSummary: React.FC = () => {
   const numSelectedFeatures = columnsToKeep?.length || 0;
   const totalFeatures = previewColumns?.length || 0;
   
-  // Make sure we're correctly filtering numerical and categorical features to display only those that are selected
-  const filteredNumericalFeatures = overview.numerical_features?.filter(
-    feat => columnsToKeep?.includes(feat) || feat === targetColumn
-  ) || [];
+  // Use fetched features if available, otherwise fall back to context values
+  const useNumericalFeatures = numericalFeatures.length > 0 
+    ? numericalFeatures 
+    : (overview.numerical_features || []);
+    
+  const useCategoricalFeatures = categoricalFeatures.length > 0
+    ? categoricalFeatures
+    : (overview.categorical_features || []);
   
-  const filteredCategoricalFeatures = overview.categorical_features?.filter(
+  // Make sure we're correctly filtering numerical and categorical features to display only those that are selected
+  const filteredNumericalFeatures = useNumericalFeatures.filter(
     feat => columnsToKeep?.includes(feat) || feat === targetColumn
-  ) || [];
+  );
+  
+  const filteredCategoricalFeatures = useCategoricalFeatures.filter(
+    feat => columnsToKeep?.includes(feat) || feat === targetColumn
+  );
   
   // Filter out the target column from features display (if it exists in the filtered arrays)
   const displayNumericalFeatures = targetColumn ? 
@@ -41,6 +94,15 @@ const DatasetSummary: React.FC = () => {
   const displayCategoricalFeatures = targetColumn ? 
     filteredCategoricalFeatures.filter(f => f !== targetColumn) : 
     filteredCategoricalFeatures;
+  
+  // If the numerical/categorical values are numbers rather than arrays, display them accordingly
+  const numericalFeaturesCount = typeof overview.numerical_features === 'number' 
+    ? overview.numerical_features 
+    : displayNumericalFeatures.length;
+    
+  const categoricalFeaturesCount = typeof overview.categorical_features === 'number'
+    ? overview.categorical_features
+    : displayCategoricalFeatures.length;
   
   const getTaskTypeBadge = () => {
     if (!taskType) return null;
@@ -113,14 +175,18 @@ const DatasetSummary: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Numerical Features</p>
+            <p className="text-xs text-muted-foreground">
+              Numerical Features {typeof numericalFeaturesCount === 'number' && `(${numericalFeaturesCount})`}
+            </p>
             <div className="flex flex-wrap gap-1">
-              {displayNumericalFeatures.length ? (
+              {Array.isArray(displayNumericalFeatures) && displayNumericalFeatures.length > 0 ? (
                 displayNumericalFeatures.map(feat => (
                   <Badge key={feat} variant="outline" className="bg-blue-50">
                     {feat}
                   </Badge>
                 ))
+              ) : numericalFeaturesCount > 0 ? (
+                <span className="text-sm">{numericalFeaturesCount} numerical feature(s)</span>
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
@@ -128,9 +194,11 @@ const DatasetSummary: React.FC = () => {
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Categorical Features</p>
+            <p className="text-xs text-muted-foreground">
+              Categorical Features {typeof categoricalFeaturesCount === 'number' && `(${categoricalFeaturesCount})`}
+            </p>
             <div className="flex flex-wrap gap-1">
-              {displayCategoricalFeatures.length ? (
+              {Array.isArray(displayCategoricalFeatures) && displayCategoricalFeatures.length > 0 ? (
                 displayCategoricalFeatures
                   .slice(0, 5)
                   .map(feat => (
@@ -138,10 +206,12 @@ const DatasetSummary: React.FC = () => {
                       {feat}
                     </Badge>
                   ))
+              ) : categoricalFeaturesCount > 0 ? (
+                <span className="text-sm">{categoricalFeaturesCount} categorical feature(s)</span>
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
-              {displayCategoricalFeatures.length > 5 && (
+              {Array.isArray(displayCategoricalFeatures) && displayCategoricalFeatures.length > 5 && (
                 <Badge variant="outline">+{displayCategoricalFeatures.length - 5} more</Badge>
               )}
             </div>

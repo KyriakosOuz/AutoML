@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -74,12 +73,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Only allow cleaned stage if processingStage is cleaned or higher AND there were missing values to handle
-    // OR if the processing stage is explicitly set to cleaned or higher
+    // Only allow cleaned stage if the user explicitly processed the data 
+    // through the 'Process Missing Values' button (which sets processingStage to 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      if (!hasMissingValues && processingStage !== 'cleaned' && processingStage !== 'final' && processingStage !== 'processed') {
-        return false;
-      }
       return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
     }
     
