@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi, Dataset } from '@/lib/api';
@@ -7,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UploadCloud, X, AlertCircle, RotateCcw } from 'lucide-react';
+import { UploadCloud, X, AlertCircle, RotateCcw, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -288,13 +288,27 @@ const FileUpload: React.FC = () => {
         )}
         
         <div className="mb-4">
-          <Label htmlFor="missing-symbol" className="text-sm font-medium">
-            Custom Missing Value Symbol (Optional)
-          </Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label htmlFor="missing-symbol" className="text-sm font-medium">
+              Custom Missing Value Symbol (Optional)
+            </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="cursor-help">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Only enter if your dataset uses custom symbols (e.g. '?', 'NA', '-') for missing values.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <Input
             id="missing-symbol"
             type="text"
-            placeholder="e.g., NA, ?, -"
+            placeholder="e.g., ?, NA, --"
             value={customMissingSymbol}
             onChange={(e) => setCustomMissingSymbol(e.target.value)}
             className="mt-1"
