@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -20,7 +21,8 @@ import {
   Loader2,
   XCircle,
   CheckCircle,
-  Info
+  Info,
+  BarChart
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -38,6 +40,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setPreviewData, 
     setPreviewColumns,
     overview,
+    setOverview,
     processingStage,
     targetColumn
   } = useDataset();
@@ -66,9 +69,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       if (response && response.data) {
         setPreviewData(response.data.preview || []);
         setPreviewColumns(response.data.columns || []);
+        if (response.data.overview) {
+          setOverview(response.data.overview);
+        }
       } else {
         setPreviewData(response.preview || []);
         setPreviewColumns(response.columns || []);
+        if (response.overview) {
+          setOverview(response.overview);
+        }
       }
       
       setInitialLoadComplete(true);
@@ -290,19 +299,27 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         )}
         
         {overview && (
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm text-gray-600 dark:text-gray-300 border">
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm border">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart className="h-4 w-4 text-primary" />
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">Dataset Statistics</h4>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
               <p className="flex items-center gap-1">
-                <span className="font-medium">Rows:</span> {overview.num_rows}
+                <span className="font-medium text-gray-700 dark:text-gray-300">Rows:</span> 
+                <span className="text-gray-900 dark:text-gray-100">{overview.num_rows}</span>
               </p>
               <p className="flex items-center gap-1">
-                <span className="font-medium">Columns:</span> {overview.num_columns}
+                <span className="font-medium text-gray-700 dark:text-gray-300">Columns:</span> 
+                <span className="text-gray-900 dark:text-gray-100">{overview.num_columns}</span>
               </p>
               <p className="flex items-center gap-1">
-                <span className="font-medium">Numerical Features:</span> {overview.numerical_features?.length || 0}
+                <span className="font-medium text-gray-700 dark:text-gray-300">Numerical Features:</span> 
+                <span className="text-gray-900 dark:text-gray-100">{overview.numerical_features?.length || 0}</span>
               </p>
               <p className="flex items-center gap-1">
-                <span className="font-medium">Categorical Features:</span> {overview.categorical_features?.length || 0}
+                <span className="font-medium text-gray-700 dark:text-gray-300">Categorical Features:</span> 
+                <span className="text-gray-900 dark:text-gray-100">{overview.categorical_features?.length || 0}</span>
               </p>
             </div>
           </div>
