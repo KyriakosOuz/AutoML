@@ -85,11 +85,11 @@ const getSessionIdFromRoute = (pathname: string): string => {
 };
 
 // Generate context based on app state and current route
-const generateContext = (pathname: string, datasetContext: any, userId: string | undefined): string => {
+const generateContext = (pathname: string, datasetContext: any | null, userId: string | undefined): string => {
   let context = `User ID: ${userId || 'unauthenticated'}. `;
   
-  // Add dataset context if on dataset page
-  if (pathname.includes('/dataset')) {
+  // Add dataset context if on dataset page and context exists
+  if (pathname.includes('/dataset') && datasetContext) {
     const { datasetId, targetColumn, processingStage, overview } = datasetContext;
     context += `Current view: Dataset management. `;
     
@@ -129,11 +129,9 @@ const generateContext = (pathname: string, datasetContext: any, userId: string |
 };
 
 // Suggested prompts based on the current route
-const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any): string[] => {
+const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | null): string[] => {
   if (pathname.includes('/dataset')) {
-    const { datasetId, processingStage } = datasetContext;
-    
-    if (!datasetId) {
+    if (!datasetContext || !datasetContext.datasetId) {
       return [
         "What kind of dataset should I upload?",
         "How do I prepare my CSV file for upload?",
@@ -141,7 +139,7 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any): str
       ];
     }
     
-    if (!processingStage || processingStage === 'raw') {
+    if (!datasetContext.processingStage || datasetContext.processingStage === 'raw') {
       return [
         "How should I handle missing values in my dataset?",
         "What preprocessing steps do you recommend?",
@@ -199,7 +197,17 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { toast } = useToast();
   const location = useLocation();
   const { user } = useAuth();
-  const datasetContext = useDataset();
+  
+  // Get dataset context safely - it might not be available on all routes
+  let datasetContext = null;
+  try {
+    // Only use the dataset context if we're on a route that has the DatasetProvider
+    if (location.pathname.includes('/dataset')) {
+      datasetContext = useDataset();
+    }
+  } catch (error) {
+    console.log('Dataset context not available on this route');
+  }
   
   // Update session ID when route changes
   useEffect(() => {
