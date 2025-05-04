@@ -263,24 +263,24 @@ const MissingValueHandler: React.FC = () => {
                       <SelectValue placeholder="Select strategy" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mean">Mean (for numerical values)</SelectItem>
-                      <SelectItem value="median">Median (for numerical values)</SelectItem>
-                      <SelectItem value="mode">Mode (most frequent value)</SelectItem>
-                      <SelectItem value="hot_deck">Hot Deck (random sampling)</SelectItem>
-                      <SelectItem value="drop">Drop rows with missing values</SelectItem>
-                      <SelectItem value="skip">Skip (keep missing values)</SelectItem>
+                      <SelectItem value="mean">Mean</SelectItem>
+                      <SelectItem value="median">Median</SelectItem>
+                      <SelectItem value="mode">Mode</SelectItem>
+                      <SelectItem value="hot_deck">Hot Deck</SelectItem>
+                      <SelectItem value="drop">Drop</SelectItem>
+                      <SelectItem value="skip">Skip</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="bg-white p-3 rounded-md border border-gray-200">
                   <h5 className="text-xs font-medium text-gray-700 mb-1">Strategy Description</h5>
                   <p className="text-xs text-gray-600">
-                    {strategy === 'mean' && 'Replace missing values with the mean (average) of each column. Only works with numerical data.'}
-                    {strategy === 'median' && 'Replace missing values with the median (middle value) of each column. Only works with numerical data.'}
-                    {strategy === 'mode' && 'Replace missing values with the most frequent value in each column. Works with both numerical and categorical data.'}
-                    {strategy === 'hot_deck' && 'Replace missing values with randomly selected values from the same column. Maintains the natural distribution of data.'}
-                    {strategy === 'drop' && 'Remove all rows that contain any missing values. This may significantly reduce your dataset size.'}
-                    {strategy === 'skip' && 'Keep missing values as they are. Some machine learning algorithms cannot handle missing values.'}
+                    {strategy === 'mean' && 'Replace missing values with the average. Only for numerical columns.'}
+                    {strategy === 'median' && 'Replace missing values with the median value. Only for numerical columns.'}
+                    {strategy === 'mode' && 'Replace missing values with the most frequent value. Works for any column type.'}
+                    {strategy === 'hot_deck' && 'Find similar rows and copy values from the nearest non-missing neighbor. Works for both numerical and categorical.'}
+                    {strategy === 'drop' && 'Remove any row with at least one missing value.'}
+                    {strategy === 'skip' && 'Leave missing values unchanged.'}
                   </p>
                 </div>
               </div>
