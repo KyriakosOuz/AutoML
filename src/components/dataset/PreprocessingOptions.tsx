@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { datasetApi } from '@/lib/api';
+import { extendedDatasetApi } from '@/lib/datasetApiWrapper';
 import { 
   Card, 
   CardContent, 
@@ -156,11 +155,12 @@ const PreprocessingOptions: React.FC = () => {
       setError(null);
       setSuccess(null);
       
-      const response = await datasetApi.preprocessDataset(
+      // Use the extended API that handles all 4 parameters
+      const response = await extendedDatasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
         balanceStrategy,
-        imputationStrategy // Add the imputation strategy
+        imputationStrategy
       );
       
       // CRITICAL FIX: Just update the processingStage to 'processed'
