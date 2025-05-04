@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useDataset, DatasetOverview } from '@/contexts/DatasetContext';
+import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
   Table, 
@@ -51,9 +52,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setOverview,
     processingStage,
     targetColumn,
-    processingButtonClicked,
-    fileUrls,
-    setFileUrls
+    processingButtonClicked
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -72,49 +71,36 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Updated isStageAvailable to handle file URLs and better track available stages
+  // Updated isStageAvailable to handle auto-processed datasets without missing values
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
-    // Debug logging for stage availability checks
-    console.log(`Checking stage availability for ${checkStage}:`, {
-      processingStage,
-      fileUrls,
-      hasMissingValues,
-      processingButtonClicked
-    });
-
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // Check if cleaned file URL exists
-      const hasCleanedFile = !!fileUrls?.cleaned;
-      console.log('Has cleaned file URL?', hasCleanedFile);
-      
-      // For datasets WITH missing values, show the cleaned stage when:
-      // 1. We have a cleaned file URL, or
-      // 2. processingButtonClicked is true and processingStage is 'cleaned' or later
+      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
+      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
       if (hasMissingValues) {
-        return hasCleanedFile || (
+        // For datasets WITH missing values, require explicit button click
+        return (
           processingButtonClicked && 
-          (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
         );
       } else {
-        // For datasets WITHOUT missing values, don't show the cleaned stage
+        // For datasets WITHOUT missing values, even if processingStage is advanced, 
+        // don't show the cleaned stage - they can go directly to final
         return false;
       }
     }
     
     if (checkStage === 'final') {
-      // Check if final file URL exists
-      const hasFinalFile = !!fileUrls?.final;
-      console.log('Has final file URL?', hasFinalFile);
-      return hasFinalFile || ['final', 'processed'].includes(processingStage || '');
+      return ['final', 'processed'].includes(processingStage || '');
     }
     
     if (checkStage === 'processed') {
-      // Check if processed file URL exists
-      const hasProcessedFile = !!fileUrls?.processed;
-      console.log('Has processed file URL?', hasProcessedFile);
-      return hasProcessedFile || processingStage === 'processed';
+      return processingStage === 'processed';
     }
     
     return false;
@@ -130,22 +116,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setStage('cleaned');
     }
   }, [processingButtonClicked, processingStage]);
-
-  // Add a new useEffect to automatically update the selected stage when fileUrls changes
-  useEffect(() => {
-    if (!fileUrls) return;
-    
-    console.log('File URLs updated in DataPreview:', fileUrls);
-    
-    // Automatically move to the latest available stage
-    if (fileUrls.processed) {
-      setStage('processed');
-    } else if (fileUrls.final) {
-      setStage('final');
-    } else if (fileUrls.cleaned) {
-      setStage('cleaned');
-    }
-  }, [fileUrls]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -167,24 +137,14 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       const previewRows = responseData.preview || [];
       const previewCols = responseData.columns || [];
       
-      // Extract file URLs if present in the response
-      if (responseData.file_urls) {
-        console.log('File URLs received:', responseData.file_urls);
-        setFileUrls(responseData.file_urls);
-      }
-      
       // Extract statistics
       const currentStageData: StageData = {
         preview: previewRows,
         columns: previewCols,
         numRows: responseData.num_rows || 0,
         numColumns: responseData.num_columns || 0,
-        numericalFeatures: Array.isArray(responseData.numerical_features) 
-          ? responseData.numerical_features.length 
-          : (responseData.numerical_features || 0),
-        categoricalFeatures: Array.isArray(responseData.categorical_features)
-          ? responseData.categorical_features.length
-          : (responseData.categorical_features || 0)
+        numericalFeatures: responseData.numerical_features || 0,
+        categoricalFeatures: responseData.categorical_features || 0
       };
       
       // Update the state with the current stage data
@@ -207,21 +167,20 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         const currentMissingValues = overview?.total_missing_values;
         const currentMissingValuesCount = overview?.missing_values_count;
         
-        // Create detailed overview with proper numerical_features handling
-        const overviewData: DatasetOverview = {
+        const overviewData = {
           num_rows: responseData.num_rows,
           num_columns: responseData.num_columns,
           missing_values: responseData.missing_values || {},
+          numerical_features: Array.isArray(responseData.numerical_features) 
+            ? responseData.numerical_features 
+            : [],
+          categorical_features: Array.isArray(responseData.categorical_features) 
+            ? responseData.categorical_features 
+            : [],
+          // Preserve existing missing values data if not in the response
           total_missing_values: responseData.total_missing_values ?? currentMissingValues,
           missing_values_count: responseData.missing_values_count ?? currentMissingValuesCount,
           column_names: responseData.column_names || previewCols,
-          // Add these required properties to fix the TypeScript errors
-          numerical_features: Array.isArray(responseData.numerical_features) 
-            ? responseData.numerical_features 
-            : (overview?.numerical_features || []),
-          categorical_features: Array.isArray(responseData.categorical_features)
-            ? responseData.categorical_features
-            : (overview?.categorical_features || [])
         };
         
         console.log('DataPreview - Setting overview with:', overviewData);
@@ -315,30 +274,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Debug information for development */}
-        <div className="bg-gray-50 p-2 mb-4 text-xs border rounded">
-          <details>
-            <summary className="cursor-pointer">Debug Info</summary>
-            <div className="mt-2 space-y-1">
-              <p>Processing Stage: {processingStage || 'none'}</p>
-              <p>Current Stage: {stage}</p>
-              <p>Has Missing Values: {hasMissingValues ? 'Yes' : 'No'}</p>
-              <p>Button Clicked: {processingButtonClicked ? 'Yes' : 'No'}</p>
-              <p>Available Stages: {
-                ['raw', 'cleaned', 'final', 'processed']
-                  .map(s => `${s}: ${isStageAvailable(s as PreviewStage) ? '✅' : '❌'}`)
-                  .join(', ')
-              }</p>
-              <p>File URLs: {JSON.stringify(fileUrls)}</p>
-              <p>Numerical Features: {overview?.numerical_features ? 
-                (Array.isArray(overview.numerical_features) 
-                  ? overview.numerical_features.join(', ') 
-                  : overview.numerical_features) 
-                : 'none'}</p>
-            </div>
-          </details>
-        </div>
-
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Info className="h-4 w-4" />
@@ -347,7 +282,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           
           {/* For datasets without missing values that are auto-processed, show an informational message */}
           {!hasMissingValues && processingStage === 'cleaned' && stage === 'raw' && (
-            <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <Alert variant="info" className="mb-4 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-500" />
               <AlertTitle className="text-blue-700">Dataset Auto-Processed</AlertTitle>
               <AlertDescription className="text-blue-600">
@@ -385,6 +320,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           </Alert>
         )}
         
+        {/* Table rendering section */}
         {!previewData || isLoadingPreview ? (
           <div className="space-y-2">
             <Skeleton className="h-8 w-full" />
@@ -467,6 +403,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           </div>
         )}
         
+        {/* Display statistics based on the current stage data */}
         {currentStageData && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm border">
             <div className="flex items-center gap-2 mb-2">

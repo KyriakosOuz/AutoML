@@ -15,8 +15,7 @@ const DatasetSummary: React.FC = () => {
     taskType,
     previewColumns,
     columnsToKeep,
-    numClasses,
-    fileUrls
+    numClasses
   } = useDataset();
   
   const [numericalFeatures, setNumericalFeatures] = useState<string[]>([]);
@@ -26,13 +25,6 @@ const DatasetSummary: React.FC = () => {
   
   // Check if we're on the training route
   const isTrainingRoute = location.pathname.includes('/training');
-  
-  // Debug current overview and numerical features
-  useEffect(() => {
-    console.log('DatasetSummary - Current overview:', overview);
-    console.log('DatasetSummary - Current numerical features:', 
-      Array.isArray(overview?.numerical_features) ? overview?.numerical_features : 'not an array');
-  }, [overview]);
   
   // Fetch the processed data to get accurate feature information
   useEffect(() => {
@@ -44,39 +36,31 @@ const DatasetSummary: React.FC = () => {
         
         let responseData;
         
-        // For training route, use preview-dataset with processed stage
+        // Always use the preview-dataset endpoint, but with 'processed' stage for training route
         if (isTrainingRoute) {
+          // For training route, use preview-dataset with processed stage
           const response = await datasetApi.previewDataset(datasetId, 'processed');
           responseData = response.data || response;
+          
           console.log("Training route - preview dataset response:", responseData);
         } else {
-          // For other routes, use preview-dataset endpoint with latest
-          const response = await datasetApi.previewDataset(datasetId, 'latest');
+          // For other routes, use preview-dataset endpoint
+          const response = await datasetApi.previewDataset(datasetId, 'processed');
           responseData = response.data || response;
+          
           console.log("Preview dataset response:", responseData);
         }
         
-        // Handle numerical features - first check for array data
-        if (Array.isArray(responseData?.numerical_features)) {
-          setNumericalFeatures(responseData.numerical_features);
-          console.log("Setting numerical features from response:", responseData.numerical_features);
-        } else if (Array.isArray(responseData?.numerical_columns)) {
-          // Alternative field name from API
-          setNumericalFeatures(responseData.numerical_columns);
-          console.log("Setting numerical features from numerical_columns:", responseData.numerical_columns);
-        } else if (overview && Array.isArray(overview.numerical_features)) {
-          // Fallback to overview if already set
-          setNumericalFeatures(overview.numerical_features);
-          console.log("Using numerical features from overview:", overview.numerical_features);
+        // Handle numerical features
+        const numFeatures = responseData?.numerical_columns || [];
+        if (Array.isArray(numFeatures)) {
+          setNumericalFeatures(numFeatures);
         }
         
         // Handle categorical features
-        if (Array.isArray(responseData?.categorical_features)) {
-          setCategoricalFeatures(responseData.categorical_features);
-        } else if (Array.isArray(responseData?.categorical_columns)) {
-          setCategoricalFeatures(responseData.categorical_columns);
-        } else if (overview && Array.isArray(overview.categorical_features)) {
-          setCategoricalFeatures(overview.categorical_features);
+        const catFeatures = responseData?.categorical_columns || [];
+        if (Array.isArray(catFeatures)) {
+          setCategoricalFeatures(catFeatures);
         }
       } catch (error) {
         console.error("Error fetching dataset features:", error);
@@ -86,7 +70,7 @@ const DatasetSummary: React.FC = () => {
     };
     
     fetchDatasetFeatures();
-  }, [datasetId, isTrainingRoute, overview]);
+  }, [datasetId, isTrainingRoute]);
   
   if (!datasetId || !overview) {
     return null;
@@ -98,11 +82,11 @@ const DatasetSummary: React.FC = () => {
   // Use fetched features if available, otherwise fall back to context values
   const useNumericalFeatures = numericalFeatures.length > 0 
     ? numericalFeatures 
-    : (Array.isArray(overview.numerical_features) ? overview.numerical_features : []);
+    : (overview.numerical_features || []);
     
   const useCategoricalFeatures = categoricalFeatures.length > 0
     ? categoricalFeatures
-    : (Array.isArray(overview.categorical_features) ? overview.categorical_features : []);
+    : (overview.categorical_features || []);
   
   // Make sure we're correctly filtering numerical and categorical features to display only those that are selected
   const filteredNumericalFeatures = useNumericalFeatures.filter(
@@ -122,9 +106,14 @@ const DatasetSummary: React.FC = () => {
     filteredCategoricalFeatures.filter(f => f !== targetColumn) : 
     filteredCategoricalFeatures;
   
-  // Always use the actual length of the numerical/categorical features arrays if available
-  const numericalFeaturesCount = displayNumericalFeatures.length;
-  const categoricalFeaturesCount = displayCategoricalFeatures.length;
+  // If the numerical/categorical values are numbers rather than arrays, display them accordingly
+  const numericalFeaturesCount = typeof overview.numerical_features === 'number' 
+    ? overview.numerical_features 
+    : displayNumericalFeatures.length;
+    
+  const categoricalFeaturesCount = typeof overview.categorical_features === 'number'
+    ? overview.categorical_features
+    : displayCategoricalFeatures.length;
   
   const getTaskTypeBadge = () => {
     if (!taskType) return null;
@@ -198,15 +187,17 @@ const DatasetSummary: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Numerical Features ({numericalFeaturesCount})
+              Numerical Features {typeof numericalFeaturesCount === 'number' && `(${numericalFeaturesCount})`}
             </p>
             <div className="flex flex-wrap gap-1">
-              {displayNumericalFeatures.length > 0 ? (
+              {Array.isArray(displayNumericalFeatures) && displayNumericalFeatures.length > 0 ? (
                 displayNumericalFeatures.map(feat => (
                   <Badge key={feat} variant="outline" className="bg-blue-50">
                     {feat}
                   </Badge>
                 ))
+              ) : numericalFeaturesCount > 0 ? (
+                <span className="text-sm">{numericalFeaturesCount} numerical feature(s)</span>
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
@@ -215,10 +206,10 @@ const DatasetSummary: React.FC = () => {
           
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Categorical Features ({categoricalFeaturesCount})
+              Categorical Features {typeof categoricalFeaturesCount === 'number' && `(${categoricalFeaturesCount})`}
             </p>
             <div className="flex flex-wrap gap-1">
-              {displayCategoricalFeatures.length > 0 ? (
+              {Array.isArray(displayCategoricalFeatures) && displayCategoricalFeatures.length > 0 ? (
                 displayCategoricalFeatures
                   .slice(0, 5)
                   .map(feat => (
@@ -226,10 +217,12 @@ const DatasetSummary: React.FC = () => {
                       {feat}
                     </Badge>
                   ))
+              ) : categoricalFeaturesCount > 0 ? (
+                <span className="text-sm">{categoricalFeaturesCount} categorical feature(s)</span>
               ) : (
                 <span className="text-sm text-muted-foreground">None</span>
               )}
-              {displayCategoricalFeatures.length > 5 && (
+              {Array.isArray(displayCategoricalFeatures) && displayCategoricalFeatures.length > 5 && (
                 <Badge variant="outline">+{displayCategoricalFeatures.length - 5} more</Badge>
               )}
             </div>
