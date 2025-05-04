@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import React, { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi, Dataset } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,15 @@ const FileUpload: React.FC = () => {
     resetState,
     isLoading, 
     error,
+    overview,
   } = useDataset();
+
+  // Debug the current state of the overview
+  useEffect(() => {
+    if (overview) {
+      console.log('FileUpload - Current overview in context:', overview);
+    }
+  }, [overview]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -104,6 +112,13 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
+      // Explicitly log missing values information
+      const responseOverview = response.overview || (response.data && response.data.overview) || {};
+      console.log('Missing values in response:', {
+        total_missing_values: responseOverview.total_missing_values,
+        missing_values_count: responseOverview.missing_values_count
+      });
+      
       // Updated response handling to handle both response formats
       if (response && 'dataset_id' in response) {
         const dataset = response as Dataset;
@@ -126,6 +141,8 @@ const FileUpload: React.FC = () => {
           data_types: overview.data_types,
           feature_classification: overview.feature_classification
         };
+        
+        console.log('Updating dataset state with overview:', datasetOverview);
         
         updateState({
           datasetId: dataset.dataset_id,
@@ -159,6 +176,8 @@ const FileUpload: React.FC = () => {
           data_types: overview.data_types,
           feature_classification: overview.feature_classification
         };
+        
+        console.log('Updating dataset state with nested overview:', datasetOverview);
         
         updateState({
           datasetId: dataset.dataset_id,

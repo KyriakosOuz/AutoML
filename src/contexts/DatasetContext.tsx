@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -103,6 +104,14 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   });
   
+  // Debug state changes
+  useEffect(() => {
+    if (state.overview) {
+      console.log('DatasetContext - State updated, overview:', state.overview);
+      console.log('DatasetContext - Missing values:', state.overview.total_missing_values);
+    }
+  }, [state.overview]);
+  
   // Save state to localStorage with debounce to prevent rapid updates
   useEffect(() => {
     try {
@@ -144,7 +153,10 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
-  const setOverview = (overview: DatasetOverview | null) => setState(prev => ({ ...prev, overview }));
+  const setOverview = (overview: DatasetOverview | null) => {
+    console.log('Setting overview directly:', overview);
+    setState(prev => ({ ...prev, overview }));
+  };
   const setPreviewData = (previewData: Record<string, any>[] | null) => setState(prev => ({ ...prev, previewData }));
   const setPreviewColumns = (previewColumns: string[] | null) => setState(prev => ({ ...prev, previewColumns }));
   const setTargetColumn = (targetColumn: string | null) => setState(prev => ({ ...prev, targetColumn }));
@@ -173,7 +185,33 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Use this when you need to update multiple related properties to avoid multiple re-renders
   const updateState = (newState: Partial<DatasetContextState>) => {
     console.log('Updating dataset state with:', newState);
+    
+    // Special handling for overview updates to ensure we don't lose missing values
     setState(prev => {
+      // If we're updating the overview, ensure we properly merge any missing fields
+      if (newState.overview && prev.overview) {
+        console.log('Merging overview with existing overview');
+        
+        // Ensure we preserve important missing value fields
+        const mergedOverview = {
+          ...prev.overview,
+          ...newState.overview,
+          // Explicitly handle missing values fields to ensure they're not lost
+          total_missing_values: newState.overview.total_missing_values !== undefined 
+            ? newState.overview.total_missing_values
+            : prev.overview.total_missing_values,
+          missing_values_count: newState.overview.missing_values_count || prev.overview.missing_values_count
+        };
+        
+        console.log('Merged overview:', mergedOverview);
+        
+        return {
+          ...prev,
+          ...newState,
+          overview: mergedOverview
+        };
+      }
+      
       // Make a single state update instead of multiple individual updates
       return { ...prev, ...newState };
     });

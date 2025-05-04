@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -56,8 +57,17 @@ const MissingValueHandler: React.FC = () => {
     setPreviewColumns
   } = useDataset();
 
-  // Detect if there are missing values
-  const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
+  // Debug log to check the overview data
+  useEffect(() => {
+    if (overview) {
+      console.log('MissingValueHandler - Overview data:', overview);
+      console.log('Total missing values:', overview.total_missing_values);
+      console.log('Missing values count:', overview.missing_values_count);
+    }
+  }, [overview]);
+  
+  // Detect if there are missing values, ensure we're not using a falsy check since 0 is valid
+  const hasMissingValues = overview?.total_missing_values !== undefined ? overview.total_missing_values > 0 : false;
   
   // Determine if we have numerical or categorical columns
   const hasNumericalColumns = overview?.numerical_features?.length > 0;
@@ -235,6 +245,9 @@ const MissingValueHandler: React.FC = () => {
   if (!isCurrentStrategyValid && availableStrategies.length > 0) {
     setStrategy(availableStrategies[0].value);
   }
+
+  console.log('MissingValueHandler render - hasMissingValues:', hasMissingValues);
+  console.log('MissingValueHandler render - missingValueColumns:', missingValueColumns);
 
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
