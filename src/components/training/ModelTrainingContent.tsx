@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import AutoMLTraining from './AutoMLTraining';

@@ -24,7 +24,7 @@ const TrainingInsights: React.FC = () => {
     customParameters,
     experimentStatus,
     experimentResults,
-    activeTab, // Current active tab in UI
+    activeTab,
   } = useTraining();
   
   // Check if this is user's first visit to training
@@ -36,23 +36,12 @@ const TrainingInsights: React.FC = () => {
     }
   }, []);
   
-  // Make training context available globally for the AI Assistant context
-  if (window) {
-    window.__TRAINING_CONTEXT__ = {
-      activeExperimentId,
-      lastTrainingType,
-      automlParameters,
-      customParameters,
-      experimentStatus,
-      experimentResults,
-      activeTab,
-      isFirstVisit
-    };
-  }
-  
-  // Create base context data from training information
+  // Create base context data from training information only (no dataset leakage)
   const baseContextData = `
+    Training Context:
+    Current Tab: ${activeTab}
     Experiment ID: ${activeExperimentId || 'Not started'}
+    Training Type: ${lastTrainingType || 'Not selected'}
     Algorithm: ${lastTrainingType === 'automl' ? automlParameters?.automlEngine : 
                 lastTrainingType === 'custom' ? customParameters?.algorithm : 'Not selected'}
     Status: ${experimentStatus || 'Not started'}
@@ -62,11 +51,9 @@ const TrainingInsights: React.FC = () => {
   
   // Generate tab-specific context data based on active tab
   const getTabSpecificContext = () => {
-    let tabContext = '';
-    
     switch(activeTab) {
       case 'automl':
-        tabContext = `
+        return `
           Tab: AutoML Training
           AutoML Engine: ${automlParameters?.automlEngine || 'Not selected'}
           Test Size: ${automlParameters?.testSize || 0.2}
@@ -78,10 +65,9 @@ const TrainingInsights: React.FC = () => {
           - autokeras: Based on Keras, good for deep learning tasks
           - h2o: Robust enterprise-grade AutoML with many algorithms
         `;
-        break;
         
       case 'custom':
-        tabContext = `
+        return `
           Tab: Custom Training
           Algorithm: ${customParameters?.algorithm || 'Not selected'}
           Test Size: ${customParameters?.testSize || 0.2}
@@ -98,11 +84,11 @@ const TrainingInsights: React.FC = () => {
           - Linear Regression: For regression tasks, interpretable
           - SVM: Effective for high-dimensional spaces
         `;
-        break;
         
       case 'results':
-        tabContext = `
+        return `
           Tab: Training Results
+          Experiment Status: ${experimentStatus || 'Unknown'}
           ${experimentResults?.metrics ? `Performance Metrics: ${JSON.stringify(experimentResults.metrics)}` : 'No metrics available'}
           
           Results include:
@@ -112,10 +98,9 @@ const TrainingInsights: React.FC = () => {
           - ROC and PR curves where applicable
           - Classification report details
         `;
-        break;
         
       case 'predict':
-        tabContext = `
+        return `
           Tab: Model Predictions
           Model available for predictions: ${activeExperimentId ? 'Yes' : 'No'}
           
@@ -124,13 +109,10 @@ const TrainingInsights: React.FC = () => {
           - Batch prediction from CSV: Upload a file with multiple instances
           ${experimentStatus === 'completed' ? 'Model is ready for predictions' : 'Model is not yet ready for predictions'}
         `;
-        break;
         
       default:
-        tabContext = '';
+        return '';
     }
-    
-    return tabContext;
   };
   
   // Combine base context with tab-specific context
@@ -155,7 +137,7 @@ const TrainingInsights: React.FC = () => {
         case 'predict':
           return "How do I get started with making predictions using my trained model?";
         default:
-          return "Based on this dataset, which algorithm would you recommend for this task type?";
+          return "What should I know about getting started with model training?";
       }
     }
     
@@ -179,7 +161,7 @@ const TrainingInsights: React.FC = () => {
         case 'predict':
           return "How should I interpret the prediction results from this model?";
         default:
-          return "My training is complete. How does this model compare to industry standards?";
+          return "My training is complete. How do these results compare to industry standards?";
       }
     }
     
@@ -198,31 +180,36 @@ const TrainingInsights: React.FC = () => {
         return [
           "What's the difference between the AutoML engines?",
           "Should I use stratified sampling for this dataset?",
-          "What test size is optimal for my data?"
+          "What test size is optimal for my data?",
+          "How long should I expect the AutoML process to take?"
         ];
       case 'custom':
         return [
           "What hyperparameters should I tune for this algorithm?",
           "How do I avoid overfitting with this model?",
-          "When should I use Random Forest vs XGBoost?"
+          "When should I use Random Forest vs XGBoost?",
+          "How does increasing the max_depth affect my model?"
         ];
       case 'results':
         return [
           "What do these evaluation metrics mean?",
           "How can I improve my model's performance?",
-          "How do I interpret the confusion matrix?"
+          "How do I interpret the confusion matrix?",
+          "What's considered a good F1 score for this type of problem?"
         ];
       case 'predict':
         return [
           "How accurate are these predictions likely to be?",
           "What input values would make the prediction unreliable?",
-          "How do I prepare my CSV for batch prediction?"
+          "How do I prepare my CSV for batch prediction?",
+          "Can I export these predictions for further analysis?"
         ];
       default:
         return [
           "Which algorithm is best for my dataset?",
           "How do I improve model accuracy?",
-          "What metrics should I focus on?"
+          "What metrics should I focus on?",
+          "How do I know if my model is overfitting?"
         ];
     }
   };

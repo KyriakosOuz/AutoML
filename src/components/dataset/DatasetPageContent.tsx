@@ -9,6 +9,7 @@ import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
 import { datasetApi } from '@/lib/api';
 import DatasetInsights from '@/components/ai-assistant/DatasetInsights';
+import PreprocessingInsights from '@/components/ai-assistant/PreprocessingInsights';
 
 const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -114,7 +115,13 @@ const DatasetPageContent: React.FC = () => {
         />
         
         {/* Only show insights when dataset is loaded */}
-        {datasetId && <DatasetInsights />}
+        {datasetId && (
+          <>
+            <DatasetInsights />
+            {/* Show preprocessing insights only when on preprocess tab */}
+            {activeTab === 'preprocess' && <PreprocessingInsights />}
+          </>
+        )}
         
         <div className="space-y-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
