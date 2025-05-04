@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -160,7 +159,7 @@ const MissingValueHandler: React.FC = () => {
   }, [datasetId, overview]);
 
   // Detect if there are missing values
-  const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
+  const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
   
   // Show which columns have missing values
   const missingValueColumns = overview?.missing_values_count ? 

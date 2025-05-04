@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -67,19 +68,21 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   });
   const { toast } = useToast();
 
-  // Check if the dataset has any missing values
-  const hasMissingValues = overview?.total_missing_values && overview.total_missing_values > 0;
+  // Check if the dataset has any missing values - updated with type check
+  const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
   // Check if a specific stage is available
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Allow cleaned stage if processingButtonClicked is true OR if there are missing values AND processingStage is 'cleaned' or higher
+    // Allow cleaned stage if there are missing values AND (processingButtonClicked OR processingStage is 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return processingButtonClicked || 
+      return hasMissingValues && (
+        processingButtonClicked || 
         processingStage === 'cleaned' || 
         processingStage === 'final' || 
-        processingStage === 'processed';
+        processingStage === 'processed'
+      );
     }
     
     if (checkStage === 'final') {
