@@ -61,17 +61,10 @@ const strategiesInfo: Record<ImputationStrategy, StrategyInfo> = {
     description: 'Replace missing values with the most frequent value. Works for any column type.',
     isEnabled: () => true, // Always enabled
   },
-  /* Commenting out Hot Deck strategy as requested
   hot_deck: {
     label: 'Hot Deck',
     description: 'Find similar rows and copy values from the nearest non-missing neighbor. Works for both numerical and categorical.',
     isEnabled: ({ hasAnyMissingValues }) => hasAnyMissingValues,
-  },
-  */
-  hot_deck: {
-    label: 'Hot Deck (Currently Disabled)',
-    description: 'Find similar rows and copy values from the nearest non-missing neighbor. Works for both numerical and categorical. (Currently disabled)',
-    isEnabled: () => false, // Disabled
   },
   drop: {
     label: 'Drop',
