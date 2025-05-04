@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -48,6 +48,15 @@ const MissingValueHandler: React.FC = () => {
     previewColumns,
     setPreviewColumns
   } = useDataset();
+
+  // Add debug logging to help diagnose the issue
+  useEffect(() => {
+    if (datasetId && overview) {
+      console.log('MissingValueHandler - Current overview:', overview);
+      console.log('MissingValueHandler - Has missing values:', overview?.total_missing_values, 
+                  overview?.total_missing_values > 0);
+    }
+  }, [datasetId, overview]);
 
   // Detect if there are missing values
   const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
