@@ -269,6 +269,25 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Close the chat panel
   const closeChat = () => setIsChatOpen(false);
   
+  // Get reply content from potentially different API response formats
+  const extractReplyFromResponse = (response: any): string => {
+    // Log the response structure for debugging
+    console.log('[AI Assistant] Response structure:', JSON.stringify(response));
+    
+    // Check for nested data.reply format
+    if (response && response.data && response.data.reply) {
+      return response.data.reply;
+    }
+    
+    // Check for top-level reply format
+    if (response && response.reply) {
+      return response.reply;
+    }
+    
+    // If neither format exists, throw a descriptive error
+    throw new Error('Invalid response format: missing reply content');
+  };
+  
   // Send a message to the AI assistant
   const sendMessage = async (content: string) => {
     try {
@@ -300,21 +319,26 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Send the message to the API
       const response = await askMistral(content, context, currentSession);
       
-      if (response && response.data && response.data.reply) {
+      try {
+        // Extract reply using the helper function that handles different formats
+        const replyContent = extractReplyFromResponse(response);
+        
         // Update the placeholder with the actual response
         setMessages(prev => 
           prev.map(msg => 
             msg.id === assistantMessageId
               ? { 
                   ...msg, 
-                  content: response.data.reply, 
+                  content: replyContent, 
                   loading: false 
                 }
               : msg
           )
         );
-      } else {
-        throw new Error('Invalid response from the AI assistant');
+      } catch (formatError) {
+        console.error('[AI Assistant] Format error:', formatError);
+        console.error('[AI Assistant] Response received:', response);
+        throw new Error(`Failed to parse AI response: ${formatError.message}`);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
