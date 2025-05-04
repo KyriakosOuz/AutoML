@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -71,26 +70,29 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Updated isStageAvailable to handle auto-processed datasets without missing values
+  // Updated isStageAvailable to prioritize processingStage over processingButtonClicked
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
+    // Log the state for debugging
+    console.log('isStageAvailable check:', {
+      checkStage,
+      processingStage,
+      processingButtonClicked,
+      hasMissingValues
+    });
+    
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
-      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
+      // FIXED: Prioritize processingStage over button click status
+      // For datasets WITH missing values, rely primarily on processingStage
       if (hasMissingValues) {
-        // For datasets WITH missing values, require explicit button click
         return (
-          processingButtonClicked && 
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
+          processingStage === 'cleaned' || 
+          processingStage === 'final' || 
+          processingStage === 'processed'
         );
       } else {
-        // For datasets WITHOUT missing values, even if processingStage is advanced, 
-        // don't show the cleaned stage - they can go directly to final
+        // For datasets WITHOUT missing values, don't show cleaned stage
         return false;
       }
     }
@@ -108,6 +110,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
 
   // Keep the existing useEffect for processingButtonClicked
   useEffect(() => {
+    // Log the state when this effect runs
+    console.log('processingButtonClicked effect triggered:', {
+      processingButtonClicked,
+      processingStage,
+      stage
+    });
+    
     if (
       processingButtonClicked &&
       (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
@@ -311,7 +320,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         )}
         
         {!isLoadingPreview && !previewError && previewData && previewData.length > 0 && (
-          <Alert className="mb-4 bg-green-50 border-green-200">
+          <Alert variant="success" className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-500" />
             <AlertTitle className="text-green-700">Data Preview Loaded</AlertTitle>
             <AlertDescription className="text-green-600">
