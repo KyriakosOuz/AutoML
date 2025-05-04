@@ -17,7 +17,6 @@ import ExperimentDetailPage from "./pages/ExperimentDetailPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import FloatingChatButton from "./components/ai-assistant/FloatingChatButton";
-import TrainingInsights from "./components/ai-assistant/TrainingInsights";
 import ExperimentInsights from "./components/ai-assistant/ExperimentInsights";
 
 const queryClient = new QueryClient();
@@ -43,7 +42,6 @@ const App = () => (
                   <Route path="/training" element={
                     <ProtectedRoute>
                       <ModelTrainingPage />
-                      <TrainingInsights />
                     </ProtectedRoute>
                   } />
                   <Route path="/dashboard" element={
