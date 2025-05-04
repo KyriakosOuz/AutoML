@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDataset } from '@/contexts/DatasetContext';
 
 // Define the message interface
 export interface AIMessage {
@@ -39,7 +38,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export async function askMistral(prompt: string, context: string, sessionId: string) {
   const headers = await getAuthHeaders();
   
-  const res = await fetch(`${API_BASE_URL}/ai-assistant/`, {
+  const res = await fetch(`${API_BASE_URL}/api/ai-assistant/`, {
     method: "POST",
     headers: {
       ...headers,
@@ -61,7 +60,7 @@ export async function askMistral(prompt: string, context: string, sessionId: str
 export async function getMistralHistory(sessionId: string) {
   const headers = await getAuthHeaders();
   
-  const res = await fetch(`${API_BASE_URL}/ai-assistant/history/?session_id=${sessionId}`, {
+  const res = await fetch(`${API_BASE_URL}/api/ai-assistant/history/?session_id=${sessionId}`, {
     headers
   });
   
@@ -203,6 +202,8 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
   try {
     // Only use the dataset context if we're on a route that has the DatasetProvider
     if (location.pathname.includes('/dataset')) {
+      // We'll try to import and use the dataset context, but we'll handle errors gracefully
+      const { useDataset } = require('@/contexts/DatasetContext');
       datasetContext = useDataset();
     }
   } catch (error) {
