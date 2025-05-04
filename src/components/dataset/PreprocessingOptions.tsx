@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Sparkles } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
 type BalanceStrategy = 'undersample' | 'smote' | 'skip';
@@ -40,9 +41,9 @@ const PreprocessingOptions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Smart logic for numerical features and balancing
+  // Extract information about columns
   const numericalFeatures = overview?.numerical_features || [];
-  
+
   const hasNumericalToNormalize = useMemo(() => {
     return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
   }, [columnsToKeep, numericalFeatures]);

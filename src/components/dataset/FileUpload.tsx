@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi, Dataset } from '@/lib/api';
@@ -25,6 +24,7 @@ const FileUpload: React.FC = () => {
     resetState,
     isLoading, 
     error,
+    setProcessingButtonClicked
   } = useDataset();
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -104,73 +104,62 @@ const FileUpload: React.FC = () => {
       
       console.log('Upload response:', response);
       
-      // Updated response handling to handle both response formats
-      if (response && 'dataset_id' in response) {
-        const dataset = response as Dataset;
-        
-        // Check if overview is directly in response or nested in data
-        const overview = dataset.overview || {};
-        const numericalFeatures = overview.numerical_features || [];
-        const categoricalFeatures = overview.categorical_features || [];
-        
-        const datasetOverview = {
-          num_rows: overview.num_rows || 0,
-          num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {}, // Ensure missing_values is always provided
-          numerical_features: numericalFeatures,
-          categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values,
-          missing_values_count: overview.missing_values_count,
-          column_names: overview.column_names,
-          unique_values_count: overview.unique_values_count,
-          data_types: overview.data_types,
-          feature_classification: overview.feature_classification
-        };
-        
-        updateState({
-          datasetId: dataset.dataset_id,
-          fileUrl: dataset.file_url,
-          overview: datasetOverview,
-          previewColumns: [...numericalFeatures, ...categoricalFeatures],
-          processingStage: 'raw',
-        });
-      } else if (response && response.data && typeof response.data === 'object' && 'dataset_id' in response.data) {
-        // Handle case where response is nested under 'data' property
-        const dataset = {
-          dataset_id: response.data.dataset_id,
-          file_url: response.data.file_url,
-          overview: response.data.overview || {}
-        };
-        
-        const overview = dataset.overview;
-        const numericalFeatures = overview.numerical_features || [];
-        const categoricalFeatures = overview.categorical_features || [];
-        
-        const datasetOverview = {
-          num_rows: overview.num_rows || 0,
-          num_columns: overview.num_columns || 0,
-          missing_values: overview.missing_values || {}, // Ensure missing_values is always provided
-          numerical_features: numericalFeatures,
-          categorical_features: categoricalFeatures,
-          total_missing_values: overview.total_missing_values,
-          missing_values_count: overview.missing_values_count,
-          column_names: overview.column_names,
-          unique_values_count: overview.unique_values_count,
-          data_types: overview.data_types,
-          feature_classification: overview.feature_classification
-        };
-        
-        updateState({
-          datasetId: dataset.dataset_id,
-          fileUrl: dataset.file_url,
-          overview: datasetOverview,
-          previewColumns: [...numericalFeatures, ...categoricalFeatures],
-          processingStage: 'raw',
-        });
+      // Extract the dataset data from the response, handling both formats
+      let datasetData: Dataset;
+      let overviewData: any = {};
+      
+      // If response has a data property with dataset_id, it's the ApiResponse format
+      if (response && response.data && typeof response.data === 'object' && 'dataset_id' in response.data) {
+        console.log('Processing ApiResponse format');
+        datasetData = response.data as Dataset;
+        overviewData = datasetData.overview || {};
+      } 
+      // If response has dataset_id directly, it's the Dataset format
+      else if (response && 'dataset_id' in response) {
+        console.log('Processing direct Dataset format');
+        datasetData = response as Dataset;
+        overviewData = datasetData.overview || {};
       } else {
-        console.error('Unexpected response format:', response);
         throw new Error('Invalid response format from server');
       }
+      
+      // Debug log the missing values information
+      console.log('Extracted missing values:', {
+        totalMissing: overviewData.total_missing_values,
+        missingByColumn: overviewData.missing_values_count,
+      });
+      
+      const numericalFeatures = overviewData.numerical_features || [];
+      const categoricalFeatures = overviewData.categorical_features || [];
+      
+      // Create a properly structured overview object
+      const datasetOverview = {
+        num_rows: overviewData.num_rows || 0,
+        num_columns: overviewData.num_columns || 0,
+        missing_values: overviewData.missing_values || {}, 
+        numerical_features: numericalFeatures,
+        categorical_features: categoricalFeatures,
+        total_missing_values: overviewData.total_missing_values || 0,
+        missing_values_count: overviewData.missing_values_count || {},
+        column_names: overviewData.column_names || [],
+        unique_values_count: overviewData.unique_values_count || {},
+        data_types: overviewData.data_types || {},
+        feature_classification: overviewData.feature_classification || {}
+      };
+      
+      console.log('Updating state with overview:', datasetOverview);
+      
+      // Reset processingButtonClicked when uploading a new dataset
+      setProcessingButtonClicked(false);
+      
+      // Update the dataset context with the new information
+      updateState({
+        datasetId: datasetData.dataset_id,
+        fileUrl: datasetData.file_url,
+        overview: datasetOverview,
+        previewColumns: [...numericalFeatures, ...categoricalFeatures],
+        processingStage: 'raw',
+      });
       
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -207,6 +196,7 @@ const FileUpload: React.FC = () => {
 
   const handleStartOver = () => {
     resetState();
+    setProcessingButtonClicked(false);
     toast({
       title: "Dataset Reset",
       description: "All dataset processing has been reset. You can now start over.",

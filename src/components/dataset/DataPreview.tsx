@@ -50,7 +50,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     overview,
     setOverview,
     processingStage,
-    targetColumn
+    targetColumn,
+    processingButtonClicked,
+    autoAdvanced
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -66,21 +68,41 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   });
   const { toast } = useToast();
 
-  // Check if the dataset has any missing values
-  const hasMissingValues = overview?.total_missing_values && overview.total_missing_values > 0;
+  // Check if the dataset has any missing values - updated with type check
+  const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Check if a specific stage is available
+  // Check if a specific stage is available - updated logic to handle both auto-advance and button click
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Only allow cleaned stage if there are missing values AND the user explicitly processed the data
-    // through the 'Process Missing Values' button (which sets processingStage to 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return hasMissingValues && (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed');
+      if (hasMissingValues) {
+        // For datasets WITH missing values: require processingButtonClicked
+        // AND the processing stage must be at least 'cleaned'
+        return (
+          processingButtonClicked && 
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
+        );
+      } else {
+        // For datasets WITHOUT missing values: show clean stage if processingStage is cleaned or higher
+        // But ONLY if explicitly set through button click OR if auto-advancement happened
+        return (
+          (processingButtonClicked || autoAdvanced) &&
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
+        );
+      }
     }
     
     if (checkStage === 'final') {
-      return processingStage === 'final' || processingStage === 'processed';
+      return ['final', 'processed'].includes(processingStage);
     }
     
     if (checkStage === 'processed') {
@@ -89,6 +111,26 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     
     return false;
   };
+
+  // Add new useEffect to handle auto-advancing behavior
+  useEffect(() => {
+    if (autoAdvanced && processingStage === 'cleaned' && stage === 'raw') {
+      console.log('Auto-switching preview to raw (not cleaned) despite auto-advancement');
+      // Don't auto-switch to cleaned when it was auto-advanced
+      // Let the user explicitly select it
+    }
+  }, [autoAdvanced, processingStage, stage]);
+
+  // Keep the existing useEffect for processingButtonClicked
+  useEffect(() => {
+    if (
+      processingButtonClicked &&
+      (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
+    ) {
+      console.log('Detected processing button clicked + cleaned data available → enabling Cleaned Data stage');
+      setStage('cleaned');
+    }
+  }, [processingButtonClicked, processingStage]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -131,7 +173,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setPreviewColumns(previewCols);
       
       // Update global overview only when viewing the latest stage
+      // But make sure we preserve missing values information
       if (stage === 'latest' || stage === processingStage) {
+        // Log what we're about to update
+        console.log('DataPreview - Current overview before update:', overview);
+        
+        // Get current missing values data that we want to preserve
+        const currentMissingValues = overview?.total_missing_values;
+        const currentMissingValuesCount = overview?.missing_values_count;
+        
         const overviewData = {
           num_rows: responseData.num_rows,
           num_columns: responseData.num_columns,
@@ -142,12 +192,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           categorical_features: Array.isArray(responseData.categorical_features) 
             ? responseData.categorical_features 
             : [],
-          // Include additional properties if available
-          total_missing_values: responseData.total_missing_values,
-          missing_values_count: responseData.missing_values_count,
+          // Preserve existing missing values data if not in the response
+          total_missing_values: responseData.total_missing_values ?? currentMissingValues,
+          missing_values_count: responseData.missing_values_count ?? currentMissingValuesCount,
           column_names: responseData.column_names || previewCols,
         };
         
+        console.log('DataPreview - Setting overview with:', overviewData);
         setOverview(overviewData);
       }
       
@@ -187,9 +238,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         console.log('Setting stage to processed');
         setStage('processed');
       }
-      // Don't automatically switch to cleaned stage - only set by button click
+      // Don't automatically switch to cleaned stage unless button clicked or manually selected
     }
-  }, [processingStage]);
+  }, [processingStage, stage]);
 
   useEffect(() => {
     if (datasetId) {
