@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -77,7 +76,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     // Only allow cleaned stage if there are missing values AND the user explicitly processed the data
     // through the 'Process Missing Values' button (which sets processingStage to 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
+      return hasMissingValues && (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed');
     }
     
     if (checkStage === 'final') {
@@ -132,15 +131,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setPreviewColumns(previewCols);
       
       // Update global overview only when viewing the latest stage
-      // But make sure we preserve missing values information
       if (stage === 'latest' || stage === processingStage) {
-        // Log what we're about to update
-        console.log('DataPreview - Current overview before update:', overview);
-        
-        // Get current missing values data that we want to preserve
-        const currentMissingValues = overview?.total_missing_values;
-        const currentMissingValuesCount = overview?.missing_values_count;
-        
         const overviewData = {
           num_rows: responseData.num_rows,
           num_columns: responseData.num_columns,
@@ -151,13 +142,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           categorical_features: Array.isArray(responseData.categorical_features) 
             ? responseData.categorical_features 
             : [],
-          // Preserve existing missing values data if not in the response
-          total_missing_values: responseData.total_missing_values ?? currentMissingValues,
-          missing_values_count: responseData.missing_values_count ?? currentMissingValuesCount,
+          // Include additional properties if available
+          total_missing_values: responseData.total_missing_values,
+          missing_values_count: responseData.missing_values_count,
           column_names: responseData.column_names || previewCols,
         };
         
-        console.log('DataPreview - Setting overview with:', overviewData);
         setOverview(overviewData);
       }
       
@@ -186,28 +176,21 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const hasFinalData = processingStage === 'final' || processingStage === 'processed';
   const hasProcessedData = processingStage === 'processed';
 
-  // Update the effect to automatically switch to cleaned stage when processingStage changes
   useEffect(() => {
     if (processingStage) {
       console.log('Processing stage changed:', processingStage);
       
-      // Switch to final or processed stages if those are the current processing stages
       if (processingStage === 'final' && stage !== 'final') {
         console.log('Setting stage to final');
         setStage('final');
       } else if (processingStage === 'processed' && stage !== 'processed') {
         console.log('Setting stage to processed');
         setStage('processed');
-      } else if (processingStage === 'cleaned' && stage === 'raw') {
-        // Only automatically switch to cleaned stage if we're currently viewing raw data
-        // This helps with the user experience flow after clicking "Process Missing Values"
-        console.log('Automatically switching from raw to cleaned stage view');
-        setStage('cleaned');
       }
+      // Don't automatically switch to cleaned stage - only set by button click
     }
-  }, [processingStage, stage]);
+  }, [processingStage]);
 
-  // Fetch preview data when dataset ID or stage changes
   useEffect(() => {
     if (datasetId) {
       console.log('DatasetId or stage changed - fetching preview');

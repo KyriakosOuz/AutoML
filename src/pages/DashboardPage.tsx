@@ -39,19 +39,17 @@ const DashboardPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <div className="w-full">
-          <TabsContent value="datasets" className="pt-2 sm:pt-4">
-            <DatasetsTab />
-          </TabsContent>
-          
-          <TabsContent value="experiments" className="pt-2 sm:pt-4">
-            <ExperimentsTab />
-          </TabsContent>
-          
-          <TabsContent value="comparisons" className="pt-2 sm:pt-4">
-            <ComparisonsTab />
-          </TabsContent>
-        </div>
+        <TabsContent value="datasets" className="pt-2 sm:pt-4">
+          <DatasetsTab />
+        </TabsContent>
+        
+        <TabsContent value="experiments" className="pt-2 sm:pt-4">
+          <ExperimentsTab />
+        </TabsContent>
+        
+        <TabsContent value="comparisons" className="pt-2 sm:pt-4">
+          <ComparisonsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
