@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -35,18 +35,29 @@ const PreprocessingOptions: React.FC = () => {
     overview
   } = useDataset();
   
-  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
-  const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
   // Extract information about columns
   const numericalFeatures = overview?.numerical_features || [];
 
   const hasNumericalToNormalize = useMemo(() => {
     return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
   }, [columnsToKeep, numericalFeatures]);
+
+  // Initialize normalization method based on numerical features availability
+  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>(
+    hasNumericalToNormalize ? 'minmax' : 'skip'
+  );
+  
+  const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Update normalization method when hasNumericalToNormalize changes
+  useEffect(() => {
+    if (!hasNumericalToNormalize && normalizationMethod !== 'skip') {
+      setNormalizationMethod('skip');
+    }
+  }, [hasNumericalToNormalize, normalizationMethod]);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
