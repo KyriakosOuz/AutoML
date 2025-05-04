@@ -81,24 +81,23 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     });
   }, [processingStage, processingButtonClicked, hasMissingValues, stage]);
 
-  // Updated isStageAvailable to prioritize processingStage over processingButtonClicked
+  // Updated isStageAvailable with clearer logic that prioritizes processingStage over button click
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
+    // These stages are always available
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
       // Only show cleaned stage for datasets with missing values that have been processed
       if (hasMissingValues) {
-        // UPDATED: Now prioritize the processingStage over the button click
-        // If the stage is already cleaned, final, or processed, make it available
-        // regardless of whether the button was clicked in this session
-        return (
-          (processingButtonClicked || 
-          processingStage === 'cleaned' ||
-          processingStage === 'final' || 
-          processingStage === 'processed')
-        );
+        // IMPORTANT FIX: Prioritize the actual processing stage over the button click state
+        // This ensures the dropdown option remains enabled even after page refresh
+        return processingStage === 'cleaned' || 
+               processingStage === 'final' || 
+               processingStage === 'processed' ||
+               processingButtonClicked;
       } else {
         // For datasets WITHOUT missing values, don't show the cleaned stage
+        // Users can go directly from raw to final
         return false;
       }
     }
@@ -124,6 +123,20 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setStage('cleaned');
     }
   }, [processingButtonClicked, processingStage]);
+
+  // Add new useEffect to ensure dropdown stage updates when processingStage changes
+  useEffect(() => {
+    if (processingStage === 'cleaned' && hasMissingValues && stage === 'raw') {
+      console.log('Processing stage is now cleaned - updating dropdown selection to cleaned');
+      setStage('cleaned');
+    } else if (processingStage === 'final' && stage !== 'final') {
+      console.log('Processing stage is now final - updating dropdown selection');
+      setStage('final');
+    } else if (processingStage === 'processed' && stage !== 'processed') {
+      console.log('Processing stage is now processed - updating dropdown selection');
+      setStage('processed');
+    }
+  }, [processingStage, hasMissingValues, stage]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -258,9 +271,18 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="raw">Raw Data</SelectItem>
-              <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
+              <SelectItem 
+                value="cleaned" 
+                disabled={!isStageAvailable('cleaned')}
+                className={!isStageAvailable('cleaned') ? "opacity-50" : ""}
+              >
+                Cleaned Data
+                {!isStageAvailable('cleaned') && hasMissingValues && 
+                  <span className="ml-2 text-red-500 text-xs">(Process data first)</span>
+                }
+              </SelectItem>
               <SelectItem value="final" disabled={!isStageAvailable('final')}>Final Data</SelectItem>
               <SelectItem value="processed" disabled={!isStageAvailable('processed')}>Processed Data</SelectItem>
               <SelectItem value="latest">Latest Stage</SelectItem>
