@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -86,9 +87,7 @@ const MissingValueHandler: React.FC = () => {
     previewData,
     setPreviewData,
     previewColumns,
-    setPreviewColumns,
-    setProcessingButtonClicked,
-    processingButtonClicked
+    setPreviewColumns
   } = useDataset();
   
   const { toast } = useToast();
@@ -160,7 +159,7 @@ const MissingValueHandler: React.FC = () => {
   }, [datasetId, overview]);
 
   // Detect if there are missing values
-  const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
+  const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
   
   // Show which columns have missing values
   const missingValueColumns = overview?.missing_values_count ? 
@@ -200,14 +199,6 @@ const MissingValueHandler: React.FC = () => {
     }
   };
 
-  // Add an effect to handle datasets with no missing values
-  useEffect(() => {
-    if (datasetId && overview && !hasMissingValues && processingStage === 'raw') {
-      console.log('MissingValueHandler: No missing values detected, can proceed to features selection');
-      // We don't need to auto-advance here as we do it in DatasetContext now
-    }
-  }, [datasetId, overview, hasMissingValues, processingStage]);
-
   const handleProcessMissingValues = async (e: React.FormEvent) => {
     // Prevent default to avoid any navigation
     e.preventDefault();
@@ -222,10 +213,6 @@ const MissingValueHandler: React.FC = () => {
       setError(null);
       
       console.log('Processing missing values with strategy:', strategy);
-      
-      // Set the processing button clicked flag to true BEFORE API call
-      // This ensures the UI reacts immediately
-      setProcessingButtonClicked(true);
       
       const response = await datasetApi.handleMissingValues(
         datasetId, 

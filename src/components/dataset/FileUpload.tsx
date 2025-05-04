@@ -24,7 +24,6 @@ const FileUpload: React.FC = () => {
     resetState,
     isLoading, 
     error,
-    setProcessingButtonClicked
   } = useDataset();
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -149,9 +148,6 @@ const FileUpload: React.FC = () => {
       
       console.log('Updating state with overview:', datasetOverview);
       
-      // Reset processingButtonClicked when uploading a new dataset
-      setProcessingButtonClicked(false);
-      
       // Update the dataset context with the new information
       updateState({
         datasetId: datasetData.dataset_id,
@@ -196,7 +192,6 @@ const FileUpload: React.FC = () => {
 
   const handleStartOver = () => {
     resetState();
-    setProcessingButtonClicked(false);
     toast({
       title: "Dataset Reset",
       description: "All dataset processing has been reset. You can now start over.",

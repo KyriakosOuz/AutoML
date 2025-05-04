@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -37,8 +36,6 @@ export interface DatasetContextProps {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
-  processingButtonClicked: boolean; // Flag to track button click
-  autoAdvanced: boolean; // New flag to track if auto-advancement happened
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -54,8 +51,6 @@ export interface DatasetContextProps {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
-  setProcessingButtonClicked: (clicked: boolean) => void; // Setter for the flag
-  setAutoAdvanced: (autoAdvanced: boolean) => void; // Setter for auto-advancement flag
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -76,8 +71,6 @@ interface DatasetContextState {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
-  processingButtonClicked: boolean; // Flag to track button click
-  autoAdvanced: boolean; // New flag to track if auto-advancement happened
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -97,8 +90,6 @@ const initialState: DatasetContextState = {
   isLoading: false,
   error: null,
   processingStage: null, // Start with null to avoid immediate redirects
-  processingButtonClicked: false, // Initialize the flag to false
-  autoAdvanced: false, // Initialize the auto-advanced flag to false
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -145,38 +136,13 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
+    
+    // IMPORTANT: We're NOT automatically setting processingStage to 'cleaned' here anymore
+    // The 'cleaned' stage will only be set when the user explicitly clicks "Process Missing Values"
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
-  // Separate effect for auto-advancing to 'cleaned' stage for datasets without missing values
-  // This separation makes the auto-advancement more explicit and controllable
-  useEffect(() => {
-    const { datasetId, overview, processingStage } = state;
-    
-    // Auto-advance to 'cleaned' stage for datasets without missing values
-    // But only do it once (check autoAdvanced flag) and only if we're in 'raw' stage
-    if (datasetId && 
-        overview && 
-        (!overview.total_missing_values || overview.total_missing_values === 0) && 
-        processingStage === 'raw' && 
-        !state.autoAdvanced) {
-      
-      console.log('No missing values detected, auto-advancing to cleaned stage');
-      setState(prev => ({ 
-        ...prev, 
-        processingStage: 'cleaned',
-        autoAdvanced: true // Set the flag to true to prevent repeated auto-advancement
-      }));
-    }
-  }, [state.datasetId, state.overview, state.processingStage, state.autoAdvanced]);
-  
   // Individual setters - these will only update one property at a time
-  const setDatasetId = (datasetId: string | null) => setState(prev => ({ 
-    ...prev, 
-    datasetId, 
-    processingButtonClicked: false,
-    autoAdvanced: false // Reset auto-advancement flag when changing dataset
-  }));
-  
+  const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
   
   // Ensure overview is properly merged to preserve all fields including missing values information
@@ -211,19 +177,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setIsLoading = (isLoading: boolean) => setState(prev => ({ ...prev, isLoading }));
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
   const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
-  
-  // Enhanced setter for processingButtonClicked that also persists to localStorage
-  const setProcessingButtonClicked = (processingButtonClicked: boolean) => {
-    console.log('Setting processingButtonClicked to:', processingButtonClicked);
-    setState(prev => ({ ...prev, processingButtonClicked }));
-    // No need to explicitly update localStorage here as the effect above will handle it
-  };
-  
-  // New setter for the autoAdvanced flag
-  const setAutoAdvanced = (autoAdvanced: boolean) => {
-    console.log('Setting autoAdvanced to:', autoAdvanced);
-    setState(prev => ({ ...prev, autoAdvanced }));
-  };
   
   const resetState = () => {
     console.log('Resetting dataset state to initial state');
@@ -274,8 +227,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoading,
     setError,
     setProcessingStage,
-    setProcessingButtonClicked,
-    setAutoAdvanced,
     resetState,
     updateState,
   };
