@@ -51,7 +51,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setOverview,
     processingStage,
     targetColumn,
-    processingButtonClicked // Get the processing button clicked flag
+    processingButtonClicked
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -70,22 +70,17 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Check if a specific stage is available
+  // Check if a specific stage is available - updated to decouple from hasMissingValues
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Allow cleaned stage if there are missing values AND (processingButtonClicked OR processingStage is 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return hasMissingValues && (
-        processingButtonClicked || 
-        processingStage === 'cleaned' || 
-        processingStage === 'final' || 
-        processingStage === 'processed'
-      );
+      // ✅ Allow if processingStage is cleaned or higher
+      return ['cleaned', 'final', 'processed'].includes(processingStage);
     }
     
     if (checkStage === 'final') {
-      return processingStage === 'final' || processingStage === 'processed';
+      return ['final', 'processed'].includes(processingStage);
     }
     
     if (checkStage === 'processed') {
@@ -95,7 +90,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     return false;
   };
 
-  // Add new useEffect to react to processingButtonClicked changes
+  // Add new useEffect to auto-switch to cleaned stage when processingStage changes
+  useEffect(() => {
+    if (processingStage === 'cleaned') {
+      console.log('Auto-switching preview to cleaned');
+      setStage('cleaned');
+    }
+  }, [processingStage]);
+
+  // Keep the existing useEffect that reacts to processingButtonClicked
   useEffect(() => {
     if (
       processingButtonClicked &&
