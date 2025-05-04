@@ -41,32 +41,21 @@ const PreprocessingOptions: React.FC = () => {
   useEffect(() => {
     console.log('Numerical features from dataset:', numericalFeatures);
     console.log('Columns to keep:', columnsToKeep);
-  }, [numericalFeatures, columnsToKeep]);
+    console.log('Overview data_types:', overview?.data_types);
+  }, [numericalFeatures, columnsToKeep, overview?.data_types]);
 
   const hasNumericalToNormalize = useMemo(() => {
-    // If we have no columns to keep or no numerical features, return false
-    if (!columnsToKeep?.length || !numericalFeatures.length) {
-      console.log('No columns to keep or no numerical features available');
+    if (!columnsToKeep || !overview?.data_types) {
+      console.log('No columns to keep or no data_types available');
       return false;
     }
-    
-    // More robust comparison - check if any selected columns are in numerical features
-    const hasNumericalColumns = columnsToKeep.some(col => 
-      // Case-insensitive comparison for extra robustness
-      numericalFeatures.some(numCol => numCol.toLowerCase() === col.toLowerCase())
-    );
-    
-    console.log('Has numerical columns to normalize:', hasNumericalColumns);
-    
-    // If all features are numerical (common case), enable normalization
-    if (numericalFeatures.length > 0 && columnsToKeep.length > 0 && 
-        numericalFeatures.length === columnsToKeep.length) {
-      console.log('All features appear to be numerical, enabling normalization');
-      return true;
-    }
-    
-    return hasNumericalColumns;
-  }, [columnsToKeep, numericalFeatures]);
+
+    return columnsToKeep.some(col => {
+      const dtype = overview.data_types?.[col];
+      console.log(`Column ${col} has data type: ${dtype}`);
+      return dtype === 'int' || dtype === 'float' || dtype === 'number' || dtype === 'numeric' || dtype === 'integer';
+    });
+  }, [columnsToKeep, overview?.data_types]);
 
   // Initialize normalization method based on numerical features availability
   const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>(
