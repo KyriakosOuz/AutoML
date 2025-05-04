@@ -144,7 +144,26 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
-  const setOverview = (overview: DatasetOverview | null) => setState(prev => ({ ...prev, overview }));
+  
+  // Ensure overview is properly merged to preserve all fields including missing values information
+  const setOverview = (overview: DatasetOverview | null) => {
+    setState(prev => {
+      if (overview) {
+        console.log('Setting overview in context:', overview);
+        // Ensure we're properly preserving all fields, especially total_missing_values
+        return { 
+          ...prev, 
+          overview: {
+            ...overview,
+            total_missing_values: overview.total_missing_values || 0,
+            missing_values_count: overview.missing_values_count || {}
+          }
+        };
+      }
+      return { ...prev, overview };
+    });
+  };
+  
   const setPreviewData = (previewData: Record<string, any>[] | null) => setState(prev => ({ ...prev, previewData }));
   const setPreviewColumns = (previewColumns: string[] | null) => setState(prev => ({ ...prev, previewColumns }));
   const setTargetColumn = (targetColumn: string | null) => setState(prev => ({ ...prev, targetColumn }));
@@ -174,8 +193,21 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const updateState = (newState: Partial<DatasetContextState>) => {
     console.log('Updating dataset state with:', newState);
     setState(prev => {
-      // Make a single state update instead of multiple individual updates
-      return { ...prev, ...newState };
+      // Special handling for overview to ensure all fields are preserved
+      const updatedState = { ...prev, ...newState };
+      
+      // If we're updating the overview, make sure we keep all fields
+      if (newState.overview && prev.overview) {
+        updatedState.overview = {
+          ...prev.overview,
+          ...newState.overview,
+          // Ensure missing values information is preserved
+          total_missing_values: newState.overview.total_missing_values ?? prev.overview.total_missing_values,
+          missing_values_count: newState.overview.missing_values_count ?? prev.overview.missing_values_count
+        };
+      }
+      
+      return updatedState;
     });
   };
   

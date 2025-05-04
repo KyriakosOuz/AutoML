@@ -131,7 +131,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setPreviewColumns(previewCols);
       
       // Update global overview only when viewing the latest stage
+      // But make sure we preserve missing values information
       if (stage === 'latest' || stage === processingStage) {
+        // Log what we're about to update
+        console.log('DataPreview - Current overview before update:', overview);
+        
+        // Get current missing values data that we want to preserve
+        const currentMissingValues = overview?.total_missing_values;
+        const currentMissingValuesCount = overview?.missing_values_count;
+        
         const overviewData = {
           num_rows: responseData.num_rows,
           num_columns: responseData.num_columns,
@@ -142,12 +150,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
           categorical_features: Array.isArray(responseData.categorical_features) 
             ? responseData.categorical_features 
             : [],
-          // Include additional properties if available
-          total_missing_values: responseData.total_missing_values,
-          missing_values_count: responseData.missing_values_count,
+          // Preserve existing missing values data if not in the response
+          total_missing_values: responseData.total_missing_values ?? currentMissingValues,
+          missing_values_count: responseData.missing_values_count ?? currentMissingValuesCount,
           column_names: responseData.column_names || previewCols,
         };
         
+        console.log('DataPreview - Setting overview with:', overviewData);
         setOverview(overviewData);
       }
       
