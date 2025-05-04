@@ -51,7 +51,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setOverview,
     processingStage,
     targetColumn,
-    processingButtonClicked
+    processingButtonClicked,
+    autoAdvanced
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -70,13 +71,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Check if a specific stage is available - updated logic to handle both cases
+  // Check if a specific stage is available - updated logic to handle both auto-advance and button click
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
       if (hasMissingValues) {
-        // For datasets WITH missing values: require both hasMissingValues AND processingButtonClicked
+        // For datasets WITH missing values: require processingButtonClicked
         // AND the processing stage must be at least 'cleaned'
         return (
           processingButtonClicked && 
@@ -88,10 +89,14 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         );
       } else {
         // For datasets WITHOUT missing values: show clean stage if processingStage is cleaned or higher
+        // But ONLY if explicitly set through button click OR if auto-advancement happened
         return (
-          processingStage === 'cleaned' || 
-          processingStage === 'final' || 
-          processingStage === 'processed'
+          (processingButtonClicked || autoAdvanced) &&
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
         );
       }
     }
@@ -107,25 +112,25 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     return false;
   };
 
-  // Add new useEffect to auto-switch to cleaned stage when processingStage changes
+  // Add new useEffect to handle auto-advancing behavior
   useEffect(() => {
-    if (processingStage === 'cleaned') {
-      console.log('Auto-switching preview to cleaned');
-      setStage('cleaned');
+    if (autoAdvanced && processingStage === 'cleaned' && stage === 'raw') {
+      console.log('Auto-switching preview to raw (not cleaned) despite auto-advancement');
+      // Don't auto-switch to cleaned when it was auto-advanced
+      // Let the user explicitly select it
     }
-  }, [processingStage]);
+  }, [autoAdvanced, processingStage, stage]);
 
-  // Keep the existing useEffect that reacts to processingButtonClicked
+  // Keep the existing useEffect for processingButtonClicked
   useEffect(() => {
     if (
       processingButtonClicked &&
-      hasMissingValues &&
       (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
     ) {
       console.log('Detected processing button clicked + cleaned data available → enabling Cleaned Data stage');
       setStage('cleaned');
     }
-  }, [processingButtonClicked, processingStage, hasMissingValues]);
+  }, [processingButtonClicked, processingStage]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -233,9 +238,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         console.log('Setting stage to processed');
         setStage('processed');
       }
-      // Don't automatically switch to cleaned stage - only set by button click
+      // Don't automatically switch to cleaned stage unless button clicked or manually selected
     }
-  }, [processingStage]);
+  }, [processingStage, stage]);
 
   useEffect(() => {
     if (datasetId) {
