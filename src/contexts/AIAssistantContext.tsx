@@ -75,6 +75,10 @@ export async function getMistralHistory(sessionId: string) {
 
 // Determine the session ID based on the current route
 const getSessionIdFromRoute = (pathname: string): string => {
+  if (pathname.includes('/dataset/upload')) return 'upload_stage';
+  if (pathname.includes('/dataset/explore')) return 'explore_stage';
+  if (pathname.includes('/dataset/features')) return 'features_stage';
+  if (pathname.includes('/dataset/preprocess')) return 'preprocess_stage';
   if (pathname.includes('/dataset')) return 'dataset_stage';
   if (pathname.includes('/training')) return 'training_stage';
   if (pathname.includes('/dashboard')) return 'dashboard_stage';
