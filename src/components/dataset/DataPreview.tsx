@@ -70,13 +70,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Check if a specific stage is available - updated to decouple from hasMissingValues
+  // Check if a specific stage is available - updated to match new requirements
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // ✅ Allow if processingStage is cleaned or higher
-      return ['cleaned', 'final', 'processed'].includes(processingStage);
+      // Only show cleaned if dataset has missing values AND button was clicked
+      return hasMissingValues && processingButtonClicked;
     }
     
     if (checkStage === 'final') {
