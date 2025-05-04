@@ -36,7 +36,7 @@ export interface DatasetContextProps {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
-  processingButtonClicked: boolean; // New flag to track button click
+  processingButtonClicked: boolean; // Flag to track button click
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -52,7 +52,7 @@ export interface DatasetContextProps {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
-  setProcessingButtonClicked: (clicked: boolean) => void; // New setter
+  setProcessingButtonClicked: (clicked: boolean) => void; // Setter for the flag
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -73,7 +73,7 @@ interface DatasetContextState {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
-  processingButtonClicked: boolean; // New flag to track button click
+  processingButtonClicked: boolean; // Flag to track button click
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -181,7 +181,12 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setIsLoading = (isLoading: boolean) => setState(prev => ({ ...prev, isLoading }));
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
   const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
-  const setProcessingButtonClicked = (processingButtonClicked: boolean) => setState(prev => ({ ...prev, processingButtonClicked }));
+  
+  // Enhanced setter for processingButtonClicked that also persists to localStorage
+  const setProcessingButtonClicked = (processingButtonClicked: boolean) => {
+    console.log('Setting processingButtonClicked to:', processingButtonClicked);
+    setState(prev => ({ ...prev, processingButtonClicked }));
+  };
   
   const resetState = () => {
     console.log('Resetting dataset state to initial state');

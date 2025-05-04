@@ -87,7 +87,8 @@ const MissingValueHandler: React.FC = () => {
     setPreviewData,
     previewColumns,
     setPreviewColumns,
-    setProcessingButtonClicked
+    setProcessingButtonClicked,
+    processingButtonClicked
   } = useDataset();
   
   const { toast } = useToast();
