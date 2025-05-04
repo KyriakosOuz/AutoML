@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -75,9 +74,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     // Only allow cleaned stage if there are missing values AND the user explicitly processed the data
-    // through the 'Process Missing Values' button (which sets processingStage to 'cleaned' or higher)
     if (checkStage === 'cleaned') {
-      return processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed';
+      // Updated logic: Only show cleaned stage if there are actually missing values that need handling
+      // AND the processing stage is cleaned or further
+      return hasMissingValues && (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed');
     }
     
     if (checkStage === 'final') {
@@ -198,14 +198,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       } else if (processingStage === 'processed' && stage !== 'processed') {
         console.log('Setting stage to processed');
         setStage('processed');
-      } else if (processingStage === 'cleaned' && stage === 'raw') {
-        // Only automatically switch to cleaned stage if we're currently viewing raw data
-        // This helps with the user experience flow after clicking "Process Missing Values"
+      } else if (processingStage === 'cleaned' && stage === 'raw' && hasMissingValues) {
+        // Only automatically switch to cleaned stage if:
+        // 1. We're currently viewing raw data
+        // 2. The dataset actually has missing values
         console.log('Automatically switching from raw to cleaned stage view');
         setStage('cleaned');
       }
     }
-  }, [processingStage, stage]);
+  }, [processingStage, stage, hasMissingValues]);
 
   // Fetch preview data when dataset ID or stage changes
   useEffect(() => {
@@ -249,8 +250,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <SelectContent>
               <SelectItem value="raw">Raw Data</SelectItem>
               <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
-              <SelectItem value="final" disabled={!hasFinalData}>Final Data</SelectItem>
-              <SelectItem value="processed" disabled={!hasProcessedData}>Processed Data</SelectItem>
+              <SelectItem value="final" disabled={!isStageAvailable('final')}>Final Data</SelectItem>
+              <SelectItem value="processed" disabled={!isStageAvailable('processed')}>Processed Data</SelectItem>
               <SelectItem value="latest">Latest Stage</SelectItem>
             </SelectContent>
           </Select>
