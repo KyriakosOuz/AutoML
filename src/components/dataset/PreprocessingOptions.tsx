@@ -34,32 +34,62 @@ const PreprocessingOptions: React.FC = () => {
     overview
   } = useDataset();
   
-  // Extract information about columns
-  const numericalFeatures = overview?.numerical_features || [];
-
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  
+  // Extract information about columns from preview data response
+  const numericalColumns = previewData?.numerical_columns || [];
+  const categoricalColumns = previewData?.categorical_columns || [];
+  
   // Debug logging to identify what's happening
   useEffect(() => {
-    console.log('Numerical features from dataset:', numericalFeatures);
+    console.log('Preview data:', previewData);
     console.log('Columns to keep:', columnsToKeep);
     console.log('Overview data_types:', overview?.data_types);
-  }, [numericalFeatures, columnsToKeep, overview?.data_types]);
+  }, [previewData, columnsToKeep, overview?.data_types]);
+  
+  // Fetch preview data to get accurate column information
+  useEffect(() => {
+    const fetchPreviewData = async () => {
+      if (!datasetId) return;
+      
+      try {
+        setIsLoadingPreview(true);
+        const response = await datasetApi.previewDataset(datasetId, 'final');
+        console.log('Preview API response:', response);
+        
+        // Handle both direct response and nested data
+        const data = response.data || response;
+        setPreviewData(data);
+      } catch (error) {
+        console.error('Error fetching preview data:', error);
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    };
+    
+    fetchPreviewData();
+  }, [datasetId]);
 
+  // Determine if normalization should be enabled based on preview data
   const hasNumericalToNormalize = useMemo(() => {
-    if (!columnsToKeep || !overview?.data_types) {
-      console.log('No columns to keep or no data_types available');
+    if (!previewData || !columnsToKeep) {
+      console.log('No preview data or columns to keep available');
       return false;
     }
 
-    return columnsToKeep.some(col => {
-      const dtype = overview.data_types?.[col];
-      console.log(`Column ${col} has data type: ${dtype}`);
-      return dtype === 'int' || dtype === 'float' || dtype === 'number' || dtype === 'numeric' || dtype === 'integer';
-    });
-  }, [columnsToKeep, overview?.data_types]);
+    // Check if any of the columns to keep are in the numerical_columns from preview
+    const hasNumerical = columnsToKeep.some(col => 
+      (previewData.numerical_columns || []).includes(col)
+    );
+    
+    console.log('Has numerical columns to normalize:', hasNumerical);
+    return hasNumerical && previewData.numerical_features > 0;
+  }, [previewData, columnsToKeep]);
 
   // Initialize normalization method based on numerical features availability
   const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>(
-    hasNumericalToNormalize ? 'minmax' : 'skip'
+    'minmax' // Default to minmax, will update based on data
   );
   
   const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
@@ -91,8 +121,13 @@ const PreprocessingOptions: React.FC = () => {
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
   const hasNumericalForSmote = useMemo(() => {
-    return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
-  }, [columnsToKeep, numericalFeatures]);
+    if (!previewData || !columnsToKeep) return false;
+    
+    // Check if any of the kept columns are in the numerical columns from preview data
+    return columnsToKeep.some(col => 
+      (previewData.numerical_columns || []).includes(col)
+    );
+  }, [previewData, columnsToKeep]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -169,6 +204,13 @@ const PreprocessingOptions: React.FC = () => {
             <AlertDescription className="text-blue-800">{debugInfo}</AlertDescription>
           </Alert>
         )}
+        
+        {isLoadingPreview && (
+          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">Loading dataset preview data...</AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-6">
           <div>
@@ -180,9 +222,9 @@ const PreprocessingOptions: React.FC = () => {
                     <Select
                       value={normalizationMethod}
                       onValueChange={(value) => setNormalizationMethod(value as NormalizationMethod)}
-                      disabled={!hasNumericalToNormalize}
+                      disabled={!hasNumericalToNormalize || isLoadingPreview}
                     >
-                      <SelectTrigger className="w-full" aria-disabled={!hasNumericalToNormalize}>
+                      <SelectTrigger className="w-full" aria-disabled={!hasNumericalToNormalize || isLoadingPreview}>
                         <SelectValue placeholder="Select normalization method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -222,7 +264,7 @@ const PreprocessingOptions: React.FC = () => {
                     <Select
                       value={balanceStrategy}
                       onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
-                      disabled={!isClassification || balanceStrategy === 'smote' && !hasNumericalForSmote}
+                      disabled={!isClassification || balanceStrategy === 'smote' && !hasNumericalForSmote || isLoadingPreview}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select balance strategy" />
@@ -263,7 +305,7 @@ const PreprocessingOptions: React.FC = () => {
       <CardFooter>
         <Button 
           onClick={handlePreprocess} 
-          disabled={isLoading}
+          disabled={isLoading || isLoadingPreview}
           className="w-full"
         >
           <Sparkles className="h-4 w-4 mr-2" />
