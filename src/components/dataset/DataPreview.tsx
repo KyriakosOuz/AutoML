@@ -50,7 +50,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     overview,
     setOverview,
     processingStage,
-    targetColumn
+    targetColumn,
+    processingButtonClicked // Get the processing button clicked flag
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -73,9 +74,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
-    // Only allow cleaned stage if there are missing values AND the processingStage is 'cleaned' or higher
+    // Allow cleaned stage if processingButtonClicked is true OR if there are missing values AND processingStage is 'cleaned' or higher
     if (checkStage === 'cleaned') {
-      return hasMissingValues && (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed');
+      return processingButtonClicked || 
+        processingStage === 'cleaned' || 
+        processingStage === 'final' || 
+        processingStage === 'processed';
     }
     
     if (checkStage === 'final') {

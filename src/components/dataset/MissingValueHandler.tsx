@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -86,7 +87,8 @@ const MissingValueHandler: React.FC = () => {
     previewData,
     setPreviewData,
     previewColumns,
-    setPreviewColumns
+    setPreviewColumns,
+    setProcessingButtonClicked
   } = useDataset();
   
   const { toast } = useToast();
@@ -212,6 +214,9 @@ const MissingValueHandler: React.FC = () => {
       setError(null);
       
       console.log('Processing missing values with strategy:', strategy);
+      
+      // Set the processing button clicked flag to true
+      setProcessingButtonClicked(true);
       
       const response = await datasetApi.handleMissingValues(
         datasetId, 

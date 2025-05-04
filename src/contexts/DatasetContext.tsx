@@ -36,6 +36,7 @@ export interface DatasetContextProps {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
+  processingButtonClicked: boolean; // New flag to track button click
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -51,6 +52,7 @@ export interface DatasetContextProps {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
+  setProcessingButtonClicked: (clicked: boolean) => void; // New setter
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -71,6 +73,7 @@ interface DatasetContextState {
   isLoading: boolean;
   error: string | null;
   processingStage: string | null; // Track the current processing stage
+  processingButtonClicked: boolean; // New flag to track button click
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -90,6 +93,7 @@ const initialState: DatasetContextState = {
   isLoading: false,
   error: null,
   processingStage: null, // Start with null to avoid immediate redirects
+  processingButtonClicked: false, // Initialize the flag to false
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -142,7 +146,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
   // Individual setters - these will only update one property at a time
-  const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId }));
+  const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId, processingButtonClicked: false })); // Reset flag when changing dataset
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
   
   // Ensure overview is properly merged to preserve all fields including missing values information
@@ -177,6 +181,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setIsLoading = (isLoading: boolean) => setState(prev => ({ ...prev, isLoading }));
   const setError = (error: string | null) => setState(prev => ({ ...prev, error }));
   const setProcessingStage = (processingStage: string | null) => setState(prev => ({ ...prev, processingStage }));
+  const setProcessingButtonClicked = (processingButtonClicked: boolean) => setState(prev => ({ ...prev, processingButtonClicked }));
   
   const resetState = () => {
     console.log('Resetting dataset state to initial state');
@@ -227,6 +232,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoading,
     setError,
     setProcessingStage,
+    setProcessingButtonClicked,
     resetState,
     updateState,
   };
