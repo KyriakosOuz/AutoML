@@ -17,7 +17,6 @@ import ExperimentDetailPage from "./pages/ExperimentDetailPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import FloatingChatButton from "./components/ai-assistant/FloatingChatButton";
-import DatasetInsights from "./components/ai-assistant/DatasetInsights";
 import TrainingInsights from "./components/ai-assistant/TrainingInsights";
 import ExperimentInsights from "./components/ai-assistant/ExperimentInsights";
 
@@ -36,10 +35,9 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route element={<MainLayout />}>
-                  <Route path="/dataset" element={
+                  <Route path="/dataset/*" element={
                     <ProtectedRoute>
                       <DatasetPage />
-                      <DatasetInsights />
                     </ProtectedRoute>
                   } />
                   <Route path="/training" element={
