@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -52,7 +51,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setOverview,
     processingStage,
     targetColumn,
-    processingButtonClicked
+    processingButtonClicked,
+    fileUrls,
+    setFileUrls
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -71,40 +72,55 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Updated isStageAvailable to handle auto-processed datasets without missing values
+  // Updated isStageAvailable to use fileUrls
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
-      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
+      // First check if we have a cleaned file URL
+      const hasCleanedFile = !!fileUrls?.cleaned;
+      
+      // For datasets WITH missing values
       if (hasMissingValues) {
-        // For datasets WITH missing values, require explicit button click
         return (
-          processingButtonClicked && 
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
+          // Either we have a cleaned file URL
+          hasCleanedFile ||
+          // Or we've clicked the processing button and stage is advanced
+          (processingButtonClicked && 
+            ['cleaned', 'final', 'processed'].includes(processingStage || ''))
         );
       } else {
-        // For datasets WITHOUT missing values, even if processingStage is advanced, 
-        // don't show the cleaned stage - they can go directly to final
+        // For datasets WITHOUT missing values, we skip the cleaned stage
         return false;
       }
     }
     
     if (checkStage === 'final') {
-      return ['final', 'processed'].includes(processingStage || '');
+      // Check for final file URL or processing stage
+      return !!fileUrls?.final || ['final', 'processed'].includes(processingStage || '');
     }
     
     if (checkStage === 'processed') {
-      return processingStage === 'processed';
+      // Check for processed file URL or processing stage
+      return !!fileUrls?.processed || processingStage === 'processed';
     }
     
     return false;
   };
+
+  // Log stage availability for debugging
+  useEffect(() => {
+    console.log('Stage availability:', {
+      raw: isStageAvailable('raw'),
+      cleaned: isStageAvailable('cleaned'),
+      final: isStageAvailable('final'),
+      processed: isStageAvailable('processed'),
+      latest: isStageAvailable('latest'),
+      fileUrls,
+      processingStage,
+      processingButtonClicked
+    });
+  }, [fileUrls, processingStage, processingButtonClicked]);
 
   // Keep the existing useEffect for processingButtonClicked
   useEffect(() => {
@@ -116,6 +132,22 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setStage('cleaned');
     }
   }, [processingButtonClicked, processingStage]);
+
+  // New effect: Update stage selection when fileUrls change
+  useEffect(() => {
+    if (fileUrls?.cleaned && stage === 'raw' && processingStage === 'cleaned') {
+      console.log('Detected cleaned file URL available → setting stage to cleaned');
+      setStage('cleaned');
+    }
+    else if (fileUrls?.final && ['raw', 'cleaned'].includes(stage) && processingStage === 'final') {
+      console.log('Detected final file URL available → setting stage to final');
+      setStage('final');
+    }
+    else if (fileUrls?.processed && ['raw', 'cleaned', 'final'].includes(stage) && processingStage === 'processed') {
+      console.log('Detected processed file URL available → setting stage to processed');
+      setStage('processed');
+    }
+  }, [fileUrls, processingStage]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -156,6 +188,17 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       // Update the current view
       setPreviewData(previewRows);
       setPreviewColumns(previewCols);
+      
+      // Extract and store file URLs if available
+      if (responseData.file_urls) {
+        console.log('File URLs found in response:', responseData.file_urls);
+        setFileUrls({
+          raw: responseData.file_urls.raw || null,
+          cleaned: responseData.file_urls.cleaned || null,
+          final: responseData.file_urls.final || null,
+          processed: responseData.file_urls.processed || null
+        });
+      }
       
       // Update global overview only when viewing the latest stage
       // But make sure we preserve missing values information

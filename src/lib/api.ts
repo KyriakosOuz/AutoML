@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +28,14 @@ export interface DatasetOverview {
   unique_values_count?: Record<string, number>;
   data_types?: Record<string, string>;
   feature_classification?: Record<string, string>;
+}
+
+// Define file URLs interface
+export interface DatasetFileUrls {
+  raw?: string;
+  cleaned?: string;
+  final?: string;
+  processed?: string;
 }
 
 // Define the API response interfaces
@@ -150,7 +157,14 @@ export const datasetApi = {
       body: formData
     });
     
-    return await handleApiResponse(response);
+    const responseData = await handleApiResponse(response);
+    
+    // Log file URLs if they exist
+    if (responseData && responseData.file_urls) {
+      console.log('File URLs in preview response:', responseData.file_urls);
+    }
+    
+    return responseData;
   },
 
   handleMissingValues: async (datasetId: string, strategy: string, customMissingSymbol?: string) => {

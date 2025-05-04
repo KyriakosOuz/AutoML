@@ -21,6 +21,14 @@ export interface FeatureImportance {
   importance: number;
 }
 
+// New interface for file URLs at different stages
+export interface DatasetFileUrls {
+  raw?: string | null;
+  cleaned?: string | null;
+  final?: string | null;
+  processed?: string | null;
+}
+
 export interface DatasetContextProps {
   datasetId: string | null;
   fileUrl: string | null;
@@ -37,6 +45,7 @@ export interface DatasetContextProps {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
+  fileUrls: DatasetFileUrls | null; // New field to store file URLs for different stages
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -53,6 +62,7 @@ export interface DatasetContextProps {
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
   setProcessingButtonClicked: (clicked: boolean) => void; // Setter for the flag
+  setFileUrls: (urls: DatasetFileUrls | null) => void; // New setter for file URLs
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -74,6 +84,7 @@ interface DatasetContextState {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
+  fileUrls: DatasetFileUrls | null; // New field to store file URLs for different stages
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -94,6 +105,7 @@ const initialState: DatasetContextState = {
   error: null,
   processingStage: null, // Start with null to avoid immediate redirects
   processingButtonClicked: false, // Initialize the flag to false
+  fileUrls: null, // Initialize file URLs to null
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -199,6 +211,9 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     // No need to explicitly update localStorage here as the effect above will handle it
   };
   
+  // New setter for fileUrls
+  const setFileUrls = (fileUrls: DatasetFileUrls | null) => setState(prev => ({ ...prev, fileUrls }));
+  
   const resetState = () => {
     console.log('Resetting dataset state to initial state');
     setState(initialState);
@@ -249,6 +264,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setError,
     setProcessingStage,
     setProcessingButtonClicked,
+    setFileUrls,
     resetState,
     updateState,
   };
