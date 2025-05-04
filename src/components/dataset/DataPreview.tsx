@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -95,6 +94,18 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     
     return false;
   };
+
+  // Add new useEffect to react to processingButtonClicked changes
+  useEffect(() => {
+    if (
+      processingButtonClicked &&
+      hasMissingValues &&
+      (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
+    ) {
+      console.log('Detected processing button clicked + cleaned data available → enabling Cleaned Data stage');
+      setStage('cleaned');
+    }
+  }, [processingButtonClicked, processingStage, hasMissingValues]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
