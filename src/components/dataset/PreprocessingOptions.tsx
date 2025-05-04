@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -20,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, InfoIcon } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
@@ -38,8 +37,35 @@ const PreprocessingOptions: React.FC = () => {
   // Extract information about columns
   const numericalFeatures = overview?.numerical_features || [];
 
+  // Debug logging to identify what's happening
+  useEffect(() => {
+    console.log('Numerical features from dataset:', numericalFeatures);
+    console.log('Columns to keep:', columnsToKeep);
+  }, [numericalFeatures, columnsToKeep]);
+
   const hasNumericalToNormalize = useMemo(() => {
-    return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
+    // If we have no columns to keep or no numerical features, return false
+    if (!columnsToKeep?.length || !numericalFeatures.length) {
+      console.log('No columns to keep or no numerical features available');
+      return false;
+    }
+    
+    // More robust comparison - check if any selected columns are in numerical features
+    const hasNumericalColumns = columnsToKeep.some(col => 
+      // Case-insensitive comparison for extra robustness
+      numericalFeatures.some(numCol => numCol.toLowerCase() === col.toLowerCase())
+    );
+    
+    console.log('Has numerical columns to normalize:', hasNumericalColumns);
+    
+    // If all features are numerical (common case), enable normalization
+    if (numericalFeatures.length > 0 && columnsToKeep.length > 0 && 
+        numericalFeatures.length === columnsToKeep.length) {
+      console.log('All features appear to be numerical, enabling normalization');
+      return true;
+    }
+    
+    return hasNumericalColumns;
   }, [columnsToKeep, numericalFeatures]);
 
   // Initialize normalization method based on numerical features availability
@@ -51,11 +77,25 @@ const PreprocessingOptions: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Debug message for UI feedback
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Update normalization method when hasNumericalToNormalize changes
   useEffect(() => {
-    if (!hasNumericalToNormalize && normalizationMethod !== 'skip') {
+    console.log('hasNumericalToNormalize changed:', hasNumericalToNormalize);
+    
+    if (hasNumericalToNormalize) {
+      // Only update if currently skipped
+      if (normalizationMethod === 'skip') {
+        console.log('Setting normalization method to minmax');
+        setNormalizationMethod('minmax');
+      }
+      setDebugInfo(null);
+    } else {
+      console.log('Setting normalization method to skip - no numerical features detected');
       setNormalizationMethod('skip');
+      setDebugInfo('Normalization disabled: No numerical features detected in selected columns');
     }
   }, [hasNumericalToNormalize, normalizationMethod]);
 
@@ -80,6 +120,7 @@ const PreprocessingOptions: React.FC = () => {
       setIsLoading(true);
       setError(null);
       setSuccess(null);
+      setDebugInfo(null);
       
       const response = await datasetApi.preprocessDataset(
         datasetId,
@@ -130,6 +171,13 @@ const PreprocessingOptions: React.FC = () => {
           <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
             <Sparkles className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">{success}</AlertDescription>
+          </Alert>
+        )}
+        
+        {debugInfo && (
+          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">{debugInfo}</AlertDescription>
           </Alert>
         )}
 
