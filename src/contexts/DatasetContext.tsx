@@ -141,9 +141,17 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
     
+    // Auto-advance to 'cleaned' stage for datasets without missing values
+    if (datasetId && state.overview && 
+        (!state.overview.total_missing_values || state.overview.total_missing_values === 0) && 
+        processingStage === 'raw') {
+      console.log('No missing values detected, auto-advancing to cleaned stage');
+      setState(prev => ({ ...prev, processingStage: 'cleaned' }));
+    }
+    
     // IMPORTANT: We're NOT automatically setting processingStage to 'cleaned' here anymore
     // The 'cleaned' stage will only be set when the user explicitly clicks "Process Missing Values"
-  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
+  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage, state.overview]);
   
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ ...prev, datasetId, processingButtonClicked: false })); // Reset flag when changing dataset
@@ -186,6 +194,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   const setProcessingButtonClicked = (processingButtonClicked: boolean) => {
     console.log('Setting processingButtonClicked to:', processingButtonClicked);
     setState(prev => ({ ...prev, processingButtonClicked }));
+    // No need to explicitly update localStorage here as the effect above will handle it
   };
   
   const resetState = () => {

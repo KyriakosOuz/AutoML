@@ -200,6 +200,14 @@ const MissingValueHandler: React.FC = () => {
     }
   };
 
+  // Add an effect to handle datasets with no missing values
+  useEffect(() => {
+    if (datasetId && overview && !hasMissingValues && processingStage === 'raw') {
+      console.log('MissingValueHandler: No missing values detected, can proceed to features selection');
+      // We don't need to auto-advance here as we do it in DatasetContext now
+    }
+  }, [datasetId, overview, hasMissingValues, processingStage]);
+
   const handleProcessMissingValues = async (e: React.FormEvent) => {
     // Prevent default to avoid any navigation
     e.preventDefault();
@@ -215,7 +223,8 @@ const MissingValueHandler: React.FC = () => {
       
       console.log('Processing missing values with strategy:', strategy);
       
-      // Set the processing button clicked flag to true
+      // Set the processing button clicked flag to true BEFORE API call
+      // This ensures the UI reacts immediately
       setProcessingButtonClicked(true);
       
       const response = await datasetApi.handleMissingValues(
