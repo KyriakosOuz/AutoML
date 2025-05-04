@@ -71,33 +71,26 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Log the current state values to help debug
-  useEffect(() => {
-    console.log('DataPreview - Current state:', {
-      processingStage,
-      processingButtonClicked,
-      hasMissingValues,
-      stage
-    });
-  }, [processingStage, processingButtonClicked, hasMissingValues, stage]);
-
-  // Updated isStageAvailable with clearer logic that prioritizes processingStage over button click
+  // Updated isStageAvailable to handle auto-processed datasets without missing values
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
-    // These stages are always available
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // Only show cleaned stage for datasets with missing values that have been processed
+      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
+      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
       if (hasMissingValues) {
-        // IMPORTANT FIX: Prioritize the actual processing stage over the button click state
-        // This ensures the dropdown option remains enabled even after page refresh
-        return processingStage === 'cleaned' || 
-               processingStage === 'final' || 
-               processingStage === 'processed' ||
-               processingButtonClicked;
+        // For datasets WITH missing values, require explicit button click
+        return (
+          processingButtonClicked && 
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
+        );
       } else {
-        // For datasets WITHOUT missing values, don't show the cleaned stage
-        // Users can go directly from raw to final
+        // For datasets WITHOUT missing values, even if processingStage is advanced, 
+        // don't show the cleaned stage - they can go directly to final
         return false;
       }
     }
@@ -123,20 +116,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       setStage('cleaned');
     }
   }, [processingButtonClicked, processingStage]);
-
-  // Add new useEffect to ensure dropdown stage updates when processingStage changes
-  useEffect(() => {
-    if (processingStage === 'cleaned' && hasMissingValues && stage === 'raw') {
-      console.log('Processing stage is now cleaned - updating dropdown selection to cleaned');
-      setStage('cleaned');
-    } else if (processingStage === 'final' && stage !== 'final') {
-      console.log('Processing stage is now final - updating dropdown selection');
-      setStage('final');
-    } else if (processingStage === 'processed' && stage !== 'processed') {
-      console.log('Processing stage is now processed - updating dropdown selection');
-      setStage('processed');
-    }
-  }, [processingStage, hasMissingValues, stage]);
 
   const fetchPreview = async () => {
     if (!datasetId) {
@@ -271,18 +250,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent>
               <SelectItem value="raw">Raw Data</SelectItem>
-              <SelectItem 
-                value="cleaned" 
-                disabled={!isStageAvailable('cleaned')}
-                className={!isStageAvailable('cleaned') ? "opacity-50" : ""}
-              >
-                Cleaned Data
-                {!isStageAvailable('cleaned') && hasMissingValues && 
-                  <span className="ml-2 text-red-500 text-xs">(Process data first)</span>
-                }
-              </SelectItem>
+              <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
               <SelectItem value="final" disabled={!isStageAvailable('final')}>Final Data</SelectItem>
               <SelectItem value="processed" disabled={!isStageAvailable('processed')}>Processed Data</SelectItem>
               <SelectItem value="latest">Latest Stage</SelectItem>
