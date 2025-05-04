@@ -71,26 +71,34 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Updated isStageAvailable to handle auto-processed datasets without missing values
+  // Log the current state values to help debug
+  useEffect(() => {
+    console.log('DataPreview - Current state:', {
+      processingStage,
+      processingButtonClicked,
+      hasMissingValues,
+      stage
+    });
+  }, [processingStage, processingButtonClicked, hasMissingValues, stage]);
+
+  // Updated isStageAvailable to prioritize processingStage over processingButtonClicked
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
-      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
+      // Only show cleaned stage for datasets with missing values that have been processed
       if (hasMissingValues) {
-        // For datasets WITH missing values, require explicit button click
+        // UPDATED: Now prioritize the processingStage over the button click
+        // If the stage is already cleaned, final, or processed, make it available
+        // regardless of whether the button was clicked in this session
         return (
-          processingButtonClicked && 
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
+          (processingButtonClicked || 
+          processingStage === 'cleaned' ||
+          processingStage === 'final' || 
+          processingStage === 'processed')
         );
       } else {
-        // For datasets WITHOUT missing values, even if processingStage is advanced, 
-        // don't show the cleaned stage - they can go directly to final
+        // For datasets WITHOUT missing values, don't show the cleaned stage
         return false;
       }
     }
