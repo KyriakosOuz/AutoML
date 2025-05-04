@@ -36,6 +36,11 @@ const ExperimentInsights: React.FC = () => {
     Metrics: ${results.metrics ? JSON.stringify(results.metrics) : 
               results.training_results?.metrics ? JSON.stringify(results.training_results.metrics) : 
               'No metrics available'}
+    Features Used: ${results.features ? results.features.join(', ') : 'Unknown'}
+    Split Ratio: ${results.split_ratio || results.data_split_ratio || 'Unknown'}
+    Hyperparameters: ${results.hyperparameters ? JSON.stringify(results.hyperparameters) : 
+                      results.training_results?.hyperparameters ? JSON.stringify(results.training_results.hyperparameters) : 
+                      'No hyperparameter information'}
   `;
   
   // Determine the appropriate prompt based on experiment results
@@ -46,9 +51,14 @@ const ExperimentInsights: React.FC = () => {
     
     if (results.status === 'completed' || results.status === 'success') {
       const metrics = results.metrics || results.training_results?.metrics || {};
-      const hasGoodPerformance = Object.values(metrics).some(
-        value => typeof value === 'number' && value >= 0.8
-      );
+      const hasGoodPerformance = Object.entries(metrics).some(([key, value]) => {
+        // Check for common accuracy metrics
+        if ((key.includes('accuracy') || key.includes('r2') || key.includes('f1')) && 
+            typeof value === 'number' && value >= 0.8) {
+          return true;
+        }
+        return false;
+      });
       
       if (hasGoodPerformance) {
         return "This model seems to perform well. What do these metrics mean and how can I interpret them?";

@@ -22,6 +22,18 @@ const TrainingInsights: React.FC = () => {
     experimentResults
   } = useTraining();
   
+  // Make training context available globally for the AI Assistant context
+  if (window) {
+    window.__TRAINING_CONTEXT__ = {
+      activeExperimentId,
+      lastTrainingType,
+      automlParameters,
+      customParameters,
+      experimentStatus,
+      experimentResults
+    };
+  }
+  
   // Skip if no training is in progress
   if (!activeExperimentId && !lastTrainingType) {
     return null;

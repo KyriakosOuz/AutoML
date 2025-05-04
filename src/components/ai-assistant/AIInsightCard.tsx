@@ -24,9 +24,9 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { openChat } = useAIAssistant();
+  const { openChat, sendMessage } = useAIAssistant();
   
-  // Fetch initial insight on component mount
+  // Fetch initial insight on component mount or when prompt/context changes
   useEffect(() => {
     const loadInsight = async () => {
       try {
@@ -48,11 +48,22 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
       }
     };
     
-    loadInsight();
-  }, [initialPrompt, contextData, sessionId]);
+    // Only fetch insights if card is expanded to save API calls
+    if (isExpanded) {
+      loadInsight();
+    }
+  }, [initialPrompt, contextData, sessionId, isExpanded]);
   
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
+  };
+  
+  const handleAskFollowUp = () => {
+    openChat(); // Open the chat dialog
+    if (insight) {
+      // Send the initial prompt + insight as context to the chat
+      sendMessage("I'd like to ask a follow-up question about this insight: " + insight.substring(0, 100) + "...");
+    }
   };
   
   return (
@@ -88,7 +99,7 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={openChat}
+                  onClick={handleAskFollowUp}
                   className="text-xs"
                 >
                   Ask follow-up questions

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -123,7 +124,10 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
         if (overview.unique_values_count) {
           // Find columns with few unique values (potential categorical)
           const categoricalCandidates = Object.entries(overview.unique_values_count)
-            .filter(([_, count]) => typeof count === 'number' && count < 10 && count > 1)
+            .filter(([_, count]) => {
+              const countVal = count as any;
+              return typeof countVal === 'number' && countVal < 10 && countVal > 1;
+            })
             .map(([col]) => col);
             
           if (categoricalCandidates.length > 0) {
@@ -152,23 +156,36 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
     // Try to get training context
     try {
       // Only use if we're on the training route
-      const { useTraining } = require('@/contexts/training/TrainingContext');
-      const trainingContext = useTraining();
+      // Use property names that match what's in TrainingContext
+      const trainingContext = window.__TRAINING_CONTEXT__;
       
       if (trainingContext) {
-        const { experimentId, selectedAlgorithm, taskType, status, hyperParameters, metrics } = trainingContext;
+        const { activeExperimentId, lastTrainingType, experimentStatus, automlParameters, customParameters, experimentResults } = trainingContext;
         
-        if (experimentId) context += `Experiment ID: ${experimentId}. `;
-        if (selectedAlgorithm) context += `Selected algorithm: ${selectedAlgorithm}. `;
-        if (taskType) context += `Task type: ${taskType}. `;
-        if (status) context += `Training status: ${status}. `;
+        if (activeExperimentId) context += `Experiment ID: ${activeExperimentId}. `;
+        if (lastTrainingType) context += `Training type: ${lastTrainingType}. `;
+        if (experimentStatus) context += `Training status: ${experimentStatus}. `;
         
-        if (hyperParameters) {
-          context += `Hyperparameters: ${JSON.stringify(hyperParameters)}. `;
+        // Add algorithm information
+        if (lastTrainingType === 'automl' && automlParameters?.automlEngine) {
+          context += `AutoML engine: ${automlParameters.automlEngine}. `;
+        } else if (lastTrainingType === 'custom' && customParameters?.algorithm) {
+          context += `Algorithm: ${customParameters.algorithm}. `;
         }
         
-        if (metrics) {
-          context += `Training metrics: ${JSON.stringify(metrics)}. `;
+        // Add hyperparameters and metrics if available
+        if (experimentResults) {
+          if (experimentResults.hyperparameters) {
+            context += `Hyperparameters: ${JSON.stringify(experimentResults.hyperparameters)}. `;
+          }
+          
+          if (experimentResults.metrics) {
+            context += `Training metrics: ${JSON.stringify(experimentResults.metrics)}. `;
+          }
+          
+          if (experimentResults.task_type) {
+            context += `Task type: ${experimentResults.task_type}. `;
+          }
         }
       }
     } catch (error) {
@@ -192,7 +209,8 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
 
 // Enhanced suggested prompts based on the current route and context
 const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | null): string[] => {
-  if (pathname.includes('/dataset')) {
+  // 1. Dataset Upload & Preview
+  if (pathname.includes('/dataset/upload') || pathname.includes('/dataset/explore')) {
     if (!datasetContext || !datasetContext.datasetId) {
       return [
         "What kind of dataset should I upload?",
@@ -201,68 +219,96 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
       ];
     }
     
-    if (!datasetContext.processingStage || datasetContext.processingStage === 'raw') {
-      return [
-        "How should I handle missing values in my dataset?",
-        "What preprocessing steps do you recommend?",
-        "Can you explain the dataset overview statistics?",
-      ];
-    }
-    
-    if (datasetContext.processingStage === 'cleaned') {
-      return [
-        "Which features are most important for my model?",
-        "Should I normalize my numerical features?",
-        "How do I encode categorical variables?",
-        "What's the difference between one-hot and label encoding?",
-      ];
-    }
-    
-    if (datasetContext.processingStage === 'final') {
-      return [
-        "What algorithm would work best for this dataset?",
-        "How should I split my data for training?",
-        "What hyperparameters should I tune first?",
-        "Should I use cross-validation?",
-      ];
-    }
-    
     return [
-      "Which features are most important for my model?",
-      "Should I scale my numerical features?",
-      "How do I encode categorical variables?",
+      "Can you give me an overview of this dataset?",
+      "What issues should I look out for in this data?",
+      "Which columns have the most missing values?",
+      "What data types do I need to check?",
     ];
   }
   
+  // 2. Missing Value Handling
+  if (datasetContext?.processingStage === 'raw' || 
+     (pathname.includes('/dataset/explore') && datasetContext?.overview?.total_missing_values > 0)) {
+    return [
+      "Was this the best missing value strategy?",
+      "Should I drop or impute this column?",
+      "What's the impact of using mean imputation?",
+      "Is hot deck suitable for categorical data?",
+    ];
+  }
+  
+  // 3. Feature Selection
+  if (pathname.includes('/dataset/features') || datasetContext?.processingStage === 'cleaned') {
+    return [
+      "Which features are best for predicting the target?",
+      "Are these selected features too correlated?",
+      "Should I remove features with low importance?",
+      "Is my target column suitable for classification?",
+    ];
+  }
+  
+  // 4. Preprocessing
+  if (pathname.includes('/dataset/preprocess') || datasetContext?.processingStage === 'final') {
+    return [
+      "Is normalization necessary for this data?",
+      "What balancing method should I use?",
+      "What happens if I don't normalize?",
+      "How do I handle class imbalance better?",
+    ];
+  }
+  
+  // 5. Model Training
   if (pathname.includes('/training')) {
     return [
-      "Which algorithm would work best for my data?",
-      "How do I interpret these model metrics?",
-      "What are hyperparameters and how do I tune them?",
-      "How do I prevent overfitting?",
-      "What's the difference between classification and regression?",
+      "What algorithms would work best for this task?",
+      "Is this model likely to overfit?",
+      "Should I try a different algorithm?",
+      "How does AutoML choose the best model?",
     ];
   }
   
+  // 6. Model Results & Visualizations
+  if (pathname.includes('/training') && window.__TRAINING_CONTEXT__?.experimentStatus === 'completed') {
+    return [
+      "Explain these metrics in plain language",
+      "Is this a good model?",
+      "What can I improve to increase accuracy?",
+      "What does the confusion matrix mean?",
+    ];
+  }
+  
+  // 7. Predictions
+  if (pathname.includes('/training') && pathname.includes('predict')) {
+    return [
+      "How accurate are these predictions?",
+      "What if the input format is slightly different?",
+      "Why did the model predict this value?",
+      "Can I use this model on new regions?",
+    ];
+  }
+  
+  // 8. Dashboard & Comparisons
   if (pathname.includes('/dashboard')) {
     return [
-      "How do I compare multiple experiments?",
-      "What metrics should I focus on for my use case?",
-      "How do I interpret the experiment results?",
-      "Which of my models performed the best?",
+      "Which model is best and why?",
+      "Compare these experiments for me",
+      "How do I choose the best one?",
+      "What trends do you notice in my experiments?",
     ];
   }
   
+  // 9. Experiment details
   if (pathname.includes('/experiment')) {
     return [
-      "Can you explain these model metrics?",
-      "How can I improve this model?",
-      "What does this confusion matrix mean?",
-      "How do I make predictions with this model?",
-      "Is this model overfitting or underfitting?",
+      "Explain these model results to me",
+      "How could I improve this experiment?",
+      "What do these metrics tell me about my model?",
+      "Should I deploy this model?",
     ];
   }
   
+  // General prompts
   return [
     "What can this AutoML platform do?",
     "How do I get started with machine learning?",
@@ -270,6 +316,13 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
     "How do I upload and prepare my dataset?",
   ];
 };
+
+// Make the training context globally available to avoid import errors
+declare global {
+  interface Window {
+    __TRAINING_CONTEXT__?: any;
+  }
+}
 
 // Provider component
 export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

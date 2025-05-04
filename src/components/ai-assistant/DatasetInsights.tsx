@@ -35,12 +35,14 @@ const DatasetInsights: React.FC = () => {
     ${overview ? `Columns: ${overview.num_columns || 'unknown'}` : ''}
     ${targetColumn ? `Target Column: ${targetColumn}` : 'No target column selected'}
     ${processingStage ? `Processing Stage: ${processingStage}` : ''}
-    ${overview?.total_missing_values ? `Missing Values: ${overview.total_missing_values}` : ''}
+    ${overview?.total_missing_values !== undefined ? `Missing Values: ${overview.total_missing_values}` : ''}
+    ${overview?.missing_values_count ? `Missing Values by Column: ${JSON.stringify(overview.missing_values_count)}` : ''}
     ${taskType ? `Task Type: ${taskType}` : ''}
     ${previewColumns ? `Available Columns: ${previewColumns.join(', ')}` : ''}
     ${overview?.numerical_features ? `Numerical Features: ${overview.numerical_features.join(', ')}` : ''}
     ${overview?.categorical_features ? `Categorical Features: ${overview.categorical_features.join(', ')}` : ''}
     ${featureImportance ? `Feature Importance: ${JSON.stringify(featureImportance.slice(0, 5))}` : ''}
+    ${overview?.data_types ? `Data Types: ${JSON.stringify(overview.data_types)}` : ''}
   `;
   
   // Determine the appropriate prompt based on dataset state and path
@@ -51,6 +53,9 @@ const DatasetInsights: React.FC = () => {
     }
     
     if (location.pathname.includes('/dataset/explore')) {
+      if (overview?.total_missing_values && overview.total_missing_values > 0) {
+        return "This dataset has missing values. What's the best strategy to handle them for this data?";
+      }
       return "Help me understand this dataset's structure and key statistics. What insights can you provide?";
     }
     
