@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useDataset } from '@/contexts/DatasetContext';
+import { useDataset, DatasetOverview } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
   Table, 
