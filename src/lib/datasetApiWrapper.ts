@@ -12,15 +12,13 @@ export const extendedDatasetApi = {
     balancing: string,
     imputation: string
   ) => {
-    // Create the options object that combines all preprocessing parameters
-    const options = {
-      normalization,
-      balancing,
-      imputation
-    };
+    // Looking at the original function in api.ts, it expects three separate parameters:
+    // datasetId, normalizationMethod, and balanceStrategy
+    // We need to pass these parameters separately, not as an options object
+    return await datasetApi.preprocessDataset(datasetId, normalization, balancing);
     
-    // Call the original method with the options object
-    // (Assuming the original accepts an options object as the third parameter)
-    return await datasetApi.preprocessDataset(datasetId, options);
+    // Note: The imputation parameter is collected here but the backend API
+    // doesn't support it yet. In the future, the API will need to be updated
+    // to accept this parameter as well.
   }
 };
