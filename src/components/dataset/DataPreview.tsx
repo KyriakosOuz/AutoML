@@ -10,7 +10,13 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,6 +100,23 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     return false;
   };
 
+  // Safe stage setter that validates if the stage is available before setting
+  const setSafeStage = (newStage: PreviewStage) => {
+    if (isStageAvailable(newStage)) {
+      console.log(`Setting stage to ${newStage}`);
+      setStage(newStage);
+      return true;
+    } else {
+      console.log(`Attempted to set unavailable stage: ${newStage}`);
+      // If current stage is no longer available, fallback to latest
+      if (stage !== 'raw' && stage !== 'latest' && !isStageAvailable(stage)) {
+        console.log('Current stage no longer available, falling back to latest');
+        setStage('latest');
+      }
+      return false;
+    }
+  };
+
   // Keep the existing useEffect for processingButtonClicked
   useEffect(() => {
     if (
@@ -101,7 +124,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
       (processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed')
     ) {
       console.log('Detected processing button clicked + cleaned data available → enabling Cleaned Data stage');
-      setStage('cleaned');
+      setSafeStage('cleaned');
     }
   }, [processingButtonClicked, processingStage]);
 
@@ -225,25 +248,68 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     return labels[selectedStage];
   };
 
+  // Determine if we need to show a different stage due to the current one becoming unavailable
+  const getDisplayStage = () => {
+    if (isStageAvailable(stage)) {
+      return stage;
+    }
+    // Fallback to latest if current stage is unavailable
+    console.log(`Current stage ${stage} is no longer available, displaying 'latest' instead`);
+    return 'latest';
+  };
+
+  // Handle the stage change with validation
+  const handleStageChange = (newStage: string) => {
+    const stageValue = newStage as PreviewStage;
+    if (setSafeStage(stageValue)) {
+      console.log(`Stage changed to ${stageValue}`);
+    } else {
+      toast({
+        title: "Invalid stage",
+        description: `Cannot select ${renderStageLabel(stageValue)} at this time.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Generate available stage options
+  const getAvailableStages = () => {
+    const stages: PreviewStage[] = ['raw', 'latest'];
+    
+    if (isStageAvailable('cleaned')) stages.push('cleaned');
+    if (isStageAvailable('final')) stages.push('final');
+    if (isStageAvailable('processed')) stages.push('processed');
+    
+    return stages;
+  };
+
+  // This is the display stage that's actually shown (might be different from state if current stage became unavailable)
+  const displayStage = getDisplayStage();
+  const availableStages = getAvailableStages();
+
   return (
     <Card className="w-full mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl text-primary">Data Preview</CardTitle>
         <div className="flex items-center gap-2">
           <Select
-            value={stage}
-            onValueChange={(value) => setStage(value as PreviewStage)}
+            value={displayStage}
+            onValueChange={handleStageChange}
             disabled={isLoadingPreview}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 bg-white dark:bg-gray-800 border-gray-300">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="raw">Raw Data</SelectItem>
-              <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
-              <SelectItem value="final" disabled={!isStageAvailable('final')}>Final Data</SelectItem>
-              <SelectItem value="processed" disabled={!isStageAvailable('processed')}>Processed Data</SelectItem>
-              <SelectItem value="latest">Latest Stage</SelectItem>
+            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 shadow-lg z-50">
+              {availableStages.map((stageOption) => (
+                <SelectItem 
+                  key={stageOption} 
+                  value={stageOption}
+                  className={!isStageAvailable(stageOption) ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  {renderStageLabel(stageOption)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
@@ -265,11 +331,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Info className="h-4 w-4" />
-            <span>Viewing: <span className="font-medium">{renderStageLabel(stage)}</span></span>
+            <span>Viewing: <span className="font-medium">{renderStageLabel(displayStage)}</span></span>
           </div>
           
           {/* For datasets without missing values that are auto-processed, show an informational message */}
-          {!hasMissingValues && processingStage === 'cleaned' && stage === 'raw' && (
+          {!hasMissingValues && processingStage === 'cleaned' && displayStage === 'raw' && (
             <Alert variant="info" className="mb-4 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-500" />
               <AlertTitle className="text-blue-700">Dataset Auto-Processed</AlertTitle>
@@ -397,7 +463,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <div className="flex items-center gap-2 mb-2">
               <BarChart className="h-4 w-4 text-primary" />
               <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                Dataset Statistics ({stage.charAt(0).toUpperCase() + stage.slice(1)} Stage)
+                Dataset Statistics ({displayStage.charAt(0).toUpperCase() + displayStage.slice(1)} Stage)
               </h4>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2">
