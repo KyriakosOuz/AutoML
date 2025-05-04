@@ -122,9 +122,9 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [state]);
 
-  // Ensure consistent processingStage based on data availability
+  // Enhanced logic for processingStage management
   useEffect(() => {
-    const { datasetId, targetColumn, columnsToKeep, processingStage } = state;
+    const { datasetId, targetColumn, columnsToKeep, processingStage, overview } = state;
     
     // Only explicitly update if certain logical conditions are met
     // Avoid unnecessary updates that might trigger unwanted redirects
@@ -133,6 +133,14 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.log('Setting initial processing stage to raw');
       setState(prev => ({ ...prev, processingStage: 'raw' }));
     }
+
+    // Auto-advance to cleaned stage for datasets with no missing values
+    const hasMissingValues = overview?.total_missing_values && overview.total_missing_values > 0;
+    if (datasetId && processingStage === 'raw' && overview && !hasMissingValues) {
+      console.log('Auto-advancing processingStage to cleaned for dataset with no missing values');
+      // We don't actually set the stage here - we let the MissingValueHandler component handle it
+      // This prevents race conditions with API calls
+    }
     
     // Only update to final stage if we have the required data and explicitly set columnsToKeep
     // This prevents overriding the stage when it's already set to 'final' or another value
@@ -140,7 +148,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
-  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
+  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage, state.overview]);
   
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ 

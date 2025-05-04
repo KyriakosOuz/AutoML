@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -201,11 +200,57 @@ const MissingValueHandler: React.FC = () => {
     }
   };
 
-  // Add an effect to handle datasets with no missing values
+  // Auto-advance datasets with no missing values
   useEffect(() => {
     if (datasetId && overview && !hasMissingValues && processingStage === 'raw') {
-      console.log('MissingValueHandler: No missing values detected, can proceed to features selection');
-      // We don't need to auto-advance here as we do it in DatasetContext now
+      console.log('MissingValueHandler: No missing values detected, auto-advancing to cleaned stage');
+      
+      // Automatically handle the transition without requiring button click
+      (async () => {
+        try {
+          console.log('Auto-processing dataset with no missing values');
+          
+          // Still use the API to ensure backend is in sync
+          const response = await datasetApi.handleMissingValues(
+            datasetId, 
+            'skip'  // Use skip strategy for datasets with no missing values
+          );
+          
+          console.log('Auto-processing response:', response);
+          
+          // Update state with response
+          const newState = {
+            overview: response.overview || (response.data && response.data.overview),
+            processingStage: 'cleaned'
+          };
+          
+          // Add optional fields if they exist
+          if (response.dataset_id || (response.data && response.data.dataset_id)) {
+            newState.datasetId = response.dataset_id || (response.data && response.data.dataset_id);
+          }
+          
+          if (response.file_url || (response.data && response.data.file_url)) {
+            newState.fileUrl = response.file_url || (response.data && response.data.file_url);
+          }
+          
+          // Update context
+          updateState(newState);
+          
+          toast({
+            title: "Dataset processed",
+            description: "Your dataset has no missing values and has been automatically marked as processed.",
+            duration: 3000,
+          });
+        } catch (error) {
+          console.error('Error auto-processing dataset:', error);
+          
+          toast({
+            title: "Error processing dataset",
+            description: error instanceof Error ? error.message : 'An unexpected error occurred',
+            variant: "destructive"
+          });
+        }
+      })();
     }
   }, [datasetId, overview, hasMissingValues, processingStage]);
 
@@ -298,9 +343,9 @@ const MissingValueHandler: React.FC = () => {
         <CardDescription>
           {hasMissingValues 
             ? `Your dataset has ${overview?.total_missing_values} missing values that need to be handled` 
-            : processingStage === 'cleaned' 
-              ? 'Your dataset has been marked as processed'
-              : `Your dataset doesn't have missing values`}
+            : processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed'
+              ? 'Your dataset has been automatically processed (no missing values)'
+              : `Your dataset doesn't have missing values and will be automatically processed`}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
@@ -432,26 +477,28 @@ const MissingValueHandler: React.FC = () => {
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertTitle>All Data Is Complete</AlertTitle>
             <AlertDescription>
-              {processingStage === 'cleaned' 
+              {processingStage === 'cleaned' || processingStage === 'final' || processingStage === 'processed'
                 ? 'Your dataset has been successfully processed.'
-                : 'Your dataset has no missing values. Click the button below to mark it as processed.'}
+                : 'Your dataset has no missing values and will be automatically processed.'}
             </AlertDescription>
           </Alert>
         )}
       </CardContent>
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
-        <Button 
-          onClick={handleProcessMissingValues} 
-          disabled={isLoading}
-          variant="default"
-          size="lg"
-          type="button"
-        >
-          <Wand2 className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : processingStage === 'cleaned' 
-            ? 'Re-process Dataset' 
-            : hasMissingValues ? 'Process Missing Values' : 'Mark as Processed'}
-        </Button>
+        {hasMissingValues && (
+          <Button 
+            onClick={handleProcessMissingValues} 
+            disabled={isLoading}
+            variant="default"
+            size="lg"
+            type="button"
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {isLoading ? 'Processing...' : processingStage === 'cleaned' 
+              ? 'Re-process Dataset' 
+              : 'Process Missing Values'}
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
