@@ -71,25 +71,28 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Updated isStageAvailable to auto-enable cleaned stage if no missing values
+  // Updated isStageAvailable to handle auto-processed datasets without missing values
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // If there are no missing values, only allow cleaned stage when processingStage is advanced
-      if (!hasMissingValues) {
-        return ['cleaned', 'final', 'processed'].includes(processingStage || '');
+      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
+      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
+      if (hasMissingValues) {
+        // For datasets WITH missing values, require explicit button click
+        return (
+          processingButtonClicked && 
+          (
+            processingStage === 'cleaned' || 
+            processingStage === 'final' || 
+            processingStage === 'processed'
+          )
+        );
+      } else {
+        // For datasets WITHOUT missing values, even if processingStage is advanced, 
+        // don't show the cleaned stage - they can go directly to final
+        return false;
       }
-      
-      // If there are missing values, require an explicit button click
-      return (
-        processingButtonClicked && 
-        (
-          processingStage === 'cleaned' || 
-          processingStage === 'final' || 
-          processingStage === 'processed'
-        )
-      );
     }
     
     if (checkStage === 'final') {
@@ -277,6 +280,17 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <span>Viewing: <span className="font-medium">{renderStageLabel(stage)}</span></span>
           </div>
           
+          {/* For datasets without missing values that are auto-processed, show an informational message */}
+          {!hasMissingValues && processingStage === 'cleaned' && stage === 'raw' && (
+            <Alert variant="info" className="mb-4 bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertTitle className="text-blue-700">Dataset Auto-Processed</AlertTitle>
+              <AlertDescription className="text-blue-600">
+                This dataset has no missing values and was automatically processed. You can proceed directly to feature selection.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {isLoadingPreview && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
