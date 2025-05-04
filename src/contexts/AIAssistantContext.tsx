@@ -123,7 +123,7 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
         if (overview.unique_values_count) {
           // Find columns with few unique values (potential categorical)
           const categoricalCandidates = Object.entries(overview.unique_values_count)
-            .filter(([_, count]) => count < 10 && count > 1)
+            .filter(([_, count]) => typeof count === 'number' && count < 10 && count > 1)
             .map(([col]) => col);
             
           if (categoricalCandidates.length > 0) {

@@ -14,44 +14,44 @@ const TrainingInsights: React.FC = () => {
   
   // Get the training context data
   const { 
-    experimentId,
-    selectedAlgorithm,
-    taskType,
-    status,
-    hyperParameters,
-    metrics
+    activeExperimentId,
+    lastTrainingType,
+    automlParameters,
+    customParameters,
+    experimentStatus,
+    experimentResults
   } = useTraining();
   
   // Skip if no training is in progress
-  if (!experimentId && !selectedAlgorithm) {
+  if (!activeExperimentId && !lastTrainingType) {
     return null;
   }
   
   // Create context data from training information
   const contextData = `
-    Experiment ID: ${experimentId || 'Not started'}
-    Algorithm: ${selectedAlgorithm || 'Not selected'}
-    Task Type: ${taskType || 'Unknown'}
-    Status: ${status || 'Not started'}
-    ${hyperParameters ? `Hyperparameters: ${JSON.stringify(hyperParameters)}` : ''}
-    ${metrics ? `Metrics: ${JSON.stringify(metrics)}` : ''}
+    Experiment ID: ${activeExperimentId || 'Not started'}
+    Algorithm: ${lastTrainingType === 'automl' ? automlParameters?.automlEngine : 
+                 lastTrainingType === 'custom' ? customParameters?.algorithm : 'Not selected'}
+    Status: ${experimentStatus || 'Not started'}
+    ${experimentResults?.hyperparameters ? `Hyperparameters: ${JSON.stringify(experimentResults.hyperparameters)}` : ''}
+    ${experimentResults?.metrics ? `Metrics: ${JSON.stringify(experimentResults.metrics)}` : ''}
   `;
   
   // Determine the appropriate prompt based on training state
   const getInitialPrompt = () => {
-    if (!selectedAlgorithm) {
+    if (!lastTrainingType) {
       return "Based on this dataset, which algorithm would you recommend for this task type?";
     }
     
-    if (status === 'processing' || status === 'running') {
+    if (experimentStatus === 'processing' || experimentStatus === 'running') {
       return "What should I expect from this training run? What metrics should I focus on?";
     }
     
-    if (status === 'completed' || status === 'success') {
+    if (experimentStatus === 'completed' || experimentStatus === 'success') {
       return "Analyze these model metrics. How good is this model and what do these results mean?";
     }
     
-    if (status === 'failed') {
+    if (experimentStatus === 'failed') {
       return "My model training failed. What might have caused this and how can I fix it?";
     }
     

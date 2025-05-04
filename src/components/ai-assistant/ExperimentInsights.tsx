@@ -30,10 +30,12 @@ const ExperimentInsights: React.FC = () => {
   const contextData = `
     Experiment ID: ${experimentId}
     Status: ${results.status || 'Unknown'}
-    Algorithm: ${results.algorithm || 'Unknown'}
+    Algorithm: ${results.algorithm || results.algorithm_choice || results.selected_algorithm || 'Unknown'}
     Task Type: ${results.task_type || 'Unknown'}
     Target Column: ${results.target_column || 'Unknown'}
-    Metrics: ${results.training_results?.metrics ? JSON.stringify(results.training_results.metrics) : 'No metrics available'}
+    Metrics: ${results.metrics ? JSON.stringify(results.metrics) : 
+              results.training_results?.metrics ? JSON.stringify(results.training_results.metrics) : 
+              'No metrics available'}
   `;
   
   // Determine the appropriate prompt based on experiment results
@@ -43,7 +45,7 @@ const ExperimentInsights: React.FC = () => {
     }
     
     if (results.status === 'completed' || results.status === 'success') {
-      const metrics = results.training_results?.metrics || {};
+      const metrics = results.metrics || results.training_results?.metrics || {};
       const hasGoodPerformance = Object.values(metrics).some(
         value => typeof value === 'number' && value >= 0.8
       );
