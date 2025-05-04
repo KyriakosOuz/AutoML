@@ -22,7 +22,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeExperimentId: null,
     experimentResults: null,
     isLoadingResults: false,
-    experimentStatus: 'processing',
+    experimentStatus: 'idle', // Changed from 'processing' to 'idle'
     statusResponse: null,
     automlEngine: defaultAutomlParameters.automlEngine,
     testSize: defaultAutomlParameters.testSize,
@@ -41,7 +41,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         setState(prev => ({
           ...prev,
           activeExperimentId: savedExperimentId,
-          lastTrainingType: savedTrainingType
+          lastTrainingType: savedTrainingType,
+          experimentStatus: 'completed' // If we have a saved experiment, assume it's completed
         }));
       }
     } catch (error) {
@@ -194,7 +195,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         activeExperimentId: null,
         experimentResults: null,
         isLoadingResults: false,
-        experimentStatus: 'processing',
+        experimentStatus: 'idle', // Changed from 'processing' to 'idle'
         statusResponse: null,
         automlEngine: defaultAutomlParameters.automlEngine,
         testSize: defaultAutomlParameters.testSize,

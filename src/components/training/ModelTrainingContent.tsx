@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
+import { useDataset } from '@/contexts/DatasetContext';
 import AutoMLTraining from './AutoMLTraining';
 import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
@@ -19,8 +20,10 @@ const ModelTrainingContent: React.FC = () => {
     resetTrainingState,
     activeExperimentId,
     experimentStatus,
+    setExperimentStatus
   } = useTraining();
   
+  const { datasetId, taskType } = useDataset();
   const isMobile = useIsMobile();
 
   // Show results and predict tabs only when experiment is completed
@@ -32,6 +35,14 @@ const ModelTrainingContent: React.FC = () => {
       setActiveTab('automl');
     }
   }, [activeTab, showResultsAndPredict, setActiveTab]);
+
+  // Reset processing status if we have valid dataset data and status is still 'processing'
+  useEffect(() => {
+    if (datasetId && taskType && experimentStatus === 'processing' && !activeExperimentId) {
+      // Only reset to null if we don't have an active experiment
+      setExperimentStatus('idle');
+    }
+  }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
   const handleReset = () => {
     resetTrainingState();
