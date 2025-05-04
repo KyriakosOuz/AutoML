@@ -51,8 +51,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     setOverview,
     processingStage,
     targetColumn,
-    processingButtonClicked,
-    autoAdvanced
+    processingButtonClicked
   } = useDataset();
   
   const [stage, setStage] = useState<PreviewStage>('raw');
@@ -71,34 +70,21 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   // Check if the dataset has any missing values - updated with type check
   const hasMissingValues = typeof overview?.total_missing_values === 'number' && overview.total_missing_values > 0;
 
-  // Check if a specific stage is available - updated logic to handle both auto-advance and button click
+  // Updated isStageAvailable to only show 'cleaned' when processingButtonClicked is true
   const isStageAvailable = (checkStage: PreviewStage): boolean => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      if (hasMissingValues) {
-        // For datasets WITH missing values: require processingButtonClicked
-        // AND the processing stage must be at least 'cleaned'
-        return (
-          processingButtonClicked && 
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
-        );
-      } else {
-        // For datasets WITHOUT missing values: show clean stage if processingStage is cleaned or higher
-        // But ONLY if explicitly set through button click OR if auto-advancement happened
-        return (
-          (processingButtonClicked || autoAdvanced) &&
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
-        );
-      }
+      // Only allow cleaned stage after explicit button click
+      // Regardless of whether the dataset has missing values or not
+      return (
+        processingButtonClicked && 
+        (
+          processingStage === 'cleaned' || 
+          processingStage === 'final' || 
+          processingStage === 'processed'
+        )
+      );
     }
     
     if (checkStage === 'final') {
@@ -111,15 +97,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     
     return false;
   };
-
-  // Add new useEffect to handle auto-advancing behavior
-  useEffect(() => {
-    if (autoAdvanced && processingStage === 'cleaned' && stage === 'raw') {
-      console.log('Auto-switching preview to raw (not cleaned) despite auto-advancement');
-      // Don't auto-switch to cleaned when it was auto-advanced
-      // Let the user explicitly select it
-    }
-  }, [autoAdvanced, processingStage, stage]);
 
   // Keep the existing useEffect for processingButtonClicked
   useEffect(() => {
@@ -238,7 +215,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         console.log('Setting stage to processed');
         setStage('processed');
       }
-      // Don't automatically switch to cleaned stage unless button clicked or manually selected
+      // Don't automatically switch to cleaned stage even if processingStage is 'cleaned'
+      // Only switch if the button was clicked explicitly
     }
   }, [processingStage, stage]);
 
@@ -283,8 +261,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
             <SelectContent>
               <SelectItem value="raw">Raw Data</SelectItem>
               <SelectItem value="cleaned" disabled={!isStageAvailable('cleaned')}>Cleaned Data</SelectItem>
-              <SelectItem value="final" disabled={!hasFinalData}>Final Data</SelectItem>
-              <SelectItem value="processed" disabled={!hasProcessedData}>Processed Data</SelectItem>
+              <SelectItem value="final" disabled={!isStageAvailable('final')}>Final Data</SelectItem>
+              <SelectItem value="processed" disabled={!isStageAvailable('processed')}>Processed Data</SelectItem>
               <SelectItem value="latest">Latest Stage</SelectItem>
             </SelectContent>
           </Select>

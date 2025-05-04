@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -38,7 +37,6 @@ export interface DatasetContextProps {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
-  autoAdvanced: boolean; // New flag to track if auto-advancement happened
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -55,7 +53,6 @@ export interface DatasetContextProps {
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
   setProcessingButtonClicked: (clicked: boolean) => void; // Setter for the flag
-  setAutoAdvanced: (autoAdvanced: boolean) => void; // Setter for auto-advancement flag
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -77,7 +74,6 @@ interface DatasetContextState {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
-  autoAdvanced: boolean; // New flag to track if auto-advancement happened
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -98,7 +94,6 @@ const initialState: DatasetContextState = {
   error: null,
   processingStage: null, // Start with null to avoid immediate redirects
   processingButtonClicked: false, // Initialize the flag to false
-  autoAdvanced: false, // Initialize the auto-advanced flag to false
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -147,34 +142,11 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage]);
   
-  // Separate effect for auto-advancing to 'cleaned' stage for datasets without missing values
-  // This separation makes the auto-advancement more explicit and controllable
-  useEffect(() => {
-    const { datasetId, overview, processingStage } = state;
-    
-    // Auto-advance to 'cleaned' stage for datasets without missing values
-    // But only do it once (check autoAdvanced flag) and only if we're in 'raw' stage
-    if (datasetId && 
-        overview && 
-        (!overview.total_missing_values || overview.total_missing_values === 0) && 
-        processingStage === 'raw' && 
-        !state.autoAdvanced) {
-      
-      console.log('No missing values detected, auto-advancing to cleaned stage');
-      setState(prev => ({ 
-        ...prev, 
-        processingStage: 'cleaned',
-        autoAdvanced: true // Set the flag to true to prevent repeated auto-advancement
-      }));
-    }
-  }, [state.datasetId, state.overview, state.processingStage, state.autoAdvanced]);
-  
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ 
     ...prev, 
     datasetId, 
-    processingButtonClicked: false,
-    autoAdvanced: false // Reset auto-advancement flag when changing dataset
+    processingButtonClicked: false
   }));
   
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
@@ -217,12 +189,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     console.log('Setting processingButtonClicked to:', processingButtonClicked);
     setState(prev => ({ ...prev, processingButtonClicked }));
     // No need to explicitly update localStorage here as the effect above will handle it
-  };
-  
-  // New setter for the autoAdvanced flag
-  const setAutoAdvanced = (autoAdvanced: boolean) => {
-    console.log('Setting autoAdvanced to:', autoAdvanced);
-    setState(prev => ({ ...prev, autoAdvanced }));
   };
   
   const resetState = () => {
@@ -275,7 +241,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setError,
     setProcessingStage,
     setProcessingButtonClicked,
-    setAutoAdvanced,
     resetState,
     updateState,
   };

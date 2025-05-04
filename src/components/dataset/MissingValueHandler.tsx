@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -262,17 +263,19 @@ const MissingValueHandler: React.FC = () => {
       await refreshDataPreview();
       
       toast({
-        title: "Missing values processed",
-        description: `Successfully handled missing values using ${strategy} strategy.`,
+        title: "Dataset processed",
+        description: hasMissingValues
+          ? `Successfully handled missing values using ${strategy} strategy.`
+          : "Dataset marked as processed successfully.",
         duration: 3000,
       });
       
     } catch (error) {
       console.error('Error handling missing values:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process missing values');
+      setError(error instanceof Error ? error.message : 'Failed to process dataset');
       
       toast({
-        title: "Error processing missing values",
+        title: "Error processing dataset",
         description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: "destructive"
       });
@@ -296,7 +299,7 @@ const MissingValueHandler: React.FC = () => {
           {hasMissingValues 
             ? `Your dataset has ${overview?.total_missing_values} missing values that need to be handled` 
             : processingStage === 'cleaned' 
-              ? 'Missing values have been successfully handled'
+              ? 'Your dataset has been marked as processed'
               : `Your dataset doesn't have missing values`}
         </CardDescription>
       </CardHeader>
@@ -430,8 +433,8 @@ const MissingValueHandler: React.FC = () => {
             <AlertTitle>All Data Is Complete</AlertTitle>
             <AlertDescription>
               {processingStage === 'cleaned' 
-                ? 'Your dataset has been successfully processed. All missing values have been handled.'
-                : 'Your dataset has no missing values. You can continue to the next step or explicitly mark it as processed.'}
+                ? 'Your dataset has been successfully processed.'
+                : 'Your dataset has no missing values. Click the button below to mark it as processed.'}
             </AlertDescription>
           </Alert>
         )}
@@ -439,15 +442,15 @@ const MissingValueHandler: React.FC = () => {
       <CardFooter className="bg-gray-50 border-t border-gray-100 gap-2 flex justify-end">
         <Button 
           onClick={handleProcessMissingValues} 
-          disabled={isLoading || !hasMissingValues}
+          disabled={isLoading}
           variant="default"
           size="lg"
           type="button"
         >
           <Wand2 className="h-4 w-4 mr-2" />
           {isLoading ? 'Processing...' : processingStage === 'cleaned' 
-            ? 'Re-process Missing Values' 
-            : 'Process Missing Values'}
+            ? 'Re-process Dataset' 
+            : hasMissingValues ? 'Process Missing Values' : 'Mark as Processed'}
         </Button>
       </CardFooter>
     </Card>
