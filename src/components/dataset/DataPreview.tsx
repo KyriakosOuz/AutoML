@@ -205,22 +205,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
   const hasProcessedData = processingStage === 'processed';
 
   useEffect(() => {
-    if (processingStage) {
-      console.log('Processing stage changed:', processingStage);
-      
-      if (processingStage === 'final' && stage !== 'final') {
-        console.log('Setting stage to final');
-        setStage('final');
-      } else if (processingStage === 'processed' && stage !== 'processed') {
-        console.log('Setting stage to processed');
-        setStage('processed');
-      }
-      // Don't automatically switch to cleaned stage even if processingStage is 'cleaned'
-      // Only switch if the button was clicked explicitly
-    }
-  }, [processingStage, stage]);
-
-  useEffect(() => {
     if (datasetId) {
       console.log('DatasetId or stage changed - fetching preview');
       fetchPreview();
