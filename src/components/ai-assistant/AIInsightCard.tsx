@@ -11,6 +11,7 @@ interface AIInsightCardProps {
   contextData: string;
   sessionId: string;
   collapsed?: boolean;
+  suggestedPrompts?: string[];
 }
 
 const AIInsightCard: React.FC<AIInsightCardProps> = ({
@@ -19,6 +20,7 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
   contextData,
   sessionId,
   collapsed = false,
+  suggestedPrompts = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(!collapsed);
   const [insight, setInsight] = useState<string | null>(null);
@@ -66,6 +68,11 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
     }
   };
   
+  const handleSuggestedPrompt = (prompt: string) => {
+    openChat(); // Open the chat dialog
+    sendMessage(prompt);
+  };
+  
   return (
     <Card className="w-full mb-4">
       <CardHeader className="pb-2">
@@ -95,6 +102,24 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
           ) : insight ? (
             <>
               <div className="text-sm whitespace-pre-wrap mb-3">{insight}</div>
+              
+              {/* Suggested prompts */}
+              {suggestedPrompts && suggestedPrompts.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {suggestedPrompts.map((prompt, index) => (
+                    <Button 
+                      key={index}
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleSuggestedPrompt(prompt)}
+                      className="text-xs"
+                    >
+                      {prompt}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              
               <div className="flex justify-end">
                 <Button 
                   variant="outline" 

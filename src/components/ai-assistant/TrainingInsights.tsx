@@ -1,11 +1,15 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AIInsightCard from './AIInsightCard';
 import { useLocation } from 'react-router-dom';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
+// Track if user has visited the training page before
+const TRAINING_VISITED_KEY = 'ml_training_visited';
+
 const TrainingInsights: React.FC = () => {
   const location = useLocation();
+  const [isFirstVisit, setIsFirstVisit] = useState<boolean>(false);
   
   // Only show insights on training pages
   if (!location.pathname.includes('/training')) {
@@ -19,8 +23,18 @@ const TrainingInsights: React.FC = () => {
     automlParameters,
     customParameters,
     experimentStatus,
-    experimentResults
+    experimentResults,
+    activeTab, // Current active tab in UI
   } = useTraining();
+  
+  // Check if this is user's first visit to training
+  useEffect(() => {
+    const hasVisited = localStorage.getItem(TRAINING_VISITED_KEY);
+    if (!hasVisited) {
+      setIsFirstVisit(true);
+      localStorage.setItem(TRAINING_VISITED_KEY, 'true');
+    }
+  }, []);
   
   // Make training context available globally for the AI Assistant context
   if (window) {
@@ -30,44 +44,187 @@ const TrainingInsights: React.FC = () => {
       automlParameters,
       customParameters,
       experimentStatus,
-      experimentResults
+      experimentResults,
+      activeTab,
+      isFirstVisit
     };
   }
   
-  // Skip if no training is in progress
-  if (!activeExperimentId && !lastTrainingType) {
-    return null;
-  }
-  
-  // Create context data from training information
-  const contextData = `
+  // Create base context data from training information
+  const baseContextData = `
     Experiment ID: ${activeExperimentId || 'Not started'}
     Algorithm: ${lastTrainingType === 'automl' ? automlParameters?.automlEngine : 
-                 lastTrainingType === 'custom' ? customParameters?.algorithm : 'Not selected'}
+                lastTrainingType === 'custom' ? customParameters?.algorithm : 'Not selected'}
     Status: ${experimentStatus || 'Not started'}
     ${experimentResults?.hyperparameters ? `Hyperparameters: ${JSON.stringify(experimentResults.hyperparameters)}` : ''}
     ${experimentResults?.metrics ? `Metrics: ${JSON.stringify(experimentResults.metrics)}` : ''}
   `;
   
-  // Determine the appropriate prompt based on training state
+  // Generate tab-specific context data based on active tab
+  const getTabSpecificContext = () => {
+    let tabContext = '';
+    
+    switch(activeTab) {
+      case 'automl':
+        tabContext = `
+          Tab: AutoML Training
+          AutoML Engine: ${automlParameters?.automlEngine || 'Not selected'}
+          Test Size: ${automlParameters?.testSize || 0.2}
+          Stratify: ${automlParameters?.stratify ? 'Yes' : 'No'}
+          Random Seed: ${automlParameters?.randomSeed || 42}
+          
+          Available AutoML Engines:
+          - mljar: Good for tabular data, efficient for small-medium datasets
+          - autokeras: Based on Keras, good for deep learning tasks
+          - h2o: Robust enterprise-grade AutoML with many algorithms
+        `;
+        break;
+        
+      case 'custom':
+        tabContext = `
+          Tab: Custom Training
+          Algorithm: ${customParameters?.algorithm || 'Not selected'}
+          Test Size: ${customParameters?.testSize || 0.2}
+          Stratify: ${customParameters?.stratify ? 'Yes' : 'No'}
+          Random Seed: ${customParameters?.randomSeed || 42}
+          Use Default Hyperparameters: ${customParameters?.useDefaultHyperparameters ? 'Yes' : 'No'}
+          
+          ${customParameters?.hyperparameters ? `Custom Hyperparameters: ${JSON.stringify(customParameters.hyperparameters)}` : ''}
+          
+          Common Algorithms:
+          - Random Forest: Ensemble learning for classification and regression
+          - XGBoost: Gradient boosting, high performance
+          - Logistic Regression: Good for binary classification, interpretable
+          - Linear Regression: For regression tasks, interpretable
+          - SVM: Effective for high-dimensional spaces
+        `;
+        break;
+        
+      case 'results':
+        tabContext = `
+          Tab: Training Results
+          ${experimentResults?.metrics ? `Performance Metrics: ${JSON.stringify(experimentResults.metrics)}` : 'No metrics available'}
+          
+          Results include:
+          - Performance metrics (accuracy, F1, precision, recall, etc.)
+          - Confusion matrix for classification tasks
+          - Feature importance
+          - ROC and PR curves where applicable
+          - Classification report details
+        `;
+        break;
+        
+      case 'predict':
+        tabContext = `
+          Tab: Model Predictions
+          Model available for predictions: ${activeExperimentId ? 'Yes' : 'No'}
+          
+          Prediction options:
+          - Manual input prediction: Enter feature values individually
+          - Batch prediction from CSV: Upload a file with multiple instances
+          ${experimentStatus === 'completed' ? 'Model is ready for predictions' : 'Model is not yet ready for predictions'}
+        `;
+        break;
+        
+      default:
+        tabContext = '';
+    }
+    
+    return tabContext;
+  };
+  
+  // Combine base context with tab-specific context
+  const contextData = `${baseContextData}\n${getTabSpecificContext()}`;
+  
+  // Determine the appropriate prompt based on training state and active tab
   const getInitialPrompt = () => {
-    if (!lastTrainingType) {
-      return "Based on this dataset, which algorithm would you recommend for this task type?";
+    // First-time visitor to training page
+    if (isFirstVisit && !activeExperimentId) {
+      return "I'm new to machine learning. How should I approach model training with this platform?";
     }
     
+    // No active experiment yet
+    if (!activeExperimentId && !lastTrainingType) {
+      switch(activeTab) {
+        case 'automl':
+          return "Which AutoML engine would you recommend for my dataset and why?";
+        case 'custom':
+          return "What algorithm would be best suited for this type of data?";
+        case 'results':
+          return "What metrics should I look for to evaluate my model's performance?";
+        case 'predict':
+          return "How do I get started with making predictions using my trained model?";
+        default:
+          return "Based on this dataset, which algorithm would you recommend for this task type?";
+      }
+    }
+    
+    // Experiment is running
     if (experimentStatus === 'processing' || experimentStatus === 'running') {
-      return "What should I expect from this training run? What metrics should I focus on?";
+      switch(activeTab) {
+        case 'automl':
+          return "While AutoML is running, what should I know about the selected engine?";
+        case 'custom':
+          return "What should I expect from this algorithm with the current hyperparameters?";
+        default:
+          return "What should I expect from this training run? What metrics should I focus on?";
+      }
     }
     
+    // Experiment completed
     if (experimentStatus === 'completed' || experimentStatus === 'success') {
-      return "Analyze these model metrics. How good is this model and what do these results mean?";
+      switch(activeTab) {
+        case 'results':
+          return "Analyze these model metrics. How good is this model and what do these results mean?";
+        case 'predict':
+          return "How should I interpret the prediction results from this model?";
+        default:
+          return "My training is complete. How does this model compare to industry standards?";
+      }
     }
     
+    // Experiment failed
     if (experimentStatus === 'failed') {
       return "My model training failed. What might have caused this and how can I fix it?";
     }
     
     return "What should I know about this algorithm and training process?";
+  };
+  
+  // Generate suggested follow-up prompts based on active tab
+  const getSuggestedPrompts = () => {
+    switch(activeTab) {
+      case 'automl':
+        return [
+          "What's the difference between the AutoML engines?",
+          "Should I use stratified sampling for this dataset?",
+          "What test size is optimal for my data?"
+        ];
+      case 'custom':
+        return [
+          "What hyperparameters should I tune for this algorithm?",
+          "How do I avoid overfitting with this model?",
+          "When should I use Random Forest vs XGBoost?"
+        ];
+      case 'results':
+        return [
+          "What do these evaluation metrics mean?",
+          "How can I improve my model's performance?",
+          "How do I interpret the confusion matrix?"
+        ];
+      case 'predict':
+        return [
+          "How accurate are these predictions likely to be?",
+          "What input values would make the prediction unreliable?",
+          "How do I prepare my CSV for batch prediction?"
+        ];
+      default:
+        return [
+          "Which algorithm is best for my dataset?",
+          "How do I improve model accuracy?",
+          "What metrics should I focus on?"
+        ];
+    }
   };
   
   return (
@@ -77,6 +234,7 @@ const TrainingInsights: React.FC = () => {
       contextData={contextData}
       sessionId="training_stage"
       collapsed={false}
+      suggestedPrompts={getSuggestedPrompts()}
     />
   );
 };
