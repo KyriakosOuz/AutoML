@@ -87,7 +87,8 @@ const MissingValueHandler: React.FC = () => {
     previewData,
     setPreviewData,
     previewColumns,
-    setPreviewColumns
+    setPreviewColumns,
+    setProcessingStage
   } = useDataset();
   
   const { toast } = useToast();
@@ -245,12 +246,15 @@ const MissingValueHandler: React.FC = () => {
       // Update context with consolidated state changes
       updateState(newState);
       
+      // Explicitly update the processing stage to ensure consistency
+      setProcessingStage('cleaned');
+      
       // Refresh the data preview with cleaned data
       await refreshDataPreview();
       
       toast({
         title: "Missing values processed",
-        description: `Successfully handled missing values using ${strategy} strategy.`,
+        description: `Successfully handled missing values using ${strategiesInfo[strategy].label} strategy. You can now view the cleaned data in the Data Preview section.`,
         duration: 3000,
       });
       
