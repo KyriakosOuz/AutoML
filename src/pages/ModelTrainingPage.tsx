@@ -8,15 +8,17 @@ import { Toaster } from '@/components/ui/toaster';
 
 const ModelTrainingPage: React.FC = () => {
   return (
-    <TrainingProvider>
-      <div className="flex flex-col min-h-screen">
-        <TrainingHeader />
-        <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
-          <ModelTrainingContent />
+    <DatasetProvider>
+      <TrainingProvider>
+        <div className="flex flex-col min-h-screen">
+          <TrainingHeader />
+          <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
+            <ModelTrainingContent />
+          </div>
+          <Toaster />
         </div>
-        <Toaster />
-      </div>
-    </TrainingProvider>
+      </TrainingProvider>
+    </DatasetProvider>
   );
 };
 
