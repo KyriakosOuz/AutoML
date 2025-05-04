@@ -6,6 +6,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
+  DialogHeader,
 } from '@/components/ui/dialog';
 import { MessageSquare, X } from 'lucide-react';
 import ChatPanel from './ChatPanel';
@@ -37,6 +39,9 @@ const FloatingChatButton: React.FC = () => {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] h-[600px] p-0 gap-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>AI Assistant Chat</DialogTitle>
+        </DialogHeader>
         <ChatPanel />
       </DialogContent>
     </Dialog>
