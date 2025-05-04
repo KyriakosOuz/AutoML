@@ -159,8 +159,7 @@ const PreprocessingOptions: React.FC = () => {
       const response = await datasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
-        balanceStrategy,
-        imputationStrategy // Add the imputation strategy
+        balanceStrategy
       );
       
       // CRITICAL FIX: Just update the processingStage to 'processed'
