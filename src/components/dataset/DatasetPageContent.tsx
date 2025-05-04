@@ -8,6 +8,7 @@ import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
 import { datasetApi } from '@/lib/api';
+import DatasetInsights from '@/components/ai-assistant/DatasetInsights';
 
 const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -111,6 +112,9 @@ const DatasetPageContent: React.FC = () => {
           targetColumn={targetColumn}
           columnsToKeep={columnsToKeep}
         />
+        
+        {/* Only show insights when dataset is loaded */}
+        {datasetId && <DatasetInsights />}
         
         <div className="space-y-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
