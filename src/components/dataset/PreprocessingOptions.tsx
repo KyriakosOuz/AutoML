@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -20,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, Info } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
@@ -32,7 +31,9 @@ const PreprocessingOptions: React.FC = () => {
     taskType,
     updateState,
     columnsToKeep,
-    overview
+    overview,
+    processingStage,
+    fileUrls
   } = useDataset();
   
   const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
@@ -40,19 +41,46 @@ const PreprocessingOptions: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
-  // Extract information about columns
-  const numericalFeatures = overview?.numerical_features || [];
+  // Extract information about columns with proper debug info
+  const numericalFeatures = useMemo(() => {
+    const features = overview?.numerical_features || [];
+    console.log('Numerical features from overview:', features);
+    setDebugInfo(prev => prev + `\nNumerical features: ${JSON.stringify(features)}`);
+    return features;
+  }, [overview?.numerical_features]);
 
+  // Add useEffect to debug when columnsToKeep changes
+  useEffect(() => {
+    console.log('columnsToKeep updated:', columnsToKeep);
+    setDebugInfo(prev => prev + `\nColumnsToKeep: ${JSON.stringify(columnsToKeep)}`);
+  }, [columnsToKeep]);
+
+  // Check if we have numerical features to normalize by comparing with columnsToKeep
   const hasNumericalToNormalize = useMemo(() => {
-    return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
+    // Convert arrays to sets for faster intersection calculation
+    const keepSet = new Set(columnsToKeep || []);
+    const numFeatures = Array.isArray(numericalFeatures) ? numericalFeatures : [];
+    
+    // Find intersection between columnsToKeep and numerical features
+    const hasNumerical = numFeatures.some(col => keepSet.has(col));
+    
+    console.log('Has numerical features to normalize:', {
+      keepSet: [...keepSet],
+      numFeatures,
+      hasNumerical
+    });
+    
+    setDebugInfo(prev => prev + `\nhasNumericalToNormalize: ${hasNumerical}`);
+    return hasNumerical;
   }, [columnsToKeep, numericalFeatures]);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
   const hasNumericalForSmote = useMemo(() => {
-    return columnsToKeep?.some(col => numericalFeatures.includes(col)) || false;
-  }, [columnsToKeep, numericalFeatures]);
+    return hasNumericalToNormalize;
+  }, [hasNumericalToNormalize]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -76,11 +104,19 @@ const PreprocessingOptions: React.FC = () => {
         balanceStrategy
       );
       
-      // CRITICAL FIX: Just update the processingStage to 'processed'
-      // This preserves all other state data and prevents tab navigation from breaking
-      updateState({
-        processingStage: 'processed'
-      });
+      // Handle file URLs from response
+      if (response.data?.file_urls) {
+        console.log('Preprocess response file_urls:', response.data.file_urls);
+        updateState({
+          fileUrls: response.data.file_urls,
+          processingStage: 'processed'
+        });
+      } else {
+        // If no file URLs, just update the processing stage
+        updateState({
+          processingStage: 'processed'
+        });
+      }
       
       // Extract message from the appropriate location in the response
       const responseData = response.data || response;
@@ -108,6 +144,23 @@ const PreprocessingOptions: React.FC = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Debug information - only visible during development */}
+        <details className="mb-4 p-2 bg-gray-50 text-xs border rounded">
+          <summary className="cursor-pointer font-medium">Debug Info</summary>
+          <div className="mt-2 whitespace-pre-wrap">
+            <p>processingStage: {processingStage}</p>
+            <p>hasNumericalToNormalize: {String(hasNumericalToNormalize)}</p>
+            <p>columnsToKeep: {JSON.stringify(columnsToKeep)}</p>
+            <p>numericalFeatures: {
+              Array.isArray(numericalFeatures) 
+                ? JSON.stringify(numericalFeatures) 
+                : String(numericalFeatures)
+            }</p>
+            <p>overview: {JSON.stringify(overview, null, 2)}</p>
+            {debugInfo}
+          </div>
+        </details>
+      
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />

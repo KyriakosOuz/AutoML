@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -21,9 +22,17 @@ export interface FeatureImportance {
   importance: number;
 }
 
+export interface FileUrls {
+  raw?: string;
+  cleaned?: string;
+  final?: string;
+  processed?: string;
+}
+
 export interface DatasetContextProps {
   datasetId: string | null;
   fileUrl: string | null;
+  fileUrls: FileUrls | null; // Added fileUrls object
   overview: DatasetOverview | null;
   previewData: Record<string, any>[] | null;
   previewColumns: string[] | null;
@@ -40,6 +49,7 @@ export interface DatasetContextProps {
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
+  setFileUrls: (urls: FileUrls | null) => void; // Added setter for fileUrls
   setOverview: (overview: DatasetOverview | null) => void;
   setPreviewData: (data: Record<string, any>[] | null) => void;
   setPreviewColumns: (columns: string[] | null) => void;
@@ -61,6 +71,7 @@ export interface DatasetContextProps {
 interface DatasetContextState {
   datasetId: string | null;
   fileUrl: string | null;
+  fileUrls: FileUrls | null; // Added fileUrls object
   overview: DatasetOverview | null;
   previewData: Record<string, any>[] | null;
   previewColumns: string[] | null;
@@ -81,6 +92,7 @@ const DatasetContext = createContext<DatasetContextProps | undefined>(undefined)
 const initialState: DatasetContextState = {
   datasetId: null,
   fileUrl: null,
+  fileUrls: null, // Initialize fileUrls
   overview: null,
   previewData: null,
   previewColumns: null,
@@ -124,7 +136,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Enhanced logic for processingStage management
   useEffect(() => {
-    const { datasetId, targetColumn, columnsToKeep, processingStage, overview } = state;
+    const { datasetId, targetColumn, columnsToKeep, processingStage, overview, fileUrls } = state;
     
     // Only explicitly update if certain logical conditions are met
     // Avoid unnecessary updates that might trigger unwanted redirects
@@ -148,7 +160,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.log('Advancing processing stage to final');
       setState(prev => ({ ...prev, processingStage: 'final' }));
     }
-  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage, state.overview]);
+  }, [state.datasetId, state.targetColumn, state.columnsToKeep, state.processingStage, state.overview, state.fileUrls]);
   
   // Individual setters - these will only update one property at a time
   const setDatasetId = (datasetId: string | null) => setState(prev => ({ 
@@ -159,18 +171,28 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   const setFileUrl = (fileUrl: string | null) => setState(prev => ({ ...prev, fileUrl }));
   
+  // Add setter for fileUrls
+  const setFileUrls = (fileUrls: FileUrls | null) => setState(prev => ({ ...prev, fileUrls }));
+  
   // Ensure overview is properly merged to preserve all fields including missing values information
   const setOverview = (overview: DatasetOverview | null) => {
     setState(prev => {
       if (overview) {
         console.log('Setting overview in context:', overview);
         // Ensure we're properly preserving all fields, especially total_missing_values
+        // and numerical_features/categorical_features
         return { 
           ...prev, 
           overview: {
             ...overview,
             total_missing_values: overview.total_missing_values || 0,
-            missing_values_count: overview.missing_values_count || {}
+            missing_values_count: overview.missing_values_count || {},
+            numerical_features: Array.isArray(overview.numerical_features) 
+              ? overview.numerical_features 
+              : (prev.overview?.numerical_features || []),
+            categorical_features: Array.isArray(overview.categorical_features)
+              ? overview.categorical_features
+              : (prev.overview?.categorical_features || [])
           }
         };
       }
@@ -224,7 +246,14 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
           ...newState.overview,
           // Ensure missing values information is preserved
           total_missing_values: newState.overview.total_missing_values ?? prev.overview.total_missing_values,
-          missing_values_count: newState.overview.missing_values_count ?? prev.overview.missing_values_count
+          missing_values_count: newState.overview.missing_values_count ?? prev.overview.missing_values_count,
+          // Ensure numerical and categorical features information is preserved
+          numerical_features: Array.isArray(newState.overview.numerical_features) 
+            ? newState.overview.numerical_features 
+            : prev.overview.numerical_features,
+          categorical_features: Array.isArray(newState.overview.categorical_features)
+            ? newState.overview.categorical_features
+            : prev.overview.categorical_features
         };
       }
       
@@ -236,6 +265,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     ...state,
     setDatasetId,
     setFileUrl,
+    setFileUrls,
     setOverview,
     setPreviewData,
     setPreviewColumns,
