@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -60,17 +61,10 @@ const strategiesInfo: Record<ImputationStrategy, StrategyInfo> = {
     description: 'Replace missing values with the most frequent value. Works for any column type.',
     isEnabled: () => true, // Always enabled
   },
-  /* Commenting out Hot Deck strategy as requested
   hot_deck: {
     label: 'Hot Deck',
     description: 'Find similar rows and copy values from the nearest non-missing neighbor. Works for both numerical and categorical.',
     isEnabled: ({ hasAnyMissingValues }) => hasAnyMissingValues,
-  },
-  */
-  hot_deck: {
-    label: 'Hot Deck (Currently Disabled)',
-    description: 'Find similar rows and copy values from the nearest non-missing neighbor. Works for both numerical and categorical. (Currently disabled)',
-    isEnabled: () => false, // Disabled
   },
   drop: {
     label: 'Drop',
@@ -381,22 +375,20 @@ const MissingValueHandler: React.FC = () => {
                               <SelectValue placeholder="Select strategy" />
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.entries(strategiesInfo)
-                                .filter(([key]) => key !== 'hot_deck')
-                                .map(([key, info]) => {
-                                  const isEnabled = info.isEnabled(strategyAvailability);
-                                  return (
-                                    <SelectItem 
-                                      key={key} 
-                                      value={key} 
-                                      disabled={!isEnabled}
-                                      className={!isEnabled ? "opacity-50" : ""}
-                                    >
-                                      {!isEnabled && <CircleSlash className="h-3.5 w-3.5 mr-1 text-muted-foreground inline" />}
-                                      {info.label}
-                                    </SelectItem>
-                                  );
-                                })}
+                              {Object.entries(strategiesInfo).map(([key, info]) => {
+                                const isEnabled = info.isEnabled(strategyAvailability);
+                                return (
+                                  <SelectItem 
+                                    key={key} 
+                                    value={key} 
+                                    disabled={!isEnabled}
+                                    className={!isEnabled ? "opacity-50" : ""}
+                                  >
+                                    {!isEnabled && <CircleSlash className="h-3.5 w-3.5 mr-1 text-muted-foreground inline" />}
+                                    {info.label}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
