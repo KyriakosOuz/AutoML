@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -106,6 +105,40 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
         if (overview.total_missing_values) {
           context += `Dataset has ${overview.total_missing_values} missing values. `;
         }
+        
+        // Add more detailed dataset information
+        if (overview.numerical_features) {
+          context += `Numerical features: ${overview.numerical_features.join(', ')}. `;
+        }
+        
+        if (overview.categorical_features) {
+          context += `Categorical features: ${overview.categorical_features.join(', ')}. `;
+        }
+        
+        // Add information about data types and unique values
+        if (overview.data_types) {
+          context += `Data types: ${JSON.stringify(overview.data_types)}. `;
+        }
+        
+        if (overview.unique_values_count) {
+          // Find columns with few unique values (potential categorical)
+          const categoricalCandidates = Object.entries(overview.unique_values_count)
+            .filter(([_, count]) => count < 10 && count > 1)
+            .map(([col]) => col);
+            
+          if (categoricalCandidates.length > 0) {
+            context += `Columns with few unique values: ${categoricalCandidates.join(', ')}. `;
+          }
+        }
+      }
+      
+      // Add information about processing stages
+      if (processingStage === 'raw') {
+        context += `Dataset is in raw state and needs preprocessing. `;
+      } else if (processingStage === 'cleaned') {
+        context += `Dataset has been cleaned but features need to be selected. `;
+      } else if (processingStage === 'final') {
+        context += `Dataset is preprocessed and ready for training. `;
       }
     } else {
       context += `No dataset uploaded yet. `;
@@ -115,6 +148,32 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
   // Add training context if on training page
   else if (pathname.includes('/training')) {
     context += `Current view: Model training. `;
+    
+    // Try to get training context
+    try {
+      // Only use if we're on the training route
+      const { useTraining } = require('@/contexts/training/TrainingContext');
+      const trainingContext = useTraining();
+      
+      if (trainingContext) {
+        const { experimentId, selectedAlgorithm, taskType, status, hyperParameters, metrics } = trainingContext;
+        
+        if (experimentId) context += `Experiment ID: ${experimentId}. `;
+        if (selectedAlgorithm) context += `Selected algorithm: ${selectedAlgorithm}. `;
+        if (taskType) context += `Task type: ${taskType}. `;
+        if (status) context += `Training status: ${status}. `;
+        
+        if (hyperParameters) {
+          context += `Hyperparameters: ${JSON.stringify(hyperParameters)}. `;
+        }
+        
+        if (metrics) {
+          context += `Training metrics: ${JSON.stringify(metrics)}. `;
+        }
+      }
+    } catch (error) {
+      console.log('Training context not available');
+    }
   }
   
   // Add dashboard context if on dashboard page
@@ -131,7 +190,7 @@ const generateContext = (pathname: string, datasetContext: any | null, userId: s
   return context;
 };
 
-// Suggested prompts based on the current route
+// Enhanced suggested prompts based on the current route and context
 const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | null): string[] => {
   if (pathname.includes('/dataset')) {
     if (!datasetContext || !datasetContext.datasetId) {
@@ -150,6 +209,24 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
       ];
     }
     
+    if (datasetContext.processingStage === 'cleaned') {
+      return [
+        "Which features are most important for my model?",
+        "Should I normalize my numerical features?",
+        "How do I encode categorical variables?",
+        "What's the difference between one-hot and label encoding?",
+      ];
+    }
+    
+    if (datasetContext.processingStage === 'final') {
+      return [
+        "What algorithm would work best for this dataset?",
+        "How should I split my data for training?",
+        "What hyperparameters should I tune first?",
+        "Should I use cross-validation?",
+      ];
+    }
+    
     return [
       "Which features are most important for my model?",
       "Should I scale my numerical features?",
@@ -163,6 +240,7 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
       "How do I interpret these model metrics?",
       "What are hyperparameters and how do I tune them?",
       "How do I prevent overfitting?",
+      "What's the difference between classification and regression?",
     ];
   }
   
@@ -171,6 +249,7 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
       "How do I compare multiple experiments?",
       "What metrics should I focus on for my use case?",
       "How do I interpret the experiment results?",
+      "Which of my models performed the best?",
     ];
   }
   
@@ -180,6 +259,7 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
       "How can I improve this model?",
       "What does this confusion matrix mean?",
       "How do I make predictions with this model?",
+      "Is this model overfitting or underfitting?",
     ];
   }
   
@@ -187,6 +267,7 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
     "What can this AutoML platform do?",
     "How do I get started with machine learning?",
     "What's the difference between classification and regression?",
+    "How do I upload and prepare my dataset?",
   ];
 };
 
@@ -273,7 +354,7 @@ export const AIAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Close the chat panel
   const closeChat = () => setIsChatOpen(false);
   
-  // Get reply content from potentially different API response formats
+  // Extract the getReplyContent function to handle different API response formats
   const extractReplyFromResponse = (response: any): string => {
     // Log the response structure for debugging
     console.log('[AI Assistant] Response structure:', JSON.stringify(response));
