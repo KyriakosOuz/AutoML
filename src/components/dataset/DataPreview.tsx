@@ -208,33 +208,21 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
         const currentMissingValuesCount = overview?.missing_values_count;
         
         // Create detailed overview with proper numerical_features handling
-        const overviewData = {
+        const overviewData: DatasetOverview = {
           num_rows: responseData.num_rows,
           num_columns: responseData.num_columns,
           missing_values: responseData.missing_values || {},
           total_missing_values: responseData.total_missing_values ?? currentMissingValues,
           missing_values_count: responseData.missing_values_count ?? currentMissingValuesCount,
           column_names: responseData.column_names || previewCols,
+          // Add these required properties to fix the TypeScript errors
+          numerical_features: Array.isArray(responseData.numerical_features) 
+            ? responseData.numerical_features 
+            : (overview?.numerical_features || []),
+          categorical_features: Array.isArray(responseData.categorical_features)
+            ? responseData.categorical_features
+            : (overview?.categorical_features || [])
         };
-        
-        // Handle numerical_features correctly - ensure we preserve as array
-        if (Array.isArray(responseData.numerical_features)) {
-          overviewData.numerical_features = responseData.numerical_features;
-          console.log('Setting numerical_features from response:', responseData.numerical_features);
-        } else if (responseData.numerical_features !== undefined) {
-          // Handle as count if it's a number
-          console.log('Received numerical_features as count:', responseData.numerical_features);
-          overviewData.numerical_features = overview?.numerical_features || [];
-        }
-        
-        // Handle categorical_features correctly - ensure we preserve as array
-        if (Array.isArray(responseData.categorical_features)) {
-          overviewData.categorical_features = responseData.categorical_features;
-          console.log('Setting categorical_features from response:', responseData.categorical_features);
-        } else if (responseData.categorical_features !== undefined) {
-          console.log('Received categorical_features as count:', responseData.categorical_features);
-          overviewData.categorical_features = overview?.categorical_features || [];
-        }
         
         console.log('DataPreview - Setting overview with:', overviewData);
         setOverview(overviewData);

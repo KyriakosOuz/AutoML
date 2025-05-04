@@ -36,13 +36,6 @@ const PreprocessingOptions: React.FC = () => {
     fileUrls
   } = useDataset();
   
-  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
-  const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-
   // Extract information about columns with proper debug info
   const numericalFeatures = useMemo(() => {
     const features = overview?.numerical_features || [];
@@ -50,12 +43,6 @@ const PreprocessingOptions: React.FC = () => {
     setDebugInfo(prev => prev + `\nNumerical features: ${JSON.stringify(features)}`);
     return features;
   }, [overview?.numerical_features]);
-
-  // Add useEffect to debug when columnsToKeep changes
-  useEffect(() => {
-    console.log('columnsToKeep updated:', columnsToKeep);
-    setDebugInfo(prev => prev + `\nColumnsToKeep: ${JSON.stringify(columnsToKeep)}`);
-  }, [columnsToKeep]);
 
   // Check if we have numerical features to normalize by comparing with columnsToKeep
   const hasNumericalToNormalize = useMemo(() => {
@@ -75,6 +62,32 @@ const PreprocessingOptions: React.FC = () => {
     setDebugInfo(prev => prev + `\nhasNumericalToNormalize: ${hasNumerical}`);
     return hasNumerical;
   }, [columnsToKeep, numericalFeatures]);
+
+  // Set initial normalization method based on numerical features availability
+  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>(
+    hasNumericalToNormalize ? 'minmax' : 'skip'
+  );
+  
+  const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
+
+  // Add useEffect to update normalization method if numerical features availability changes
+  useEffect(() => {
+    // If no numerical features are available, set normalization method to 'skip'
+    if (!hasNumericalToNormalize && normalizationMethod !== 'skip') {
+      console.log('No numerical features to normalize, setting method to skip');
+      setNormalizationMethod('skip');
+    }
+  }, [hasNumericalToNormalize, normalizationMethod]);
+
+  // Add useEffect to debug when columnsToKeep changes
+  useEffect(() => {
+    console.log('columnsToKeep updated:', columnsToKeep);
+    setDebugInfo(prev => prev + `\nColumnsToKeep: ${JSON.stringify(columnsToKeep)}`);
+  }, [columnsToKeep]);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
