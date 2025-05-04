@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
 import { 
@@ -33,13 +32,6 @@ import { useToast } from '@/hooks/use-toast';
 
 type ImputationStrategy = 'mean' | 'median' | 'mode' | 'hot_deck' | 'drop' | 'skip';
 
-interface StrategyOption {
-  value: ImputationStrategy;
-  label: string;
-  description: string;
-  enableCondition: (hasNumerical: boolean, hasCategorical: boolean) => boolean;
-}
-
 const MissingValueHandler: React.FC = () => {
   const [strategy, setStrategy] = useState<ImputationStrategy>('mode');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,69 +49,9 @@ const MissingValueHandler: React.FC = () => {
     setPreviewColumns
   } = useDataset();
 
-  // Debug log to check the overview data
-  useEffect(() => {
-    if (overview) {
-      console.log('MissingValueHandler - Overview data:', overview);
-      console.log('Total missing values:', overview.total_missing_values);
-      console.log('Missing values count:', overview.missing_values_count);
-    }
-  }, [overview]);
+  // Detect if there are missing values
+  const hasMissingValues = overview?.total_missing_values ? overview.total_missing_values > 0 : false;
   
-  // Detect if there are missing values, ensure we're not using a falsy check since 0 is valid
-  const hasMissingValues = overview?.total_missing_values !== undefined ? overview.total_missing_values > 0 : false;
-  
-  // Determine if we have numerical or categorical columns
-  const hasNumericalColumns = overview?.numerical_features?.length > 0;
-  const hasCategoricalColumns = overview?.categorical_features?.length > 0;
-
-  // Define available strategies with their conditions
-  const strategies: StrategyOption[] = useMemo(() => [
-    {
-      value: 'mean',
-      label: 'Mean Imputation',
-      description: 'Fill missing numerical values with the column\'s average',
-      enableCondition: (hasNumerical) => hasNumerical
-    },
-    {
-      value: 'median',
-      label: 'Median Imputation',
-      description: 'Fill missing numerical values with the column\'s median',
-      enableCondition: (hasNumerical) => hasNumerical
-    },
-    {
-      value: 'mode',
-      label: 'Mode Imputation',
-      description: 'Fill missing values with the most frequent value (works for all types)',
-      enableCondition: () => true
-    },
-    {
-      value: 'hot_deck',
-      label: 'Hot Deck Imputation',
-      description: 'Fill using values from nearest complete row based on feature similarity',
-      enableCondition: () => true
-    },
-    {
-      value: 'drop',
-      label: 'Drop Rows',
-      description: 'Remove any row that contains at least one missing value',
-      enableCondition: () => true
-    },
-    {
-      value: 'skip',
-      label: 'Skip Imputation',
-      description: 'Do nothing now, proceed with missing values untouched',
-      enableCondition: () => true
-    }
-  ], []);
-
-  // Filter available strategies based on dataset characteristics
-  const availableStrategies = useMemo(() => 
-    strategies.filter(strategy => 
-      strategy.enableCondition(hasNumericalColumns, hasCategoricalColumns)
-    ),
-  [strategies, hasNumericalColumns, hasCategoricalColumns]);
-
   // Show which columns have missing values
   const missingValueColumns = overview?.missing_values_count ? 
     Object.entries(overview.missing_values_count)
@@ -223,31 +155,9 @@ const MissingValueHandler: React.FC = () => {
     }
   };
 
-  const getStageStatus = (dataset: any, stage: 'raw' | 'cleaned' | 'final' | 'processed') => {
-    const stageMap = {
-      raw: dataset.has_raw,
-      cleaned: dataset.has_cleaned,
-      final: dataset.has_final,
-      processed: dataset.has_processed
-    };
-
-    return stageMap[stage];
-  };
-
   if (!datasetId || !overview) {
     return null;
   }
-
-  // Check if the current strategy is valid based on the dataset characteristics
-  const isCurrentStrategyValid = availableStrategies.some(s => s.value === strategy);
-  
-  // If current strategy is not valid, reset to a valid one
-  if (!isCurrentStrategyValid && availableStrategies.length > 0) {
-    setStrategy(availableStrategies[0].value);
-  }
-
-  console.log('MissingValueHandler render - hasMissingValues:', hasMissingValues);
-  console.log('MissingValueHandler render - missingValueColumns:', missingValueColumns);
 
   return (
     <Card className="w-full mt-6 overflow-hidden border border-gray-100 shadow-md rounded-xl">
@@ -344,24 +254,24 @@ const MissingValueHandler: React.FC = () => {
                       <SelectValue placeholder="Select strategy" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableStrategies.map((strategyOption) => (
-                        <SelectItem 
-                          key={strategyOption.value} 
-                          value={strategyOption.value}
-                          disabled={!strategyOption.enableCondition(hasNumericalColumns, hasCategoricalColumns)}
-                        >
-                          {strategyOption.label}
-                          {!strategyOption.enableCondition(hasNumericalColumns, hasCategoricalColumns) && 
-                            " (Not applicable for this dataset)"}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="mean">Mean (for numerical values)</SelectItem>
+                      <SelectItem value="median">Median (for numerical values)</SelectItem>
+                      <SelectItem value="mode">Mode (most frequent value)</SelectItem>
+                      <SelectItem value="hot_deck">Hot Deck (random sampling)</SelectItem>
+                      <SelectItem value="drop">Drop rows with missing values</SelectItem>
+                      <SelectItem value="skip">Skip (keep missing values)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="bg-white p-3 rounded-md border border-gray-200">
                   <h5 className="text-xs font-medium text-gray-700 mb-1">Strategy Description</h5>
                   <p className="text-xs text-gray-600">
-                    {availableStrategies.find(s => s.value === strategy)?.description}
+                    {strategy === 'mean' && 'Replace missing values with the mean (average) of each column. Only works with numerical data.'}
+                    {strategy === 'median' && 'Replace missing values with the median (middle value) of each column. Only works with numerical data.'}
+                    {strategy === 'mode' && 'Replace missing values with the most frequent value in each column. Works with both numerical and categorical data.'}
+                    {strategy === 'hot_deck' && 'Replace missing values with randomly selected values from the same column. Maintains the natural distribution of data.'}
+                    {strategy === 'drop' && 'Remove all rows that contain any missing values. This may significantly reduce your dataset size.'}
+                    {strategy === 'skip' && 'Keep missing values as they are. Some machine learning algorithms cannot handle missing values.'}
                   </p>
                 </div>
               </div>

@@ -107,9 +107,6 @@ const ExperimentsTab: React.FC = () => {
   
   const { toast } = useToast();
 
-  // Define the maximum number of experiments that can be selected for comparison
-  const MAX_EXPERIMENTS_FOR_COMPARISON = 4;
-
   useEffect(() => {
     fetchExperiments();
     
@@ -179,7 +176,6 @@ const ExperimentsTab: React.FC = () => {
 
   const handleAddToComparison = (experimentId: string) => {
     setSelectedExperiments(prev => {
-      // If already selected, remove it
       if (prev.includes(experimentId)) {
         const newSelected = prev.filter(id => id !== experimentId);
         toast({
@@ -187,16 +183,6 @@ const ExperimentsTab: React.FC = () => {
           description: "Experiment removed from comparison list",
         });
         return newSelected;
-      }
-      
-      // Check if we've hit the maximum allowed experiments for comparison
-      if (prev.length >= MAX_EXPERIMENTS_FOR_COMPARISON) {
-        toast({
-          title: "Limit Reached",
-          description: `You can only compare up to ${MAX_EXPERIMENTS_FOR_COMPARISON} experiments at a time.`,
-          variant: "destructive",
-        });
-        return prev;
       }
       
       toast({
@@ -366,16 +352,6 @@ const ExperimentsTab: React.FC = () => {
 
   const isCompareButtonEnabled = () => {
     return trainingMethod !== 'all' && selectedExperiments.length >= 2;
-  };
-  
-  // Check if an experiment should have its comparison button disabled
-  const isComparisonButtonDisabled = (experimentId: string) => {
-    // If the experiment is already selected, it should always be enabled (to allow deselection)
-    if (selectedExperiments.includes(experimentId)) {
-      return false;
-    }
-    // Disable if we've reached the maximum number of experiments
-    return selectedExperiments.length >= MAX_EXPERIMENTS_FOR_COMPARISON;
   };
 
   const FilterButtons = () => (
@@ -577,8 +553,6 @@ const ExperimentsTab: React.FC = () => {
               <TableBody>
                 {experiments.map((experiment) => {
                   const isRegression = experiment.task_type === 'regression';
-                  const isDisabled = isComparisonButtonDisabled(experiment.id);
-                  
                   return (
                     <TableRow key={experiment.id}>
                       <TableCell>{experiment.experiment_name}</TableCell>
@@ -617,8 +591,6 @@ const ExperimentsTab: React.FC = () => {
                             variant={selectedExperiments.includes(experiment.id) ? "default" : "outline"}
                             size="sm"
                             onClick={() => handleAddToComparison(experiment.id)}
-                            disabled={isDisabled}
-                            className={isDisabled && !selectedExperiments.includes(experiment.id) ? "opacity-50" : ""}
                           >
                             {selectedExperiments.includes(experiment.id) ? (
                               <Check className="h-4 w-4" />
