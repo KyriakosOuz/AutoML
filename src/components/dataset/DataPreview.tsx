@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -76,23 +75,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ highlightTargetColumn }) => {
     if (checkStage === 'raw' || checkStage === 'latest') return true;
     
     if (checkStage === 'cleaned') {
-      // MODIFIED: Only show cleaned stage for datasets with missing values that have been processed
-      // For datasets without missing values, even if they're auto-processed, don't show cleaned stage
-      if (hasMissingValues) {
-        // For datasets WITH missing values, require explicit button click
-        return (
-          processingButtonClicked && 
-          (
-            processingStage === 'cleaned' || 
-            processingStage === 'final' || 
-            processingStage === 'processed'
-          )
-        );
-      } else {
-        // For datasets WITHOUT missing values, even if processingStage is advanced, 
-        // don't show the cleaned stage - they can go directly to final
-        return false;
-      }
+      const cleanedStages = ['cleaned', 'final', 'processed'];
+      return (
+        typeof overview?.total_missing_values === 'number' &&
+        overview.total_missing_values > 0 &&
+        cleanedStages.includes(processingStage || '')
+      );
     }
     
     if (checkStage === 'final') {
