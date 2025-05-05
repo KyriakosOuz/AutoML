@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
-import CustomTrainingResults from './CustomTrainingResults';
+// import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
 
@@ -420,10 +420,11 @@ const CustomTraining: React.FC = () => {
       )}
 
       {experimentResults && (
-        <CustomTrainingResults 
-          experimentResults={experimentResults} 
-          onReset={resetExperiment}
-        />
+        <Alert>
+          <AlertDescription>
+            Results view is temporarily unavailable.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
