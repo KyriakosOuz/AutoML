@@ -813,3 +813,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
+
+function isVisualizationFile(type: string) {
+  // Remove duplicate function at the bottom since we already have it defined above
+  return !type.includes('model') && !type.includes('report') && !type.includes('encoder') && !type.includes('pipeline');
+}
