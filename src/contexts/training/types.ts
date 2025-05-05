@@ -9,7 +9,8 @@ import {
   ExperimentStatusResponse 
 } from '@/types/training';
 
-export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed' | 'success';
+// Update the experiment status type to include 'success' explicitly
+export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 export interface TrainingContextState {
   isTraining: boolean;
@@ -29,6 +30,7 @@ export interface TrainingContextState {
   stratify: boolean;
   randomSeed: number;
   activeTab: string;
+  isCheckingLastExperiment: boolean;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -54,4 +56,5 @@ export interface TrainingContextValue extends TrainingContextState {
   setExperimentStatus: (status: ExperimentStatus) => void;
   setStatusResponse: (response: ExperimentStatusResponse | null) => void;
   setActiveTab: (tab: string) => void;
+  checkLastExperiment: () => Promise<void>;
 }

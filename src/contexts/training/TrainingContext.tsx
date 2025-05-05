@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -6,6 +5,7 @@ import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
 import { TrainingContextValue, TrainingContextState, ExperimentStatus } from './types';
 import { EXPERIMENT_STORAGE_KEY, EXPERIMENT_TYPE_STORAGE_KEY, defaultAutomlParameters, defaultCustomParameters } from './constants';
 import { useExperimentPolling } from './useExperimentPolling';
+import { checkStatus } from '@/lib/training';
 
 const TrainingContext = createContext<TrainingContextValue | undefined>(undefined);
 
@@ -22,32 +22,183 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeExperimentId: null,
     experimentResults: null,
     isLoadingResults: false,
-    experimentStatus: 'processing',
+    experimentStatus: 'idle', // Changed from 'processing' to 'idle'
     statusResponse: null,
     automlEngine: defaultAutomlParameters.automlEngine,
     testSize: defaultAutomlParameters.testSize,
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
+    isCheckingLastExperiment: false,
   });
 
+  // Enhanced experiment restoration with improved logging and error handling
   useEffect(() => {
+    const restoreExperiment = async () => {
+      try {
+        const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
+        const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
+        
+        if (savedExperimentId) {
+          console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
+          
+          // First update state with basic info we have from storage
+          setState(prev => ({
+            ...prev,
+            activeExperimentId: savedExperimentId,
+            lastTrainingType: savedTrainingType,
+            experimentStatus: 'processing', // Start with processing status until we know more
+            isLoadingResults: true
+          }));
+          
+          // Then check the actual experiment status from the API
+          try {
+            console.log("[TrainingContext] Checking status of restored experiment");
+            const statusResponse = await checkStatus(savedExperimentId);
+            const status = statusResponse.data;
+            console.log("[TrainingContext] Retrieved status for restored experiment:", status);
+            
+            // Map backend status to our internal status type
+            let mappedStatus: ExperimentStatus = status.status as ExperimentStatus;
+            
+            // If backend returns 'success', map it to our 'completed' status
+            if (mappedStatus === 'success' || mappedStatus === 'completed') {
+              mappedStatus = 'completed';
+            }
+            
+            // Update with the actual status
+            setState(prev => ({
+              ...prev,
+              experimentStatus: mappedStatus,
+              statusResponse: status,
+              isLoadingResults: false,
+              // If experiment is still running or processing, we want to set isTraining to true
+              isTraining: ['running', 'processing'].includes(mappedStatus)
+            }));
+            
+            // If the experiment is still in progress, restart polling
+            if (['running', 'processing'].includes(mappedStatus)) {
+              console.log("[TrainingContext] Experiment still in progress, restarting polling");
+              startPolling(savedExperimentId);
+            } 
+            // If it's completed, fetch results
+            else if (mappedStatus === 'completed') {
+              console.log("[TrainingContext] Experiment completed, fetching results");
+              getExperimentResults();
+            }
+          } catch (error) {
+            console.error("[TrainingContext] Error checking status of restored experiment:", error);
+            // If there's an error checking status, assume it's completed to prevent blocking the UI
+            setState(prev => ({
+              ...prev,
+              experimentStatus: 'completed',
+              isLoadingResults: false
+            }));
+            
+            // Show toast to inform user
+            toast({
+              title: "Error checking experiment status",
+              description: "Could not verify the current experiment status. Showing cached data instead.",
+              variant: "destructive"
+            });
+          }
+        }
+      } catch (error) {
+        console.error("[TrainingContext] Error restoring experiment from localStorage:", error);
+      }
+    };
+    
+    restoreExperiment();
+  }, []);
+
+  // New method to check for the most recent experiment
+  const checkLastExperiment = async () => {
+    // Skip if we already have an active experiment or are already checking
+    if (state.activeExperimentId || state.isCheckingLastExperiment) {
+      console.log("[TrainingContext] Already have an active experiment or checking, skipping last experiment lookup");
+      return;
+    }
+
     try {
-      const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
-      const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
+      console.log("[TrainingContext] Checking for most recent experiment");
       
-      if (savedExperimentId) {
-        console.log("Restored experiment ID from storage:", savedExperimentId);
-        setState(prev => ({
-          ...prev,
-          activeExperimentId: savedExperimentId,
-          lastTrainingType: savedTrainingType
-        }));
+      setState(prev => ({
+        ...prev,
+        isCheckingLastExperiment: true
+      }));
+      
+      // Get the latest experiment from the API
+      const latestExperiment = await trainingApi.getLastExperiment();
+      
+      if (!latestExperiment) {
+        console.log("[TrainingContext] No recent experiments found");
+        setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
+        return;
+      }
+      
+      console.log("[TrainingContext] Found recent experiment:", latestExperiment);
+      
+      // Update state with the latest experiment
+      const experimentId = latestExperiment.id;
+      
+      // First update with basic info
+      setState(prev => ({
+        ...prev,
+        activeExperimentId: experimentId,
+        experimentStatus: 'processing',
+        lastTrainingType: latestExperiment.automl_engine ? 'automl' : 'custom',
+        isLoadingResults: true
+      }));
+      
+      // Save to localStorage for persistence between page refreshes
+      localStorage.setItem(EXPERIMENT_STORAGE_KEY, experimentId);
+      localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, latestExperiment.automl_engine ? 'automl' : 'custom');
+      
+      // Then check the actual status
+      const statusResponse = await checkStatus(experimentId);
+      const status = statusResponse.data;
+      
+      // Map backend status to our internal status type
+      let mappedStatus: ExperimentStatus = status.status as ExperimentStatus;
+      
+      // If backend returns 'success', map it to our 'completed' status
+      if (mappedStatus === 'success' || mappedStatus === 'completed') {
+        mappedStatus = 'completed';
+      }
+      
+      // Update with the actual status
+      setState(prev => ({
+        ...prev,
+        experimentStatus: mappedStatus,
+        statusResponse: status,
+        isLoadingResults: false,
+        isCheckingLastExperiment: false,
+        // If experiment is still running, we want to set isTraining to true
+        isTraining: ['running', 'processing'].includes(mappedStatus)
+      }));
+      
+      // If has results and is completed, fetch them right away
+      if (status.hasTrainingResults && mappedStatus === 'completed') {
+        console.log("[TrainingContext] Latest experiment has results, fetching them");
+        getExperimentResults();
+      }
+      
+      // If still running, start polling
+      if (['running', 'processing'].includes(mappedStatus)) {
+        console.log("[TrainingContext] Latest experiment still in progress, starting polling");
+        startPolling(experimentId);
+        
+        // Show toast to inform user
+        toast({
+          title: "Experiment in progress",
+          description: "We found an experiment in progress and resumed monitoring it for you.",
+        });
       }
     } catch (error) {
-      console.error("Error loading experiment data from localStorage:", error);
+      console.error("[TrainingContext] Error checking for most recent experiment:", error);
+      setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
     }
-  }, []);
+  };
 
   useEffect(() => {
     try {
@@ -83,13 +234,21 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         status: 'completed',
         hasTrainingResults: true
       },
-      experimentStatus: 'completed'
+      experimentStatus: 'completed',
+      isTraining: false // Make sure to set isTraining to false when completed
     }));
     
     toast({
       title: "Training Complete",
       description: "Your model has finished training successfully!"
     });
+    
+    // Automatically fetch results when training completes
+    try {
+      getExperimentResults();
+    } catch (error) {
+      console.error("[TrainingContext] Error fetching results after successful training:", error);
+    }
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
@@ -102,7 +261,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         status: 'failed',
         hasTrainingResults: false,
         error_message: error
-      }
+      },
+      experimentStatus: 'failed'
     }));
     
     toast({
@@ -137,12 +297,20 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       if (results) {
         console.log("[TrainingContext] Successfully fetched experiment results");
+        
+        // Handle 'success' status from API by mapping it to 'completed'
+        let resultStatus = results.status;
+        if (resultStatus === 'success') {
+          resultStatus = 'completed';
+        }
+        
         setState(prev => ({ 
           ...prev, 
           experimentResults: results, 
           isLoadingResults: false, 
           error: null,
-          experimentStatus: results.status || 'completed'
+          experimentStatus: resultStatus as ExperimentStatus,
+          isTraining: false // Make sure to set isTraining to false when results are retrieved
         }));
       } else {
         console.log("[TrainingContext] No results returned from API");
@@ -154,7 +322,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           ? error.message
           : 'Failed to fetch experiment results';
       console.error("[TrainingContext] Error fetching results:", errorMessage);
-      setState(prev => ({ ...prev, error: errorMessage, isLoadingResults: false }));
+      setState(prev => ({ 
+        ...prev, 
+        error: errorMessage, 
+        isLoadingResults: false,
+        experimentStatus: 'failed',
+        isTraining: false
+      }));
       toast({
         title: "Error Fetching Results",
         description: errorMessage,
@@ -182,6 +356,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
+    checkLastExperiment,
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -194,16 +369,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         activeExperimentId: null,
         experimentResults: null,
         isLoadingResults: false,
-        experimentStatus: 'processing',
+        experimentStatus: 'idle',
         statusResponse: null,
         automlEngine: defaultAutomlParameters.automlEngine,
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
+        isCheckingLastExperiment: false,
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+      stopPolling(); // Make sure to stop any active polling
     },
     clearExperimentResults: () => {
       setState(prev => ({
@@ -214,6 +391,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+      stopPolling(); // Make sure to stop any active polling
     },
     getExperimentResults,
     startPolling,
