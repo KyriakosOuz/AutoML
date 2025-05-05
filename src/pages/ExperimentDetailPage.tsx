@@ -6,8 +6,8 @@ import { ExperimentResults } from '@/types/training';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
 import { getExperimentResults } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-// import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
-// import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
+import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
+import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
 import { DatasetProvider } from '@/contexts/DatasetContext';
 
 const ExperimentDetailPage: React.FC = () => {
@@ -36,7 +36,7 @@ const ExperimentDetailPage: React.FC = () => {
   
   return (
     <DatasetProvider>
-      {/* <AssistantInsightsProvider> */}
+      <AssistantInsightsProvider>
         <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
           <h1 className="text-xl sm:text-2xl font-bold mb-6">Experiment Details</h1>
           
@@ -45,9 +45,9 @@ const ExperimentDetailPage: React.FC = () => {
             status={status}
           />
           
-          {/* <ExperimentSidePanel /> */}
+          <ExperimentSidePanel />
         </div>
-      {/* </AssistantInsightsProvider> */}
+      </AssistantInsightsProvider>
     </DatasetProvider>
   );
 };

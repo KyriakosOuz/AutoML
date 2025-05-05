@@ -5,8 +5,8 @@ import { TrainingProvider, useTraining } from '@/contexts/training/TrainingConte
 import ModelTrainingContent from '@/components/training/ModelTrainingContent';
 import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
-// import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
-// import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
+import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
+import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
 
 // Create a separate component that uses the context
 const TrainingPageContent: React.FC = () => {
@@ -24,7 +24,7 @@ const TrainingPageContent: React.FC = () => {
       <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
         <ModelTrainingContent />
       </div>
-      {/* <TrainingSidePanel /> */}
+      <TrainingSidePanel />
     </div>
   );
 };
@@ -34,10 +34,10 @@ const ModelTrainingPage: React.FC = () => {
   return (
     <DatasetProvider>
       <TrainingProvider>
-        {/* <AssistantInsightsProvider> */}
+        <AssistantInsightsProvider>
           <TrainingPageContent />
           <Toaster />
-        {/* </AssistantInsightsProvider> */}
+        </AssistantInsightsProvider>
       </TrainingProvider>
     </DatasetProvider>
   );
