@@ -16,11 +16,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
+// The CustomTrainingResults import is still needed for TypeScript
 import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
 
 const CustomTraining: React.FC = () => {
+  
   const { datasetId, taskType: datasetTaskType, targetColumn } = useDataset();
   const {
     isTraining,
@@ -34,7 +36,8 @@ const CustomTraining: React.FC = () => {
     setActiveExperimentId,
     experimentResults,
     isLoadingResults,
-    startPolling
+    startPolling,
+    activeTab
   } = useTraining();
   
   const { toast } = useToast();
@@ -412,6 +415,8 @@ const CustomTraining: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Commented out the results section to avoid duplication with the Results tab */}
+      {/*
       {isLoadingResults && (
         <div className="p-8 text-center">
           <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
@@ -425,6 +430,7 @@ const CustomTraining: React.FC = () => {
           onReset={resetExperiment}
         />
       )}
+      */}
     </div>
   );
 };
