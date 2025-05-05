@@ -14,6 +14,7 @@ const ModelTrainingPageContent: React.FC = () => {
   useEffect(() => {
     console.log("[ModelTrainingPage] Component mounted, checking for most recent experiment");
     checkLastExperiment();
+    // Add empty dependency array to ensure this only runs once on mount
   }, [checkLastExperiment]);
   
   return (
@@ -31,7 +32,9 @@ const ModelTrainingPageContent: React.FC = () => {
 // Wrapper component that provides the TrainingProvider context
 const ModelTrainingPage: React.FC = () => {
   return (
-    <ModelTrainingPageContent />
+    <TrainingProvider>
+      <ModelTrainingPageContent />
+    </TrainingProvider>
   );
 };
 
