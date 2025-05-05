@@ -61,7 +61,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             let mappedStatus: ExperimentStatus = status.status as ExperimentStatus;
             
             // If backend returns 'success', map it to our 'completed' status
-            if (mappedStatus === 'success') {
+            if (mappedStatus === 'success' || mappedStatus === 'completed') {
               mappedStatus = 'completed';
             }
             
@@ -81,7 +81,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
               startPolling(savedExperimentId);
             } 
             // If it's completed, fetch results
-            else if (mappedStatus === 'completed' || mappedStatus === 'success') {
+            else if (mappedStatus === 'completed') {
               console.log("[TrainingContext] Experiment completed, fetching results");
               getExperimentResults();
             }
@@ -207,12 +207,19 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       if (results) {
         console.log("[TrainingContext] Successfully fetched experiment results");
+        
+        // Handle 'success' status from API by mapping it to 'completed'
+        let resultStatus = results.status;
+        if (resultStatus === 'success') {
+          resultStatus = 'completed';
+        }
+        
         setState(prev => ({ 
           ...prev, 
           experimentResults: results, 
           isLoadingResults: false, 
           error: null,
-          experimentStatus: results.status || 'completed',
+          experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false // Make sure to set isTraining to false when results are retrieved
         }));
       } else {
