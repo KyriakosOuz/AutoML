@@ -137,16 +137,7 @@ const formatValue = (value: number | undefined) => {
   return value >= 0 && value <= 1 ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
 };
 
-// Updated function to identify visualization files - exclude model files
 const isVisualizationFile = (fileType: string) => {
-  // Exclude model files from visualizations
-  if (fileType.toLowerCase().includes('model') || 
-      fileType.toLowerCase().includes('encoder') ||
-      fileType.toLowerCase().includes('pipeline') ||
-      fileType.toLowerCase() === 'pickle') {
-    return false;
-  }
-  
   const visualTypes = [
     'distribution', 
     'shap', 
@@ -161,14 +152,6 @@ const isVisualizationFile = (fileType: string) => {
     'class_distribution'
   ];
   return visualTypes.some(type => fileType.toLowerCase().includes(type));
-};
-
-// New function to identify model files
-const isModelFile = (fileType: string) => {
-  return fileType.toLowerCase().includes('model') || 
-         fileType.toLowerCase().includes('encoder') ||
-         fileType.toLowerCase().includes('pipeline') ||
-         fileType.toLowerCase() === 'pickle';
 };
 
 const getMetricPriority = (metricName: string): number => {
@@ -332,14 +315,13 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     )
     .sort((a, b) => getMetricPriority(a[0]) - getMetricPriority(b[0]));
   
-  // Separate files by type
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
-  const modelFiles = files.filter(file => isModelFile(file.file_type));
   
-  // Get other downloadable files that are not models or visualizations
-  const otherDownloadableFiles = files.filter(file => 
-    !isVisualizationFile(file.file_type) && 
-    !isModelFile(file.file_type)
+  const downloadableFiles = files.filter(file => 
+    file.file_type === 'model' || 
+    file.file_type === 'report' || 
+    file.file_type.includes('report') ||
+    file.file_type.includes('model')
   );
 
   const formatTaskType = (type: string = '') => {
@@ -536,12 +518,11 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                       <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
                         <CardContent className="p-3">
                           <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            {/* Updated image style to fit within container instead of cover */}
-                            <img 
-                              src={file.file_url} 
-                              alt={file.file_type} 
-                              className="w-full h-full object-contain" 
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center"
+                              style={{ backgroundImage: `url(${file.file_url})` }}
                             />
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
                           </div>
                           <div className="mt-2 text-center">
                             <p className="text-sm font-medium capitalize">
@@ -556,7 +537,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                         <img 
                           src={file.file_url} 
                           alt={file.file_type} 
-                          className="w-full rounded-md object-contain max-h-[70vh]"
+                          className="w-full rounded-md"
                         />
                         <div className="mt-2 flex justify-between items-center">
                           <h3 className="font-medium capitalize">
@@ -681,105 +662,68 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           </TabsContent>
           
           <TabsContent value="downloads" className="p-6">
-            {/* Display model files first with special prominence */}
-            {modelFiles.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-medium mb-4">Model Files</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {modelFiles.map((file, index) => {
-                    const displayName = file.file_type
-                      .replace(/_/g, ' ')
-                      .split(' ')
-                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(' ');
-                      
-                    return (
-                      <Card key={index} className="shadow-sm bg-primary/5 border-primary/20">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base capitalize">{displayName}</CardTitle>
-                          <CardDescription>
-                            Download the trained model file for inference
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <Button variant="default" asChild className="w-full">
-                            <a href={file.file_url} download={file.file_name || `${file.file_type}.file`} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" /> 
-                              Download {file.file_name || displayName}
-                            </a>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {/* Other downloadable files */}
-            {otherDownloadableFiles.length > 0 ? (
-              <div>
-                <h3 className="text-lg font-medium mb-4">Other Downloads</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {otherDownloadableFiles.map((file, index) => {
-                    const displayName = file.file_type
-                      .replace(/_/g, ' ')
-                      .split(' ')
-                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(' ');
-                      
-                    return (
-                      <Card key={index} className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base capitalize">{displayName}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <Button asChild className="w-full" variant="outline">
-                            <a href={file.file_url} download={file.file_name || `${file.file_type}.file`} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" /> 
-                              Download {file.file_name || displayName}
-                            </a>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              // Show if no downloads of any kind are available
-              !modelFiles.length && (
-                <div className="text-center py-12">
-                  <Download className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    No downloadable artifacts were found for this experiment.
-                  </p>
-                </div>
-              )
-            )}
-            
-            {/* Add visualizations as additional downloads */}
-            {visualizationFiles.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4">Visualization Downloads</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {visualizationFiles.map((file, index) => (
+            {downloadableFiles.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {downloadableFiles.map((file, index) => {
+                  const displayName = file.file_type
+                    .replace(/_/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                    
+                  return (
                     <Card key={index} className="shadow-sm">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
+                        <CardTitle className="text-base capitalize">{displayName}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <Button asChild className="w-full" variant="outline">
-                          <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
+                        <Button asChild className="w-full">
+                          <a href={file.file_url} download={file.file_name || `${file.file_type}.file`} target="_blank" rel="noopener noreferrer">
                             <Download className="h-4 w-4 mr-2" /> 
-                            Download Image
+                            Download {file.file_name || displayName}
                           </a>
                         </Button>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Download className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  No downloadable artifacts were found for this experiment.
+                </p>
+              </div>
+            )}
+            
+            {files.length > downloadableFiles.length && (
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4">All Files</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>File Type</TableHead>
+                      <TableHead>Download</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {files.map((file, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="capitalize">{file.file_type.replace(/_/g, ' ')}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={file.file_url} download={file.file_name || `${file.file_type}.file`} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </a>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </TabsContent>
@@ -813,8 +757,3 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
-
-function isVisualizationFile(type: string) {
-  // Remove duplicate function at the bottom since we already have it defined above
-  return !type.includes('model') && !type.includes('report') && !type.includes('encoder') && !type.includes('pipeline');
-}
