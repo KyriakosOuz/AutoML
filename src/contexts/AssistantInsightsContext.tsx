@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDataset } from './DatasetContext';
@@ -39,8 +38,20 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     };
     
     setInsights(prev => {
-      // Remove duplicate insights with the same title for the same route
-      const filtered = prev.filter(i => !(i.title === insight.title && i.route === insight.route));
+      // More precise deduplication - check title, route, and content substring
+      const filtered = prev.filter(i => {
+        // If same title and route, consider as duplicate
+        if (i.title === insight.title && i.route === insight.route) {
+          return false;
+        }
+        
+        // For preprocess route, be even more strict to avoid duplicates
+        if (insight.route.includes('/preprocess') && i.route.includes('/preprocess')) {
+          return false;
+        }
+        
+        return true;
+      });
       return [...filtered, newInsight];
     });
   };
@@ -55,9 +66,18 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     setInsights([]);
   };
 
-  // Get insights for a specific route
+  // Get insights for a specific route - more specific matching
   const getRouteInsights = (route: string) => {
-    return insights.filter(insight => insight.route === route);
+    // Exact route matching for specific paths, prefix matching for others
+    return insights.filter(insight => {
+      // Exact matching for specific routes
+      if (route === '/dataset/preprocess' && insight.route === '/dataset/preprocess') {
+        return true;
+      }
+      
+      // Otherwise use prefix matching
+      return insight.route === route || insight.route.startsWith(route + '/');
+    });
   };
 
   // Generate dataset insights when needed
@@ -65,55 +85,53 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     if (location.pathname.includes('/dataset') && datasetContext.datasetId) {
       const overview = datasetContext.overview;
       
-      // Dataset overview insight
-      if (overview) {
+      // Dataset overview insight - only for upload and explore routes
+      if ((location.pathname.includes('/upload') || location.pathname.includes('/explore')) && overview) {
         const hasMissingValues = overview.total_missing_values && overview.total_missing_values > 0;
         
-        if (location.pathname.includes('/upload') || location.pathname.includes('/explore')) {
-          addInsight({
-            title: 'Dataset Overview',
-            content: hasMissingValues 
-              ? `Your dataset has ${overview.total_missing_values} missing values across ${overview.num_columns} columns. You'll need to handle them in the next step.`
-              : 'Great! Your dataset has no missing values. You can continue to feature selection.',
-            route: '/dataset',
-            suggestedPrompts: [
-              'What preprocessing steps should I consider?',
-              'How should I handle these missing values?',
-              'What features might be important?'
-            ]
-          });
-        }
-        
-        // Features stage insight
-        if (location.pathname.includes('/features') && datasetContext.targetColumn) {
-          addInsight({
-            title: 'Feature Selection',
-            content: `You've selected '${datasetContext.targetColumn}' as your target column. Select the features you want to include in your model.`,
-            route: '/dataset/features',
-            suggestedPrompts: [
-              'Which features are most important?',
-              'How many features should I select?',
-              'What happens if I select correlated features?'
-            ]
-          });
-        }
-        
-        // Preprocessing stage insight
-        if (location.pathname.includes('/preprocess') && datasetContext.taskType) {
-          const isClassification = datasetContext.taskType === 'classification';
-          addInsight({
-            title: 'Preprocessing Options',
-            content: isClassification
-              ? 'For classification tasks, consider applying class balancing if your classes are imbalanced.'
-              : 'For regression tasks, normalizing your numerical features can improve model performance.',
-            route: '/dataset/preprocess',
-            suggestedPrompts: [
-              'Should I normalize my data?',
-              isClassification ? 'How does class balancing work?' : 'What scaling method is best?',
-              'What preprocessing steps are most important?'
-            ]
-          });
-        }
+        addInsight({
+          title: 'Dataset Overview',
+          content: hasMissingValues 
+            ? `Your dataset has ${overview.total_missing_values} missing values across ${overview.num_columns} columns. You'll need to handle them in the next step.`
+            : 'Great! Your dataset has no missing values. You can continue to feature selection.',
+          route: '/dataset',
+          suggestedPrompts: [
+            'What preprocessing steps should I consider?',
+            'How should I handle these missing values?',
+            'What features might be important?'
+          ]
+        });
+      }
+      
+      // Features stage insight - only for features route
+      if (location.pathname.includes('/features') && datasetContext.targetColumn) {
+        addInsight({
+          title: 'Feature Selection',
+          content: `You've selected '${datasetContext.targetColumn}' as your target column. Select the features you want to include in your model.`,
+          route: '/dataset/features',
+          suggestedPrompts: [
+            'Which features are most important?',
+            'How many features should I select?',
+            'What happens if I select correlated features?'
+          ]
+        });
+      }
+      
+      // Preprocessing stage insight - only for preprocess route
+      if (location.pathname.includes('/preprocess') && datasetContext.taskType) {
+        const isClassification = datasetContext.taskType === 'classification';
+        addInsight({
+          title: 'Preprocessing Options',
+          content: isClassification
+            ? 'For classification tasks, consider applying class balancing if your classes are imbalanced.'
+            : 'For regression tasks, normalizing your numerical features can improve model performance.',
+          route: '/dataset/preprocess',
+          suggestedPrompts: [
+            'Should I normalize my data?',
+            isClassification ? 'How does class balancing work?' : 'What scaling method is best?',
+            'What preprocessing steps are most important?'
+          ]
+        });
       }
     }
     

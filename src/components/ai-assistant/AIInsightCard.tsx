@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAIAssistant, askMistral } from '@/contexts/AIAssistantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, MessageSquare, ChevronUp, ChevronDown } from 'lucide-react';
+import { Loader2, LightBulb, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface AIInsightCardProps {
   title?: string;
@@ -15,11 +15,11 @@ interface AIInsightCardProps {
 }
 
 const AIInsightCard: React.FC<AIInsightCardProps> = ({
-  title = "Mistral AI Insights",
+  title = "AI Insight",
   initialPrompt,
   contextData,
   sessionId,
-  collapsed = false,
+  collapsed = true,
   suggestedPrompts = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(!collapsed);
@@ -31,6 +31,9 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
   // Fetch initial insight on component mount or when prompt/context changes
   useEffect(() => {
     const loadInsight = async () => {
+      // Only fetch if not already loaded
+      if (insight !== null || !isExpanded) return;
+      
       try {
         setIsLoading(true);
         setError(null);
@@ -54,7 +57,7 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
     if (isExpanded) {
       loadInsight();
     }
-  }, [initialPrompt, contextData, sessionId, isExpanded]);
+  }, [initialPrompt, contextData, sessionId, isExpanded, insight]);
   
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
@@ -74,14 +77,14 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
   };
   
   return (
-    <Card className="w-full mb-4">
+    <Card className="w-full mb-3 transition-all duration-200 hover:shadow-md border-muted">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-purple-500" />
+          <CardTitle className="text-md flex items-center gap-2">
+            <LightBulb className="h-4 w-4 text-primary" />
             {title}
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={toggleExpand}>
+          <Button variant="ghost" size="sm" onClick={toggleExpand} className="h-7 w-7 p-0">
             {isExpanded ? (
               <ChevronUp className="h-4 w-4" />
             ) : (
@@ -91,17 +94,17 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
         </div>
       </CardHeader>
       {isExpanded && (
-        <CardContent className="pb-3">
+        <CardContent className="pb-3 pt-0">
           {isLoading ? (
-            <div className="flex justify-center items-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              <span>Loading insights...</span>
+            <div className="flex justify-center items-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span className="text-sm">Loading insights...</span>
             </div>
           ) : error ? (
-            <div className="text-destructive py-2">{error}</div>
+            <div className="text-destructive py-2 text-sm">{error}</div>
           ) : insight ? (
             <>
-              <div className="text-sm whitespace-pre-wrap mb-3">{insight}</div>
+              <div className="text-sm whitespace-pre-wrap mb-3 text-muted-foreground">{insight}</div>
               
               {/* Suggested prompts */}
               {suggestedPrompts && suggestedPrompts.length > 0 && (
@@ -112,7 +115,7 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
                       variant="outline" 
                       size="sm"
                       onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-xs"
+                      className="text-xs h-7 px-2 py-0"
                     >
                       {prompt}
                     </Button>
@@ -122,17 +125,17 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
               
               <div className="flex justify-end">
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
                   onClick={handleAskFollowUp}
-                  className="text-xs"
+                  className="text-xs h-7"
                 >
-                  Ask follow-up questions
+                  Ask follow-up
                 </Button>
               </div>
             </>
           ) : (
-            <div className="text-muted-foreground py-2">No insights available</div>
+            <div className="text-muted-foreground py-2 text-sm">No insights available</div>
           )}
         </CardContent>
       )}

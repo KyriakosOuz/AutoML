@@ -13,7 +13,7 @@ const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
   const { toast } = useToast();
 
-  const { data, isLoading, error } = useQuery<ExperimentResults>({
+  const { data, isLoading, error, refetch } = useQuery<ExperimentResults>({
     queryKey: ['experiment', experimentId],
     queryFn: () => getExperimentResults(experimentId!),
     enabled: !!experimentId,
@@ -36,12 +36,16 @@ const ExperimentDetailPage: React.FC = () => {
   return (
     <AssistantInsightsProvider>
       <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
-        <h1 className="text-xl sm:text-2xl font-bold mb-6">Experiment Details</h1>
+        <h1 className="text-xl sm:text-2xl font-bold mb-6">
+          Experiment Details
+          {data?.experiment_name && ` - ${data.experiment_name}`}
+        </h1>
         
         <ExperimentResultsContainer 
           experimentId={experimentId || ''} 
           status={status}
           onReset={() => {/* Optional reset handler */}}
+          onRefresh={() => refetch()}
         />
         
         <ExperimentSidePanel />
