@@ -43,7 +43,6 @@ const ExperimentDetailPage: React.FC = () => {
           <ExperimentResultsContainer 
             experimentId={experimentId || ''} 
             status={status}
-            onReset={() => {/* Optional reset handler */}}
           />
           
           <ExperimentSidePanel />
@@ -54,4 +53,3 @@ const ExperimentDetailPage: React.FC = () => {
 };
 
 export default ExperimentDetailPage;
-

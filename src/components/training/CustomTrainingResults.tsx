@@ -18,9 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Award, 
   BarChart4, 
-  Clock, 
   Image as ImageIcon, 
-  RefreshCw,
   DownloadCloud,
   Activity,
   LineChart,
@@ -356,10 +354,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
       </CardContent>
       
       <CardFooter className="justify-between border-t p-4">
-        <Button variant="outline" onClick={onReset}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Run Another Experiment
-        </Button>
+        <div></div> {/* Empty div to maintain spacing */}
         
         <Button variant="outline" asChild>
           <a href={`/models/${experiment_id}`} target="_blank" rel="noopener noreferrer">
