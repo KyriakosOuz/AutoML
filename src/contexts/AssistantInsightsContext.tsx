@@ -126,9 +126,9 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
           content: 'Select your training method: AutoML will automatically find the best model, or configure a custom model manually.',
           route: '/training',
           suggestedPrompts: [
-            'What's the difference between AutoML and custom?',
-            'Which algorithm should I choose?',
-            'How do I interpret the results?'
+            "What's the difference between AutoML and custom?",
+            "Which algorithm should I choose?",
+            "How do I interpret the results?"
           ]
         });
       }
@@ -140,9 +140,9 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
           content: `Your model training has completed successfully. Check the results to see how your model performed.`,
           route: '/training',
           suggestedPrompts: [
-            'How do I interpret these metrics?',
-            'Is this a good model?',
-            'How can I improve my model?'
+            "How do I interpret these metrics?",
+            "Is this a good model?",
+            "How can I improve my model?"
           ]
         });
       }
