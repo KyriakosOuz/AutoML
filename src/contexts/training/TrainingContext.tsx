@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -30,6 +31,118 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
     isCheckingLastExperiment: false,
+  });
+
+  // Define getExperimentResults first (no dependencies on functions defined later)
+  const getExperimentResults = useCallback(async () => {
+    if (!state.activeExperimentId) return;
+    
+    // Don't refetch if we already have results
+    if (state.experimentResults && !state.isLoadingResults) {
+      console.log("[TrainingContext] Already have results, not fetching again");
+      return;
+    }
+    
+    setState(prev => ({ ...prev, isLoadingResults: true }));
+    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId);
+
+    try {
+      // Use the correct endpoint for full experiment results
+      const results = await trainingApi.getExperimentResults(state.activeExperimentId);
+
+      if (results) {
+        console.log("[TrainingContext] Successfully fetched experiment results");
+        
+        // Handle 'success' status from API by mapping it to 'completed'
+        let resultStatus = results.status;
+        if (resultStatus === 'success') {
+          resultStatus = 'completed';
+        }
+        
+        setState(prev => ({ 
+          ...prev, 
+          experimentResults: results, 
+          isLoadingResults: false, 
+          error: null,
+          experimentStatus: resultStatus as ExperimentStatus,
+          isTraining: false // Make sure to set isTraining to false when results are retrieved
+        }));
+      } else {
+        console.log("[TrainingContext] No results returned from API");
+        setState(prev => ({ ...prev, isLoadingResults: false }));
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch experiment results';
+      console.error("[TrainingContext] Error fetching results:", errorMessage);
+      setState(prev => ({ 
+        ...prev, 
+        error: errorMessage, 
+        isLoadingResults: false,
+        experimentStatus: 'failed',
+        isTraining: false
+      }));
+      toast({
+        title: "Error Fetching Results",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, toast]);
+
+  const handlePollingSuccess = useCallback(async (experimentId: string) => {
+    setState(prev => ({
+      ...prev,
+      statusResponse: {
+        status: 'completed',
+        hasTrainingResults: true
+      },
+      experimentStatus: 'completed',
+      isTraining: false // Make sure to set isTraining to false when completed
+    }));
+    
+    toast({
+      title: "Training Complete",
+      description: "Your model has finished training successfully!"
+    });
+    
+    // Automatically fetch results when training completes
+    try {
+      getExperimentResults();
+    } catch (error) {
+      console.error("[TrainingContext] Error fetching results after successful training:", error);
+    }
+  }, [toast, getExperimentResults]);
+
+  const handlePollingError = useCallback((error: string) => {
+    setState(prev => ({
+      ...prev,
+      error,
+      isLoadingResults: false,
+      isTraining: false,
+      statusResponse: {
+        status: 'failed',
+        hasTrainingResults: false,
+        error_message: error
+      },
+      experimentStatus: 'failed'
+    }));
+    
+    toast({
+      title: "Training Error",
+      description: error,
+      variant: "destructive"
+    });
+  }, [toast]);
+
+  // Define polling hooks before they're used in other functions
+  const { startPolling, stopPolling } = useExperimentPolling({
+    onSuccess: handlePollingSuccess,
+    onError: handlePollingError,
+    setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
+    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
   // Enhanced experiment restoration with improved logging and error handling
@@ -109,9 +222,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
     
     restoreExperiment();
-  }, []);
+  }, [toast, startPolling, getExperimentResults]);
 
-  // New method to check for the most recent experiment - NOW WRAPPED IN useCallback
+  // Now define checkLastExperiment after all its dependencies are defined
   const checkLastExperiment = useCallback(async () => {
     // Skip if we already have an active experiment or are already checking
     if (state.activeExperimentId || state.isCheckingLastExperiment) {
@@ -225,117 +338,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.log("[TrainingContext] Status indicates results are ready, fetching them now");
       getExperimentResults();
     }
-  }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults]);
-
-  const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
-    setState(prev => ({
-      ...prev,
-      statusResponse: {
-        status: 'completed',
-        hasTrainingResults: true
-      },
-      experimentStatus: 'completed',
-      isTraining: false // Make sure to set isTraining to false when completed
-    }));
-    
-    toast({
-      title: "Training Complete",
-      description: "Your model has finished training successfully!"
-    });
-    
-    // Automatically fetch results when training completes
-    try {
-      getExperimentResults();
-    } catch (error) {
-      console.error("[TrainingContext] Error fetching results after successful training:", error);
-    }
-  }, [toast]);
-
-  const handlePollingError = useCallback((error: string) => {
-    setState(prev => ({
-      ...prev,
-      error,
-      isLoadingResults: false,
-      isTraining: false,
-      statusResponse: {
-        status: 'failed',
-        hasTrainingResults: false,
-        error_message: error
-      },
-      experimentStatus: 'failed'
-    }));
-    
-    toast({
-      title: "Training Error",
-      description: error,
-      variant: "destructive"
-    });
-  }, [toast]);
-
-  const { startPolling, stopPolling } = useExperimentPolling({
-    onSuccess: handlePollingSuccess,
-    onError: handlePollingError,
-    setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
-    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
-  });
-
-  const getExperimentResults = React.useCallback(async () => {
-    if (!state.activeExperimentId) return;
-    
-    // Don't refetch if we already have results
-    if (state.experimentResults && !state.isLoadingResults) {
-      console.log("[TrainingContext] Already have results, not fetching again");
-      return;
-    }
-    
-    setState(prev => ({ ...prev, isLoadingResults: true }));
-    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId);
-
-    try {
-      // Use the correct endpoint for full experiment results
-      const results = await trainingApi.getExperimentResults(state.activeExperimentId);
-
-      if (results) {
-        console.log("[TrainingContext] Successfully fetched experiment results");
-        
-        // Handle 'success' status from API by mapping it to 'completed'
-        let resultStatus = results.status;
-        if (resultStatus === 'success') {
-          resultStatus = 'completed';
-        }
-        
-        setState(prev => ({ 
-          ...prev, 
-          experimentResults: results, 
-          isLoadingResults: false, 
-          error: null,
-          experimentStatus: resultStatus as ExperimentStatus,
-          isTraining: false // Make sure to set isTraining to false when results are retrieved
-        }));
-      } else {
-        console.log("[TrainingContext] No results returned from API");
-        setState(prev => ({ ...prev, isLoadingResults: false }));
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch experiment results';
-      console.error("[TrainingContext] Error fetching results:", errorMessage);
-      setState(prev => ({ 
-        ...prev, 
-        error: errorMessage, 
-        isLoadingResults: false,
-        experimentStatus: 'failed',
-        isTraining: false
-      }));
-      toast({
-        title: "Error Fetching Results",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
-  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, toast]);
+  }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults, getExperimentResults]);
 
   const contextValue: TrainingContextValue = {
     ...state,
