@@ -6,7 +6,7 @@ import { ExperimentResults } from '@/types/training';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import CustomTrainingResults from './CustomTrainingResults';
+// import CustomTrainingResults from './CustomTrainingResults';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -44,10 +44,16 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
   return (
     <div className="w-full">
-      <CustomTrainingResults 
+      {/* CustomTrainingResults component is temporarily commented out */}
+      <Alert>
+        <AlertDescription>
+          Results view is temporarily unavailable.
+        </AlertDescription>
+      </Alert>
+      {/* <CustomTrainingResults 
         experimentResults={data} 
-        onReset={() => {}} // Empty handler as reset button is removed
-      />
+        onReset={() => {}}
+      /> */}
     </div>
   );
 };

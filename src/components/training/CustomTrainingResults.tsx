@@ -1,4 +1,5 @@
 
+/*
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -389,4 +390,9 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   );
 };
 
+export default CustomTrainingResults;
+*/
+
+// This component has been temporarily commented out
+const CustomTrainingResults = () => null;
 export default CustomTrainingResults;
