@@ -87,22 +87,10 @@ const PreprocessingOptions: React.FC = () => {
     return hasNumerical && previewData.numerical_features > 0;
   }, [previewData, columnsToKeep]);
 
-  // Initialize normalization method - default to minmax only when initializing
-  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
-  
-  // Only set a default when component first mounts and data is loaded
-  useEffect(() => {
-    if (hasNumericalToNormalize && normalizationMethod === 'skip') {
-      // Set initial default only if not explicitly chosen by user
-      console.log('Setting initial default normalization method to minmax');
-      setNormalizationMethod('minmax');
-      setDebugInfo(null);
-    } else if (!hasNumericalToNormalize) {
-      console.log('No numerical features detected, defaulting to skip');
-      setNormalizationMethod('skip');
-      setDebugInfo('Normalization disabled: No numerical features detected in selected columns');
-    }
-  }, [hasNumericalToNormalize]); // Only run when hasNumericalToNormalize changes, not when normalizationMethod changes
+  // Initialize normalization method based on numerical features availability
+  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>(
+    'minmax' // Default to minmax, will update based on data
+  );
   
   const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
   const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +99,24 @@ const PreprocessingOptions: React.FC = () => {
   
   // Debug message for UI feedback
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+
+  // Update normalization method when hasNumericalToNormalize changes
+  useEffect(() => {
+    console.log('hasNumericalToNormalize changed:', hasNumericalToNormalize);
+    
+    if (hasNumericalToNormalize) {
+      // Only update if currently skipped
+      if (normalizationMethod === 'skip') {
+        console.log('Setting normalization method to minmax');
+        setNormalizationMethod('minmax');
+      }
+      setDebugInfo(null);
+    } else {
+      console.log('Setting normalization method to skip - no numerical features detected');
+      setNormalizationMethod('skip');
+      setDebugInfo('Normalization disabled: No numerical features detected in selected columns');
+    }
+  }, [hasNumericalToNormalize, normalizationMethod]);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
