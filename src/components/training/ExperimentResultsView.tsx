@@ -61,6 +61,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         </AlertDescription>
       </Alert>
       
+      {/* Pass the data directly to avoid duplicate fetching */}
       <ExperimentResultsContainer 
         experimentId={experimentId} 
         status="completed" 

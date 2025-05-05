@@ -60,9 +60,12 @@ const ExperimentDetailPage: React.FC = () => {
             </Alert>
           )}
           
+          {/* Only show the ExperimentResultsContainer - no other results components */}
           <ExperimentResultsContainer 
             experimentId={experimentId || ''} 
             status={status}
+            results={data} // Pass data directly to avoid duplicate fetching
+            isLoading={isLoading}
           />
           
           <ExperimentSidePanel />
