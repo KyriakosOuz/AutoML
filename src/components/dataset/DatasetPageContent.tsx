@@ -7,7 +7,7 @@ import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
 import { datasetApi } from '@/lib/api';
-import DatasetSidePanel from '@/components/ai-assistant/DatasetSidePanel';
+// import DatasetSidePanel from '@/components/ai-assistant/DatasetSidePanel';
 
 const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -133,7 +133,7 @@ const DatasetPageContent: React.FC = () => {
         </footer>
       </div>
       
-      <DatasetSidePanel />
+      {/* <DatasetSidePanel /> */}
     </div>
   );
 };
