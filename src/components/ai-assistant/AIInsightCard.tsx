@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAIAssistant, askMistral } from '@/contexts/AIAssistantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, LightBulb, ChevronUp, ChevronDown } from 'lucide-react';
+import { Loader2, Lightbulb, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface AIInsightCardProps {
   title?: string;
@@ -81,7 +81,7 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-md flex items-center gap-2">
-            <LightBulb className="h-4 w-4 text-primary" />
+            <Lightbulb className="h-4 w-4 text-primary" />
             {title}
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={toggleExpand} className="h-7 w-7 p-0">

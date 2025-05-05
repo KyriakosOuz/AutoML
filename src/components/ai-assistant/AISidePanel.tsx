@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, LightBulb } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AIInsightCard from './AIInsightCard';
@@ -67,7 +67,7 @@ const AISidePanel: React.FC<AISidePanelProps> = ({ insights, loading = false }) 
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <LightBulb className="h-5 w-5 text-primary" />
+              <Lightbulb className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-medium">AI Assistant</h2>
             </div>
             <Button 
