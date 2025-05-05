@@ -5,8 +5,9 @@ import ModelTrainingContent from '@/components/training/ModelTrainingContent';
 import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
 import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
+import { TrainingProvider } from '@/contexts/training/TrainingContext';
 
-const ModelTrainingPage: React.FC = () => {
+const ModelTrainingPageContent: React.FC = () => {
   const { checkLastExperiment } = useTraining();
   
   // Check for the most recent experiment when the component mounts
@@ -24,6 +25,13 @@ const ModelTrainingPage: React.FC = () => {
       <TrainingSidePanel />
       <Toaster />
     </div>
+  );
+};
+
+// Wrapper component that provides the TrainingProvider context
+const ModelTrainingPage: React.FC = () => {
+  return (
+    <ModelTrainingPageContent />
   );
 };
 

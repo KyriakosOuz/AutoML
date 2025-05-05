@@ -17,7 +17,10 @@ const TrainingSidePanel: React.FC = () => {
     }));
   }, [getRouteInsights]);
 
-  return <AISidePanel insights={insights} loading={isTraining} />;
+  // Pass loading state based on training status
+  const isLoading = isTraining || experimentStatus === 'processing' || experimentStatus === 'running';
+
+  return <AISidePanel insights={insights} loading={isLoading} />;
 };
 
 export default TrainingSidePanel;
