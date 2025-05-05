@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import CustomTrainingResults from './CustomTrainingResults';
+import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -15,12 +16,28 @@ interface ExperimentResultsViewProps {
 const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
+  const { setResultsLoaded } = useTraining();
+  
   const { data, isLoading, error } = useQuery<ExperimentResults>({
     queryKey: ['experiment', experimentId],
     queryFn: () => getExperimentResults(experimentId),
     enabled: !!experimentId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+  
+  // Notify parent components when results are loaded or loading
+  useEffect(() => {
+    if (data && !isLoading) {
+      console.log("[ExperimentResultsView] Results loaded successfully");
+      if (setResultsLoaded) {
+        setResultsLoaded(true);
+      }
+    } else {
+      if (setResultsLoaded) {
+        setResultsLoaded(false);
+      }
+    }
+  }, [data, isLoading, setResultsLoaded]);
 
   if (isLoading) {
     return (

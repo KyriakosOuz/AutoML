@@ -32,6 +32,9 @@ const ModelTrainingContent: React.FC = () => {
   
   const { datasetId, taskType, processingStage } = useDataset();
   const isMobile = useIsMobile();
+  
+  // State to track when results are fully loaded
+  const [resultsLoaded, setResultsLoaded] = useState(false);
 
   // Show results and predict tabs only when experiment is completed
   const showResultsAndPredict = 
@@ -39,8 +42,10 @@ const ModelTrainingContent: React.FC = () => {
     activeExperimentId && 
     !isTraining;
 
-  // Add status indicator
-  const isProcessing = experimentStatus === 'processing' || experimentStatus === 'running' || isTraining;
+  // Add status indicator - Modified to also check resultsLoaded
+  const isProcessing = 
+    (experimentStatus === 'processing' || experimentStatus === 'running' || isTraining) && 
+    !resultsLoaded;
   
   // More detailed status logging
   useEffect(() => {
@@ -52,9 +57,10 @@ const ModelTrainingContent: React.FC = () => {
       experimentStatus,
       isTraining,
       isLoadingResults,
-      activeExperimentId
+      activeExperimentId,
+      resultsLoaded
     });
-  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId]);
+  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded]);
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
@@ -80,6 +86,23 @@ const ModelTrainingContent: React.FC = () => {
       getExperimentResults();
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults]);
+
+  // Update resultsLoaded state when experimentResults are available
+  useEffect(() => {
+    if (experimentResults && !isLoadingResults && 
+        (experimentStatus === 'completed' || experimentStatus === 'success')) {
+      console.log("ModelTrainingContent - Results are loaded, updating state");
+      // Add small delay to ensure UI updates properly
+      const timer = setTimeout(() => {
+        setResultsLoaded(true);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else if (!experimentResults || isLoadingResults || 
+               (experimentStatus !== 'completed' && experimentStatus !== 'success')) {
+      setResultsLoaded(false);
+    }
+  }, [experimentResults, isLoadingResults, experimentStatus]);
 
   // Determine if dataset is ready for training
   const isDatasetReady = !!(
@@ -113,8 +136,8 @@ const ModelTrainingContent: React.FC = () => {
     <div className="space-y-6">
       <DatasetSummary />
       
-      {/* Display status bar when experiment is in progress or loading */}
-      {(isProcessing || isLoadingResults) && (
+      {/* Display status bar when experiment is in progress or loading - updated condition */}
+      {(isProcessing || (isLoadingResults && !resultsLoaded)) && (
         <Alert className="mb-4 bg-primary-foreground border-primary/30">
           <div className="flex flex-col w-full">
             <div className="flex items-center mb-2">
@@ -134,8 +157,8 @@ const ModelTrainingContent: React.FC = () => {
         </Alert>
       )}
 
-      {/* Add info message when viewing existing experiment results */}
-      {activeExperimentId && experimentResults && !isProcessing && !isLoadingResults && (
+      {/* Add info message when viewing existing experiment results - updated condition */}
+      {activeExperimentId && experimentResults && resultsLoaded && !isProcessing && !isLoadingResults && (
         <Alert variant="info" className="mb-4">
           <Info className="h-4 w-4 text-blue-500 mr-2" />
           <AlertDescription className="text-sm">
@@ -188,7 +211,6 @@ const ModelTrainingContent: React.FC = () => {
               Predict
             </TabsTrigger>
           </TabsList>
-          {/* Reset button removed as requested */}
         </div>
 
         <TabsContent value="automl" className="space-y-4">

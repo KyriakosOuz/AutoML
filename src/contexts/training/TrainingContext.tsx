@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -228,6 +229,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults]);
 
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
+    console.log("[TrainingContext] Polling completed successfully for experiment:", experimentId);
+    
     setState(prev => ({
       ...prev,
       statusResponse: {
@@ -235,7 +238,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         hasTrainingResults: true
       },
       experimentStatus: 'completed',
-      isTraining: false // Make sure to set isTraining to false when completed
+      isTraining: false, // Make sure to set isTraining to false when completed
+      isLoadingResults: false // Ensure isLoadingResults is also set to false
     }));
     
     toast({
@@ -245,6 +249,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     
     // Automatically fetch results when training completes
     try {
+      console.log("[TrainingContext] Fetching results after successful training");
       getExperimentResults();
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
@@ -252,6 +257,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
+    console.log("[TrainingContext] Polling error:", error);
+    
     setState(prev => ({
       ...prev,
       error,
@@ -282,7 +289,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const getExperimentResults = React.useCallback(async () => {
     if (!state.activeExperimentId) return;
     
-    // Don't refetch if we already have results
+    // Don't refetch if we already have results and aren't explicitly loading
     if (state.experimentResults && !state.isLoadingResults) {
       console.log("[TrainingContext] Already have results, not fetching again");
       return;
@@ -299,22 +306,37 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         console.log("[TrainingContext] Successfully fetched experiment results");
         
         // Handle 'success' status from API by mapping it to 'completed'
-        let resultStatus = results.status;
+        let resultStatus = results.status || 'completed';
         if (resultStatus === 'success') {
           resultStatus = 'completed';
         }
         
+        // Update all related state values to ensure consistency
         setState(prev => ({ 
           ...prev, 
           experimentResults: results, 
-          isLoadingResults: false, 
+          isLoadingResults: false,
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
-          isTraining: false // Make sure to set isTraining to false when results are retrieved
+          isTraining: false, // Ensure isTraining is false when results are loaded
+          // Ensure statusResponse is updated to be consistent
+          statusResponse: {
+            status: resultStatus as ExperimentStatus,
+            hasTrainingResults: true
+          }
         }));
       } else {
         console.log("[TrainingContext] No results returned from API");
-        setState(prev => ({ ...prev, isLoadingResults: false }));
+        setState(prev => ({ 
+          ...prev, 
+          isLoadingResults: false,
+          experimentStatus: 'failed',
+          statusResponse: {
+            status: 'failed',
+            hasTrainingResults: false,
+            error_message: 'No results returned'
+          }
+        }));
       }
     } catch (error) {
       const errorMessage =
@@ -327,7 +349,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         error: errorMessage, 
         isLoadingResults: false,
         experimentStatus: 'failed',
-        isTraining: false
+        isTraining: false,
+        statusResponse: {
+          status: 'failed',
+          hasTrainingResults: false,
+          error_message: errorMessage
+        }
       }));
       toast({
         title: "Error Fetching Results",
