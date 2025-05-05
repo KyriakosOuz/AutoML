@@ -67,21 +67,21 @@ const CustomTraining: React.FC = () => {
   }, [datasetTaskType]);
 
   useEffect(() => {
-    if (customParameters.algorithm) {
+    if (customParameters && customParameters.algorithm) {
       const newName = generateExperimentName('Custom', customParameters.algorithm.toUpperCase());
       setExperimentName(newName);
     }
-  }, [customParameters.algorithm]);
+  }, [customParameters?.algorithm]);
 
   // Reset hasFetchedParams when algorithm changes
   useEffect(() => {
     setHasFetchedParams(false);
-  }, [customParameters.algorithm]);
+  }, [customParameters?.algorithm]);
 
   // Fixed hyperparameter fetching to prevent infinite loops
   useEffect(() => {
     if (
-      customParameters.algorithm && 
+      customParameters?.algorithm && 
       !customParameters.useDefaultHyperparameters && 
       !hasFetchedParams &&
       Object.keys(customParameters.hyperparameters || {}).length === 0
@@ -102,7 +102,7 @@ const CustomTraining: React.FC = () => {
           setHasFetchedParams(true);
         });
     }
-  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, customParameters.hyperparameters, hasFetchedParams, setCustomParameters]);
+  }, [customParameters?.algorithm, customParameters?.useDefaultHyperparameters, customParameters?.hyperparameters, hasFetchedParams, setCustomParameters]);
 
   const toggleDefaultHyperparameters = () => {
     const newValue = !customParameters.useDefaultHyperparameters;
@@ -121,7 +121,7 @@ const CustomTraining: React.FC = () => {
   // Fixed hyperparameter fetching to prevent infinite loops
   useEffect(() => {
     if (
-      customParameters.algorithm && 
+      customParameters?.algorithm && 
       !customParameters.useDefaultHyperparameters && 
       !hasFetchedParams &&
       Object.keys(customParameters.hyperparameters || {}).length === 0
@@ -142,7 +142,7 @@ const CustomTraining: React.FC = () => {
           setHasFetchedParams(true);
         });
     }
-  }, [customParameters.algorithm, customParameters.useDefaultHyperparameters, customParameters.hyperparameters, hasFetchedParams, setCustomParameters]);
+  }, [customParameters?.algorithm, customParameters?.useDefaultHyperparameters, customParameters?.hyperparameters, hasFetchedParams, setCustomParameters]);
 
   const handleTrainModel = async () => {
     try {
