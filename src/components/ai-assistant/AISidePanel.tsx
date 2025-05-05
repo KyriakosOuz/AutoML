@@ -55,7 +55,7 @@ const AISidePanel: React.FC<AISidePanelProps> = ({ insights, loading = false }) 
       <Button 
         variant="ghost" 
         size="icon" 
-        className="h-12 w-6 absolute -left-6 top-1/2 -translate-y-1/2 rounded-l-md rounded-r-none bg-primary/90 text-primary-foreground shadow-md hover:bg-primary"
+        className="h-12 w-6 absolute -left-6 top-1/2 -translate-y-1/2 rounded-l-md rounded-r-none bg-primary/90 text-primary-foreground shadow-md hover:bg-primary z-40"
         onClick={toggleExpanded}
       >
         {isExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
