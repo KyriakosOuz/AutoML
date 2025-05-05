@@ -416,6 +416,19 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [stopPolling, toast]);
 
+  // Add the missing clearLocalStorageData function
+  const clearLocalStorageData = useCallback(() => {
+    console.log("[TrainingContext] Explicitly clearing all localStorage data");
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY + '_timestamp');
+    
+    toast({
+      title: "Data Cleared",
+      description: "All training state data has been removed from local storage."
+    });
+  }, [toast]);
+
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
@@ -478,6 +491,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     getExperimentResults,
     startPolling,
     stopPolling,
+    clearLocalStorageData, // Add the new function to the context value
   };
 
   return (
