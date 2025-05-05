@@ -1,16 +1,7 @@
 
-import { 
-  AutoMLParameters, 
-  CustomTrainingParameters, 
-  AutoMLResult, 
-  CustomTrainingResult, 
-  ExperimentResults, 
-  TrainingEngine,
-  ExperimentStatusResponse 
-} from '@/types/training';
+import { ExperimentResults, ExperimentStatusResponse, AutoMLParameters, CustomTrainingParameters, AutoMLResult, CustomTrainingResult } from '@/types/training';
 
-// Update the experiment status type to include 'success' explicitly
-export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'failed' | 'success';
+export type ExperimentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'processing' | 'success';
 
 export interface TrainingContextState {
   isTraining: boolean;
@@ -25,11 +16,11 @@ export interface TrainingContextState {
   isLoadingResults: boolean;
   experimentStatus: ExperimentStatus;
   statusResponse: ExperimentStatusResponse | null;
-  automlEngine: TrainingEngine;
+  automlEngine: 'mljar' | 'autokeras' | 'h2o';
   testSize: number;
   stratify: boolean;
   randomSeed: number;
-  activeTab: string;
+  activeTab: 'automl' | 'custom' | 'results' | 'predict';
   isCheckingLastExperiment: boolean;
 }
 
@@ -41,20 +32,21 @@ export interface TrainingContextValue extends TrainingContextState {
   setAutomlResult: (result: AutoMLResult | null) => void;
   setCustomResult: (result: CustomTrainingResult | null) => void;
   setError: (error: string | null) => void;
-  resetTrainingState: () => void;
   setActiveExperimentId: (id: string | null) => void;
   setExperimentResults: (results: ExperimentResults | null) => void;
   setIsLoadingResults: (isLoading: boolean) => void;
-  clearExperimentResults: () => void;
-  getExperimentResults: () => void;
-  setAutomlEngine: (engine: TrainingEngine) => void;
+  setExperimentStatus: (status: ExperimentStatus) => void;
+  setStatusResponse: (response: ExperimentStatusResponse | null) => void;
+  setAutomlEngine: (engine: 'mljar' | 'autokeras' | 'h2o') => void;
   setTestSize: (size: number) => void;
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
+  setActiveTab: (tab: 'automl' | 'custom' | 'results' | 'predict') => void;
+  checkLastExperiment: () => Promise<void>;
+  resetTrainingState: () => void;
+  forceResetTrainingState: () => void; // Added new function
+  clearExperimentResults: () => void;
+  getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
-  setExperimentStatus: (status: ExperimentStatus) => void;
-  setStatusResponse: (response: ExperimentStatusResponse | null) => void;
-  setActiveTab: (tab: string) => void;
-  checkLastExperiment: () => Promise<void>;
 }

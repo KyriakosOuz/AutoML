@@ -13,6 +13,15 @@ export const checkStatus = async (experimentId: string): Promise<ApiResponse<Exp
       headers
     });
 
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw { status: 404, message: 'Experiment not found' };
+      }
+      if (response.status === 400) {
+        throw { status: 400, message: 'Invalid experiment ID' };
+      }
+    }
+
     return handleApiResponse<ExperimentStatusResponse>(response);
   } catch (error) {
     console.error('[API] Error checking training status:', error);

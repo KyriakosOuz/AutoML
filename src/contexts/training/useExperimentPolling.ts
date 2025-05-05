@@ -1,8 +1,8 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
+import { ExperimentStatus } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
 
 export interface UseExperimentPollingProps {
@@ -20,12 +20,16 @@ export const useExperimentPolling = ({
 }: UseExperimentPollingProps) => {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
+  const [lastStatusChange, setLastStatusChange] = useState<Date | null>(null);
+  const lastStatusRef = useRef<string | null>(null);
+  const MAX_TIME_WITHOUT_STATUS_CHANGE = 60000 * 5; // 5 minutes without status change
   const { toast } = useToast();
 
   const stopPolling = useCallback(() => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
       setPollingInterval(null);
+      console.log('[TrainingContext] Polling stopped');
     }
   }, [pollingInterval]);
 
@@ -37,6 +41,8 @@ export const useExperimentPolling = ({
     setIsLoading(true);
     setPollingAttempts(0);
     setExperimentStatus('processing');
+    setLastStatusChange(new Date());
+    lastStatusRef.current = 'processing';
 
     toast({
       title: "Training Started",
@@ -48,6 +54,28 @@ export const useExperimentPolling = ({
         const response = await checkStatus(experimentId);
         const data = response.data;
         console.log('[TrainingContext] Status response data:', data);
+
+        // Check if status has changed
+        if (lastStatusRef.current !== data.status) {
+          lastStatusRef.current = data.status;
+          setLastStatusChange(new Date());
+        } else {
+          // Check if we're stuck in the same status for too long
+          const now = new Date();
+          const timeSinceLastChange = lastStatusChange ? now.getTime() - lastStatusChange.getTime() : 0;
+          if (timeSinceLastChange > MAX_TIME_WITHOUT_STATUS_CHANGE && data.status === 'running') {
+            console.warn(`[TrainingContext] Experiment seems stuck in '${data.status}' status for over 5 minutes`);
+            stopPolling();
+            setExperimentStatus('failed');
+            onError('Training seems to be stuck. The experiment has been in the same status for too long.');
+            toast({
+              title: "Training Stuck",
+              description: "Training has been in the same status for too long. Please try again.",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
 
         if (data.status === 'failed' || !!data.error_message) {
           setExperimentStatus('failed');
@@ -102,6 +130,20 @@ export const useExperimentPolling = ({
           });
           return;
         }
+        
+        // Handle 404/400 errors specially - experiment might not exist
+        if (error.status === 404 || error.status === 400) {
+          stopPolling();
+          setExperimentStatus('failed');
+          onError('Experiment not found. It may have been deleted or never existed.');
+          toast({
+            title: "Experiment Not Found",
+            description: "The experiment you're trying to monitor doesn't exist. Starting fresh.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
           stopPolling();
@@ -119,7 +161,7 @@ export const useExperimentPolling = ({
     }, POLL_INTERVAL);
 
     setPollingInterval(poller);
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, lastStatusChange]);
 
   useEffect(() => {
     return () => {
