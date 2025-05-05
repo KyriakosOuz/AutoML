@@ -397,7 +397,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           
           <TabsContent value="metrics" className="p-6">
             {sortedMetricEntries.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {sortedMetricEntries.map(([key, value]) => {
                   const isPercentageMetric = [
                     'accuracy', 'f1_score', 'precision', 'recall', 'auc', 'roc_auc', 

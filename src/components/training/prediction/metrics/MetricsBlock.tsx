@@ -27,7 +27,7 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType }) => {
   if (taskType.includes('classification')) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {metrics.accuracy !== undefined && (
             <Card>
               <CardHeader className="pb-2">
@@ -56,7 +56,7 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType }) => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {metrics.mae !== undefined && (
           <Card>
             <CardHeader className="pb-2">

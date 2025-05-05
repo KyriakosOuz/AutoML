@@ -282,7 +282,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           
           <TabsContent value="metrics" className="p-6">
             {Object.keys(metrics).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {Object.entries(metrics).map(([key, value]) => {
                   if (
                     key === 'classification_report'
@@ -290,7 +290,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                     return null;
                   }
                   if (typeof value !== 'number') return null;
-                  const isPercentageMetric = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2'].some(m => 
+                  const isPercentageMetric = ['accuracy', 'f1', 'precision', 'recall', 'auc', 'r2'].some(m => 
                     key.toLowerCase().includes(m)
                   );
                   return (
