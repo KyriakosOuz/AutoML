@@ -61,15 +61,23 @@ const isVisualizationFile = (file: any) => {
     'feature_importance',
     'calibration',
     'lift',
-    'gains'
+    'gains',
+    'metrics_summary',
+    'shap'
   ];
   
-  return visualTypes.some(type => file.file_type.includes(type)) && 
-         !file.file_type.includes('model') && 
-         !file.file_type.includes('report') &&
-         !file.file_type.includes('csv') &&
-         !file.file_type.includes('json') &&
-         !file.file_type.includes('md');
+  return (
+    (visualTypes.some(type => file.file_type.toLowerCase().includes(type)) || 
+    file.file_type.toLowerCase().includes('plot') ||
+    file.file_type.toLowerCase().includes('chart') ||
+    file.file_type.toLowerCase().includes('graph') ||
+    file.file_type.toLowerCase().includes('visualization')) && 
+    !file.file_type.toLowerCase().includes('model') && 
+    !file.file_type.toLowerCase().includes('report') &&
+    !file.file_type.toLowerCase().includes('csv') &&
+    !file.file_type.toLowerCase().includes('json') &&
+    !file.file_type.toLowerCase().includes('md')
+  );
 };
 
 const isDocumentationFile = (file: any) => {

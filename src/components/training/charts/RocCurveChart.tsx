@@ -15,7 +15,11 @@ interface RocCurveChartProps {
 }
 
 const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc }) => {
+  // Log data to help debug
+  console.log("[RocCurveChart] Rendering with data:", { fpr, tpr, auc });
+  
   if (!fpr || !tpr || fpr.length === 0 || tpr.length === 0) {
+    console.log("[RocCurveChart] Missing or empty data");
     return (
       <Card>
         <CardHeader>

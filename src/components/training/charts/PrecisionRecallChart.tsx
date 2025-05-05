@@ -15,7 +15,11 @@ interface PrecisionRecallChartProps {
 }
 
 const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, recall, f1Score }) => {
+  // Log data to help debug
+  console.log("[PrecisionRecallChart] Rendering with data:", { precision, recall, f1Score });
+  
   if (!precision || !recall || precision.length === 0 || recall.length === 0) {
+    console.log("[PrecisionRecallChart] Missing or empty data");
     return (
       <Card>
         <CardHeader>

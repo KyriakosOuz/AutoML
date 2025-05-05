@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -109,6 +108,23 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
+  // For debugging
+  useEffect(() => {
+    if (experimentResults) {
+      console.log("[ModelTrainingContent] Experiment results:", experimentResults);
+      
+      if (experimentResults.files) {
+        console.log("[ModelTrainingContent] Visualization files:", 
+          experimentResults.files.filter(file => 
+            file.file_type.toLowerCase().includes('roc') || 
+            file.file_type.toLowerCase().includes('precision_recall') ||
+            file.file_type.toLowerCase().includes('metrics_summary')
+          )
+        );
+      }
+    }
+  }, [experimentResults]);
+  
   return (
     <div className="space-y-6">
       <DatasetSummary />
