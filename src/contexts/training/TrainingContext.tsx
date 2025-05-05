@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -78,6 +77,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Clear localStorage to prevent getting stuck in an error state
     localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
     localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY + '_timestamp');
     
     toast({
       title: "Training Error",
@@ -213,18 +213,19 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             experimentStatus: mappedStatus,
             statusResponse: status,
             isLoadingResults: false,
-            // If experiment is still running or processing, we want to set isTraining to true
+            // Only set isTraining to true if experiment is still running or processing
             isTraining: ['running', 'processing'].includes(mappedStatus)
           }));
           
-          // If the experiment is still in progress, restart polling
+          // IMPORTANT: Only start polling if the experiment is still in progress
+          // and not completed or failed
           if (['running', 'processing'].includes(mappedStatus)) {
             console.log("[TrainingContext] Experiment still in progress, restarting polling");
             startPolling(savedExperimentId);
           } 
-          // If it's completed, fetch results
-          else if (mappedStatus === 'completed') {
-            console.log("[TrainingContext] Experiment completed, fetching results");
+          // If it's completed, fetch results but DO NOT start polling
+          else if (mappedStatus === 'completed' || status.hasTrainingResults === true) {
+            console.log("[TrainingContext] Experiment completed, fetching results WITHOUT polling");
             getExperimentResults();
           }
         } catch (error) {
@@ -255,7 +256,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
     
     restoreExperiment();
-  }, [toast, startPolling, getExperimentResults]);
+  }, [toast, startPolling, getExperimentResults, stopPolling]);
 
   // Now define checkLastExperiment after all its dependencies are defined
   const checkLastExperiment = useCallback(async () => {

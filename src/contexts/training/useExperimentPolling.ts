@@ -22,6 +22,8 @@ export const useExperimentPolling = ({
   const [pollingAttempts, setPollingAttempts] = useState(0);
   const [lastStatusChange, setLastStatusChange] = useState<Date | null>(null);
   const lastStatusRef = useRef<string | null>(null);
+  const isPollingActiveRef = useRef<boolean>(false);
+  const experimentIdRef = useRef<string | null>(null);
   const MAX_TIME_WITHOUT_STATUS_CHANGE = 60000 * 5; // 5 minutes without status change
   const { toast } = useToast();
 
@@ -29,15 +31,36 @@ export const useExperimentPolling = ({
     if (pollingInterval) {
       clearInterval(pollingInterval);
       setPollingInterval(null);
+      isPollingActiveRef.current = false;
+      experimentIdRef.current = null;
       console.log('[TrainingContext] Polling stopped');
     }
   }, [pollingInterval]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        console.log('[TrainingContext] Polling cleared on unmount');
+      }
+    };
+  }, [pollingInterval]);
+
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string) => {
+    // Prevent multiple polling instances for the same experiment
+    if (isPollingActiveRef.current && experimentIdRef.current === experimentId) {
+      console.log('[TrainingContext] Polling already active for this experiment, not starting again');
+      return;
+    }
+    
+    // Stop any existing polling first
     stopPolling();
-
+    
     console.log('[TrainingContext] Starting polling for experiment:', experimentId);
+    experimentIdRef.current = experimentId;
+    isPollingActiveRef.current = true;
     setIsLoading(true);
     setPollingAttempts(0);
     setExperimentStatus('processing');
@@ -48,9 +71,33 @@ export const useExperimentPolling = ({
       title: "Training Started",
       description: "Your model training has started. Please wait while we process your request."
     });
+    
+    // Do an initial status check before setting up interval
+    try {
+      const initialResponse = await checkStatus(experimentId);
+      const initialData = initialResponse.data;
+      console.log('[TrainingContext] Initial status check response:', initialData);
+      
+      // If experiment is already completed with results, don't start polling
+      if (initialData.status === 'completed' || initialData.status === 'success' || initialData.hasTrainingResults === true) {
+        console.log('[TrainingContext] Experiment already completed, not starting polling');
+        setExperimentStatus(initialData.status === 'success' ? 'completed' : initialData.status);
+        onSuccess(experimentId);
+        return;
+      }
+    } catch (error) {
+      console.error('[TrainingContext] Error in initial status check:', error);
+      // Continue to polling anyway, as the error might be temporary
+    }
 
     const poller = setInterval(async () => {
       try {
+        if (!isPollingActiveRef.current) {
+          console.log('[TrainingContext] Polling disabled, clearing interval');
+          clearInterval(poller);
+          return;
+        }
+        
         const response = await checkStatus(experimentId);
         const data = response.data;
         console.log('[TrainingContext] Status response data:', data);
@@ -90,11 +137,13 @@ export const useExperimentPolling = ({
         }
         setExperimentStatus(data.status);
 
-        // Stop polling immediately if results are available
-        if (data.hasTrainingResults === true) {
-          console.log('[TrainingContext] Results ready — stopping poller');
+        // Stop polling immediately if results are available or status is completed/success
+        if (data.hasTrainingResults === true || data.status === 'completed' || data.status === 'success') {
+          console.log('[TrainingContext] Results ready or experiment completed — stopping poller');
           clearInterval(poller);
           setPollingInterval(null);
+          isPollingActiveRef.current = false;
+          experimentIdRef.current = null;
 
           setTimeout(() => {
             onSuccess(experimentId);
@@ -162,12 +211,6 @@ export const useExperimentPolling = ({
 
     setPollingInterval(poller);
   }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, lastStatusChange]);
-
-  useEffect(() => {
-    return () => {
-      stopPolling();
-    };
-  }, [stopPolling]);
 
   return { startPolling, stopPolling };
 };

@@ -44,7 +44,7 @@ export interface TrainingContextValue extends TrainingContextState {
   setActiveTab: (tab: 'automl' | 'custom' | 'results' | 'predict') => void;
   checkLastExperiment: () => Promise<void>;
   resetTrainingState: () => void;
-  forceResetTrainingState: () => void; // Added new function
+  forceResetTrainingState: () => void; 
   clearExperimentResults: () => void;
   getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;

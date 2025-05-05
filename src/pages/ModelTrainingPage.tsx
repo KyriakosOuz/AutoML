@@ -12,7 +12,13 @@ import { RefreshCw } from 'lucide-react';
 
 // Create a separate component that uses the context
 const TrainingPageContent: React.FC = () => {
-  const { checkLastExperiment, experimentStatus, isTraining, forceResetTrainingState } = useTraining();
+  const { 
+    checkLastExperiment, 
+    experimentStatus, 
+    isTraining, 
+    forceResetTrainingState, 
+    stopPolling // Make sure we have access to stopPolling
+  } = useTraining();
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const [showResetButton, setShowResetButton] = useState(false);
   
@@ -34,6 +40,14 @@ const TrainingPageContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [checkLastExperiment, hasAttemptedFetch, experimentStatus, isTraining]);
+  
+  // Make sure we stop polling when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log("[ModelTrainingPage] Component unmounting, stopping polling");
+      stopPolling();
+    };
+  }, [stopPolling]);
   
   return (
     <div className="flex flex-col min-h-screen">
