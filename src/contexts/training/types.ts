@@ -20,6 +20,7 @@ export interface CustomParameters {
   randomSeed: number;
   enableAnalytics?: boolean;
   useDefaultHyperparameters?: boolean;
+  enableVisualization?: boolean;
 }
 
 export interface ExperimentStatusResponse {
