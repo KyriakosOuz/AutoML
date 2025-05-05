@@ -22,7 +22,8 @@ export interface TrainingContextState {
   randomSeed: number;
   activeTab: 'automl' | 'custom' | 'results' | 'predict';
   isCheckingLastExperiment: boolean;
-  isPollingActive?: boolean; // New field to track polling status
+  isPollingActive?: boolean; // Track polling status
+  hasConnectionError?: boolean; // Track connection errors
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -50,4 +51,5 @@ export interface TrainingContextValue extends TrainingContextState {
   getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
+  clearLocalStorageData: () => void; // New function to explicitly clear localStorage
 }
