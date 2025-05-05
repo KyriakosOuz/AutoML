@@ -86,6 +86,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   console.log("[ExperimentResultsContainer] Rendering with isMljarExperiment:", isMljarExperiment);
   console.log("[ExperimentResultsContainer] Results automl_engine:", results?.automl_engine);
   console.log("[ExperimentResultsContainer] Results training_type:", results?.training_type);
+  console.log("[ExperimentResultsContainer] Status:", status);
+  console.log("[ExperimentResultsContainer] Is Loading:", isLoading);
 
   return (
     <div className="w-full overflow-x-hidden">

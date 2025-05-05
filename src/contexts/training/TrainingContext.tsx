@@ -1,9 +1,12 @@
 
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { trainingApi } from '@/lib/api';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from './types';
 import { CustomTrainingParameters, AutoMLParameters, TrainingEngine } from '@/types/training';
+import { useExperimentPolling } from './useExperimentPolling';
+import { useToast } from '@/hooks/use-toast';
+import { getExperimentResults as fetchExperimentResults } from '@/lib/training';
 
 interface TrainingContextType {
   lastExperimentId: string | null;
@@ -99,6 +102,7 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
   const [automlResult, setAutomlResult] = useState<any | null>(initialState.automlResult);
   const [customResult, setCustomResult] = useState<any | null>(initialState.customResult);
   const [lastTrainingType, setLastTrainingType] = useState<'automl' | 'custom' | null>(null);
+  const { toast } = useToast();
 
   // Handle setting customParameters with partial updates
   const setCustomParameters = (params: Partial<CustomTrainingParameters>) => {
@@ -107,6 +111,86 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
       ...params
     }));
   };
+
+  // Add the onSuccess and onError handlers for polling
+  const handlePollingSuccess = useCallback((experimentId: string) => {
+    console.log('[TrainingContext] Training completed successfully');
+    setExperimentStatus('completed');
+    setActiveExperimentId(experimentId);
+    setIsTraining(false);
+    
+    // Fetch results when training completes
+    fetchResultsForExperiment(experimentId);
+    
+    toast({
+      title: "Training Completed",
+      description: "Your model training has completed successfully!"
+    });
+  }, [toast]);
+
+  const handlePollingError = useCallback((errorMessage: string) => {
+    console.error('[TrainingContext] Training failed:', errorMessage);
+    setExperimentStatus('failed');
+    setIsTraining(false);
+    setError(errorMessage);
+    
+    toast({
+      title: "Training Failed",
+      description: errorMessage,
+      variant: "destructive"
+    });
+  }, [toast]);
+
+  // Implement actual results fetching
+  const fetchResultsForExperiment = useCallback(async (experimentId: string) => {
+    if (!experimentId) return;
+    
+    try {
+      setIsLoadingResults(true);
+      console.log('[TrainingContext] Fetching results for experiment:', experimentId);
+      
+      const results = await fetchExperimentResults(experimentId);
+      console.log('[TrainingContext] Results received:', results);
+      
+      if (results) {
+        setExperimentResults(results);
+        
+        // Set the appropriate result state based on training type
+        if (results.training_type === 'automl' || results.automl_engine) {
+          setAutomlResult(results);
+        } else {
+          setCustomResult(results);
+        }
+      }
+    } catch (error) {
+      console.error('[TrainingContext] Error fetching results:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch experiment results';
+      setError(errorMessage);
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingResults(false);
+    }
+  }, [toast]);
+
+  // Integrate the polling hook
+  const { startPolling: initiatePolling, stopPolling } = useExperimentPolling({
+    onSuccess: handlePollingSuccess,
+    onError: handlePollingError,
+    setExperimentStatus,
+    setIsLoading: setIsLoadingResults
+  });
+
+  // Setup cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   const checkLastExperiment = useCallback(async () => {
     // Add a check to prevent multiple calls if already loading
@@ -138,32 +222,34 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
     setExperimentResults(null);
   };
 
-  // Add the missing functions
+  // Implement real polling functionality
+  const startPolling = useCallback((experimentId: string) => {
+    if (!experimentId) return;
+    
+    setActiveExperimentId(experimentId);
+    setExperimentStatus('processing');
+    setIsTraining(true);
+    initiatePolling(experimentId);
+    
+    console.log(`[TrainingContext] Started polling for experiment ${experimentId}`);
+  }, [initiatePolling]);
+
+  // Reset training state function
   const resetTrainingState = () => {
     setIsTraining(false);
     setActiveExperimentId(null);
     setExperimentStatus('idle');
     setExperimentResults(null);
     setError(null);
+    stopPolling();
   };
 
-  const startPolling = (experimentId: string) => {
-    // This is a stub - actual polling logic would be implemented here
-    setActiveExperimentId(experimentId);
-    setExperimentStatus('processing');
-    console.log(`[TrainingContext] Started polling for experiment ${experimentId}`);
-  };
-
-  const getExperimentResults = () => {
-    // This is a stub - actual results fetching logic would be implemented here
-    console.log("[TrainingContext] Fetching experiment results");
-    setIsLoadingResults(true);
-    // Simulate fetching
-    setTimeout(() => {
-      setIsLoadingResults(false);
-      console.log("[TrainingContext] Finished fetching experiment results");
-    }, 500);
-  };
+  // Implement actual getExperimentResults function
+  const getExperimentResults = useCallback(() => {
+    if (!activeExperimentId) return;
+    
+    fetchResultsForExperiment(activeExperimentId);
+  }, [activeExperimentId, fetchResultsForExperiment]);
 
   const value: TrainingContextType = {
     lastExperimentId,

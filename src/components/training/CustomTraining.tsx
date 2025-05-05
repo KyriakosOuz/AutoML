@@ -19,6 +19,7 @@ import HyperParameterEditor from './HyperParameterEditor';
 import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
+import ExperimentResultsContainer from '../experiments/ExperimentResultsContainer';
 
 const CustomTraining: React.FC = () => {
   const { datasetId, taskType: datasetTaskType, targetColumn } = useDataset();
@@ -34,7 +35,8 @@ const CustomTraining: React.FC = () => {
     setActiveExperimentId,
     experimentResults,
     isLoadingResults,
-    startPolling
+    startPolling,
+    experimentStatus
   } = useTraining();
   
   const { toast } = useToast();
@@ -67,7 +69,8 @@ const CustomTraining: React.FC = () => {
   }, [datasetTaskType]);
 
   useEffect(() => {
-    if (customParameters && customParameters.algorithm) {
+    // Use safe optional chaining to prevent undefined errors
+    if (customParameters?.algorithm) {
       const newName = generateExperimentName('Custom', customParameters.algorithm.toUpperCase());
       setExperimentName(newName);
     }
@@ -117,32 +120,6 @@ const CustomTraining: React.FC = () => {
       });
     }
   };
-
-  // Fixed hyperparameter fetching to prevent infinite loops
-  useEffect(() => {
-    if (
-      customParameters?.algorithm && 
-      !customParameters.useDefaultHyperparameters && 
-      !hasFetchedParams &&
-      Object.keys(customParameters.hyperparameters || {}).length === 0
-    ) {
-      trainingApi.getAvailableHyperparameters(customParameters.algorithm)
-        .then(params => {
-          setCustomParameters({
-            hyperparameters: params
-          });
-          setHasFetchedParams(true);
-        })
-        .catch(error => {
-          console.error('Error fetching hyperparameters:', error);
-          const defaultParams = DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
-          setCustomParameters({
-            hyperparameters: defaultParams
-          });
-          setHasFetchedParams(true);
-        });
-    }
-  }, [customParameters?.algorithm, customParameters?.useDefaultHyperparameters, customParameters?.hyperparameters, hasFetchedParams, setCustomParameters]);
 
   const handleTrainModel = async () => {
     try {
@@ -205,14 +182,18 @@ const CustomTraining: React.FC = () => {
     return !!(
       datasetId &&
       datasetTaskType &&
-      customParameters.algorithm &&
+      customParameters?.algorithm &&
       customParameters.testSize >= 0.1 &&
       customParameters.testSize <= 0.5
     );
   };
 
+  // Show results section if we have an active experiment with results or in progress
+  const showResults = !!activeExperimentId && (experimentStatus !== 'idle');
+
   return (
     <div className="space-y-8">
+      {/* Training form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl text-primary">
@@ -377,53 +358,61 @@ const CustomTraining: React.FC = () => {
               />
             </div>
 
-            <Button
-              onClick={handleTrainModel}
-              disabled={isTraining || !isFormValid()}
-              className="w-full mt-4"
-              size="lg"
-            >
-              {isTraining ? (
-                <>
-                  <Loader className="mr-2 h-5 w-5 animate-spin" />
-                  Training in Progress...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-5 w-5" />
-                  Train Model with {customParameters.algorithm}
-                </>
-              )}
-            </Button>
-
-            <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md">
-              <p className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                <span>Training might take several minutes depending on dataset size and complexity.</span>
-              </p>
+            <div className="flex justify-end mt-6">
+              <Button 
+                onClick={handleTrainModel}
+                disabled={!isFormValid() || isTraining} 
+                className="ml-auto"
+              >
+                {isTraining ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Training...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Train Model
+                  </>
+                )}
+              </Button>
             </div>
-            
-            {activeExperimentId && (
-              <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
-                <p className="font-mono">Experiment ID: {activeExperimentId}</p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
 
-      {isLoadingResults && (
-        <div className="p-8 text-center">
-          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Fetching experiment results...</p>
-        </div>
-      )}
-
-      {experimentResults && (
-        <CustomTrainingResults 
-          experimentResults={experimentResults} 
-          onReset={resetExperiment}
-        />
+      {/* Results Section */}
+      {showResults && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {experimentStatus === 'processing' || experimentStatus === 'running' ? (
+                <Loader className="h-5 w-5 animate-spin" />
+              ) : (
+                <Beaker className="h-5 w-5" />
+              )}
+              Training Results
+            </CardTitle>
+            <CardDescription>
+              {experimentStatus === 'processing' || experimentStatus === 'running' 
+                ? 'Your model is being trained...' 
+                : experimentStatus === 'completed' || experimentStatus === 'success'
+                ? 'Model training completed successfully'
+                : experimentStatus === 'failed'
+                ? 'Model training failed'
+                : 'Custom training experiment'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExperimentResultsContainer
+              experimentId={activeExperimentId}
+              status={experimentStatus}
+              results={experimentResults}
+              isLoading={isLoadingResults}
+              onReset={resetExperiment}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
