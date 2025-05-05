@@ -71,15 +71,19 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     experiment_id, 
     experiment_name, 
     target_column, 
-    task_type = '', // Provide default value to prevent undefined
+    task_type = '', 
     metrics = {}, 
     files = [],
     algorithm
   } = experimentResults;
 
-  // Helper function to filter files by type
+  // Helper function to filter files by type and check for specific visualization types
   const isVisualizationFile = (file: any) => {
-    const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
+    const visualTypes = [
+      'distribution', 'shap', 'confusion_matrix', 'importance', 
+      'plot', 'chart', 'graph', 'visualization', 'roc_curve', 
+      'precision_recall_curve', 'pr_curve', 'metrics_summary'
+    ];
     const nonVisualTypes = ['model', 'report', 'label_encoder'];
     
     // Return true if contains visual type and doesn't contain non-visual type
