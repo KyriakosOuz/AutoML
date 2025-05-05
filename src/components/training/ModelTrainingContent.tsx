@@ -7,7 +7,7 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { CircleSlash, Play, AlertCircle, Loader, Info } from 'lucide-react';
+import { CircleSlash, Play, AlertCircle, Loader, Info, RotateCcw } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -27,7 +27,8 @@ const ModelTrainingContent: React.FC = () => {
     isTraining,
     isLoadingResults,
     getExperimentResults,
-    experimentResults
+    experimentResults,
+    stopPolling
   } = useTraining();
   
   const { datasetId, taskType, processingStage } = useDataset();
@@ -132,9 +133,31 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
+  // Handle reset button click
+  const handleReset = () => {
+    console.log("Reset button clicked, stopping polling and resetting training state");
+    stopPolling(); // First stop any active polling
+    resetTrainingState(); // Then reset the training state
+    setActiveTab('automl'); // Set the active tab to automl
+  };
+
   return (
     <div className="space-y-6">
       <DatasetSummary />
+      
+      <div className="flex justify-between items-center">
+        {/* Display reset button when there's an active experiment or during training */}
+        {(activeExperimentId || isTraining || isProcessing) && (
+          <Button 
+            variant="outline" 
+            className="mb-4" 
+            onClick={handleReset}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset Training
+          </Button>
+        )}
+      </div>
       
       {/* Display status bar when experiment is in progress or loading - updated condition */}
       {(isProcessing || (isLoadingResults && !resultsLoaded)) && (
