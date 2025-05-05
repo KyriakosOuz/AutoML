@@ -11,7 +11,6 @@ import { RefreshCcw, CircleSlash, Play, AlertCircle, Loader } from 'lucide-react
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 import { useIsMobile } from '@/hooks/use-mobile';
-import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 
@@ -135,7 +134,7 @@ const ModelTrainingContent: React.FC = () => {
           </AlertDescription>
         </Alert>
       )}
-      <TrainingInsights />
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
           <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} bg-gray-100`}>
