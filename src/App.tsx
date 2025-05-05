@@ -18,6 +18,7 @@ import FeedbackPage from "./pages/FeedbackPage";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import FloatingChatButton from "./components/ai-assistant/FloatingChatButton";
 import { AssistantInsightsProvider } from "./contexts/AssistantInsightsContext";
+import { DatasetProvider } from "./contexts/DatasetContext";
 
 const queryClient = new QueryClient();
 
@@ -36,14 +37,20 @@ const App = () => (
                 <Route element={<MainLayout />}>
                   <Route path="/dataset/*" element={
                     <ProtectedRoute>
-                      <AssistantInsightsProvider>
-                        <DatasetPage />
-                      </AssistantInsightsProvider>
+                      <DatasetProvider>
+                        <AssistantInsightsProvider>
+                          <DatasetPage />
+                        </AssistantInsightsProvider>
+                      </DatasetProvider>
                     </ProtectedRoute>
                   } />
                   <Route path="/training" element={
                     <ProtectedRoute>
-                      <ModelTrainingPage />
+                      <DatasetProvider>
+                        <AssistantInsightsProvider>
+                          <ModelTrainingPage />
+                        </AssistantInsightsProvider>
+                      </DatasetProvider>
                     </ProtectedRoute>
                   } />
                   <Route path="/dashboard" element={
