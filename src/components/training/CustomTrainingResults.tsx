@@ -54,5 +54,18 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   return null;
 };
 
-export default CustomTrainingResults;
+export { CustomTrainingResults };
 */
+
+// This file is commented out as requested by the user
+// Export an empty component to satisfy imports until this is properly implemented
+import { ExperimentResults } from '@/types/training';
+
+interface CustomTrainingResultsProps {
+  experimentResults: ExperimentResults;
+  onReset: () => void;
+}
+
+export const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = () => {
+  return null;
+};

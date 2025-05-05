@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -6,7 +5,7 @@ import { ExperimentResults } from '@/types/training';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import CustomTrainingResults from './CustomTrainingResults';
+import { CustomTrainingResults } from './CustomTrainingResults';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
