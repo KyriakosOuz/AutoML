@@ -27,14 +27,18 @@ export const useExperimentPolling = ({
   const MAX_TIME_WITHOUT_STATUS_CHANGE = 60000 * 5; // 5 minutes without status change
   const { toast } = useToast();
 
+  // Enhanced stopPolling function with better cleanup
   const stopPolling = useCallback(() => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
-      setPollingInterval(null);
-      isPollingActiveRef.current = false;
-      experimentIdRef.current = null;
-      console.log('[TrainingContext] Polling stopped');
+      console.log('[TrainingContext] Polling interval cleared');
     }
+    
+    // Reset all state to ensure polling is truly stopped
+    setPollingInterval(null);
+    isPollingActiveRef.current = false;
+    experimentIdRef.current = null;
+    console.log('[TrainingContext] Polling stopped completely');
   }, [pollingInterval]);
 
   // Cleanup on unmount
@@ -47,8 +51,34 @@ export const useExperimentPolling = ({
     };
   }, [pollingInterval]);
 
+  // Check if an experiment is already completed to avoid polling
+  const checkIfAlreadyCompleted = useCallback(async (experimentId: string): Promise<boolean> => {
+    try {
+      console.log('[TrainingContext] Checking if experiment is already completed:', experimentId);
+      const response = await checkStatus(experimentId);
+      const data = response.data;
+      
+      if (data.status === 'completed' || data.status === 'success' || data.hasTrainingResults === true) {
+        console.log('[TrainingContext] Experiment already completed, no need to start polling');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[TrainingContext] Error checking if experiment is already completed:', error);
+      return false;
+    }
+  }, []);
+
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string) => {
+    // First, check if this experiment is already completed to avoid polling
+    const isAlreadyCompleted = await checkIfAlreadyCompleted(experimentId);
+    if (isAlreadyCompleted) {
+      setExperimentStatus('completed');
+      onSuccess(experimentId);
+      return;
+    }
+    
     // Prevent multiple polling instances for the same experiment
     if (isPollingActiveRef.current && experimentIdRef.current === experimentId) {
       console.log('[TrainingContext] Polling already active for this experiment, not starting again');
@@ -81,7 +111,7 @@ export const useExperimentPolling = ({
       // If experiment is already completed with results, don't start polling
       if (initialData.status === 'completed' || initialData.status === 'success' || initialData.hasTrainingResults === true) {
         console.log('[TrainingContext] Experiment already completed, not starting polling');
-        setExperimentStatus(initialData.status === 'success' ? 'completed' : initialData.status);
+        setExperimentStatus(initialData.status === 'success' ? 'completed' : initialData.status as ExperimentStatus);
         onSuccess(experimentId);
         return;
       }
@@ -135,21 +165,19 @@ export const useExperimentPolling = ({
           });
           return;
         }
-        setExperimentStatus(data.status);
+        setExperimentStatus(data.status as ExperimentStatus);
 
         // Stop polling immediately if results are available or status is completed/success
         if (data.hasTrainingResults === true || data.status === 'completed' || data.status === 'success') {
           console.log('[TrainingContext] Results ready or experiment completed — stopping poller');
-          clearInterval(poller);
-          setPollingInterval(null);
-          isPollingActiveRef.current = false;
-          experimentIdRef.current = null;
+          stopPolling();
 
           setTimeout(() => {
             onSuccess(experimentId);
           }, 1000); // (optional: allow backend ready time)
           return;
         }
+        
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');
@@ -210,7 +238,7 @@ export const useExperimentPolling = ({
     }, POLL_INTERVAL);
 
     setPollingInterval(poller);
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, lastStatusChange]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, checkIfAlreadyCompleted]);
 
   return { startPolling, stopPolling };
 };

@@ -17,7 +17,7 @@ const TrainingPageContent: React.FC = () => {
     experimentStatus, 
     isTraining, 
     forceResetTrainingState, 
-    stopPolling // Make sure we have access to stopPolling
+    stopPolling 
   } = useTraining();
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const [showResetButton, setShowResetButton] = useState(false);
@@ -43,8 +43,11 @@ const TrainingPageContent: React.FC = () => {
   
   // Make sure we stop polling when component unmounts
   useEffect(() => {
+    console.log("[ModelTrainingPage] Component mounted, adding cleanup function for polling");
+    
     return () => {
       console.log("[ModelTrainingPage] Component unmounting, stopping polling");
+      // Explicitly call stopPolling to ensure we don't leak intervals
       stopPolling();
     };
   }, [stopPolling]);

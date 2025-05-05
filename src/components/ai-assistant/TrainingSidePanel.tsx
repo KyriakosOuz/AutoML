@@ -1,12 +1,20 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import AISidePanel from './AISidePanel';
 import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 const TrainingSidePanel: React.FC = () => {
   const { getRouteInsights } = useAssistantInsights();
-  const { isTraining, experimentStatus, activeExperimentId } = useTraining();
+  const trainingContext = useTraining();
+  const [loading, setLoading] = useState(false);
+  
+  // Safely access training context values
+  useEffect(() => {
+    if (trainingContext) {
+      setLoading(trainingContext.isTraining);
+    }
+  }, [trainingContext]);
   
   const insights = useMemo(() => {
     return getRouteInsights('/training').map(insight => ({
@@ -17,7 +25,7 @@ const TrainingSidePanel: React.FC = () => {
     }));
   }, [getRouteInsights]);
 
-  return <AISidePanel insights={insights} loading={isTraining} />;
+  return <AISidePanel insights={insights} loading={loading} />;
 };
 
 export default TrainingSidePanel;

@@ -136,34 +136,45 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
       }
     }
     
-    // Training insights - only generate if trainingContext is available
+    // Training insights - only generate if trainingContext is available and we're on the training page
     if (location.pathname.includes('/training') && trainingContext) {
-      // Training setup insight
-      if (!trainingContext.isTraining && !trainingContext.experimentResults) {
-        addInsight({
-          title: 'Training Configuration',
-          content: 'Select your training method: AutoML will automatically find the best model, or configure a custom model manually.',
-          route: '/training',
-          suggestedPrompts: [
-            "What's the difference between AutoML and custom?",
-            "Which algorithm should I choose?",
-            "How do I interpret the results?"
-          ]
-        });
-      }
-      
-      // Training results insight
-      if (trainingContext.experimentStatus === 'completed' && trainingContext.experimentResults) {
-        addInsight({
-          title: 'Training Complete',
-          content: `Your model training has completed successfully. Check the results to see how your model performed.`,
-          route: '/training',
-          suggestedPrompts: [
-            "How do I interpret these metrics?",
-            "Is this a good model?",
-            "How can I improve my model?"
-          ]
-        });
+      // We need to be more careful about accessing training context properties to avoid triggering bugs
+      try {
+        // Only generate insights when we're sure it's safe
+        const isTraining = trainingContext.isTraining;
+        const experimentResults = trainingContext.experimentResults;
+        const experimentStatus = trainingContext.experimentStatus;
+
+        // Training setup insight
+        if (!isTraining && !experimentResults) {
+          addInsight({
+            title: 'Training Configuration',
+            content: 'Select your training method: AutoML will automatically find the best model, or configure a custom model manually.',
+            route: '/training',
+            suggestedPrompts: [
+              "What's the difference between AutoML and custom?",
+              "Which algorithm should I choose?",
+              "How do I interpret the results?"
+            ]
+          });
+        }
+        
+        // Training results insight - only add when explicitly completed
+        if (experimentStatus === 'completed' && experimentResults) {
+          addInsight({
+            title: 'Training Complete',
+            content: `Your model training has completed successfully. Check the results to see how your model performed.`,
+            route: '/training',
+            suggestedPrompts: [
+              "How do I interpret these metrics?",
+              "Is this a good model?",
+              "How can I improve my model?"
+            ]
+          });
+        }
+      } catch (error) {
+        console.error('Error generating training insights:', error);
+        // Don't let errors in insight generation crash the context
       }
     }
   }, [
@@ -174,7 +185,8 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     datasetContext?.taskType,
     trainingContext?.isTraining,
     trainingContext?.experimentResults,
-    trainingContext?.experimentStatus
+    trainingContext?.experimentStatus,
+    addInsight
   ]);
 
   return (
@@ -197,4 +209,3 @@ export const useAssistantInsights = (): AssistantInsightsContextType => {
   }
   return context;
 };
-

@@ -22,6 +22,7 @@ export interface TrainingContextState {
   randomSeed: number;
   activeTab: 'automl' | 'custom' | 'results' | 'predict';
   isCheckingLastExperiment: boolean;
+  isPollingActive?: boolean; // New field to track polling status
 }
 
 export interface TrainingContextValue extends TrainingContextState {
