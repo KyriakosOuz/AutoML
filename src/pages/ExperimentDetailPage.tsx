@@ -17,6 +17,7 @@ const ExperimentDetailPage: React.FC = () => {
     queryFn: () => getExperimentResults(experimentId!),
     enabled: !!experimentId,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1, // Only retry once to prevent excessive requests
   });
 
   useEffect(() => {
@@ -39,6 +40,8 @@ const ExperimentDetailPage: React.FC = () => {
       <ExperimentResultsContainer 
         experimentId={experimentId || ''} 
         status={status}
+        results={data}
+        isLoading={isLoading}
       />
       
       <ExperimentSidePanel />

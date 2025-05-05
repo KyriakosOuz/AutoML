@@ -13,7 +13,9 @@ const ModelTrainingPage: React.FC = () => {
   useEffect(() => {
     console.log("[ModelTrainingPage] Component mounted, checking for most recent experiment");
     checkLastExperiment();
-  }, [checkLastExperiment]);
+    // Only check once on mount, no need to re-check on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   return (
     <div className="flex flex-col min-h-screen">

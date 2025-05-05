@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -37,11 +36,35 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ExperimentResults } from '@/types/training';
 import ClassificationReportTable from './ClassificationReportTable';
+import RocCurveChart from './charts/RocCurveChart';
+import PrecisionRecallChart from './charts/PrecisionRecallChart';
+import ConfusionMatrixChart from './charts/ConfusionMatrixChart';
 
 interface CustomTrainingResultsProps {
   experimentResults: ExperimentResults;
   onReset: () => void;
 }
+
+// Helper function to categorize files by type
+const categorizeFiles = (files: any[] = []) => {
+  return {
+    confusionMatrix: files.filter(f => f.file_type.includes('confusion_matrix')),
+    rocCurve: files.filter(f => f.file_url.includes('roc_curve') || f.file_type.includes('roc')),
+    precisionRecall: files.filter(f => f.file_url.includes('precision_recall') || f.file_type.includes('precision')),
+    distribution: files.filter(f => f.file_type.includes('distribution')),
+    featureImportance: files.filter(f => f.file_type.includes('importance')),
+    other: files.filter(f => 
+      !f.file_type.includes('confusion_matrix') && 
+      !f.file_url.includes('roc_curve') && 
+      !f.file_url.includes('precision_recall') &&
+      !f.file_type.includes('distribution') &&
+      !f.file_type.includes('importance') &&
+      !f.file_type.includes('model') &&
+      !f.file_type.includes('report')
+    ),
+    model: files.filter(f => f.file_type === 'model' || f.file_type.includes('model'))
+  };
+};
 
 const formatTime = (date: string) => {
   try {
@@ -77,20 +100,12 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     algorithm
   } = experimentResults;
 
-  // Helper function to filter files by type
-  const isVisualizationFile = (file: any) => {
-    const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
-    return visualTypes.some(type => file.file_type.includes(type)) && 
-           !file.file_type.includes('model') && 
-           !file.file_type.includes('report');
-  };
-
+  // Categorize files by type
+  const categorizedFiles = categorizeFiles(files);
+  
   // Get model files
   const modelFiles = files.filter(file => file.file_type === 'model' || file.file_type.includes('model'));
   const firstModelFile = modelFiles.length > 0 ? modelFiles[0] : null;
-  
-  // Get visualization files (excluding models and reports)
-  const visualizationFiles = files.filter(isVisualizationFile);
 
   // Check if task_type exists before using it
   const isClassification = task_type ? task_type.includes('classification') : false;
@@ -115,14 +130,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
 
   // Format task type for display with null check
   const formattedTaskType = task_type ? task_type.replace(/_/g, ' ') : 'unknown task';
-  
-  // Check and log classification report if it exists
-  if (metrics && metrics.classification_report) {
-    console.log('[CustomTrainingResults] Classification report type:', typeof metrics.classification_report);
-    if (typeof metrics.classification_report === 'object') {
-      console.log('[CustomTrainingResults] Classification report keys:', Object.keys(metrics.classification_report));
-    }
-  }
 
   return (
     <Card className="shadow-lg border-primary/10">
@@ -282,13 +289,293 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 </>
               )}
             </div>
+            
+            {/* Display Chart Components for ROC and PR curves if data exists */}
+            {isClassification && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                {metrics.fpr && metrics.tpr && (
+                  <RocCurveChart fpr={metrics.fpr} tpr={metrics.tpr} auc={metrics.auc} />
+                )}
+                
+                {metrics.precision && metrics.recall && (
+                  <PrecisionRecallChart 
+                    precision={metrics.precision} 
+                    recall={metrics.recall} 
+                    f1Score={metrics.f1_score}
+                  />
+                )}
+                
+                {metrics.confusion_matrix && (
+                  <ConfusionMatrixChart 
+                    matrix={metrics.confusion_matrix} 
+                    labels={metrics.class_labels}
+                  />
+                )}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="visualizations" className="p-6">
-            {visualizationFiles.length > 0 ? (
+            {categorizedFiles.confusionMatrix.length > 0 || 
+             categorizedFiles.rocCurve.length > 0 ||
+             categorizedFiles.precisionRecall.length > 0 || 
+             categorizedFiles.distribution.length > 0 ||
+             categorizedFiles.featureImportance.length > 0 ||
+             categorizedFiles.other.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {visualizationFiles.map((file, index) => (
-                  <Dialog key={index}>
+                {/* Confusion Matrix */}
+                {categorizedFiles.confusionMatrix.map((file, index) => (
+                  <Dialog key={`cm-${index}`}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              Confusion Matrix
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt="Confusion Matrix" 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">Confusion Matrix</h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+                
+                {/* ROC Curves */}
+                {categorizedFiles.rocCurve.map((file, index) => (
+                  <Dialog key={`roc-${index}`}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              ROC Curve
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt="ROC Curve" 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">ROC Curve</h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+                
+                {/* Precision-Recall Curves */}
+                {categorizedFiles.precisionRecall.map((file, index) => (
+                  <Dialog key={`pr-${index}`}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              Precision-Recall Curve
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt="Precision-Recall Curve" 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">Precision-Recall Curve</h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+                
+                {/* Distribution plots */}
+                {categorizedFiles.distribution.map((file, index) => (
+                  <Dialog key={`dist-${index}`}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              Distribution Analysis
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt="Distribution Analysis" 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">Distribution Analysis</h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+                
+                {/* Feature importance */}
+                {categorizedFiles.featureImportance.map((file, index) => (
+                  <Dialog key={`imp-${index}`}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              Feature Importance
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt="Feature Importance" 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">Feature Importance</h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+                
+                {/* Other visualization files */}
+                {categorizedFiles.other.map((file, index) => (
+                  <Dialog key={`other-${index}`}>
                     <DialogTrigger asChild>
                       <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
                         <CardContent className="p-4">
