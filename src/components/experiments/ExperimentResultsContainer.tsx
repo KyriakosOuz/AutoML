@@ -10,6 +10,8 @@ import MLJARExperimentResults from '../results/MLJARExperimentResults';
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
+  results?: ExperimentResultsType | null; // Make results optional
+  isLoading?: boolean; // Make isLoading optional
   onReset?: () => void;
   onRefresh?: () => void;
 }
@@ -17,22 +19,30 @@ interface ExperimentResultsContainerProps {
 const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   experimentId,
   status,
+  results: providedResults,
+  isLoading: providedIsLoading,
   onReset,
   onRefresh
 }) => {
-  const [results, setResults] = useState<ExperimentResultsType | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);
+  const [isLoading, setIsLoading] = useState<boolean>(providedIsLoading !== undefined ? providedIsLoading : false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    if (providedResults) {
+      // If results are provided as props, use them
+      setResults(providedResults);
+      return;
+    }
+    
     if (!experimentId) return;
     
     // Fetch results when status is completed, success, or failed (to show error details)
     if ((status === 'completed' || status === 'success' || status === 'failed')) {
       fetchResults();
     }
-  }, [experimentId, status]);
+  }, [experimentId, status, providedResults]);
 
   const fetchResults = async () => {
     if (!experimentId) return;

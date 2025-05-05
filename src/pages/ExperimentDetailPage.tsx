@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ExperimentResults } from '@/types/training';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
-import { getExperimentResults } from '@/lib/api';
+import { getExperimentResults } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
@@ -30,6 +30,9 @@ const ExperimentDetailPage: React.FC = () => {
     }
   }, [error, toast]);
   
+  // Determine the status to pass to ExperimentResultsContainer
+  const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
+  
   return (
     <AssistantInsightsProvider>
       <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
@@ -37,8 +40,8 @@ const ExperimentDetailPage: React.FC = () => {
         
         <ExperimentResultsContainer 
           experimentId={experimentId || ''} 
-          results={data}
-          isLoading={isLoading}
+          status={status}
+          onReset={() => {/* Optional reset handler */}}
         />
         
         <ExperimentSidePanel />
