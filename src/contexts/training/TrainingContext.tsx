@@ -29,6 +29,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
+    isCheckingLastExperiment: false,
   });
 
   // Enhanced experiment restoration with improved logging and error handling
@@ -109,6 +110,95 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     
     restoreExperiment();
   }, []);
+
+  // New method to check for the most recent experiment
+  const checkLastExperiment = async () => {
+    // Skip if we already have an active experiment or are already checking
+    if (state.activeExperimentId || state.isCheckingLastExperiment) {
+      console.log("[TrainingContext] Already have an active experiment or checking, skipping last experiment lookup");
+      return;
+    }
+
+    try {
+      console.log("[TrainingContext] Checking for most recent experiment");
+      
+      setState(prev => ({
+        ...prev,
+        isCheckingLastExperiment: true
+      }));
+      
+      // Get the latest experiment from the API
+      const latestExperiment = await trainingApi.getLastExperiment();
+      
+      if (!latestExperiment) {
+        console.log("[TrainingContext] No recent experiments found");
+        setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
+        return;
+      }
+      
+      console.log("[TrainingContext] Found recent experiment:", latestExperiment);
+      
+      // Update state with the latest experiment
+      const experimentId = latestExperiment.id;
+      
+      // First update with basic info
+      setState(prev => ({
+        ...prev,
+        activeExperimentId: experimentId,
+        experimentStatus: 'processing',
+        lastTrainingType: latestExperiment.automl_engine ? 'automl' : 'custom',
+        isLoadingResults: true
+      }));
+      
+      // Save to localStorage for persistence between page refreshes
+      localStorage.setItem(EXPERIMENT_STORAGE_KEY, experimentId);
+      localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, latestExperiment.automl_engine ? 'automl' : 'custom');
+      
+      // Then check the actual status
+      const statusResponse = await checkStatus(experimentId);
+      const status = statusResponse.data;
+      
+      // Map backend status to our internal status type
+      let mappedStatus: ExperimentStatus = status.status as ExperimentStatus;
+      
+      // If backend returns 'success', map it to our 'completed' status
+      if (mappedStatus === 'success' || mappedStatus === 'completed') {
+        mappedStatus = 'completed';
+      }
+      
+      // Update with the actual status
+      setState(prev => ({
+        ...prev,
+        experimentStatus: mappedStatus,
+        statusResponse: status,
+        isLoadingResults: false,
+        isCheckingLastExperiment: false,
+        // If experiment is still running, we want to set isTraining to true
+        isTraining: ['running', 'processing'].includes(mappedStatus)
+      }));
+      
+      // If has results and is completed, fetch them right away
+      if (status.hasTrainingResults && mappedStatus === 'completed') {
+        console.log("[TrainingContext] Latest experiment has results, fetching them");
+        getExperimentResults();
+      }
+      
+      // If still running, start polling
+      if (['running', 'processing'].includes(mappedStatus)) {
+        console.log("[TrainingContext] Latest experiment still in progress, starting polling");
+        startPolling(experimentId);
+        
+        // Show toast to inform user
+        toast({
+          title: "Experiment in progress",
+          description: "We found an experiment in progress and resumed monitoring it for you.",
+        });
+      }
+    } catch (error) {
+      console.error("[TrainingContext] Error checking for most recent experiment:", error);
+      setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
+    }
+  };
 
   useEffect(() => {
     try {
@@ -266,6 +356,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
+    checkLastExperiment,
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -285,6 +376,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
+        isCheckingLastExperiment: false,
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);

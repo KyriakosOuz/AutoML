@@ -30,6 +30,7 @@ export interface TrainingContextState {
   stratify: boolean;
   randomSeed: number;
   activeTab: string;
+  isCheckingLastExperiment: boolean;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -55,4 +56,5 @@ export interface TrainingContextValue extends TrainingContextState {
   setExperimentStatus: (status: ExperimentStatus) => void;
   setStatusResponse: (response: ExperimentStatusResponse | null) => void;
   setActiveTab: (tab: string) => void;
+  checkLastExperiment: () => Promise<void>;
 }
