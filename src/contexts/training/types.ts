@@ -1,7 +1,15 @@
 
-import { ExperimentResults, ExperimentStatusResponse, AutoMLParameters, CustomTrainingParameters, AutoMLResult, CustomTrainingResult } from '@/types/training';
+import { 
+  AutoMLParameters, 
+  CustomTrainingParameters, 
+  AutoMLResult, 
+  CustomTrainingResult, 
+  ExperimentResults, 
+  TrainingEngine,
+  ExperimentStatusResponse 
+} from '@/types/training';
 
-export type ExperimentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'processing' | 'success';
+export type ExperimentStatus = 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 export interface TrainingContextState {
   isTraining: boolean;
@@ -16,16 +24,11 @@ export interface TrainingContextState {
   isLoadingResults: boolean;
   experimentStatus: ExperimentStatus;
   statusResponse: ExperimentStatusResponse | null;
-  automlEngine: 'mljar' | 'autokeras' | 'h2o';
+  automlEngine: TrainingEngine;
   testSize: number;
   stratify: boolean;
   randomSeed: number;
-  activeTab: 'automl' | 'custom' | 'results' | 'predict';
-  isCheckingLastExperiment: boolean;
-  isPollingActive?: boolean; // Track polling status
-  hasConnectionError?: boolean; // Track connection errors
-  hasFetchedResults: boolean; // NEW FLAG: Track if we've already fetched the results
-  consecutiveErrorCount: number; // NEW: Track consecutive API errors for backoff
+  activeTab: string;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -36,23 +39,19 @@ export interface TrainingContextValue extends TrainingContextState {
   setAutomlResult: (result: AutoMLResult | null) => void;
   setCustomResult: (result: CustomTrainingResult | null) => void;
   setError: (error: string | null) => void;
+  resetTrainingState: () => void;
   setActiveExperimentId: (id: string | null) => void;
   setExperimentResults: (results: ExperimentResults | null) => void;
   setIsLoadingResults: (isLoading: boolean) => void;
-  setExperimentStatus: (status: ExperimentStatus) => void;
-  setStatusResponse: (response: ExperimentStatusResponse | null) => void;
-  setAutomlEngine: (engine: 'mljar' | 'autokeras' | 'h2o') => void;
+  clearExperimentResults: () => void;
+  getExperimentResults: () => void;
+  setAutomlEngine: (engine: TrainingEngine) => void;
   setTestSize: (size: number) => void;
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
-  setActiveTab: (tab: 'automl' | 'custom' | 'results' | 'predict') => void;
-  checkLastExperiment: () => Promise<void>;
-  resetTrainingState: () => void;
-  forceResetTrainingState: () => void; 
-  clearExperimentResults: () => void;
-  getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
-  clearLocalStorageData: () => void;
-  setHasFetchedResults: (hasFetched: boolean) => void; // NEW: Setter for hasFetchedResults flag
+  setExperimentStatus: (status: ExperimentStatus) => void;
+  setStatusResponse: (response: ExperimentStatusResponse | null) => void;
+  setActiveTab: (tab: string) => void;
 }

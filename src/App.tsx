@@ -17,8 +17,7 @@ import ExperimentDetailPage from "./pages/ExperimentDetailPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import FloatingChatButton from "./components/ai-assistant/FloatingChatButton";
-import { AssistantInsightsProvider } from "./contexts/AssistantInsightsContext";
-import { DatasetProvider } from "./contexts/DatasetContext";
+import ExperimentInsights from "./components/ai-assistant/ExperimentInsights";
 
 const queryClient = new QueryClient();
 
@@ -37,18 +36,12 @@ const App = () => (
                 <Route element={<MainLayout />}>
                   <Route path="/dataset/*" element={
                     <ProtectedRoute>
-                      <DatasetProvider>
-                        <AssistantInsightsProvider>
-                          <DatasetPage />
-                        </AssistantInsightsProvider>
-                      </DatasetProvider>
+                      <DatasetPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/training" element={
                     <ProtectedRoute>
-                      <DatasetProvider>
-                        <ModelTrainingPage />
-                      </DatasetProvider>
+                      <ModelTrainingPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/dashboard" element={
@@ -63,11 +56,8 @@ const App = () => (
                   } />
                   <Route path="/experiment/:experimentId" element={
                     <ProtectedRoute>
-                      <DatasetProvider>
-                        <AssistantInsightsProvider>
-                          <ExperimentDetailPage />
-                        </AssistantInsightsProvider>
-                      </DatasetProvider>
+                      <ExperimentDetailPage />
+                      <ExperimentInsights />
                     </ProtectedRoute>
                   } />
                   <Route path="/settings" element={

@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -602,44 +603,6 @@ export const trainingApi = {
     } catch (error) {
       console.error('Error fetching experiment results:', error);
       throw error;
-    }
-  },
-
-  getLastExperiment: async () => {
-    try {
-      console.log('[API] Fetching most recent experiment');
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_URL}/experiments/last-experiment/`, {
-        headers
-      });
-      
-      if (response.status === 404) {
-        console.log('[API] No recent experiments found');
-        return null;
-      }
-      
-      if (response.status === 400) {
-        console.log('[API] Bad request when fetching last experiment. Server may be misconfigured or require authentication.');
-        return null; // Return null instead of throwing error to stop retry attempts
-      }
-      
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        console.error('[API] Error fetching last experiment:', {
-          status: response.status,
-          response: errorText.substring(0, 200)
-        });
-        throw new Error(`Failed to fetch last experiment: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('[API] Last experiment data:', data);
-      
-      return data.data || data;
-    } catch (error) {
-      console.error('[API] Error in getLastExperiment:', error);
-      // Don't throw error, return null to gracefully handle this case
-      return null;
     }
   }
 };

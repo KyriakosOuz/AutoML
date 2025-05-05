@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,8 @@ import DatasetHeader from '@/components/dataset/DatasetHeader';
 import DatasetTabNavigation from '@/components/dataset/DatasetTabNavigation';
 import DatasetTabContent from '@/components/dataset/DatasetTabContent';
 import { datasetApi } from '@/lib/api';
-// import DatasetSidePanel from '@/components/ai-assistant/DatasetSidePanel';
+import DatasetInsights from '@/components/ai-assistant/DatasetInsights';
+import PreprocessingInsights from '@/components/ai-assistant/PreprocessingInsights';
 
 const DatasetPageContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -112,6 +114,15 @@ const DatasetPageContent: React.FC = () => {
           columnsToKeep={columnsToKeep}
         />
         
+        {/* Only show insights when dataset is loaded */}
+        {datasetId && (
+          <>
+            <DatasetInsights />
+            {/* Show preprocessing insights only when on preprocess tab */}
+            {activeTab === 'preprocess' && <PreprocessingInsights />}
+          </>
+        )}
+        
         <div className="space-y-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <DatasetTabNavigation isTabEnabled={isTabEnabled} />
@@ -132,8 +143,6 @@ const DatasetPageContent: React.FC = () => {
           <p>© 2025 AutoML Web App. Data processing powered by FastAPI.</p>
         </footer>
       </div>
-      
-      {/* <DatasetSidePanel /> */}
     </div>
   );
 };
