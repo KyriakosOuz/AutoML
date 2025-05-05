@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -111,8 +112,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     restoreExperiment();
   }, []);
 
-  // New method to check for the most recent experiment
-  const checkLastExperiment = async () => {
+  // New method to check for the most recent experiment - properly memoized with useCallback
+  const checkLastExperiment = useCallback(async () => {
     // Skip if we already have an active experiment or are already checking
     if (state.activeExperimentId || state.isCheckingLastExperiment) {
       console.log("[TrainingContext] Already have an active experiment or checking, skipping last experiment lookup");
@@ -198,7 +199,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error("[TrainingContext] Error checking for most recent experiment:", error);
       setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
     }
-  };
+  }, [state.activeExperimentId, state.isCheckingLastExperiment, toast]);
 
   useEffect(() => {
     try {
@@ -227,7 +228,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults]);
 
-  const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
+  const handlePollingSuccess = useCallback(async (experimentId: string) => {
     setState(prev => ({
       ...prev,
       statusResponse: {
@@ -279,7 +280,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
 
-  const getExperimentResults = React.useCallback(async () => {
+  // Make getExperimentResults a memoized callback too
+  const getExperimentResults = useCallback(async () => {
     if (!state.activeExperimentId) return;
     
     // Don't refetch if we already have results
