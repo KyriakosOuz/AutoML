@@ -1,15 +1,12 @@
 
 import React, { useEffect } from 'react';
-import { DatasetProvider } from '@/contexts/DatasetContext';
-import { TrainingProvider, useTraining } from '@/contexts/training/TrainingContext';
+import { useTraining } from '@/contexts/training/TrainingContext';
 import ModelTrainingContent from '@/components/training/ModelTrainingContent';
 import TrainingHeader from '@/components/training/TrainingHeader';
 import { Toaster } from '@/components/ui/toaster';
-import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
 import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
 
-// Create a separate component that uses the context
-const TrainingPageContent: React.FC = () => {
+const ModelTrainingPage: React.FC = () => {
   const { checkLastExperiment } = useTraining();
   
   // Check for the most recent experiment when the component mounts
@@ -25,21 +22,8 @@ const TrainingPageContent: React.FC = () => {
         <ModelTrainingContent />
       </div>
       <TrainingSidePanel />
+      <Toaster />
     </div>
-  );
-};
-
-// Main component that provides the context
-const ModelTrainingPage: React.FC = () => {
-  return (
-    <DatasetProvider>
-      <TrainingProvider>
-        <AssistantInsightsProvider>
-          <TrainingPageContent />
-          <Toaster />
-        </AssistantInsightsProvider>
-      </TrainingProvider>
-    </DatasetProvider>
   );
 };
 

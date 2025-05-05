@@ -1,14 +1,9 @@
 
 import React from 'react';
-import { DatasetProvider } from '@/contexts/DatasetContext';
 import DatasetPageContent from '@/components/dataset/DatasetPageContent';
 
 const DatasetPage: React.FC = () => {
-  return (
-    <DatasetProvider>
-      <DatasetPageContent />
-    </DatasetProvider>
-  );
+  return <DatasetPageContent />;
 };
 
 export default DatasetPage;

@@ -3,25 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
-// Import hooks conditionally to prevent errors
-let useDatasetImport: any = null;
-let useTrainingImport: any = null;
-
-// Dynamically import hooks to prevent errors when providers aren't available
-try {
-  // Attempt to import useDataset, but don't fail if it's not available
-  useDatasetImport = require('./DatasetContext').useDataset;
-} catch (error) {
-  console.log('DatasetContext not available');
-}
-
-try {
-  // Attempt to import useTraining, but don't fail if it's not available
-  useTrainingImport = require('./training/TrainingContext').useTraining;
-} catch (error) {
-  console.log('TrainingContext not available');
-}
-
 export interface Insight {
   id: string;
   title: string;
@@ -45,9 +26,33 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
   const [insights, setInsights] = useState<Insight[]>([]);
   const location = useLocation();
   
-  // Safely use contexts only if they're available
-  const datasetContext = useDatasetImport ? useDatasetImport() : null;
-  const trainingContext = useTrainingImport ? useTrainingImport() : null;
+  // Safely get contexts without direct imports to avoid dependency cycles
+  let datasetContext = null;
+  let trainingContext = null;
+  
+  // We'll populate dataset and training data only when needed based on the route
+  // This avoids trying to use hooks outside their providers
+  if (location.pathname.includes('/dataset')) {
+    try {
+      const DatasetContext = require('./DatasetContext');
+      if (DatasetContext.useDataset) {
+        datasetContext = DatasetContext.useDataset();
+      }
+    } catch (error) {
+      console.log('DatasetContext not available or not on dataset route');
+    }
+  }
+  
+  if (location.pathname.includes('/training') || location.pathname.includes('/experiment')) {
+    try {
+      const TrainingContext = require('./training/TrainingContext');
+      if (TrainingContext.useTraining) {
+        trainingContext = TrainingContext.useTraining();
+      }
+    } catch (error) {
+      console.log('TrainingContext not available or not on training route');
+    }
+  }
 
   // Add a new insight
   const addInsight = (insight: Omit<Insight, 'id' | 'timestamp'>) => {
@@ -197,4 +202,3 @@ export const useAssistantInsights = (): AssistantInsightsContextType => {
   }
   return context;
 };
-
