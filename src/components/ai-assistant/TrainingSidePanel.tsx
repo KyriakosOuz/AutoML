@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import AIBottomPanel from './AIBottomPanel';
+import AISidePanel from './AISidePanel';
 import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
@@ -17,7 +17,7 @@ const TrainingSidePanel: React.FC = () => {
     }));
   }, [getRouteInsights]);
 
-  return <AIBottomPanel insights={insights} loading={isTraining} />;
+  return <AISidePanel insights={insights} loading={isTraining} />;
 };
 
 export default TrainingSidePanel;

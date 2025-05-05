@@ -31,9 +31,6 @@ import { trainingApi } from '@/lib/api';
 import ClassificationReportTable from '@/components/training/ClassificationReportTable';
 import ConfusionMatrixChart from '@/components/training/charts/ConfusionMatrixChart';
 import PrecisionRecallChart from '@/components/training/charts/PrecisionRecallChart';
-import MarkdownRenderer from '../file-renderers/MarkdownRenderer';
-import JsonRenderer from '../file-renderers/JsonRenderer';
-import CsvRenderer from '../file-renderers/CsvRenderer';
 
 const formatTaskType = (type: string = '') => {
   if (!type) return "Unknown";
@@ -179,35 +176,11 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
         }
 
         const payload = apiRes;
+        const tr = payload.training_results || {};
+        const allMetrics = (tr && typeof tr === 'object' && 'metrics' in tr) ? tr.metrics || {} : {};
         
-        // Improved metrics parsing - extract metrics from different possible locations
-        let allMetrics: Record<string, any> = {};
-        
-        // Check if metrics exist directly in the payload
-        if (payload.metrics && typeof payload.metrics === 'object') {
-          allMetrics = { ...allMetrics, ...payload.metrics };
-        }
-        
-        // Check if metrics exist in training_results
-        const trainingResults = payload.training_results || {};
-        if (trainingResults && typeof trainingResults === 'object') {
-          // If training_results has metrics property
-          if (trainingResults.metrics && typeof trainingResults.metrics === 'object') {
-            allMetrics = { ...allMetrics, ...trainingResults.metrics };
-          }
-          
-          // Some APIs might put metrics directly in training_results
-          const metricKeys = ['accuracy', 'precision', 'recall', 'f1_score', 'auc', 'rmse', 'mae', 'mse', 'r2_score'];
-          for (const key of metricKeys) {
-            if (key in trainingResults && typeof trainingResults[key] === 'number') {
-              allMetrics[key] = trainingResults[key];
-            }
-          }
-        }
-        
-        console.log('[ExperimentResultsView] Parsed metrics:', allMetrics);
-        
-        // Extract numeric metrics
+        const typedMetrics = allMetrics as ExtendedMetrics;
+
         const numericMetrics: Record<string, number> = {};
         Object.entries(allMetrics).forEach(([key, value]) => {
           if (typeof value === 'number') {
@@ -215,9 +188,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           }
         });
 
-        const typedMetrics = allMetrics as ExtendedMetrics;
-        
-        // Extract special metric formats
         const classificationReport = typedMetrics.classification_report ?? null;
         const confusionMatrix = typedMetrics.confusion_matrix ?? null;
         
@@ -231,7 +201,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           
         const shapValues = typedMetrics.shap_values ?? undefined;
 
-        // Calculate training time if not provided
         let trainingTimeSec = payload.training_time_sec;
         if (!trainingTimeSec && payload.created_at && payload.completed_at) {
           const created = new Date(payload.created_at);
@@ -239,7 +208,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           trainingTimeSec = (completed.getTime() - created.getTime()) / 1000;
         }
 
-        // Process files for proper display
         const processedFiles: ExperimentFile[] = (payload.files || []).map(file => ({
           ...file,
           file_name: file.file_name || file.file_type + '.file'
@@ -255,8 +223,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               algorithm: payload.algorithm,
               automl_engine: payload.automl_engine,
               target_column: payload.target_column,
-              hyperparameters: payload.hyperparameters || {},
-              training_time_sec: trainingTimeSec || 0,
+              hyperparameters: payload.hyperparameters,
+              training_time_sec: trainingTimeSec,
               created_at: payload.created_at,
               completed_at: payload.completed_at,
               error_message: payload.error_message ?? null,
@@ -511,48 +479,30 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
     );
   }
 
-  const { experiment_metadata, metrics, files, classificationReport, confusionMatrix, roc, prCurve } = results || {
-    experiment_metadata: {} as ExperimentMetadata,
-    metrics: {} as Record<string, number>,
-    files: [] as ExperimentFile[],
-    classificationReport: null,
-    confusionMatrix: null,
-    roc: null,
-    prCurve: null
-  };
+  const { experiment_metadata, metrics, files, classificationReport, confusionMatrix, roc, prCurve } = results;
 
+  const numberMetrics = metrics;
+  
   const isVisualizationFile = (fileType: string) => {
     const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
     return visualTypes.some(type => fileType.includes(type));
   };
   
-  // File categorization
-  const downloadableFiles = (files || []).filter(file => 
-    file.file_type === 'model' || 
-    file.file_type.includes('report')
-  );
+  const downloadableFiles = Array.from(new Set(
+    files.filter(file => 
+      file.file_type === 'model' || 
+      file.file_type.includes('report')
+    ).map(file => file.file_url)
+  )).map(url => {
+    const file = files.find(f => f.file_url === url);
+    return file ? file : null;
+  }).filter(Boolean) as typeof files;
   
-  const visualizationFiles = (files || []).filter(file => 
-    isVisualizationFile(file.file_type)
-  );
-  
-  const readmeFile = (files || []).find(file => 
-    file.file_type.includes('readme') || 
-    file.file_name?.toLowerCase().includes('readme.md')
-  );
-  
-  const modelMetadataFile = (files || []).find(file => 
-    file.file_type.includes('model_metadata') || 
-    file.file_type.includes('json')
-  );
-  
-  const csvFiles = (files || []).filter(file => 
-    file.file_type.includes('csv') || 
-    file.file_name?.toLowerCase().includes('.csv')
+  const visualizationFiles = files.filter(file => 
+    file.file_type !== 'model' && 
+    !file.file_type.includes('report')
   );
 
-  const numberMetrics = metrics;
-  
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -614,9 +564,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
           </TabsList>
 
           <TabsContent value="metrics" className="p-6">
-            {Object.keys(metrics).length > 0 ? (
+            {Object.keys(results?.metrics || {}).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(metrics).map(([key, value]) => {
+                {Object.entries(results?.metrics || {}).map(([key, value]) => {
                   const isPercentageMetric = 
                     key.toLowerCase().includes("accuracy") ||
                     key.toLowerCase().includes("f1_score") ||
@@ -649,35 +599,35 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground max-w-md mx-auto mt-2 text-center py-8">
-                No performance metrics were found for this experiment. This might happen if the model is still being processed or if there was an issue during training.
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                No performance metrics were found for this experiment.
               </p>
             )}
-            {classificationReport && (
+            {results?.classificationReport && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md overflow-x-auto">
-                  <ClassificationReportTable report={classificationReport} />
+                  <ClassificationReportTable report={results.classificationReport} />
                 </div>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="visualizations" className="p-6">
-            {confusionMatrix && confusionMatrix.length > 0 && (
+            {results?.confusionMatrix && results.confusionMatrix.length > 0 && (
               <div className="mb-8">
                 <ConfusionMatrixChart 
-                  matrix={confusionMatrix} 
+                  matrix={results.confusionMatrix} 
                   labels={undefined} 
                 />
               </div>
             )}
-            {prCurve && (
+            {results?.prCurve && (
               <div className="mb-8">
                 <PrecisionRecallChart 
-                  precision={prCurve.precision} 
-                  recall={prCurve.recall} 
-                  f1Score={prCurve.f1Score}
+                  precision={results.prCurve.precision} 
+                  recall={results.prCurve.recall} 
+                  f1Score={results.prCurve.f1Score}
                 />
               </div>
             )}
@@ -763,57 +713,27 @@ const ExperimentResultsView: React.FC<ExperimentResultsProps> = ({
               
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Model Metadata</CardTitle>
+                  <CardTitle className="text-base">Downloads</CardTitle>
                 </CardHeader>
-                <CardContent className="max-h-80 overflow-y-auto">
-                  {modelMetadataFile ? (
-                    <JsonRenderer 
-                      fileUrl={modelMetadataFile.file_url} 
-                      title="Model Configuration"
-                    />
-                  ) : (
-                    <pre className="text-xs font-mono whitespace-pre-wrap p-4 bg-muted rounded-md">
-                      {JSON.stringify(experiment_metadata.hyperparameters || {}, null, 2)}
-                    </pre>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {readmeFile && (
-                <Card className="shadow-sm col-span-1 md:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Documentation</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <MarkdownRenderer
-                      fileUrl={readmeFile.file_url}
-                      title="README"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {csvFiles.length > 0 && csvFiles.map((file, index) => (
-                <Card key={index} className="shadow-sm col-span-1 md:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CsvRenderer
-                      fileUrl={file.file_url}
-                      maxRows={20}
-                    />
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
+                <CardContent>
+                  <div className="space-y-4">
+                    {downloadableFiles.map((file, index) => (
+                      <Button key={index} variant="outline" className="w-full justify-start" asChild>
                         <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-1" />
-                          Download Full CSV
+                          <Download className="h-4 w-4 mr-2" /> 
+                          Download {file.file_type.replace(/_/g, ' ')}
                         </a>
                       </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    ))}
+                    
+                    {downloadableFiles.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No downloadable files available
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import AIBottomPanel from './AIBottomPanel';
+import AISidePanel from './AISidePanel';
 import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
 
 const ExperimentSidePanel: React.FC = () => {
@@ -15,7 +15,7 @@ const ExperimentSidePanel: React.FC = () => {
     }));
   }, [getRouteInsights]);
 
-  return <AIBottomPanel insights={insights} />;
+  return <AISidePanel insights={insights} />;
 };
 
 export default ExperimentSidePanel;

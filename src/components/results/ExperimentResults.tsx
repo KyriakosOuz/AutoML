@@ -25,9 +25,6 @@ import {
 import { ExperimentStatus } from '@/contexts/training/types';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import ClassificationReportTable from '../training/ClassificationReportTable';
-import MarkdownRenderer from '../file-renderers/MarkdownRenderer';
-import JsonRenderer from '../file-renderers/JsonRenderer';
-import CsvRenderer from '../file-renderers/CsvRenderer';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -93,29 +90,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       file.file_type.includes('report')
     );
   };
-
-  const getFilesByType = (fileType: string) => {
-    if (!experimentResults?.files) return [];
-    return experimentResults.files.filter(file => 
-      file.file_type === fileType || 
-      file.file_type.includes(fileType)
-    );
-  };
-  
-  const readmeFile = experimentResults?.files?.find(file => 
-    file.file_type.includes('readme') || 
-    file.file_name?.toLowerCase().includes('readme.md')
-  );
-  
-  const modelMetadataFile = experimentResults?.files?.find(file => 
-    file.file_type === 'model_metadata' || 
-    file.file_type.includes('ensemble.json')
-  );
-  
-  const predictionsFile = experimentResults?.files?.find(file => 
-    file.file_type === 'predictions_csv' ||
-    file.file_type.includes('predictions')
-  );
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -231,13 +205,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   
   const metrics = experimentResults.metrics || {};
   const files = experimentResults.files || [];
-  
-  // Better visualization file filtering - specifically look for image files
-  const visualizationFiles = files.filter(file => 
-    isVisualizationFile(file.file_type) &&
-    !file.file_type.includes('model') &&
-    !file.file_type.includes('report')
-  );
+  const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   
   const classificationReport = metrics.classification_report && 
     (typeof metrics.classification_report === 'string' || typeof metrics.classification_report === 'object') 
@@ -344,8 +312,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground max-w-md mx-auto mt-2 text-center py-8">
-                No performance metrics were found for this experiment. This might happen if the model is still being processed or if there was an issue during training.
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                No performance metrics were found for this experiment.
               </p>
             )}
             {classificationReport && (
@@ -422,95 +390,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 </p>
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="details" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Experiment Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">Task Type</TableCell>
-                        <TableCell>{formatTaskType(task_type)}</TableCell>
-                      </TableRow>
-                      {target_column && (
-                        <TableRow>
-                          <TableCell className="font-medium">Target Column</TableCell>
-                          <TableCell>{target_column}</TableCell>
-                        </TableRow>
-                      )}
-                      {experiment_id && (
-                        <TableRow>
-                          <TableCell className="font-medium">Experiment ID</TableCell>
-                          <TableCell className="font-mono text-xs">{experiment_id}</TableCell>
-                        </TableRow>
-                      )}
-                      {completed_at && (
-                        <TableRow>
-                          <TableCell className="font-medium">Completed At</TableCell>
-                          <TableCell>{new Date(completed_at).toLocaleString()}</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-              
-              {readmeFile && (
-                <Card className="shadow-sm col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Documentation</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <MarkdownRenderer
-                      fileUrl={readmeFile.file_url}
-                      title="README"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {modelMetadataFile && (
-                <Card className="shadow-sm col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Model Metadata</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <JsonRenderer
-                      fileUrl={modelMetadataFile.file_url}
-                      title="Configuration"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {predictionsFile && (
-                <Card className="shadow-sm col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Predictions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CsvRenderer
-                      fileUrl={predictionsFile.file_url}
-                      title="Model Predictions"
-                      maxRows={20}
-                    />
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={predictionsFile.file_url} download={predictionsFile.file_name} target="_blank" rel="noopener noreferrer">
-                          <DownloadCloud className="h-4 w-4 mr-1" />
-                          Download Full CSV
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </TabsContent>
 
           <TabsContent value="downloads" className="p-6">

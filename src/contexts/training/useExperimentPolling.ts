@@ -52,7 +52,6 @@ export const useExperimentPolling = ({
         if (data.status === 'failed' || !!data.error_message) {
           setExperimentStatus('failed');
           stopPolling();
-          setIsLoading(false); // Stop loading state to render error UI
           onError(data.error_message || 'Training failed.');
           toast({
             title: "Training Failed",
@@ -61,29 +60,23 @@ export const useExperimentPolling = ({
           });
           return;
         }
-        
         setExperimentStatus(data.status);
-        
-        // Immediately stop polling when the status is "completed" or "success"
-        // even if hasTrainingResults is not explicitly true
-        if (data.status === 'completed' || data.status === 'success' || data.hasTrainingResults === true) {
-          console.log('[TrainingContext] Training completed — stopping poller');
+
+        // Stop polling immediately if results are available
+        if (data.hasTrainingResults === true) {
+          console.log('[TrainingContext] Results ready — stopping poller');
           clearInterval(poller);
           setPollingInterval(null);
-          setIsLoading(false); // Stop loading state to render results UI
 
-          // Add a slight delay before triggering success to ensure UI updates
           setTimeout(() => {
             onSuccess(experimentId);
-          }, 500);
+          }, 1000); // (optional: allow backend ready time)
           return;
         }
-        
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');
           stopPolling();
-          setIsLoading(false); // Stop loading state to render error UI
           onError('Timeout while waiting for training completion');
           toast({
             title: "Training Timeout",
@@ -101,7 +94,6 @@ export const useExperimentPolling = ({
         ) {
           stopPolling();
           setExperimentStatus('failed');
-          setIsLoading(false); // Stop loading state to render error UI
           onError('Your session has expired. Please log in again.');
           toast({
             title: "Session Expired",
@@ -113,7 +105,6 @@ export const useExperimentPolling = ({
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           setExperimentStatus('failed');
           stopPolling();
-          setIsLoading(false); // Stop loading state to render error UI
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           onError(`Failed to check experiment status: ${errorMessage}`);
           toast({

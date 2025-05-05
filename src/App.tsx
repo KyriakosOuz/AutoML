@@ -30,48 +30,48 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AIAssistantProvider>
-              <AssistantInsightsProvider>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route element={<MainLayout />}>
-                    <Route path="/dataset/*" element={
-                      <ProtectedRoute>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route element={<MainLayout />}>
+                  <Route path="/dataset/*" element={
+                    <ProtectedRoute>
+                      <AssistantInsightsProvider>
                         <DatasetPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/training" element={
-                      <ProtectedRoute>
-                        <ModelTrainingPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/dashboard" element={
-                      <ProtectedRoute>
-                        <DashboardPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/feedback" element={
-                      <ProtectedRoute>
-                        <FeedbackPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/experiment/:experimentId" element={
-                      <ProtectedRoute>
-                        <ExperimentDetailPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <ProtectedRoute>
-                        <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
-                          <h1 className="text-xl sm:text-2xl font-bold mb-4">Settings Page (Coming Soon)</h1>
-                        </div>
-                      </ProtectedRoute>
-                    } />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <FloatingChatButton />
-              </AssistantInsightsProvider>
+                      </AssistantInsightsProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/training" element={
+                    <ProtectedRoute>
+                      <ModelTrainingPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/feedback" element={
+                    <ProtectedRoute>
+                      <FeedbackPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/experiment/:experimentId" element={
+                    <ProtectedRoute>
+                      <ExperimentDetailPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
+                        <h1 className="text-xl sm:text-2xl font-bold mb-4">Settings Page (Coming Soon)</h1>
+                      </div>
+                    </ProtectedRoute>
+                  } />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <FloatingChatButton />
             </AIAssistantProvider>
           </BrowserRouter>
         </div>

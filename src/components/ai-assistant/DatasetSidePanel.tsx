@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import AIBottomPanel from './AIBottomPanel';
+import AISidePanel from './AISidePanel';
 import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
 import { useDataset } from '@/contexts/DatasetContext';
 
@@ -17,7 +17,7 @@ const DatasetSidePanel: React.FC = () => {
     }));
   }, [getRouteInsights]);
 
-  return <AIBottomPanel insights={insights} loading={isLoading} />;
+  return <AISidePanel insights={insights} loading={isLoading} />;
 };
 
 export default DatasetSidePanel;

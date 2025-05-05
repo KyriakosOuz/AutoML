@@ -24,31 +24,11 @@ interface AssistantInsightsContextType {
 
 const AssistantInsightsContext = createContext<AssistantInsightsContextType | undefined>(undefined);
 
-// Helper function to check if we're in a context where DatasetProvider is available
-const useOptionalDataset = () => {
-  try {
-    return useDataset();
-  } catch (error) {
-    console.info('Dataset context not available on this route');
-    return null;
-  }
-};
-
-// Helper function to check if we're in a context where TrainingProvider is available
-const useOptionalTraining = () => {
-  try {
-    return useTraining();
-  } catch (error) {
-    console.info('Training context not available on this route');
-    return null;
-  }
-};
-
 export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [insights, setInsights] = useState<Insight[]>([]);
   const location = useLocation();
-  const datasetContext = useOptionalDataset();
-  const trainingContext = useOptionalTraining();
+  const datasetContext = useDataset();
+  const trainingContext = useTraining();
 
   // Add a new insight
   const addInsight = (insight: Omit<Insight, 'id' | 'timestamp'>) => {
@@ -59,20 +39,8 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     };
     
     setInsights(prev => {
-      // More precise deduplication - check title, route, and content substring
-      const filtered = prev.filter(i => {
-        // If same title and route, consider as duplicate
-        if (i.title === insight.title && i.route === insight.route) {
-          return false;
-        }
-        
-        // For preprocess route, be even more strict to avoid duplicates
-        if (insight.route.includes('/preprocess') && i.route.includes('/preprocess')) {
-          return false;
-        }
-        
-        return true;
-      });
+      // Remove duplicate insights with the same title for the same route
+      const filtered = prev.filter(i => !(i.title === insight.title && i.route === insight.route));
       return [...filtered, newInsight];
     });
   };
@@ -87,80 +55,70 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     setInsights([]);
   };
 
-  // Get insights for a specific route - more specific matching
+  // Get insights for a specific route
   const getRouteInsights = (route: string) => {
-    // Exact route matching for specific paths, prefix matching for others
-    return insights.filter(insight => {
-      // Exact matching for specific routes
-      if (route === '/dataset/preprocess' && insight.route === '/dataset/preprocess') {
-        return true;
-      }
-      
-      // Otherwise use prefix matching
-      return insight.route === route || insight.route.startsWith(route + '/');
-    });
+    return insights.filter(insight => insight.route === route);
   };
 
   // Generate dataset insights when needed
   useEffect(() => {
-    // Only proceed if we have dataset context
-    if (!datasetContext) return;
-    
     if (location.pathname.includes('/dataset') && datasetContext.datasetId) {
       const overview = datasetContext.overview;
       
-      // Dataset overview insight - only for upload and explore routes
-      if ((location.pathname.includes('/upload') || location.pathname.includes('/explore')) && overview) {
+      // Dataset overview insight
+      if (overview) {
         const hasMissingValues = overview.total_missing_values && overview.total_missing_values > 0;
         
-        addInsight({
-          title: 'Dataset Overview',
-          content: hasMissingValues 
-            ? `Your dataset has ${overview.total_missing_values} missing values across ${overview.num_columns} columns. You'll need to handle them in the next step.`
-            : 'Great! Your dataset has no missing values. You can continue to feature selection.',
-          route: '/dataset',
-          suggestedPrompts: [
-            'What preprocessing steps should I consider?',
-            'How should I handle these missing values?',
-            'What features might be important?'
-          ]
-        });
-      }
-      
-      // Features stage insight - only for features route
-      if (location.pathname.includes('/features') && datasetContext.targetColumn) {
-        addInsight({
-          title: 'Feature Selection',
-          content: `You've selected '${datasetContext.targetColumn}' as your target column. Select the features you want to include in your model.`,
-          route: '/dataset/features',
-          suggestedPrompts: [
-            'Which features are most important?',
-            'How many features should I select?',
-            'What happens if I select correlated features?'
-          ]
-        });
-      }
-      
-      // Preprocessing stage insight - only for preprocess route
-      if (location.pathname.includes('/preprocess') && datasetContext.taskType) {
-        const isClassification = datasetContext.taskType === 'classification';
-        addInsight({
-          title: 'Preprocessing Options',
-          content: isClassification
-            ? 'For classification tasks, consider applying class balancing if your classes are imbalanced.'
-            : 'For regression tasks, normalizing your numerical features can improve model performance.',
-          route: '/dataset/preprocess',
-          suggestedPrompts: [
-            'Should I normalize my data?',
-            isClassification ? 'How does class balancing work?' : 'What scaling method is best?',
-            'What preprocessing steps are most important?'
-          ]
-        });
+        if (location.pathname.includes('/upload') || location.pathname.includes('/explore')) {
+          addInsight({
+            title: 'Dataset Overview',
+            content: hasMissingValues 
+              ? `Your dataset has ${overview.total_missing_values} missing values across ${overview.num_columns} columns. You'll need to handle them in the next step.`
+              : 'Great! Your dataset has no missing values. You can continue to feature selection.',
+            route: '/dataset',
+            suggestedPrompts: [
+              'What preprocessing steps should I consider?',
+              'How should I handle these missing values?',
+              'What features might be important?'
+            ]
+          });
+        }
+        
+        // Features stage insight
+        if (location.pathname.includes('/features') && datasetContext.targetColumn) {
+          addInsight({
+            title: 'Feature Selection',
+            content: `You've selected '${datasetContext.targetColumn}' as your target column. Select the features you want to include in your model.`,
+            route: '/dataset/features',
+            suggestedPrompts: [
+              'Which features are most important?',
+              'How many features should I select?',
+              'What happens if I select correlated features?'
+            ]
+          });
+        }
+        
+        // Preprocessing stage insight
+        if (location.pathname.includes('/preprocess') && datasetContext.taskType) {
+          const isClassification = datasetContext.taskType === 'classification';
+          addInsight({
+            title: 'Preprocessing Options',
+            content: isClassification
+              ? 'For classification tasks, consider applying class balancing if your classes are imbalanced.'
+              : 'For regression tasks, normalizing your numerical features can improve model performance.',
+            route: '/dataset/preprocess',
+            suggestedPrompts: [
+              'Should I normalize my data?',
+              isClassification ? 'How does class balancing work?' : 'What scaling method is best?',
+              'What preprocessing steps are most important?'
+            ]
+          });
+        }
       }
     }
     
     // Training insights
-    if (trainingContext && location.pathname.includes('/training')) {
+    if (location.pathname.includes('/training') && trainingContext) {
       // Training setup insight
       if (!trainingContext.isTraining && !trainingContext.experimentResults) {
         addInsight({
@@ -191,13 +149,13 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     }
   }, [
     location.pathname,
-    datasetContext?.datasetId,
-    datasetContext?.overview,
-    datasetContext?.targetColumn,
-    datasetContext?.taskType,
-    trainingContext?.isTraining,
-    trainingContext?.experimentResults,
-    trainingContext?.experimentStatus
+    datasetContext.datasetId,
+    datasetContext.overview,
+    datasetContext.targetColumn,
+    datasetContext.taskType,
+    trainingContext.isTraining,
+    trainingContext.experimentResults,
+    trainingContext.experimentStatus
   ]);
 
   return (

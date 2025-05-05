@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -113,11 +112,6 @@ const DatasetPageContent: React.FC = () => {
           columnsToKeep={columnsToKeep}
         />
         
-        {/* AI Assistant Panel - Placed above the tabs */}
-        <div className="mb-6">
-          <DatasetSidePanel />
-        </div>
-        
         <div className="space-y-6">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <DatasetTabNavigation isTabEnabled={isTabEnabled} />
@@ -138,6 +132,8 @@ const DatasetPageContent: React.FC = () => {
           <p>© 2025 AutoML Web App. Data processing powered by FastAPI.</p>
         </footer>
       </div>
+      
+      <DatasetSidePanel />
     </div>
   );
 };
