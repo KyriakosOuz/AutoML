@@ -1,5 +1,4 @@
 
-/*
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -81,13 +80,21 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   // Helper function to filter files by type
   const isVisualizationFile = (file: any) => {
     const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
+    const nonVisualTypes = ['model', 'report', 'label_encoder'];
+    
+    // Return true if contains visual type and doesn't contain non-visual type
     return visualTypes.some(type => file.file_type.includes(type)) && 
-           !file.file_type.includes('model') && 
-           !file.file_type.includes('report');
+           !nonVisualTypes.some(type => file.file_type.includes(type));
   };
 
-  // Get model files
-  const modelFiles = files.filter(file => file.file_type === 'model' || file.file_type.includes('model'));
+  // Get model files - make sure to include only unique model files
+  const modelFiles = files
+    .filter(file => file.file_type === 'model' || file.file_type.includes('model'))
+    // Remove duplicates based on file_url
+    .filter((file, index, self) => 
+      index === self.findIndex(f => f.file_url === file.file_url)
+    );
+  
   const firstModelFile = modelFiles.length > 0 ? modelFiles[0] : null;
   
   // Get visualization files (excluding models and reports)
@@ -95,6 +102,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
 
   // Check if task_type exists before using it
   const isClassification = task_type ? task_type.includes('classification') : false;
+  const isRegression = task_type ? task_type.includes('regression') : false;
   
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
@@ -126,7 +134,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   }
 
   return (
-    <Card className="shadow-lg border-primary/10">
+    <Card className="shadow-lg border-primary/10 mt-6">
       <CardHeader className="bg-primary/5 border-b border-primary/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -227,16 +235,16 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 </>
               )}
               
-              {!isClassification && (
+              {isRegression && (
                 <>
-                  {metrics.r2_score !== undefined && (
+                  {metrics.r2 !== undefined && (
                     <Card className="overflow-hidden">
                       <CardHeader className="p-4 pb-2">
                         <CardTitle className="text-base">R² Score</CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.r2_score)}`}>
-                          {formatRegressionMetric(metrics.r2_score)}
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.r2)}`}>
+                          {formatRegressionMetric(metrics.r2)}
                         </div>
                       </CardContent>
                     </Card>
@@ -390,9 +398,4 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   );
 };
 
-export default CustomTrainingResults;
-*/
-
-// This component has been temporarily commented out
-const CustomTrainingResults = () => null;
 export default CustomTrainingResults;
