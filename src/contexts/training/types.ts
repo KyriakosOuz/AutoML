@@ -24,6 +24,8 @@ export interface TrainingContextState {
   isCheckingLastExperiment: boolean;
   isPollingActive?: boolean; // Track polling status
   hasConnectionError?: boolean; // Track connection errors
+  hasFetchedResults: boolean; // NEW FLAG: Track if we've already fetched the results
+  consecutiveErrorCount: number; // NEW: Track consecutive API errors for backoff
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -51,5 +53,6 @@ export interface TrainingContextValue extends TrainingContextState {
   getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;
-  clearLocalStorageData: () => void; // New function to explicitly clear localStorage
+  clearLocalStorageData: () => void;
+  setHasFetchedResults: (hasFetched: boolean) => void; // NEW: Setter for hasFetchedResults flag
 }
