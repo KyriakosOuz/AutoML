@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -43,11 +42,14 @@ const AutoMLTraining: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
-    // Log dataset context values to help debugging
+    // Enhanced logging to help debugging
     console.log("AutoML Training - Dataset context values:", { 
-      datasetId, taskType, processingStage 
+      datasetId, 
+      taskType, 
+      processingStage,
+      experimentStatus
     });
-  }, [datasetId, taskType, processingStage]);
+  }, [datasetId, taskType, processingStage, experimentStatus]);
 
   useEffect(() => {
     if (taskType && automlEngine) {
@@ -131,7 +133,8 @@ const AutoMLTraining: React.FC = () => {
   };
 
   const isFormValid = () => {
-    console.log("Checking if form is valid:", {
+    // Enhanced logging for form validation
+    console.log("AutoML - Checking if form is valid:", {
       datasetId,
       taskType,
       automlEngine,
@@ -140,14 +143,24 @@ const AutoMLTraining: React.FC = () => {
     });
     
     // Check if we have the required data and if dataset is properly processed
-    return !!(
+    // UPDATED: Accept both 'processed' and 'final' as valid processing stages
+    const isValidProcessingStage = processingStage === 'final' || processingStage === 'processed';
+    
+    const result = !!(
       datasetId &&
       taskType &&
       automlEngine &&
       testSize >= 0.1 &&
       testSize <= 0.5 &&
-      processingStage === 'final'
+      isValidProcessingStage
     );
+    
+    console.log("AutoML - Form validation result:", { 
+      result, 
+      isValidProcessingStage
+    });
+    
+    return result;
   };
 
   // More explicit conditions for button disabled state
@@ -156,10 +169,11 @@ const AutoMLTraining: React.FC = () => {
     const isProcessing = experimentStatus === 'processing' || experimentStatus === 'running';
     const isSubmittingNow = isTraining || isSubmitting;
     
-    console.log("Button disabled conditions:", {
+    console.log("AutoML - Button disabled conditions:", {
       formNotValid,
       isProcessing,
-      isSubmittingNow
+      isSubmittingNow,
+      experimentStatus
     });
     
     return formNotValid || isProcessing || isSubmittingNow;
@@ -184,6 +198,15 @@ const AutoMLTraining: React.FC = () => {
                 <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
                 <AlertDescription>
                   Please select or process a dataset before training a model.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {datasetId && (!processingStage || !(processingStage === 'final' || processingStage === 'processed')) && (
+              <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
+                <AlertDescription>
+                  Please complete dataset preprocessing before training. Current stage: {processingStage || 'unknown'}
                 </AlertDescription>
               </Alert>
             )}

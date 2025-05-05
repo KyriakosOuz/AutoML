@@ -7,11 +7,12 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, CircleSlash, Play } from 'lucide-react';
+import { RefreshCcw, CircleSlash, Play, AlertCircle } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -23,11 +24,22 @@ const ModelTrainingContent: React.FC = () => {
     setExperimentStatus
   } = useTraining();
   
-  const { datasetId, taskType } = useDataset();
+  const { datasetId, taskType, processingStage } = useDataset();
   const isMobile = useIsMobile();
 
   // Show results and predict tabs only when experiment is completed
   const showResultsAndPredict = experimentStatus === 'completed' && activeExperimentId;
+
+  // Enhanced debugging for context transition
+  useEffect(() => {
+    console.log("ModelTrainingContent - Current state:", { 
+      datasetId,
+      taskType,
+      processingStage,
+      activeTab,
+      experimentStatus
+    });
+  }, [datasetId, taskType, processingStage, activeTab, experimentStatus]);
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
@@ -40,6 +52,7 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     if (datasetId && taskType && experimentStatus === 'processing' && !activeExperimentId) {
       // Only reset to null if we don't have an active experiment
+      console.log("ModelTrainingContent - Resetting experimentStatus from 'processing' to 'idle'");
       setExperimentStatus('idle');
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
@@ -49,9 +62,25 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab('automl');
   };
 
+  // Determine if dataset is ready for training
+  const isDatasetReady = !!(
+    datasetId && 
+    taskType && 
+    (processingStage === 'final' || processingStage === 'processed')
+  );
+
   return (
     <div className="space-y-6">
       <DatasetSummary />
+      {!isDatasetReady && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+          <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
+          <AlertDescription>
+            Please complete dataset setup and preprocessing before training a model.
+            {processingStage && ` Current stage: ${processingStage}`}
+          </AlertDescription>
+        </Alert>
+      )}
       <TrainingInsights />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">

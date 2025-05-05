@@ -1,3 +1,4 @@
+
 import { 
   AutoMLParameters, 
   CustomTrainingParameters, 
@@ -8,6 +9,7 @@ import {
   ExperimentStatusResponse 
 } from '@/types/training';
 
+// Update the experiment status type to include 'processed' explicitly
 export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'failed' | 'success';
 
 export interface TrainingContextState {
