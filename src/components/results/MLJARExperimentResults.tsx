@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -20,7 +19,7 @@ import {
   Loader,
   Image as ImageIcon,
   FileJson,
-  FileCsv
+  Files
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
@@ -390,7 +389,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </TabsTrigger>
             
             <TabsTrigger value="data" className="text-sm flex items-center gap-1">
-              <FileCsv className="h-4 w-4" />
+              <Files className="h-4 w-4" />
               <span>Predictions</span>
             </TabsTrigger>
             
@@ -564,7 +563,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         </>
                       ) : (
                         <>
-                          <FileCsv className="h-4 w-4 mr-2" />
+                          <Files className="h-4 w-4 mr-2" />
                           Preview Predictions
                         </>
                       )}
@@ -596,7 +595,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     </ScrollArea>
                   ) : (
                     <div className="text-center py-8 border rounded-md bg-muted/20">
-                      <FileCsv className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                      <Files className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
                       <p className="text-muted-foreground">
                         Click "Preview Predictions" to load prediction data
                       </p>
@@ -621,7 +620,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               </Card>
             ) : (
               <div className="text-center py-12">
-                <FileCsv className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <Files className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Predictions Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
                   No predictions file was found for this experiment.
