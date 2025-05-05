@@ -8,6 +8,7 @@ import { getExperimentResults } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
+import { DatasetProvider } from '@/contexts/DatasetContext';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
@@ -34,19 +35,20 @@ const ExperimentDetailPage: React.FC = () => {
   const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
   
   return (
-    <AssistantInsightsProvider>
-      <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
-        <h1 className="text-xl sm:text-2xl font-bold mb-6">Experiment Details</h1>
-        
-        <ExperimentResultsContainer 
-          experimentId={experimentId || ''} 
-          status={status}
-          onReset={() => {/* Optional reset handler */}}
-        />
-        
-        <ExperimentSidePanel />
-      </div>
-    </AssistantInsightsProvider>
+    <DatasetProvider>
+      <AssistantInsightsProvider>
+        <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
+          <h1 className="text-xl sm:text-2xl font-bold mb-6">Experiment Details</h1>
+          
+          <ExperimentResultsContainer 
+            experimentId={experimentId || ''} 
+            status={status}
+          />
+          
+          <ExperimentSidePanel />
+        </div>
+      </AssistantInsightsProvider>
+    </DatasetProvider>
   );
 };
 

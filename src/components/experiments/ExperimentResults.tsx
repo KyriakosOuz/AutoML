@@ -519,7 +519,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                         <CardContent className="p-3">
                           <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
                             <div 
-                              className="absolute inset-0 bg-cover bg-center"
+                              className="absolute inset-0 bg-contain bg-center bg-no-repeat"
                               style={{ backgroundImage: `url(${file.file_url})` }}
                             />
                             <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />

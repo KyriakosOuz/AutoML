@@ -7,13 +7,14 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, CircleSlash, Play, AlertCircle, Loader } from 'lucide-react';
+import { CircleSlash, Play, AlertCircle, Loader, Info } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { formatDistanceToNow } from 'date-fns';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -25,7 +26,8 @@ const ModelTrainingContent: React.FC = () => {
     setExperimentStatus,
     isTraining,
     isLoadingResults,
-    getExperimentResults
+    getExperimentResults,
+    experimentResults
   } = useTraining();
   
   const { datasetId, taskType, processingStage } = useDataset();
@@ -79,12 +81,6 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults]);
 
-  const handleReset = () => {
-    console.log("ModelTrainingContent - Resetting training state");
-    resetTrainingState();
-    setActiveTab('automl');
-  };
-
   // Determine if dataset is ready for training
   const isDatasetReady = !!(
     datasetId && 
@@ -99,6 +95,18 @@ const ModelTrainingContent: React.FC = () => {
     if (experimentStatus === 'processing') return 'Processing...';
     if (experimentStatus === 'running') return 'Running...';
     return 'Working...';
+  };
+
+  // Format experiment creation time if available
+  const getExperimentTimeInfo = () => {
+    if (experimentResults?.created_at) {
+      try {
+        return formatDistanceToNow(new Date(experimentResults.created_at), { addSuffix: true });
+      } catch (e) {
+        return '';
+      }
+    }
+    return '';
   };
 
   return (
@@ -123,6 +131,18 @@ const ModelTrainingContent: React.FC = () => {
               {activeExperimentId && `Experiment ID: ${activeExperimentId.substring(0, 8)}...`}
             </p>
           </div>
+        </Alert>
+      )}
+
+      {/* Add info message when viewing existing experiment results */}
+      {activeExperimentId && experimentResults && !isProcessing && !isLoadingResults && (
+        <Alert variant="info" className="mb-4">
+          <Info className="h-4 w-4 text-blue-500 mr-2" />
+          <AlertDescription className="text-sm">
+            Viewing results for experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
+            {experimentResults.algorithm && ` using ${experimentResults.algorithm}`}
+            {getExperimentTimeInfo() && ` (created ${getExperimentTimeInfo()})`}
+          </AlertDescription>
         </Alert>
       )}
       
@@ -168,17 +188,7 @@ const ModelTrainingContent: React.FC = () => {
               Predict
             </TabsTrigger>
           </TabsList>
-          {(activeExperimentId || showResultsAndPredict) && (
-            <Button 
-              variant="outline" 
-              size={isMobile ? "sm" : "default"} 
-              onClick={handleReset} 
-              className={`${isMobile ? 'w-full' : 'ml-4'}`}
-            >
-              <RefreshCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Reset
-            </Button>
-          )}
+          {/* Reset button removed as requested */}
         </div>
 
         <TabsContent value="automl" className="space-y-4">
@@ -189,7 +199,7 @@ const ModelTrainingContent: React.FC = () => {
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
           {showResultsAndPredict && activeExperimentId ? (
-            <ExperimentResultsView experimentId={activeExperimentId} onReset={handleReset} />
+            <ExperimentResultsView experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
               <h3 className="text-lg font-medium mb-2">No Results Available</h3>

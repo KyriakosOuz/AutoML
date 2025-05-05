@@ -47,9 +47,7 @@ const App = () => (
                   <Route path="/training" element={
                     <ProtectedRoute>
                       <DatasetProvider>
-                        <AssistantInsightsProvider>
-                          <ModelTrainingPage />
-                        </AssistantInsightsProvider>
+                        <ModelTrainingPage />
                       </DatasetProvider>
                     </ProtectedRoute>
                   } />

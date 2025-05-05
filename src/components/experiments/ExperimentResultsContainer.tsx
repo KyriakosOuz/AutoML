@@ -12,7 +12,7 @@ interface ExperimentResultsContainerProps {
   status: ExperimentStatus;
   results?: ExperimentResultsType | null; // Make results optional
   isLoading?: boolean; // Make isLoading optional
-  onReset?: () => void;
+  onReset?: () => void; // Make onReset optional
   onRefresh?: () => void;
 }
 
@@ -21,7 +21,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   status,
   results: providedResults,
   isLoading: providedIsLoading,
-  onReset,
+  onReset = () => {}, // Default no-op function
   onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);
