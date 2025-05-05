@@ -7,11 +7,13 @@ import ExperimentResultsContainer from '@/components/experiments/ExperimentResul
 import { getExperimentResults } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { AssistantInsightsProvider } from '@/contexts/AssistantInsightsContext';
-import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
+import AIBottomPanel from '@/components/ai-assistant/AIBottomPanel';
+import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
   const { toast } = useToast();
+  const { getRouteInsights } = useAssistantInsights();
 
   const { data, isLoading, error, refetch } = useQuery<ExperimentResults>({
     queryKey: ['experiment', experimentId],
@@ -30,12 +32,21 @@ const ExperimentDetailPage: React.FC = () => {
     }
   }, [error, toast]);
   
+  const insights = React.useMemo(() => {
+    return getRouteInsights('/experiment').map(insight => ({
+      id: insight.id,
+      title: insight.title,
+      content: insight.content,
+      suggestedPrompts: insight.suggestedPrompts,
+    }));
+  }, [getRouteInsights]);
+  
   // Determine the status to pass to ExperimentResultsContainer
   const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
   
   return (
     <AssistantInsightsProvider>
-      <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
+      <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8 mb-16">
         <h1 className="text-xl sm:text-2xl font-bold mb-6">
           Experiment Details
           {data?.experiment_name && ` - ${data.experiment_name}`}
@@ -48,7 +59,7 @@ const ExperimentDetailPage: React.FC = () => {
           onRefresh={() => refetch()}
         />
         
-        <ExperimentSidePanel />
+        <AIBottomPanel insights={insights} />
       </div>
     </AssistantInsightsProvider>
   );

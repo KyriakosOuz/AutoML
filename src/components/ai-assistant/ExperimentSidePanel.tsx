@@ -1,25 +1,21 @@
 
 import React, { useMemo } from 'react';
-import AISidePanel from './AISidePanel';
+import AIBottomPanel from './AIBottomPanel';
 import { useAssistantInsights } from '@/contexts/AssistantInsightsContext';
-import { useParams } from 'react-router-dom';
 
 const ExperimentSidePanel: React.FC = () => {
   const { getRouteInsights } = useAssistantInsights();
-  const { experimentId } = useParams<{ experimentId: string }>();
   
   const insights = useMemo(() => {
-    const allInsights = getRouteInsights('/experiment');
-    // Ensure we have unique insights
-    return allInsights.map(insight => ({
+    return getRouteInsights('/experiment').map(insight => ({
       id: insight.id,
       title: insight.title,
       content: insight.content,
       suggestedPrompts: insight.suggestedPrompts,
     }));
-  }, [getRouteInsights, experimentId]);
+  }, [getRouteInsights]);
 
-  return <AISidePanel insights={insights} />;
+  return <AIBottomPanel insights={insights} />;
 };
 
 export default ExperimentSidePanel;

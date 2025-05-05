@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -22,6 +21,9 @@ import {
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
+import MarkdownRenderer from '../file-renderers/MarkdownRenderer';
+import JsonRenderer from '../file-renderers/JsonRenderer';
+import CsvRenderer from '../file-renderers/CsvRenderer';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -478,13 +480,13 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         <DialogTitle>Predictions Preview</DialogTitle>
                       </DialogHeader>
                       <div className="overflow-x-auto">
-                        {/* Predictions table would be loaded here */}
-                        <p className="text-muted-foreground mb-4">
-                          Preview of predictions (first 50 rows)
-                        </p>
-                        <p className="text-sm text-center py-8 text-muted-foreground">
-                          To view the full predictions, download the CSV file
-                        </p>
+                        {/* Use CSV Renderer for predictions */}
+                        <CsvRenderer 
+                          fileUrl={predictionsFile.file_url}
+                          title="Predictions Preview" 
+                          maxRows={50}
+                        />
+                        
                         <div className="flex justify-end mt-4">
                           <Button asChild>
                             <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
@@ -522,55 +524,17 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-1 gap-6">
               {modelMetadataFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Best Model Metadata</CardTitle>
-                    <CardDescription>
-                      Technical details about the selected model
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
-                      <pre className="text-xs font-mono">
-                        {JSON.stringify(hyperparameters, null, 2)}
-                      </pre>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Metadata
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <JsonRenderer 
+                  fileUrl={modelMetadataFile.file_url}
+                  title="Model Metadata"
+                />
               )}
               
               {readmeFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Model Documentation</CardTitle>
-                    <CardDescription>
-                      README file for the MLJAR model
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-64 overflow-y-auto">
-                      <p className="text-sm">
-                        Model documentation is available for download
-                      </p>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={readmeFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Documentation
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <MarkdownRenderer 
+                  fileUrl={readmeFile.file_url}
+                  title="Model Documentation"
+                />
               )}
               
               {!modelMetadataFile && !readmeFile && (
