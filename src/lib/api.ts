@@ -618,6 +618,11 @@ export const trainingApi = {
         return null;
       }
       
+      if (response.status === 400) {
+        console.log('[API] Bad request when fetching last experiment. Server may be misconfigured or require authentication.');
+        return null; // Return null instead of throwing error to stop retry attempts
+      }
+      
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
         console.error('[API] Error fetching last experiment:', {

@@ -111,8 +111,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     restoreExperiment();
   }, []);
 
-  // New method to check for the most recent experiment
-  const checkLastExperiment = async () => {
+  // New method to check for the most recent experiment - NOW WRAPPED IN useCallback
+  const checkLastExperiment = useCallback(async () => {
     // Skip if we already have an active experiment or are already checking
     if (state.activeExperimentId || state.isCheckingLastExperiment) {
       console.log("[TrainingContext] Already have an active experiment or checking, skipping last experiment lookup");
@@ -198,7 +198,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error("[TrainingContext] Error checking for most recent experiment:", error);
       setState(prev => ({ ...prev, isCheckingLastExperiment: false }));
     }
-  };
+  }, [state.activeExperimentId, state.isCheckingLastExperiment, toast, startPolling, getExperimentResults]);
 
   useEffect(() => {
     try {

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DatasetProvider } from '@/contexts/DatasetContext';
 import { TrainingProvider, useTraining } from '@/contexts/training/TrainingContext';
 import ModelTrainingContent from '@/components/training/ModelTrainingContent';
@@ -11,12 +11,16 @@ import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
 // Create a separate component that uses the context
 const TrainingPageContent: React.FC = () => {
   const { checkLastExperiment } = useTraining();
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   
   // Check for the most recent experiment when the component mounts
   useEffect(() => {
-    console.log("[ModelTrainingPage] Component mounted, checking for most recent experiment");
-    checkLastExperiment();
-  }, [checkLastExperiment]);
+    if (!hasAttemptedFetch) {
+      console.log("[ModelTrainingPage] Component mounted, checking for most recent experiment");
+      checkLastExperiment();
+      setHasAttemptedFetch(true);
+    }
+  }, [checkLastExperiment, hasAttemptedFetch]);
   
   return (
     <div className="flex flex-col min-h-screen">
