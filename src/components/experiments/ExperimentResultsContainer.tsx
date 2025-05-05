@@ -28,7 +28,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   useEffect(() => {
     if (!experimentId) return;
     
-    if ((status === 'completed' || status === 'success')) {
+    // Fetch results when status is completed, success, or failed (to show error details)
+    if ((status === 'completed' || status === 'success' || status === 'failed')) {
       fetchResults();
     }
   }, [experimentId, status]);

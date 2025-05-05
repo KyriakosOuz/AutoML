@@ -24,7 +24,8 @@ const ModelTrainingContent: React.FC = () => {
     experimentStatus,
     setExperimentStatus,
     isTraining,
-    isLoadingResults
+    isLoadingResults,
+    getExperimentResults
   } = useTraining();
   
   const { datasetId, taskType, processingStage } = useDataset();
@@ -70,6 +71,14 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
+  // Trigger experiment results fetch when appropriate
+  useEffect(() => {
+    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && !isLoadingResults) {
+      console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
+      getExperimentResults();
+    }
+  }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults]);
+
   const handleReset = () => {
     console.log("ModelTrainingContent - Resetting training state");
     resetTrainingState();
@@ -83,6 +92,15 @@ const ModelTrainingContent: React.FC = () => {
     (processingStage === 'final' || processingStage === 'processed')
   );
 
+  // Get appropriate status message
+  const getStatusMessage = () => {
+    if (isTraining) return 'Training in Progress...';
+    if (isLoadingResults) return 'Loading Results...';
+    if (experimentStatus === 'processing') return 'Processing...';
+    if (experimentStatus === 'running') return 'Running...';
+    return 'Working...';
+  };
+
   return (
     <div className="space-y-6">
       <DatasetSummary />
@@ -94,10 +112,7 @@ const ModelTrainingContent: React.FC = () => {
             <div className="flex items-center mb-2">
               <Loader className="h-4 w-4 animate-spin text-primary mr-2" />
               <span className="font-semibold">
-                {isTraining ? 'Training in Progress...' : 
-                 isLoadingResults ? 'Loading Results...' : 
-                 experimentStatus === 'processing' ? 'Processing...' : 
-                 experimentStatus === 'running' ? 'Running...' : 'Working...'}
+                {getStatusMessage()}
               </span>
             </div>
             <Progress 

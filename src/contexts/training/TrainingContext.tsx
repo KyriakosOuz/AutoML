@@ -31,7 +31,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeTab: 'automl',
   });
 
-  // Enhanced experiment restoration
+  // Enhanced experiment restoration with improved logging and error handling
   useEffect(() => {
     const restoreExperiment = async () => {
       try {
@@ -57,23 +57,31 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             const status = statusResponse.data;
             console.log("[TrainingContext] Retrieved status for restored experiment:", status);
             
+            // Map backend status to our internal status type
+            let mappedStatus: ExperimentStatus = status.status as ExperimentStatus;
+            
+            // If backend returns 'success', map it to our 'completed' status
+            if (mappedStatus === 'success') {
+              mappedStatus = 'completed';
+            }
+            
             // Update with the actual status
             setState(prev => ({
               ...prev,
-              experimentStatus: status.status as ExperimentStatus,
+              experimentStatus: mappedStatus,
               statusResponse: status,
               isLoadingResults: false,
               // If experiment is still running or processing, we want to set isTraining to true
-              isTraining: ['running', 'processing'].includes(status.status)
+              isTraining: ['running', 'processing'].includes(mappedStatus)
             }));
             
             // If the experiment is still in progress, restart polling
-            if (['running', 'processing'].includes(status.status)) {
+            if (['running', 'processing'].includes(mappedStatus)) {
               console.log("[TrainingContext] Experiment still in progress, restarting polling");
               startPolling(savedExperimentId);
             } 
             // If it's completed, fetch results
-            else if (status.status === 'completed' || status.status === 'success') {
+            else if (mappedStatus === 'completed' || mappedStatus === 'success') {
               console.log("[TrainingContext] Experiment completed, fetching results");
               getExperimentResults();
             }
@@ -85,6 +93,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
               experimentStatus: 'completed',
               isLoadingResults: false
             }));
+            
+            // Show toast to inform user
+            toast({
+              title: "Error checking experiment status",
+              description: "Could not verify the current experiment status. Showing cached data instead.",
+              variant: "destructive"
+            });
           }
         }
       } catch (error) {
@@ -137,6 +152,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       title: "Training Complete",
       description: "Your model has finished training successfully!"
     });
+    
+    // Automatically fetch results when training completes
+    try {
+      getExperimentResults();
+    } catch (error) {
+      console.error("[TrainingContext] Error fetching results after successful training:", error);
+    }
   }, [toast]);
 
   const handlePollingError = useCallback((error: string) => {
