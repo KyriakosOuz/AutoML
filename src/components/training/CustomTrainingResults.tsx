@@ -1,11 +1,11 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle,
-  CardFooter
+  CardTitle
 } from '@/components/ui/card';
 import { 
   Tabs, 
@@ -23,7 +23,7 @@ import {
   Activity,
   LineChart,
   Table as TableIcon,
-  BookOpen
+  FileText
 } from 'lucide-react';
 import { 
   Table,
@@ -77,6 +77,21 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     algorithm
   } = experimentResults;
 
+  // Helper function to filter files by type
+  const isVisualizationFile = (file: any) => {
+    const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
+    return visualTypes.some(type => file.file_type.includes(type)) && 
+           !file.file_type.includes('model') && 
+           !file.file_type.includes('report');
+  };
+
+  // Get model files
+  const modelFiles = files.filter(file => file.file_type === 'model' || file.file_type.includes('model'));
+  const firstModelFile = modelFiles.length > 0 ? modelFiles[0] : null;
+  
+  // Get visualization files (excluding models and reports)
+  const visualizationFiles = files.filter(isVisualizationFile);
+
   // Check if task_type exists before using it
   const isClassification = task_type ? task_type.includes('classification') : false;
   
@@ -97,15 +112,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     if (value >= 0.5) return 'text-amber-600';
     return 'text-red-600';
   };
-
-  const filesByType = files.reduce((acc, file) => {
-    const type = file.file_type;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(file);
-    return acc;
-  }, {} as Record<string, typeof files>);
 
   // Format task type for display with null check
   const formattedTaskType = task_type ? task_type.replace(/_/g, ' ') : 'unknown task';
@@ -148,6 +154,12 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
               <BarChart4 className="mr-1 h-4 w-4" />
               Visualizations
             </TabsTrigger>
+            {firstModelFile && (
+              <TabsTrigger value="model" className="data-[state=active]:bg-primary/10">
+                <FileText className="mr-1 h-4 w-4" />
+                Model
+              </TabsTrigger>
+            )}
             {metrics.classification_report && (
               <TabsTrigger value="report" className="data-[state=active]:bg-primary/10">
                 <TableIcon className="mr-1 h-4 w-4" />
@@ -273,15 +285,15 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
           </TabsContent>
           
           <TabsContent value="visualizations" className="p-6">
-            {files.length > 0 ? (
+            {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {files.map((file, index) => (
+                {visualizationFiles.map((file, index) => (
                   <Dialog key={index}>
                     <DialogTrigger asChild>
                       <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
                         <CardContent className="p-4">
                           <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
-                            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
                             <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
                               <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
                             </div>
@@ -336,6 +348,27 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
               </div>
             )}
           </TabsContent>
+
+          {firstModelFile && (
+            <TabsContent value="model" className="p-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Trained Model</CardTitle>
+                  <CardDescription>Download the trained model file</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-center py-4">
+                    <Button asChild>
+                      <a href={firstModelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                        <DownloadCloud className="h-4 w-4 mr-2" />
+                        Download Model
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
           
           <TabsContent value="report" className="p-6">
             <Card>
@@ -352,17 +385,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
           </TabsContent>
         </Tabs>
       </CardContent>
-      
-      <CardFooter className="justify-between border-t p-4">
-        <div></div> {/* Empty div to maintain spacing */}
-        
-        <Button variant="outline" asChild>
-          <a href={`/models/${experiment_id}`} target="_blank" rel="noopener noreferrer">
-            <BookOpen className="h-4 w-4 mr-2" />
-            View Full Report
-          </a>
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
