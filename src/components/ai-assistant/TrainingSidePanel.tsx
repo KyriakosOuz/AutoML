@@ -6,7 +6,7 @@ import { useTraining } from '@/contexts/training/TrainingContext';
 
 const TrainingSidePanel: React.FC = () => {
   const { getRouteInsights } = useAssistantInsights();
-  const { isTraining } = useTraining();
+  const { isTraining, experimentStatus, activeExperimentId } = useTraining();
   
   const insights = useMemo(() => {
     return getRouteInsights('/training').map(insight => ({

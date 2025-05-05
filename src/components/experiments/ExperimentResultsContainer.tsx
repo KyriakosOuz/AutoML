@@ -81,13 +81,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   };
 
   // Check if this is a MLJAR experiment
-  const isMljarExperiment = results?.automl_engine === "mljar" || results?.training_type === "automl";
-
-  console.log("[ExperimentResultsContainer] Rendering with isMljarExperiment:", isMljarExperiment);
-  console.log("[ExperimentResultsContainer] Results automl_engine:", results?.automl_engine);
-  console.log("[ExperimentResultsContainer] Results training_type:", results?.training_type);
-  console.log("[ExperimentResultsContainer] Status:", status);
-  console.log("[ExperimentResultsContainer] Is Loading:", isLoading);
+  const isMljarExperiment = results?.automl_engine === "mljar";
 
   return (
     <div className="w-full overflow-x-hidden">

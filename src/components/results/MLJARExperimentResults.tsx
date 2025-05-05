@@ -22,9 +22,6 @@ import {
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
-import ConfusionMatrixChart from '../training/charts/ConfusionMatrixChart';
-import RocCurveChart from '../training/charts/RocCurveChart';
-import PrecisionRecallChart from '../training/charts/PrecisionRecallChart';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -35,25 +32,6 @@ interface MLJARExperimentResultsProps {
   onReset?: () => void;
   onRefresh?: () => void;
 }
-
-// Helper function to categorize files by type
-const categorizeFiles = (files: any[] = []) => {
-  return {
-    confusionMatrix: files.filter(f => f.file_type.includes('confusion_matrix')),
-    rocCurve: files.filter(f => f.file_url.includes('roc_curve') || f.file_type.includes('roc')),
-    precisionRecall: files.filter(f => f.file_url.includes('precision_recall') || f.file_type.includes('precision')),
-    learningCurves: files.filter(f => f.file_type.includes('learning_curve')),
-    featureImportance: files.filter(f => f.file_type.includes('feature_importance')),
-    distribution: files.filter(f => f.file_type.includes('distribution')),
-    readme: files.filter(f => f.file_type === 'readme' || f.file_type.includes('README')),
-    modelMetadata: files.filter(f => 
-      f.file_type === 'model_metadata' || 
-      f.file_type.includes('model') && f.file_type.includes('metadata')
-    ),
-    predictions: files.filter(f => f.file_type.includes('predictions')),
-    model: files.filter(f => f.file_type === 'model' && !f.file_type.includes('metadata'))
-  };
-};
 
 const formatTaskType = (type: string = '') => {
   if (!type) return "Unknown";
@@ -80,6 +58,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   onRefresh
 }) => {
   const [activeTab, setActiveTab] = useState<string>('summary');
+  const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -214,8 +193,33 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Categorize files by type
-  const categorizedFiles = categorizeFiles(files);
+  // Filter files by type
+  const getFilesByType = (fileType: string) => {
+    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
+  };
+
+  const visualizationFiles = [
+    ...getFilesByType('confusion_matrix'),
+    ...getFilesByType('roc_curve'),
+    ...getFilesByType('precision_recall_curve'),
+    ...getFilesByType('learning_curve'),
+    ...getFilesByType('feature_importance')
+  ];
+
+  const modelMetadataFile = files.find(file => 
+    file.file_type === 'model_metadata' || 
+    file.file_type.includes('ensemble.json')
+  );
+  
+  const readmeFile = files.find(file => 
+    file.file_type === 'readme' || 
+    file.file_type.includes('README.md')
+  );
+  
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' ||
+    file.file_type.includes('predictions')
+  );
 
   // Format chart display name
   const formatChartName = (fileType: string) => {
@@ -360,201 +364,142 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
-                      {metrics.accuracy !== undefined && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Accuracy:</span>
-                          <span className="text-sm font-medium">{(metrics.accuracy * 100).toFixed(2)}%</span>
-                        </>
-                      )}
-                      
-                      {metrics.f1_score !== undefined && (
-                        <>
-                          <span className="text-sm text-muted-foreground">F1 Score:</span>
-                          <span className="text-sm font-medium">{(metrics.f1_score * 100).toFixed(2)}%</span>
-                        </>
-                      )}
-                      
-                      {metrics.precision !== undefined && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Precision:</span>
-                          <span className="text-sm font-medium">{(metrics.precision * 100).toFixed(2)}%</span>
-                        </>
-                      )}
-                      
-                      {metrics.recall !== undefined && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Recall:</span>
-                          <span className="text-sm font-medium">{(metrics.recall * 100).toFixed(2)}%</span>
-                        </>
-                      )}
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      {Object.entries(metrics).map(([key, value]) => {
+                        if (
+                          key === 'best_model_label' ||
+                          key === 'metric_used' ||
+                          key === 'metric_value' ||
+                          key === 'classification_report' ||
+                          key === 'confusion_matrix' ||
+                          typeof value !== 'number'
+                        ) return null;
+                        
+                        return (
+                          <div key={key}>
+                            <span className="text-sm text-muted-foreground">
+                              {key.replace(/_/g, ' ')}:
+                            </span>
+                            <span className="text-sm font-medium ml-2">
+                              {formatMetric(value as number)}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              
-              {/* Confusion Matrix */}
-              {metrics.confusion_matrix && (
-                <Card className="shadow-sm sm:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Confusion Matrix</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
-                      <ConfusionMatrixChart matrix={metrics.confusion_matrix} />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </TabsContent>
           
           {/* Charts Tab */}
           <TabsContent value="charts" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* ROC Curve */}
-              {categorizedFiles.rocCurve.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">ROC Curve</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.rocCurve[0]?.file_url} 
-                      alt="ROC Curve" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=ROC+Curve+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Precision-Recall Curve */}
-              {categorizedFiles.precisionRecall.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Precision-Recall Curve</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.precisionRecall[0]?.file_url} 
-                      alt="Precision-Recall Curve" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=PR+Curve+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Confusion Matrix */}
-              {categorizedFiles.confusionMatrix.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Confusion Matrix</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.confusionMatrix[0]?.file_url} 
-                      alt="Confusion Matrix" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=Confusion+Matrix+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Learning Curves */}
-              {categorizedFiles.learningCurves.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Learning Curves</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.learningCurves[0]?.file_url} 
-                      alt="Learning Curves" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=Learning+Curves+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Feature Importance */}
-              {categorizedFiles.featureImportance.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Feature Importance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.featureImportance[0]?.file_url} 
-                      alt="Feature Importance" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=Feature+Importance+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Distribution Graphs */}
-              {categorizedFiles.distribution.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={categorizedFiles.distribution[0]?.file_url} 
-                      alt="Distribution" 
-                      className="w-full h-auto rounded-md"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = 'https://placehold.co/400x300?text=Distribution+Not+Available';
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {Object.values(categorizedFiles).flat().length === 0 && (
-                <div className="col-span-2 text-center py-10">
-                  <Image className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="mt-4 text-muted-foreground">No visualization files available</p>
-                </div>
-              )}
-            </div>
+            {visualizationFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visualizationFiles.map((file, index) => (
+                  <Dialog key={index}>
+                    <DialogTrigger asChild>
+                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">
+                            {formatChartName(file.file_type)}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3">
+                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center"
+                              style={{ backgroundImage: `url(${file.file_url})` }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <DialogHeader>
+                        <DialogTitle>{formatChartName(file.file_type)}</DialogTitle>
+                      </DialogHeader>
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt={file.file_type} 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Image
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  No visualization files were found for this experiment.
+                </p>
+              </div>
+            )}
           </TabsContent>
           
           {/* Predictions Tab */}
           <TabsContent value="predictions" className="p-6">
-            {categorizedFiles.predictions.length > 0 ? (
+            {predictionsFile ? (
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Predictions</CardTitle>
+                <CardHeader>
+                  <CardTitle>Model Predictions</CardTitle>
                   <CardDescription>
-                    Download the predictions file to view all predictions
+                    View predictions made by the MLJAR model
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex justify-center my-6">
-                    <Button asChild>
-                      <a href={categorizedFiles.predictions[0]?.file_url} download target="_blank" rel="noopener noreferrer">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <Button onClick={() => setPredictionsDialogOpen(true)} className="mb-4">
+                      <TableIcon className="h-4 w-4 mr-2" />
+                      View Predictions
+                    </Button>
+                    
+                    <p className="text-sm text-muted-foreground">
+                      Click to preview the model's predictions on the test dataset
+                    </p>
+                  </div>
+                  
+                  <Dialog open={predictionsDialogOpen} onOpenChange={setPredictionsDialogOpen}>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Predictions Preview</DialogTitle>
+                      </DialogHeader>
+                      <div className="overflow-x-auto">
+                        {/* Predictions table would be loaded here */}
+                        <p className="text-muted-foreground mb-4">
+                          Preview of predictions (first 50 rows)
+                        </p>
+                        <p className="text-sm text-center py-8 text-muted-foreground">
+                          To view the full predictions, download the CSV file
+                        </p>
+                        <div className="flex justify-end mt-4">
+                          <Button asChild>
+                            <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Full Predictions CSV
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <div className="mt-6">
+                    <Button asChild className="w-full">
+                      <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
                         <Download className="h-4 w-4 mr-2" />
                         Download Predictions CSV
                       </a>
@@ -563,30 +508,38 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             ) : (
-              <Card className="text-center">
-                <CardContent className="py-10">
-                  <TableIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="mt-4 text-muted-foreground">No predictions file available</p>
-                </CardContent>
-              </Card>
+              <div className="text-center py-12">
+                <TableIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Predictions Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  No predictions file was found for this experiment.
+                </p>
+              </div>
             )}
           </TabsContent>
           
           {/* Model Details Tab */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 gap-6">
-              {categorizedFiles.readme.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-6">
+              {modelMetadataFile && (
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">README</CardTitle>
-                    <CardDescription>Documentation from MLJAR</CardDescription>
+                  <CardHeader>
+                    <CardTitle>Best Model Metadata</CardTitle>
+                    <CardDescription>
+                      Technical details about the selected model
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-center my-4">
-                      <Button asChild>
-                        <a href={categorizedFiles.readme[0]?.file_url} target="_blank" rel="noopener noreferrer">
-                          <FileText className="h-4 w-4 mr-2" />
-                          View README
+                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                      <pre className="text-xs font-mono">
+                        {JSON.stringify(hyperparameters, null, 2)}
+                      </pre>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Metadata
                         </a>
                       </Button>
                     </div>
@@ -594,18 +547,25 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </Card>
               )}
               
-              {categorizedFiles.modelMetadata.length > 0 && (
+              {readmeFile && (
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Model Metadata</CardTitle>
-                    <CardDescription>Technical details about the trained model</CardDescription>
+                  <CardHeader>
+                    <CardTitle>Model Documentation</CardTitle>
+                    <CardDescription>
+                      README file for the MLJAR model
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-center my-4">
-                      <Button asChild>
-                        <a href={categorizedFiles.modelMetadata[0]?.file_url} target="_blank" rel="noopener noreferrer">
-                          <Info className="h-4 w-4 mr-2" />
-                          View Model Metadata
+                    <div className="bg-muted p-4 rounded-md h-64 overflow-y-auto">
+                      <p className="text-sm">
+                        Model documentation is available for download
+                      </p>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={readmeFile.file_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Documentation
                         </a>
                       </Button>
                     </div>
@@ -613,13 +573,14 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </Card>
               )}
               
-              {categorizedFiles.modelMetadata.length === 0 && categorizedFiles.readme.length === 0 && (
-                <Card className="text-center">
-                  <CardContent className="py-10">
-                    <Info className="h-12 w-12 mx-auto text-muted-foreground" />
-                    <p className="mt-4 text-muted-foreground">No model details available</p>
-                  </CardContent>
-                </Card>
+              {!modelMetadataFile && !readmeFile && (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Model Details Available</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    No metadata or documentation files were found for this model.
+                  </p>
+                </div>
               )}
             </div>
           </TabsContent>
@@ -627,16 +588,18 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       </CardContent>
       
       <CardFooter className="flex justify-between border-t p-4">
-        <Button variant="outline" onClick={onReset}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Run New Experiment
-        </Button>
+        {onReset && (
+          <Button variant="outline" onClick={onReset}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Run New Experiment
+          </Button>
+        )}
         
-        {completed_at && (
-          <div className="text-xs text-muted-foreground flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            Completed: {new Date(completed_at).toLocaleString()}
-          </div>
+        {onRefresh && (
+          <Button variant="secondary" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Results
+          </Button>
         )}
       </CardFooter>
     </Card>
