@@ -1,6 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DownloadCloud } from 'lucide-react';
 import ClassificationReportTable from '../../ClassificationReportTable';
 
 interface MetricsBlockProps {
@@ -18,9 +20,10 @@ interface MetricsBlockProps {
     }>;
   };
   taskType: string;
+  modelFileUrl?: string;
 }
 
-const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType }) => {
+const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFileUrl }) => {
   const formatMetric = (value: number) => (value * 100).toFixed(1) + '%';
   const formatRegressionMetric = (value: number) => value.toFixed(3);
 
@@ -45,6 +48,23 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType }) => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatMetric(metrics.f1_macro)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Add Download Model button if URL is provided */}
+          {modelFileUrl && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Download Model</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full" asChild>
+                  <a href={modelFileUrl} download target="_blank" rel="noopener noreferrer">
+                    <DownloadCloud className="h-4 w-4 mr-2" />
+                    Download
+                  </a>
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -84,6 +104,23 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType }) => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatRegressionMetric(metrics.r2)}</div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Add Download Model button if URL is provided */}
+        {modelFileUrl && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Download Model</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" asChild>
+                <a href={modelFileUrl} download target="_blank" rel="noopener noreferrer">
+                  <DownloadCloud className="h-4 w-4 mr-2" />
+                  Download
+                </a>
+              </Button>
             </CardContent>
           </Card>
         )}

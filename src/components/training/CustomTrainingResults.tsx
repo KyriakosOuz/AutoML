@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -167,12 +166,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
               <BarChart4 className="mr-1 h-4 w-4" />
               Visualizations
             </TabsTrigger>
-            {firstModelFile && (
-              <TabsTrigger value="model" className="data-[state=active]:bg-primary/10">
-                <FileText className="mr-1 h-4 w-4" />
-                Model
-              </TabsTrigger>
-            )}
             {metrics.classification_report && (
               <TabsTrigger value="report" className="data-[state=active]:bg-primary/10">
                 <TableIcon className="mr-1 h-4 w-4" />
@@ -294,6 +287,26 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                   )}
                 </>
               )}
+              
+              {/* Add Download Model Button as a card */}
+              {firstModelFile && (
+                <Card className="overflow-hidden">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Download Model</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Button 
+                      className="w-full" 
+                      asChild
+                    >
+                      <a href={firstModelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                        <DownloadCloud className="h-4 w-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
           
@@ -362,27 +375,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
             )}
           </TabsContent>
 
-          {firstModelFile && (
-            <TabsContent value="model" className="p-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Trained Model</CardTitle>
-                  <CardDescription>Download the trained model file</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-center py-4">
-                    <Button asChild>
-                      <a href={firstModelFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <DownloadCloud className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-          
           <TabsContent value="report" className="p-6">
             <Card>
               <CardHeader className="pb-2">

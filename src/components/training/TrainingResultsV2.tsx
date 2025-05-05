@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -229,7 +228,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </TabsList>
           
           <TabsContent value="metrics" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {isClassification ? (
                 // Classification metrics
                 <>
@@ -340,6 +339,23 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     </Card>
                   )}
                 </>
+              )}
+              
+              {/* Add Download Model button as a card */}
+              {model_file_url && (
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Download Model</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" asChild>
+                      <a href={model_file_url} download target="_blank" rel="noopener noreferrer">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
               )}
             </div>
             
