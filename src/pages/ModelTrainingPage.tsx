@@ -14,8 +14,8 @@ const ModelTrainingPageContent: React.FC = () => {
   useEffect(() => {
     console.log("[ModelTrainingPage] Component mounted, checking for most recent experiment");
     checkLastExperiment();
-    // Add empty dependency array to ensure this only runs once on mount
-  }, [checkLastExperiment]);
+    // Empty dependency array ensures this only runs once on mount, regardless of checkLastExperiment changes
+  }, []); // <-- Removed the dependency on checkLastExperiment
   
   return (
     <div className="flex flex-col min-h-screen">
