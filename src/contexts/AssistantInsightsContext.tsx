@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDataset } from './DatasetContext';
@@ -23,11 +24,31 @@ interface AssistantInsightsContextType {
 
 const AssistantInsightsContext = createContext<AssistantInsightsContextType | undefined>(undefined);
 
+// Helper function to check if we're in a context where DatasetProvider is available
+const useOptionalDataset = () => {
+  try {
+    return useDataset();
+  } catch (error) {
+    console.info('Dataset context not available on this route');
+    return null;
+  }
+};
+
+// Helper function to check if we're in a context where TrainingProvider is available
+const useOptionalTraining = () => {
+  try {
+    return useTraining();
+  } catch (error) {
+    console.info('Training context not available on this route');
+    return null;
+  }
+};
+
 export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [insights, setInsights] = useState<Insight[]>([]);
   const location = useLocation();
-  const datasetContext = useDataset();
-  const trainingContext = useTraining();
+  const datasetContext = useOptionalDataset();
+  const trainingContext = useOptionalTraining();
 
   // Add a new insight
   const addInsight = (insight: Omit<Insight, 'id' | 'timestamp'>) => {
@@ -82,6 +103,9 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
 
   // Generate dataset insights when needed
   useEffect(() => {
+    // Only proceed if we have dataset context
+    if (!datasetContext) return;
+    
     if (location.pathname.includes('/dataset') && datasetContext.datasetId) {
       const overview = datasetContext.overview;
       
@@ -136,7 +160,7 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     }
     
     // Training insights
-    if (location.pathname.includes('/training') && trainingContext) {
+    if (trainingContext && location.pathname.includes('/training')) {
       // Training setup insight
       if (!trainingContext.isTraining && !trainingContext.experimentResults) {
         addInsight({
@@ -167,13 +191,13 @@ export const AssistantInsightsProvider: React.FC<{ children: React.ReactNode }> 
     }
   }, [
     location.pathname,
-    datasetContext.datasetId,
-    datasetContext.overview,
-    datasetContext.targetColumn,
-    datasetContext.taskType,
-    trainingContext.isTraining,
-    trainingContext.experimentResults,
-    trainingContext.experimentStatus
+    datasetContext?.datasetId,
+    datasetContext?.overview,
+    datasetContext?.targetColumn,
+    datasetContext?.taskType,
+    trainingContext?.isTraining,
+    trainingContext?.experimentResults,
+    trainingContext?.experimentStatus
   ]);
 
   return (
