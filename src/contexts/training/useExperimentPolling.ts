@@ -58,8 +58,9 @@ export const useExperimentPolling = ({
       const response = await checkStatus(experimentId);
       const data = response.data;
       
-      if (data.status === 'completed' || data.status === 'success' || data.hasTrainingResults === true) {
-        console.log('[TrainingContext] Experiment already completed, no need to start polling');
+      // Improved completion check - explicitly check both status and hasTrainingResults
+      if ((data.status === 'completed' || data.status === 'success') && data.hasTrainingResults === true) {
+        console.log('[TrainingContext] Experiment already completed with results, no need to start polling');
         return true;
       }
       return false;
@@ -108,9 +109,10 @@ export const useExperimentPolling = ({
       const initialData = initialResponse.data;
       console.log('[TrainingContext] Initial status check response:', initialData);
       
-      // If experiment is already completed with results, don't start polling
-      if (initialData.status === 'completed' || initialData.status === 'success' || initialData.hasTrainingResults === true) {
-        console.log('[TrainingContext] Experiment already completed, not starting polling');
+      // Improved completion check - explicitly check both status and hasTrainingResults
+      if ((initialData.status === 'completed' || initialData.status === 'success') && 
+          initialData.hasTrainingResults === true) {
+        console.log('[TrainingContext] Experiment already completed with results, not starting polling');
         setExperimentStatus(initialData.status === 'success' ? 'completed' : initialData.status as ExperimentStatus);
         onSuccess(experimentId);
         return;
@@ -167,14 +169,27 @@ export const useExperimentPolling = ({
         }
         setExperimentStatus(data.status as ExperimentStatus);
 
-        // Stop polling immediately if results are available or status is completed/success
-        if (data.hasTrainingResults === true || data.status === 'completed' || data.status === 'success') {
-          console.log('[TrainingContext] Results ready or experiment completed — stopping poller');
+        // Improved completion check - explicitly check both status and hasTrainingResults
+        if ((data.status === 'completed' || data.status === 'success') && 
+            data.hasTrainingResults === true) {
+          console.log('[TrainingContext] Results ready and experiment completed — stopping poller');
           stopPolling();
 
           setTimeout(() => {
             onSuccess(experimentId);
           }, 1000); // (optional: allow backend ready time)
+          return;
+        }
+        
+        // Also stop if status is completed even if hasTrainingResults isn't explicitly true 
+        // (fallback safety check, some backends might not set this flag)
+        if (data.status === 'completed' || data.status === 'success') {
+          console.log('[TrainingContext] Experiment completed status detected — stopping poller');
+          stopPolling();
+          
+          setTimeout(() => {
+            onSuccess(experimentId);
+          }, 1000);
           return;
         }
         
