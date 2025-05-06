@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -25,7 +26,7 @@ import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/comp
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
 type BalanceStrategy = 'undersample' | 'oversample' | 'skip';
 type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
-type OversamplingMethod = 'random' | 'smote' | 'bsmote' | 'adasyn';
+type OversamplingMethod = 'random' | 'smote' | 'borderline_smote' | 'adasyn' | 'smotenc';
 type BalanceMethod = UndersamplingMethod | OversamplingMethod | 'none';
 
 const PreprocessingOptions: React.FC = () => {
@@ -120,14 +121,30 @@ const PreprocessingOptions: React.FC = () => {
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
-  const hasNumericalForSmote = useMemo(() => {
-    if (!previewData || !columnsToKeep) return false;
+  // Feature type detection for appropriate balancing methods
+  const featureTypes = useMemo(() => {
+    if (!previewData || !columnsToKeep) {
+      return {
+        hasNumerical: false,
+        hasCategorical: false,
+        isMixed: false
+      };
+    }
     
-    // Check if any of the kept columns are in the numerical columns from preview data
-    return columnsToKeep.some(col => 
-      (previewData.numerical_columns || []).includes(col)
-    );
+    const numericalFeatures = previewData.numerical_columns || [];
+    const categoricalFeatures = previewData.categorical_columns || [];
+    
+    const selectedNumerical = columnsToKeep.filter(col => numericalFeatures.includes(col));
+    const selectedCategorical = columnsToKeep.filter(col => categoricalFeatures.includes(col));
+    
+    return {
+      hasNumerical: selectedNumerical.length > 0,
+      hasCategorical: selectedCategorical.length > 0,
+      isMixed: selectedNumerical.length > 0 && selectedCategorical.length > 0
+    };
   }, [previewData, columnsToKeep]);
+  
+  console.log('Feature types detected:', featureTypes);
 
   // Effect to reset balance method when strategy changes
   useEffect(() => {
@@ -182,23 +199,42 @@ const PreprocessingOptions: React.FC = () => {
     }
   };
 
+  // Get available balance method options based on feature types
   const getBalanceMethodOptions = () => {
     if (balanceStrategy === 'undersample') {
       return (
         <>
           <SelectItem value="random">Random Undersampling</SelectItem>
-          <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
-          <SelectItem value="tomek">Tomek Links</SelectItem>
-          <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
+          {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
+            <>
+              <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
+              <SelectItem value="tomek">Tomek Links</SelectItem>
+              <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
+            </>
+          )}
+          {featureTypes.isMixed && (
+            <>
+              <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
+              <SelectItem value="tomek">Tomek Links</SelectItem>
+              <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
+            </>
+          )}
         </>
       );
     } else if (balanceStrategy === 'oversample') {
       return (
         <>
           <SelectItem value="random">Random Oversampling</SelectItem>
-          <SelectItem value="smote">SMOTE</SelectItem>
-          <SelectItem value="bsmote">Borderline SMOTE</SelectItem>
-          <SelectItem value="adasyn">ADASYN</SelectItem>
+          {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
+            <>
+              <SelectItem value="smote">SMOTE</SelectItem>
+              <SelectItem value="borderline_smote">Borderline SMOTE</SelectItem>
+              <SelectItem value="adasyn">ADASYN</SelectItem>
+            </>
+          )}
+          {featureTypes.isMixed && (
+            <SelectItem value="smotenc">SMOTENC</SelectItem>
+          )}
         </>
       );
     }
@@ -209,26 +245,28 @@ const PreprocessingOptions: React.FC = () => {
     if (balanceStrategy === 'undersample') {
       switch (balanceMethod) {
         case 'random':
-          return 'Randomly removes samples from majority classes';
+          return 'Resamples randomly from the majority class.';
         case 'enn':
-          return 'Removes samples whose class differs from the majority of their neighbors';
+          return 'Removes ambiguous samples using nearest neighbor voting.';
         case 'tomek':
-          return 'Removes points that form Tomek links to clean decision boundaries';
+          return 'Cleans overlapping examples between classes.';
         case 'ncr':
-          return 'Combines ENN and Condensed NN to remove noisy points';
+          return 'Combines Tomek and ENN with more aggressive cleaning.';
         default:
           return '';
       }
     } else if (balanceStrategy === 'oversample') {
       switch (balanceMethod) {
         case 'random':
-          return 'Randomly duplicates samples from minority classes';
+          return 'Resamples randomly from the minority class.';
         case 'smote':
-          return 'Creates synthetic examples from existing minority samples';
-        case 'bsmote':
-          return 'Focuses synthetic generation near decision boundaries';
+          return 'Generates synthetic samples using nearest neighbors (numerical only).';
+        case 'borderline_smote':
+          return 'Focuses on difficult-to-classify minority samples.';
         case 'adasyn':
-          return 'Generates more samples in difficult-to-learn regions';
+          return 'Generates more synthetic samples for harder cases (adaptive).';
+        case 'smotenc':
+          return 'SMOTE for mixed data (categorical + numerical).';
         default:
           return '';
       }
@@ -369,32 +407,30 @@ const PreprocessingOptions: React.FC = () => {
             {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
+                <div>
+                  <Select
+                    value={balanceMethod}
+                    onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
+                    disabled={!isClassification || isLoadingPreview}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select balancing method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getBalanceMethodOptions()}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div>
-                        <Select
-                          value={balanceMethod}
-                          onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                          disabled={!isClassification || isLoadingPreview}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select balancing method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getBalanceMethodOptions()}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <InfoIcon className="h-4 w-4 text-gray-400 inline-block ml-1 mt-2 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Select a specific algorithm for the chosen balancing strategy.</p>
+                      <p className="max-w-xs text-xs">{getBalanceMethodDescription()}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <p className="text-xs text-gray-500 mt-1">
-                  {getBalanceMethodDescription()}
-                </p>
               </div>
             )}
           </div>
