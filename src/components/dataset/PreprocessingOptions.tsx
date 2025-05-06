@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -23,7 +24,10 @@ import { AlertCircle, Sparkles, InfoIcon } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
-type BalanceStrategy = 'undersample' | 'smote' | 'skip';
+type BalanceStrategy = 'undersample' | 'oversample' | 'skip';
+type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
+type OversamplingMethod = 'random' | 'smote' | 'bsmote' | 'adasyn';
+type BalanceMethod = UndersamplingMethod | OversamplingMethod | 'none';
 
 const PreprocessingOptions: React.FC = () => {
   const { 
@@ -104,7 +108,10 @@ const PreprocessingOptions: React.FC = () => {
     }
   }, [hasNumericalToNormalize]); // Only run when hasNumericalToNormalize changes, not when normalizationMethod changes
   
+  // Enhanced balance strategy state
   const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
+  const [balanceMethod, setBalanceMethod] = useState<BalanceMethod>('random');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -122,6 +129,17 @@ const PreprocessingOptions: React.FC = () => {
       (previewData.numerical_columns || []).includes(col)
     );
   }, [previewData, columnsToKeep]);
+
+  // Effect to reset balance method when strategy changes
+  useEffect(() => {
+    if (balanceStrategy === 'undersample') {
+      setBalanceMethod('random' as UndersamplingMethod);
+    } else if (balanceStrategy === 'oversample') {
+      setBalanceMethod('random' as OversamplingMethod);
+    } else {
+      setBalanceMethod('none');
+    }
+  }, [balanceStrategy]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -143,7 +161,8 @@ const PreprocessingOptions: React.FC = () => {
       const response = await datasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
-        balanceStrategy
+        balanceStrategy,
+        balanceMethod
       );
       
       // CRITICAL FIX: Just update the processingStage to 'processed'
@@ -163,6 +182,60 @@ const PreprocessingOptions: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getBalanceMethodOptions = () => {
+    if (balanceStrategy === 'undersample') {
+      return (
+        <>
+          <SelectItem value="random">Random Undersampling</SelectItem>
+          <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
+          <SelectItem value="tomek">Tomek Links</SelectItem>
+          <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
+        </>
+      );
+    } else if (balanceStrategy === 'oversample') {
+      return (
+        <>
+          <SelectItem value="random">Random Oversampling</SelectItem>
+          <SelectItem value="smote">SMOTE</SelectItem>
+          <SelectItem value="bsmote">Borderline SMOTE</SelectItem>
+          <SelectItem value="adasyn">ADASYN</SelectItem>
+        </>
+      );
+    }
+    return null;
+  };
+
+  const getBalanceMethodDescription = () => {
+    if (balanceStrategy === 'undersample') {
+      switch (balanceMethod) {
+        case 'random':
+          return 'Randomly removes samples from majority classes';
+        case 'enn':
+          return 'Removes samples whose class differs from the majority of their neighbors';
+        case 'tomek':
+          return 'Removes points that form Tomek links to clean decision boundaries';
+        case 'ncr':
+          return 'Combines ENN and Condensed NN to remove noisy points';
+        default:
+          return '';
+      }
+    } else if (balanceStrategy === 'oversample') {
+      switch (balanceMethod) {
+        case 'random':
+          return 'Randomly duplicates samples from minority classes';
+        case 'smote':
+          return 'Creates synthetic examples from existing minority samples';
+        case 'bsmote':
+          return 'Focuses synthetic generation near decision boundaries';
+        case 'adasyn':
+          return 'Generates more samples in difficult-to-learn regions';
+        default:
+          return '';
+      }
+    }
+    return '';
   };
 
   if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
@@ -251,6 +324,16 @@ const PreprocessingOptions: React.FC = () => {
           
           <div>
             <h4 className="font-medium mb-2">Balance Classes</h4>
+            
+            {!isClassification && (
+              <Alert className="mb-4 bg-amber-50 border-amber-200">
+                <InfoIcon className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-amber-700">
+                  Class balancing is only applicable to classification tasks (binary or multiclass), not regression.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -258,41 +341,64 @@ const PreprocessingOptions: React.FC = () => {
                     <Select
                       value={balanceStrategy}
                       onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
-                      disabled={!isClassification || balanceStrategy === 'smote' && !hasNumericalForSmote || isLoadingPreview}
+                      disabled={!isClassification || isLoadingPreview}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select balance strategy" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="undersample">Undersampling</SelectItem>
-                        <SelectItem 
-                          value="smote" 
-                          disabled={!hasNumericalForSmote}
-                        >
-                          SMOTE (Synthetic Minority Over-sampling)
-                        </SelectItem>
                         <SelectItem value="skip">Skip Balancing</SelectItem>
+                        <SelectItem value="undersample">Undersampling</SelectItem>
+                        <SelectItem value="oversample">Oversampling</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </TooltipTrigger>
-                {!isClassification ? (
+                {!isClassification && (
                   <TooltipContent>
                     <p>Balancing is only supported for classification tasks, not regression.</p>
                   </TooltipContent>
-                ) : balanceStrategy === 'smote' && !hasNumericalForSmote ? (
-                  <TooltipContent>
-                    <p>SMOTE requires numerical features. It can't be applied if none are selected.</p>
-                  </TooltipContent>
-                ) : null}
+                )}
               </Tooltip>
             </TooltipProvider>
             <p className="text-xs text-gray-500 mt-1">
-              {balanceStrategy === 'undersample' && 'Reduces samples from majority classes to match minority class'}
-              {balanceStrategy === 'smote' && 'Creates synthetic samples for minority classes (requires numerical features)'}
+              {balanceStrategy === 'undersample' && 'Reduces samples from majority classes to balance class distribution'}
+              {balanceStrategy === 'oversample' && 'Increases samples in minority classes through duplication or synthetic generation'}
               {balanceStrategy === 'skip' && 'No class balancing will be applied'}
               {!isClassification && 'Class balancing is only applicable for classification tasks'}
             </p>
+            
+            {balanceStrategy !== 'skip' && isClassification && (
+              <div className="mt-4">
+                <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select
+                          value={balanceMethod}
+                          onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
+                          disabled={!isClassification || isLoadingPreview || balanceStrategy === 'skip'}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select balancing method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getBalanceMethodOptions()}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Select a specific algorithm for the chosen balancing strategy.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getBalanceMethodDescription()}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
