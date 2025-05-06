@@ -245,11 +245,16 @@ export const datasetApi = {
     return await handleApiResponse(response);
   },
 
-  preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string) => {
+  preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string, balanceMethod?: string) => {
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('normalization_method', normalizationMethod);
     formData.append('balance_strategy', balanceStrategy);
+    
+    // Only add balance_method if balanceStrategy is not 'skip'
+    if (balanceStrategy !== 'skip' && balanceMethod) {
+      formData.append('balance_method', balanceMethod);
+    }
     
     const token = getAuthToken();
     

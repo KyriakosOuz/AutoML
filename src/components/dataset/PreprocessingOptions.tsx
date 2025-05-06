@@ -272,7 +272,8 @@ const PreprocessingOptions: React.FC = () => {
       const response = await datasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
-        balanceStrategy === 'skip' ? 'skip' : `${balanceStrategy}:${balanceMethod}`
+        balanceStrategy,
+        balanceStrategy !== 'skip' ? balanceMethod : undefined
       );
       
       // CRITICAL FIX: Just update the processingStage to 'processed'
@@ -555,7 +556,7 @@ const PreprocessingOptions: React.FC = () => {
             <AlertDescription className="text-blue-800">Loading dataset preview data...</AlertDescription>
           </Alert>
         )}
-
+        
         <div className="space-y-6">
           <div>
             <h4 className="font-medium mb-2">Normalization</h4>
