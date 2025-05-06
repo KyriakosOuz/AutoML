@@ -366,7 +366,6 @@ const PreprocessingOptions: React.FC = () => {
               {!isClassification && 'Class balancing is only applicable for classification tasks'}
             </p>
             
-            {/* Fixed TypeScript type comparison issue */}
             {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
@@ -377,7 +376,7 @@ const PreprocessingOptions: React.FC = () => {
                         <Select
                           value={balanceMethod}
                           onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                          disabled={!isClassification || isLoadingPreview || (balanceStrategy === 'skip')}
+                          disabled={!isClassification || isLoadingPreview || balanceStrategy === 'skip'}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select balancing method" />
