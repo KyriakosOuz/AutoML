@@ -158,11 +158,12 @@ const PreprocessingOptions: React.FC = () => {
       setSuccess(null);
       setDebugInfo(null);
       
+      // FIX: Update the API call to use the correct number of arguments
+      // We need to modify our API call to match what's expected
       const response = await datasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
-        balanceStrategy,
-        balanceMethod
+        balanceStrategy === 'skip' ? 'skip' : `${balanceStrategy}:${balanceMethod}`
       );
       
       // CRITICAL FIX: Just update the processingStage to 'processed'
@@ -368,6 +369,7 @@ const PreprocessingOptions: React.FC = () => {
               {!isClassification && 'Class balancing is only applicable for classification tasks'}
             </p>
             
+            {/* FIX: Fixed comparison below to check if balanceStrategy is not 'skip' instead of comparing to 'undersample' | 'oversample' */}
             {balanceStrategy !== 'skip' && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
