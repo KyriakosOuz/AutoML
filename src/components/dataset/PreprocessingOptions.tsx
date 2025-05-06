@@ -474,11 +474,8 @@ const PreprocessingOptions: React.FC = () => {
 
   // Get the tooltip and style for the currently selected balancing method
   const getSelectedMethodInfo = () => {
-    // Using string literal comparison instead of type comparison
-    const skipStrategy = balanceStrategy === 'skip';
-    const noneMethod = balanceMethod === 'none';
-    
-    if (skipStrategy || noneMethod) {
+    // Always use strict string equality comparison
+    if (balanceStrategy === 'skip' || balanceMethod === 'none') {
       return {
         tooltip: "No class balancing will be applied",
         bgColor: "bg-gray-50",
@@ -487,8 +484,8 @@ const PreprocessingOptions: React.FC = () => {
       };
     }
     
+    // Use explicit string equality for specific balance strategy values
     let methodKey = '';
-    // Use string equality comparison to avoid TypeScript type issues
     if (balanceStrategy === 'undersample') {
       methodKey = balanceMethod === 'random' ? 'random_under' : balanceMethod;
     } else if (balanceStrategy === 'oversample') {
