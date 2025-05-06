@@ -21,13 +21,89 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Sparkles, InfoIcon } from 'lucide-react';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  TooltipProvider, 
+  Tooltip, 
+  TooltipContent, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
 type BalanceStrategy = 'undersample' | 'oversample' | 'skip';
 type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
 type OversamplingMethod = 'random' | 'smote' | 'borderline_smote' | 'adasyn' | 'smotenc';
 type BalanceMethod = UndersamplingMethod | OversamplingMethod | 'none';
+
+// Method descriptions for tooltips
+interface MethodInfo {
+  name: string;
+  description: string;
+  bestFor: string;
+  limitations?: string;
+}
+
+const methodDescriptions: Record<string, MethodInfo> = {
+  // Undersampling methods
+  random_under: {
+    name: 'Random Undersampling',
+    description: 'Resamples randomly from the majority class.',
+    bestFor: 'Simple datasets with many majority samples',
+  },
+  enn: {
+    name: 'Edited Nearest Neighbors',
+    description: 'Removes ambiguous samples using nearest neighbor voting.',
+    bestFor: 'Datasets with noisy majority samples',
+    limitations: 'Requires numerical features',
+  },
+  tomek: {
+    name: 'Tomek Links',
+    description: 'Cleans overlapping examples between classes.',
+    bestFor: 'Datasets with class overlap',
+    limitations: 'Requires numerical features',
+  },
+  ncr: {
+    name: 'Neighborhood Cleaning Rule',
+    description: 'Combines Tomek and ENN with more aggressive cleaning.',
+    bestFor: 'Datasets with complex decision boundaries',
+    limitations: 'Requires numerical features',
+  },
+  
+  // Oversampling methods
+  random_over: {
+    name: 'Random Oversampling',
+    description: 'Resamples randomly from the minority class.',
+    bestFor: 'Simple datasets with few minority samples',
+  },
+  smote: {
+    name: 'SMOTE',
+    description: 'Generates synthetic samples using nearest neighbors.',
+    bestFor: 'Datasets with numerical features',
+    limitations: 'Numerical features only',
+  },
+  borderline_smote: {
+    name: 'Borderline SMOTE',
+    description: 'Focuses on difficult-to-classify minority samples.',
+    bestFor: 'Datasets with complex decision boundaries',
+    limitations: 'Numerical features only',
+  },
+  adasyn: {
+    name: 'ADASYN',
+    description: 'Generates more synthetic samples for harder cases (adaptive).',
+    bestFor: 'Datasets with complex, imbalanced distributions',
+    limitations: 'Numerical features only',
+  },
+  smotenc: {
+    name: 'SMOTENC',
+    description: 'SMOTE for mixed data (categorical + numerical).',
+    bestFor: 'Mixed datasets with both categorical and numerical features',
+    limitations: 'Requires both feature types',
+  },
+};
 
 const PreprocessingOptions: React.FC = () => {
   const { 
@@ -47,10 +123,12 @@ const PreprocessingOptions: React.FC = () => {
   
   // Debug logging to identify what's happening
   useEffect(() => {
-    console.log('Preview data:', previewData);
-    console.log('Columns to keep:', columnsToKeep);
-    console.log('Overview data_types:', overview?.data_types);
-  }, [previewData, columnsToKeep, overview?.data_types]);
+    console.log('PreprocessingOptions - Preview data:', previewData);
+    console.log('PreprocessingOptions - Columns to keep:', columnsToKeep);
+    console.log('PreprocessingOptions - Overview data_types:', overview?.data_types);
+    console.log('PreprocessingOptions - numerical_columns:', numericalColumns);
+    console.log('PreprocessingOptions - categorical_columns:', categoricalColumns);
+  }, [previewData, columnsToKeep, overview?.data_types, numericalColumns, categoricalColumns]);
   
   // Fetch preview data to get accurate column information
   useEffect(() => {
@@ -124,6 +202,7 @@ const PreprocessingOptions: React.FC = () => {
   // Feature type detection for appropriate balancing methods
   const featureTypes = useMemo(() => {
     if (!previewData || !columnsToKeep) {
+      console.log('No preview data or columns to keep for feature type detection');
       return {
         hasNumerical: false,
         hasCategorical: false,
@@ -131,20 +210,29 @@ const PreprocessingOptions: React.FC = () => {
       };
     }
     
+    // Log raw data for debugging
+    console.log('Feature type detection raw data:');
+    console.log('- numerical_columns:', previewData.numerical_columns);
+    console.log('- categorical_columns:', previewData.categorical_columns);
+    console.log('- columnsToKeep:', columnsToKeep);
+    
     const numericalFeatures = previewData.numerical_columns || [];
     const categoricalFeatures = previewData.categorical_columns || [];
     
     const selectedNumerical = columnsToKeep.filter(col => numericalFeatures.includes(col));
     const selectedCategorical = columnsToKeep.filter(col => categoricalFeatures.includes(col));
     
-    return {
+    const result = {
       hasNumerical: selectedNumerical.length > 0,
       hasCategorical: selectedCategorical.length > 0,
-      isMixed: selectedNumerical.length > 0 && selectedCategorical.length > 0
+      isMixed: selectedNumerical.length > 0 && selectedCategorical.length > 0,
+      numericalCount: selectedNumerical.length,
+      categoricalCount: selectedCategorical.length
     };
+    
+    console.log('Feature types detected:', result);
+    return result;
   }, [previewData, columnsToKeep]);
-  
-  console.log('Feature types detected:', featureTypes);
 
   // Effect to reset balance method when strategy changes
   useEffect(() => {
@@ -204,19 +292,43 @@ const PreprocessingOptions: React.FC = () => {
     if (balanceStrategy === 'undersample') {
       return (
         <>
-          <SelectItem value="random">Random Undersampling</SelectItem>
-          {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
+          <SelectItem value="random">
+            <div className="flex items-center justify-between w-full pr-2">
+              <span>Random Undersampling</span>
+              <HoverCardTrigger asChild>
+                <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+              </HoverCardTrigger>
+            </div>
+          </SelectItem>
+          
+          {featureTypes.hasNumerical && (
             <>
-              <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
-              <SelectItem value="tomek">Tomek Links</SelectItem>
-              <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
-            </>
-          )}
-          {featureTypes.isMixed && (
-            <>
-              <SelectItem value="enn">ENN (Edited Nearest Neighbors)</SelectItem>
-              <SelectItem value="tomek">Tomek Links</SelectItem>
-              <SelectItem value="ncr">NCR (Neighborhood Cleaning Rule)</SelectItem>
+              <SelectItem value="enn" disabled={!featureTypes.hasNumerical}>
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>ENN (Edited Nearest Neighbors)</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
+              
+              <SelectItem value="tomek" disabled={!featureTypes.hasNumerical}>
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>Tomek Links</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
+              
+              <SelectItem value="ncr" disabled={!featureTypes.hasNumerical}>
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>NCR (Neighborhood Cleaning Rule)</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
             </>
           )}
         </>
@@ -224,16 +336,55 @@ const PreprocessingOptions: React.FC = () => {
     } else if (balanceStrategy === 'oversample') {
       return (
         <>
-          <SelectItem value="random">Random Oversampling</SelectItem>
+          <SelectItem value="random">
+            <div className="flex items-center justify-between w-full pr-2">
+              <span>Random Oversampling</span>
+              <HoverCardTrigger asChild>
+                <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+              </HoverCardTrigger>
+            </div>
+          </SelectItem>
+          
           {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
             <>
-              <SelectItem value="smote">SMOTE</SelectItem>
-              <SelectItem value="borderline_smote">Borderline SMOTE</SelectItem>
-              <SelectItem value="adasyn">ADASYN</SelectItem>
+              <SelectItem value="smote">
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>SMOTE</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
+              
+              <SelectItem value="borderline_smote">
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>Borderline SMOTE</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
+              
+              <SelectItem value="adasyn">
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>ADASYN</span>
+                  <HoverCardTrigger asChild>
+                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </HoverCardTrigger>
+                </div>
+              </SelectItem>
             </>
           )}
+          
           {featureTypes.isMixed && (
-            <SelectItem value="smotenc">SMOTENC</SelectItem>
+            <SelectItem value="smotenc">
+              <div className="flex items-center justify-between w-full pr-2">
+                <span>SMOTENC</span>
+                <HoverCardTrigger asChild>
+                  <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                </HoverCardTrigger>
+              </div>
+            </SelectItem>
           )}
         </>
       );
@@ -241,37 +392,14 @@ const PreprocessingOptions: React.FC = () => {
     return null;
   };
 
-  const getBalanceMethodDescription = () => {
+  // Get the appropriate method info for the current selection
+  const getCurrentMethodInfo = (): MethodInfo | undefined => {
     if (balanceStrategy === 'undersample') {
-      switch (balanceMethod) {
-        case 'random':
-          return 'Resamples randomly from the majority class.';
-        case 'enn':
-          return 'Removes ambiguous samples using nearest neighbor voting.';
-        case 'tomek':
-          return 'Cleans overlapping examples between classes.';
-        case 'ncr':
-          return 'Combines Tomek and ENN with more aggressive cleaning.';
-        default:
-          return '';
-      }
+      return methodDescriptions[`${balanceMethod === 'random' ? 'random_under' : balanceMethod}`];
     } else if (balanceStrategy === 'oversample') {
-      switch (balanceMethod) {
-        case 'random':
-          return 'Resamples randomly from the minority class.';
-        case 'smote':
-          return 'Generates synthetic samples using nearest neighbors (numerical only).';
-        case 'borderline_smote':
-          return 'Focuses on difficult-to-classify minority samples.';
-        case 'adasyn':
-          return 'Generates more synthetic samples for harder cases (adaptive).';
-        case 'smotenc':
-          return 'SMOTE for mixed data (categorical + numerical).';
-        default:
-          return '';
-      }
+      return methodDescriptions[`${balanceMethod === 'random' ? 'random_over' : balanceMethod}`];
     }
-    return '';
+    return undefined;
   };
 
   if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
@@ -407,30 +535,42 @@ const PreprocessingOptions: React.FC = () => {
             {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
-                <div>
-                  <Select
-                    value={balanceMethod}
-                    onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                    disabled={!isClassification || isLoadingPreview}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select balancing method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getBalanceMethodOptions()}
-                    </SelectContent>
-                  </Select>
+                <div className="relative">
+                  <HoverCard>
+                    <Select
+                      value={balanceMethod}
+                      onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
+                      disabled={!isClassification || isLoadingPreview}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select balancing method" />
+                      </SelectTrigger>
+                      <SelectContent className="relative">
+                        {getBalanceMethodOptions()}
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Rich hover card content for method info */}
+                    <HoverCardContent className="w-80">
+                      {getCurrentMethodInfo() && (
+                        <div className="space-y-2">
+                          <h5 className="font-medium text-sm">{getCurrentMethodInfo()?.name}</h5>
+                          <p className="text-sm">{getCurrentMethodInfo()?.description}</p>
+                          <div className="pt-2">
+                            <span className="text-xs font-medium">Best for: </span>
+                            <span className="text-xs">{getCurrentMethodInfo()?.bestFor}</span>
+                          </div>
+                          {getCurrentMethodInfo()?.limitations && (
+                            <div>
+                              <span className="text-xs font-medium text-amber-700">Limitations: </span>
+                              <span className="text-xs text-amber-700">{getCurrentMethodInfo()?.limitations}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </HoverCardContent>
+                  </HoverCard>
                 </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <InfoIcon className="h-4 w-4 text-gray-400 inline-block ml-1 mt-2 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs text-xs">{getBalanceMethodDescription()}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
             )}
           </div>
