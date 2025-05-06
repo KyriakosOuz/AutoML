@@ -39,69 +39,81 @@ type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
 type OversamplingMethod = 'random' | 'smote' | 'borderline_smote' | 'adasyn' | 'smotenc';
 type BalanceMethod = UndersamplingMethod | OversamplingMethod | 'none';
 
-// Method descriptions for tooltips
+// Enhanced method descriptions for tooltips
 interface MethodInfo {
   name: string;
   description: string;
   bestFor: string;
   limitations?: string;
+  dataRequirements?: string;
 }
 
 const methodDescriptions: Record<string, MethodInfo> = {
   // Undersampling methods
   random_under: {
     name: 'Random Undersampling',
-    description: 'Resamples randomly from the majority class.',
-    bestFor: 'Simple datasets with many majority samples',
+    description: 'Randomly removes samples from majority classes until classes are balanced.',
+    bestFor: 'Simple datasets with many majority class samples',
+    limitations: 'May discard potentially useful information',
+    dataRequirements: 'Works with any feature types'
   },
   enn: {
     name: 'Edited Nearest Neighbors',
-    description: 'Removes ambiguous samples using nearest neighbor voting.',
-    bestFor: 'Datasets with noisy majority samples',
-    limitations: 'Requires numerical features',
+    description: 'Removes majority samples whose class differs from the class of their nearest neighbors.',
+    bestFor: 'Datasets with noisy samples near class boundaries',
+    limitations: 'More computationally intensive than random undersampling',
+    dataRequirements: 'Requires numerical features'
   },
   tomek: {
     name: 'Tomek Links',
-    description: 'Cleans overlapping examples between classes.',
-    bestFor: 'Datasets with class overlap',
-    limitations: 'Requires numerical features',
+    description: 'Identifies and removes majority samples that form "Tomek links" (pairs of closest samples from different classes).',
+    bestFor: 'Datasets with overlapping classes',
+    limitations: 'Only removes samples at class boundaries',
+    dataRequirements: 'Requires numerical features'
   },
   ncr: {
     name: 'Neighborhood Cleaning Rule',
-    description: 'Combines Tomek and ENN with more aggressive cleaning.',
+    description: 'Combines ENN with additional cleaning rules to remove more majority samples.',
     bestFor: 'Datasets with complex decision boundaries',
-    limitations: 'Requires numerical features',
+    limitations: 'More aggressive than ENN, may remove too many samples',
+    dataRequirements: 'Requires numerical features'
   },
   
   // Oversampling methods
   random_over: {
     name: 'Random Oversampling',
-    description: 'Resamples randomly from the minority class.',
-    bestFor: 'Simple datasets with few minority samples',
+    description: 'Creates exact duplicates of minority class samples.',
+    bestFor: 'Simple datasets with few minority class samples',
+    limitations: 'May lead to overfitting as it creates exact duplicates',
+    dataRequirements: 'Works with any feature types'
   },
   smote: {
     name: 'SMOTE',
-    description: 'Generates synthetic samples using nearest neighbors.',
-    bestFor: 'Datasets with numerical features',
-    limitations: 'Numerical features only',
+    description: 'Creates synthetic samples along the line segments joining minority class neighbors.',
+    bestFor: 'Datasets with continuous numerical features',
+    limitations: 'Can generate noisy samples if class regions are complex',
+    dataRequirements: 'Numerical features only'
   },
   borderline_smote: {
     name: 'Borderline SMOTE',
-    description: 'Focuses on difficult-to-classify minority samples.',
-    bestFor: 'Datasets with complex decision boundaries',
-    limitations: 'Numerical features only',
+    description: 'Creates synthetic samples specifically for minority samples near the class boundary.',
+    bestFor: 'Datasets with well-defined decision boundaries',
+    limitations: 'More complex than standard SMOTE',
+    dataRequirements: 'Numerical features only'
   },
   adasyn: {
     name: 'ADASYN',
-    description: 'Generates more synthetic samples for harder cases (adaptive).',
-    bestFor: 'Datasets with complex, imbalanced distributions',
-    limitations: 'Numerical features only',
+    description: 'Generates more synthetic samples for minority instances that are harder to learn.',
+    bestFor: 'Datasets with varying densities of minority samples',
+    limitations: 'May create noisy samples in complex regions',
+    dataRequirements: 'Numerical features only'
   },
   smotenc: {
     name: 'SMOTENC',
-    description: 'SMOTE for mixed data (categorical + numerical).',
+    description: 'SMOTE adaptation for datasets with mixed numerical and categorical features.',
     bestFor: 'Mixed datasets with both categorical and numerical features',
-    limitations: 'Requires both feature types',
+    limitations: 'Less effective than SMOTE for purely numerical data',
+    dataRequirements: 'Works with mixed categorical and numerical features'
   },
 };
 
@@ -287,119 +299,255 @@ const PreprocessingOptions: React.FC = () => {
     }
   };
 
-  // Get available balance method options based on feature types
+  // Improved method options with more detailed descriptions
   const getBalanceMethodOptions = () => {
     if (balanceStrategy === 'undersample') {
       return (
         <>
-          <SelectItem value="random">
-            <div className="flex items-center justify-between w-full pr-2">
-              <span>Random Undersampling</span>
-              <HoverCardTrigger asChild>
-                <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-              </HoverCardTrigger>
-            </div>
-          </SelectItem>
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="random" className="cursor-help">
+                Random Undersampling
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.random_under.name}</h5>
+                <p className="text-sm">{methodDescriptions.random_under.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.random_under.bestFor}</span>
+                </div>
+                {methodDescriptions.random_under.limitations && (
+                  <div>
+                    <span className="text-xs font-medium">Limitations: </span>
+                    <span className="text-xs">{methodDescriptions.random_under.limitations}</span>
+                  </div>
+                )}
+                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
+                  <span className="text-xs text-green-700">Works with any data types</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
           
-          {featureTypes.hasNumerical && (
-            <>
-              <SelectItem value="enn" disabled={!featureTypes.hasNumerical}>
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>ENN (Edited Nearest Neighbors)</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
-                </div>
+          {/* ENN method - requires numerical features */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="enn" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                ENN (Edited Nearest Neighbors)
               </SelectItem>
-              
-              <SelectItem value="tomek" disabled={!featureTypes.hasNumerical}>
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>Tomek Links</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.enn.name}</h5>
+                <p className="text-sm">{methodDescriptions.enn.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.enn.bestFor}</span>
                 </div>
-              </SelectItem>
-              
-              <SelectItem value="ncr" disabled={!featureTypes.hasNumerical}>
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>NCR (Neighborhood Cleaning Rule)</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.enn.limitations}</span>
                 </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* Tomek Links method - requires numerical features */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="tomek" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                Tomek Links
               </SelectItem>
-            </>
-          )}
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.tomek.name}</h5>
+                <p className="text-sm">{methodDescriptions.tomek.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.tomek.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.tomek.limitations}</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* NCR method - requires numerical features */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="ncr" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                NCR (Neighborhood Cleaning Rule)
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.ncr.name}</h5>
+                <p className="text-sm">{methodDescriptions.ncr.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.ncr.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.ncr.limitations}</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         </>
       );
     } else if (balanceStrategy === 'oversample') {
       return (
         <>
-          <SelectItem value="random">
-            <div className="flex items-center justify-between w-full pr-2">
-              <span>Random Oversampling</span>
-              <HoverCardTrigger asChild>
-                <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-              </HoverCardTrigger>
-            </div>
-          </SelectItem>
-          
-          {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
-            <>
-              <SelectItem value="smote">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>SMOTE</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
-                </div>
+          {/* Random Oversampling */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="random" className="cursor-help">
+                Random Oversampling
               </SelectItem>
-              
-              <SelectItem value="borderline_smote">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>Borderline SMOTE</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.random_over.name}</h5>
+                <p className="text-sm">{methodDescriptions.random_over.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.random_over.bestFor}</span>
                 </div>
-              </SelectItem>
-              
-              <SelectItem value="adasyn">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span>ADASYN</span>
-                  <HoverCardTrigger asChild>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </HoverCardTrigger>
+                {methodDescriptions.random_over.limitations && (
+                  <div>
+                    <span className="text-xs font-medium">Limitations: </span>
+                    <span className="text-xs">{methodDescriptions.random_over.limitations}</span>
+                  </div>
+                )}
+                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
+                  <span className="text-xs text-green-700">Works with any data types</span>
                 </div>
-              </SelectItem>
-            </>
-          )}
-          
-          {featureTypes.isMixed && (
-            <SelectItem value="smotenc">
-              <div className="flex items-center justify-between w-full pr-2">
-                <span>SMOTENC</span>
-                <HoverCardTrigger asChild>
-                  <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                </HoverCardTrigger>
               </div>
-            </SelectItem>
-          )}
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* SMOTE - requires numerical features only */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="smote" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                SMOTE
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.smote.name}</h5>
+                <p className="text-sm">{methodDescriptions.smote.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.smote.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.smote.limitations}</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* Borderline SMOTE - requires numerical features only */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="borderline_smote" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                Borderline SMOTE
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.borderline_smote.name}</h5>
+                <p className="text-sm">{methodDescriptions.borderline_smote.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.borderline_smote.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.borderline_smote.limitations}</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* ADASYN - requires numerical features only */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="adasyn" disabled={!featureTypes.hasNumerical || featureTypes.hasCategorical} className="cursor-help">
+                ADASYN
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.adasyn.name}</h5>
+                <p className="text-sm">{methodDescriptions.adasyn.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.adasyn.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.adasyn.limitations}</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
+                  <span className="text-xs text-amber-700">Requires numerical features only</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+          
+          {/* SMOTENC - requires mixed features (numerical and categorical) */}
+          <HoverCard openDelay={100} closeDelay={200}>
+            <HoverCardTrigger asChild>
+              <SelectItem value="smotenc" disabled={!featureTypes.isMixed} className="cursor-help">
+                SMOTENC
+              </SelectItem>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" side="right">
+              <div className="space-y-2">
+                <h5 className="font-semibold text-sm">{methodDescriptions.smotenc.name}</h5>
+                <p className="text-sm">{methodDescriptions.smotenc.description}</p>
+                <div className="pt-2">
+                  <span className="text-xs font-medium">Best for: </span>
+                  <span className="text-xs">{methodDescriptions.smotenc.bestFor}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium">Limitations: </span>
+                  <span className="text-xs">{methodDescriptions.smotenc.limitations}</span>
+                </div>
+                <div className="bg-cyan-50 border border-cyan-100 rounded p-1 mt-1">
+                  <span className="text-xs text-cyan-700">Works best with mixed categorical and numerical features</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         </>
       );
     }
     return null;
-  };
-
-  // Get the appropriate method info for the current selection
-  const getCurrentMethodInfo = (): MethodInfo | undefined => {
-    if (balanceStrategy === 'undersample') {
-      return methodDescriptions[`${balanceMethod === 'random' ? 'random_under' : balanceMethod}`];
-    } else if (balanceStrategy === 'oversample') {
-      return methodDescriptions[`${balanceMethod === 'random' ? 'random_over' : balanceMethod}`];
-    }
-    return undefined;
   };
 
   if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
@@ -536,40 +684,30 @@ const PreprocessingOptions: React.FC = () => {
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
                 <div className="relative">
-                  <HoverCard>
-                    <Select
-                      value={balanceMethod}
-                      onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                      disabled={!isClassification || isLoadingPreview}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select balancing method" />
-                      </SelectTrigger>
-                      <SelectContent className="relative">
-                        {getBalanceMethodOptions()}
-                      </SelectContent>
-                    </Select>
-                    
-                    {/* Rich hover card content for method info */}
-                    <HoverCardContent className="w-80">
-                      {getCurrentMethodInfo() && (
-                        <div className="space-y-2">
-                          <h5 className="font-medium text-sm">{getCurrentMethodInfo()?.name}</h5>
-                          <p className="text-sm">{getCurrentMethodInfo()?.description}</p>
-                          <div className="pt-2">
-                            <span className="text-xs font-medium">Best for: </span>
-                            <span className="text-xs">{getCurrentMethodInfo()?.bestFor}</span>
-                          </div>
-                          {getCurrentMethodInfo()?.limitations && (
-                            <div>
-                              <span className="text-xs font-medium text-amber-700">Limitations: </span>
-                              <span className="text-xs text-amber-700">{getCurrentMethodInfo()?.limitations}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </HoverCardContent>
-                  </HoverCard>
+                  <Select
+                    value={balanceMethod}
+                    onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
+                    disabled={!isClassification || isLoadingPreview}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select balancing method" />
+                    </SelectTrigger>
+                    <SelectContent className="relative z-50">
+                      {getBalanceMethodOptions()}
+                    </SelectContent>
+                  </Select>
+                  {/* Feature type detection info for users */}
+                  <div className="text-xs text-gray-500 mt-1 space-y-1">
+                    {balanceStrategy === 'undersample' && balanceMethod !== 'random' && !featureTypes.hasNumerical && 
+                      <p className="text-amber-500">Some methods require numerical features which are not present in your selected columns.</p>
+                    }
+                    {balanceStrategy === 'oversample' && balanceMethod !== 'random' && balanceMethod !== 'smotenc' && featureTypes.hasCategorical && 
+                      <p className="text-amber-500">SMOTE variants (except SMOTENC) require numerical features only.</p>
+                    }
+                    {balanceStrategy === 'oversample' && balanceMethod === 'smotenc' && !featureTypes.isMixed && 
+                      <p className="text-amber-500">SMOTENC requires both numerical and categorical features.</p>
+                    }
+                  </div>
                 </div>
               </div>
             )}
