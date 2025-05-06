@@ -470,6 +470,51 @@ const PreprocessingOptions: React.FC = () => {
     return null;
   };
 
+  // Get the tooltip and style for the currently selected balancing method
+  const getSelectedMethodInfo = () => {
+    if (balanceStrategy === 'skip' || balanceMethod === 'none') {
+      return {
+        tooltip: "No class balancing will be applied",
+        bgColor: "bg-gray-50",
+        borderColor: "border-gray-100",
+        textColor: "text-gray-700"
+      };
+    }
+    
+    let methodKey = '';
+    if (balanceStrategy === 'undersample') {
+      if (balanceMethod === 'random') methodKey = 'random_under';
+      else methodKey = balanceMethod;
+    } else if (balanceStrategy === 'oversample') {
+      if (balanceMethod === 'random') methodKey = 'random_over';
+      else methodKey = balanceMethod;
+    }
+    
+    // Set style based on method requirements
+    let bgColor = "bg-amber-50";
+    let borderColor = "border-amber-100";
+    let textColor = "text-amber-800";
+    
+    if (methodKey === 'random_under' || methodKey === 'random_over') {
+      bgColor = "bg-green-50";
+      borderColor = "border-green-100";
+      textColor = "text-green-800";
+    } else if (methodKey === 'smotenc') {
+      bgColor = "bg-cyan-50";
+      borderColor = "border-cyan-100";
+      textColor = "text-cyan-700";
+    }
+    
+    return {
+      tooltip: methodDescriptions[methodKey]?.tooltip || "No description available",
+      bgColor,
+      borderColor,
+      textColor
+    };
+  };
+  
+  const methodInfo = getSelectedMethodInfo();
+
   if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
     return null;
   }
@@ -617,34 +662,25 @@ const PreprocessingOptions: React.FC = () => {
                     </SelectContent>
                   </Select>
                   
-                  {/* Feature type detection info */}
-                  <div className="text-xs text-gray-500 mt-1 space-y-1">
-                    {featureTypes.hasNumerical && featureTypes.hasCategorical && (
-                      <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded">
-                        <span className="font-medium">Dataset type:</span> Mixed (numerical + categorical)
+                  {/* Method information section - replaced dataset type info */}
+                  {balanceStrategy !== 'skip' && balanceMethod !== 'none' && (
+                    <div className="text-xs mt-2 space-y-1">
+                      <div className={`px-3 py-2 rounded ${methodInfo.bgColor} ${methodInfo.borderColor} ${methodInfo.textColor}`}>
+                        {methodInfo.tooltip}
                       </div>
-                    )}
-                    {featureTypes.hasNumerical && !featureTypes.hasCategorical && (
-                      <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded">
-                        <span className="font-medium">Dataset type:</span> Numerical only
-                      </div>
-                    )}
-                    {!featureTypes.hasNumerical && featureTypes.hasCategorical && (
-                      <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded">
-                        <span className="font-medium">Dataset type:</span> Categorical only
-                      </div>
-                    )}
-                    
-                    {balanceStrategy === 'undersample' && balanceMethod !== 'random' && !featureTypes.hasNumerical && (
-                      <p className="text-amber-500">This method requires numerical features which are not present in your selected columns.</p>
-                    )}
-                    {balanceStrategy === 'oversample' && balanceMethod !== 'random' && balanceMethod !== 'smotenc' && !featureTypes.hasNumerical && (
-                      <p className="text-amber-500">This method requires numerical features which are not present in your selected columns.</p>
-                    )}
-                    {balanceStrategy === 'oversample' && balanceMethod === 'smotenc' && !featureTypes.isMixed && (
-                      <p className="text-amber-500">SMOTENC requires both numerical and categorical features.</p>
-                    )}
-                  </div>
+                      
+                      {/* Keep error messages for incompatible methods */}
+                      {balanceStrategy === 'undersample' && balanceMethod !== 'random' && !featureTypes.hasNumerical && (
+                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
+                      )}
+                      {balanceStrategy === 'oversample' && balanceMethod !== 'random' && balanceMethod !== 'smotenc' && !featureTypes.hasNumerical && (
+                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
+                      )}
+                      {balanceStrategy === 'oversample' && balanceMethod === 'smotenc' && !featureTypes.isMixed && (
+                        <p className="text-amber-500 mt-1 px-1">SMOTENC requires both numerical and categorical features.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
