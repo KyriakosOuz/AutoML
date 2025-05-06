@@ -376,7 +376,7 @@ const PreprocessingOptions: React.FC = () => {
                         <Select
                           value={balanceMethod}
                           onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                          disabled={!isClassification || isLoadingPreview || balanceStrategy === 'skip'}
+                          disabled={!isClassification || isLoadingPreview}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select balancing method" />
