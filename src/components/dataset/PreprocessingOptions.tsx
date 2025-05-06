@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -369,8 +368,8 @@ const PreprocessingOptions: React.FC = () => {
               {!isClassification && 'Class balancing is only applicable for classification tasks'}
             </p>
             
-            {/* FIX: Fixed comparison below to check if balanceStrategy is not 'skip' instead of comparing to 'undersample' | 'oversample' */}
-            {balanceStrategy !== 'skip' && isClassification && (
+            {/* Fix for the TypeScript error: modified conditional to properly handle balance strategy */}
+            {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
                 <TooltipProvider>
