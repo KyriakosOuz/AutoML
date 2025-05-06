@@ -157,8 +157,6 @@ const PreprocessingOptions: React.FC = () => {
       setSuccess(null);
       setDebugInfo(null);
       
-      // FIX: Update the API call to use the correct number of arguments
-      // We need to modify our API call to match what's expected
       const response = await datasetApi.preprocessDataset(
         datasetId,
         normalizationMethod,
@@ -368,8 +366,8 @@ const PreprocessingOptions: React.FC = () => {
               {!isClassification && 'Class balancing is only applicable for classification tasks'}
             </p>
             
-            {/* Fix for the TypeScript error: modified conditional to properly handle balance strategy */}
-            {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
+            {/* TypeScript fix: Explicitly check for specific string values */}
+            {balanceStrategy !== 'skip' && isClassification && (
               <div className="mt-4">
                 <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
                 <TooltipProvider>
