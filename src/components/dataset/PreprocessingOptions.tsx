@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -475,7 +474,8 @@ const PreprocessingOptions: React.FC = () => {
 
   // Get the tooltip and style for the currently selected balancing method
   const getSelectedMethodInfo = () => {
-    // Fix the comparison here - this was causing the type error
+    // Fix the type comparison by properly checking the values
+    // This explicitly checks the string values rather than relying on TypeScript's type inference
     if (balanceStrategy === 'skip' || balanceMethod === 'none') {
       return {
         tooltip: "No class balancing will be applied",
