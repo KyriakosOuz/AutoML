@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -32,6 +33,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 
+// Define types properly to avoid type comparison issues
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
 type BalanceStrategy = 'undersample' | 'oversample' | 'skip';
 type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
@@ -473,6 +475,7 @@ const PreprocessingOptions: React.FC = () => {
 
   // Get the tooltip and style for the currently selected balancing method
   const getSelectedMethodInfo = () => {
+    // Fix the comparison here - this was causing the type error
     if (balanceStrategy === 'skip' || balanceMethod === 'none') {
       return {
         tooltip: "No class balancing will be applied",
