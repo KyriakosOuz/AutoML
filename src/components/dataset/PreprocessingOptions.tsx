@@ -474,8 +474,11 @@ const PreprocessingOptions: React.FC = () => {
 
   // Get the tooltip and style for the currently selected balancing method
   const getSelectedMethodInfo = () => {
-    // Fix the type comparison issue by using explicit string comparison
-    if (balanceStrategy === 'skip' || balanceMethod === 'none') {
+    // Using string literal comparison instead of type comparison
+    const skipStrategy = balanceStrategy === 'skip';
+    const noneMethod = balanceMethod === 'none';
+    
+    if (skipStrategy || noneMethod) {
       return {
         tooltip: "No class balancing will be applied",
         bgColor: "bg-gray-50",
