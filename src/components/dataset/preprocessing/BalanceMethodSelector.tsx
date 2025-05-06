@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Select, 
@@ -219,6 +220,7 @@ const BalanceMethodSelector: React.FC<BalanceMethodSelectorProps> = ({
 
   // Get tooltip and style for selected method
   const getSelectedMethodInfo = () => {
+    // Fix the type comparison issue by comparing string values explicitly
     if (balanceStrategy === 'skip' || balanceMethod === 'none') {
       return {
         tooltip: "No class balancing will be applied",
