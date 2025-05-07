@@ -279,6 +279,23 @@ export const datasetApi = {
     
     return await response.json();
   },
+
+  checkClassImbalance: async (datasetId: string) => {
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    
+    const token = getAuthToken();
+    
+    const response = await fetch(`${API_URL}/dataset/check-class-imbalance/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+    
+    return await handleApiResponse(response);
+  },
 };
 
 export const trainingApi = {

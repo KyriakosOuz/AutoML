@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -19,6 +19,8 @@ import { useDataset } from '@/contexts/DatasetContext';
 import NormalizationSelector, { NormalizationMethod } from './NormalizationSelector';
 import BalanceStrategySelector, { BalanceStrategy } from './BalanceStrategySelector';
 import BalanceMethodSelector, { BalanceMethod } from './BalanceMethodSelector';
+import ClassImbalanceAlert from './ClassImbalanceAlert';
+import ClassDistributionChart from './ClassDistributionChart';
 
 interface FeatureTypes {
   hasNumerical: boolean;
@@ -43,7 +45,10 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
     datasetId, 
     taskType, 
     updateState,
-    columnsToKeep
+    columnsToKeep,
+    targetColumn,
+    classImbalanceData, 
+    setClassImbalanceData 
   } = useDataset();
 
   const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
@@ -54,8 +59,52 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [isCheckingImbalance, setIsCheckingImbalance] = useState(false);
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
+
+  // Effect to check for class imbalance when the component mounts
+  useEffect(() => {
+    const checkClassImbalance = async () => {
+      if (!datasetId || !isClassification || isCheckingImbalance) return;
+
+      try {
+        setIsCheckingImbalance(true);
+        console.log('Checking class imbalance for dataset:', datasetId);
+        
+        const response = await datasetApi.checkClassImbalance(datasetId);
+        console.log('Class imbalance response:', response);
+        
+        const imbalanceData = response.data || response;
+        
+        // Update the class imbalance data in the context
+        setClassImbalanceData(imbalanceData);
+        
+        // If imbalance is detected and there's a recommendation, update the balance strategy
+        if (imbalanceData.needs_balancing && imbalanceData.recommendation) {
+          const lowerCaseRec = imbalanceData.recommendation.toLowerCase();
+          
+          if (lowerCaseRec.includes('smote')) {
+            setBalanceStrategy('oversample');
+            setBalanceMethod('smote');
+          } else if (lowerCaseRec.includes('oversample')) {
+            setBalanceStrategy('oversample');
+            setBalanceMethod('random');
+          } else if (lowerCaseRec.includes('undersample')) {
+            setBalanceStrategy('undersample');
+            setBalanceMethod('random');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking class imbalance:', error);
+        setDebugInfo('Failed to check class imbalance: ' + (error instanceof Error ? error.message : String(error)));
+      } finally {
+        setIsCheckingImbalance(false);
+      }
+    };
+
+    checkClassImbalance();
+  }, [datasetId, isClassification, setClassImbalanceData]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -136,6 +185,26 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
           </Alert>
         )}
         
+        {isCheckingImbalance && (
+          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">Analyzing class distribution...</AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Class Imbalance Alert - Only for classification tasks */}
+        {isClassification && classImbalanceData && !isCheckingImbalance && (
+          <>
+            <ClassImbalanceAlert classImbalanceData={classImbalanceData} />
+            {/* Display chart for class distribution */}
+            <ClassDistributionChart 
+              classData={classImbalanceData.class_distribution} 
+              targetColumn={classImbalanceData.target_column} 
+            />
+            <Separator className="my-6" />
+          </>
+        )}
+        
         <div className="space-y-6">
           <NormalizationSelector 
             value={normalizationMethod}
@@ -166,7 +235,7 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
       <CardFooter>
         <Button 
           onClick={handlePreprocess} 
-          disabled={isLoading || isLoadingPreview}
+          disabled={isLoading || isLoadingPreview || isCheckingImbalance}
           className="w-full"
         >
           <Sparkles className="h-4 w-4 mr-2" />

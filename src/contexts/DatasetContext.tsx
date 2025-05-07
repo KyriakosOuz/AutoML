@@ -21,6 +21,13 @@ export interface FeatureImportance {
   importance: number;
 }
 
+export interface ClassImbalanceData {
+  needs_balancing: boolean;
+  class_distribution: Record<string, number>;
+  target_column: string;
+  recommendation?: string;
+}
+
 export interface DatasetContextProps {
   datasetId: string | null;
   fileUrl: string | null;
@@ -37,6 +44,7 @@ export interface DatasetContextProps {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
+  classImbalanceData: ClassImbalanceData | null;
   
   setDatasetId: (id: string | null) => void;
   setFileUrl: (url: string | null) => void;
@@ -53,6 +61,7 @@ export interface DatasetContextProps {
   setError: (error: string | null) => void;
   setProcessingStage: (stage: string | null) => void;
   setProcessingButtonClicked: (clicked: boolean) => void; // Setter for the flag
+  setClassImbalanceData: (data: ClassImbalanceData | null) => void;
   
   resetState: () => void;
   updateState: (newState: Partial<DatasetContextState>) => void;
@@ -74,6 +83,7 @@ interface DatasetContextState {
   error: string | null;
   processingStage: string | null; // Track the current processing stage
   processingButtonClicked: boolean; // Flag to track button click
+  classImbalanceData: ClassImbalanceData | null;
 }
 
 const DatasetContext = createContext<DatasetContextProps | undefined>(undefined);
@@ -94,6 +104,7 @@ const initialState: DatasetContextState = {
   error: null,
   processingStage: null, // Start with null to avoid immediate redirects
   processingButtonClicked: false, // Initialize the flag to false
+  classImbalanceData: null,
 };
 
 export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -199,6 +210,9 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     // No need to explicitly update localStorage here as the effect above will handle it
   };
   
+  const setClassImbalanceData = (classImbalanceData: ClassImbalanceData | null) => 
+    setState(prev => ({ ...prev, classImbalanceData }));
+  
   const resetState = () => {
     console.log('Resetting dataset state to initial state');
     setState(initialState);
@@ -249,6 +263,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setError,
     setProcessingStage,
     setProcessingButtonClicked,
+    setClassImbalanceData,
     resetState,
     updateState,
   };
