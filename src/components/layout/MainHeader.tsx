@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Cpu, BarChart2, Upload, HelpCircle, Star } from 'lucide-react';
+import { BarChart2, Upload, HelpCircle, Star } from 'lucide-react';
 import AuthHeader from '@/components/auth/AuthHeader';
 import {
   Dialog,
@@ -53,7 +52,11 @@ const MainHeader = () => {
         <div className="flex items-center gap-2">
           {isMobile && <MobileNav />}
           <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
+            <img 
+              src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
+              alt="KyrO Logo" 
+              className="h-5 w-5 sm:h-6 sm:w-6" 
+            />
             <span className="hidden sm:inline">KyrO AutoML</span>
             <span className="sm:hidden">KyrO</span>
           </Link>
@@ -102,7 +105,11 @@ const MainHeader = () => {
                   className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
                 >
                   <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
-                    <Cpu className="h-4 w-4" />
+                    <img 
+                      src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
+                      alt="KyrO Logo" 
+                      className="h-4 w-4" 
+                    />
                     <span className="hidden sm:inline">Training</span>
                   </Link>
                 </TabsTrigger>

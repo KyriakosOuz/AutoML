@@ -7,7 +7,7 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, BarChart2, Upload, Cpu } from 'lucide-react';
+import { Menu, BarChart2, Upload } from 'lucide-react';
 
 const MobileNav = () => {
   const location = useLocation();
@@ -40,7 +40,11 @@ const MobileNav = () => {
             </span>
           </Link>
           <Link to="/training" className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-100">
-            <Cpu className={`h-5 w-5 ${isActive('/training') ? 'text-black' : 'text-gray-500'}`} />
+            <img 
+              src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
+              alt="KyrO Logo" 
+              className={`h-5 w-5 ${isActive('/training') ? 'opacity-100' : 'opacity-70'}`} 
+            />
             <span className={`${isActive('/training') ? 'font-medium text-black' : 'text-gray-700'}`}>
               Training
             </span>
