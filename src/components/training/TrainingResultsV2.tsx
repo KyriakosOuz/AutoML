@@ -3,7 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { trainingApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { ExperimentResults } from '@/types/training';
+import { useTraining } from '@/contexts/training/TrainingContext';
+import {
   Award, 
   BarChart4, 
   Clock, 
@@ -16,13 +23,6 @@ import {
   Microscope,
   Loader
 } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { trainingApi } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
-import { ExperimentResults } from '@/types/training';
-import { useTraining } from '@/contexts/training/TrainingContext';
 
 export interface TrainingResultsV2Props {
   experimentId: string;
@@ -43,6 +43,11 @@ const formatTaskType = (type: string) => {
     default:
       return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   }
+};
+
+// Helper function to get F1 score from either f1 or f1_score fields
+const getF1Score = (metrics: { f1_score?: number; f1?: number }): number | undefined => {
+  return metrics.f1_score !== undefined ? metrics.f1_score : metrics.f1;
 };
 
 const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onReset }) => {
@@ -245,14 +250,14 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     </Card>
                   )}
                   
-                  {metrics.f1_score !== undefined && (
+                  {getF1Score(metrics) !== undefined && (
                     <Card className="shadow-sm">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base">F1 Score</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.f1_score)}`}>
-                          {formatMetric(metrics.f1_score)}
+                        <div className={`text-2xl font-bold ${getMetricColor(getF1Score(metrics))}`}>
+                          {formatMetric(getF1Score(metrics))}
                         </div>
                       </CardContent>
                     </Card>

@@ -626,7 +626,7 @@ const ExperimentsTab: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Method</TableHead>
+                  <TableHead>Method/Algorithm</TableHead>
                   <TableHead>Metrics</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -644,13 +644,10 @@ const ExperimentsTab: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {experiment.auto_train ? (
-                          <span>{experiment.automl_engine || 'Unknown Engine'}</span>
+                          <span>{experiment.automl_engine ? experiment.automl_engine.toUpperCase() : 'Unknown Engine'}</span>
                         ) : (
                           <span>{experiment.algorithm_choice}</span>
                         )}
-                        <Badge variant="outline" className="ml-2">
-                          {experiment.auto_train ? 'AutoML' : 'Custom'}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
