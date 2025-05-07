@@ -42,8 +42,9 @@ export const automlTrain = async (
     formData.append('stratify', stratify ? 'true' : 'false');
     formData.append('random_seed', randomSeed.toString());
     
-    // Add experiment name if provided
+    // Add experiment name if provided - log for debugging
     if (experimentName) {
+      console.log('[API] Setting experiment name in request:', experimentName);
       formData.append('experiment_name', experimentName);
     }
     
@@ -60,7 +61,7 @@ export const automlTrain = async (
     }
 
     const result = await response.json();
-    console.log('[API] AutoML training started successfully:', result);
+    console.log('[API] AutoML training started successfully. Result:', result);
     return result.data;
   } catch (error) {
     console.error('[API] Error in automlTrain:', error);

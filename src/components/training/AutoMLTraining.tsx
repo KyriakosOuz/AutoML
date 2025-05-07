@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
-import { trainingApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,6 +57,7 @@ const AutoMLTraining: React.FC = () => {
   useEffect(() => {
     if (taskType && automlEngine && !experimentName) {
       const newName = generateExperimentName('AutoML', automlEngine.toUpperCase());
+      console.log("AutoMLTraining - Generated default experiment name:", newName);
       setExperimentName(newName);
     }
   }, [taskType, automlEngine, experimentName, setExperimentName]);
@@ -110,6 +110,8 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
+      console.log("AutoMLTraining - Starting training with experiment name:", experimentName);
+
       // Use the function from training.ts instead of api.ts
       const result = await trainingLib.automlTrain(
         datasetId,
@@ -125,9 +127,16 @@ const AutoMLTraining: React.FC = () => {
         setLastTrainingType('automl');
         startPolling(result.experiment_id);
         
+        // Log the experiment ID and name for debugging
+        console.log("AutoMLTraining - Training submitted:", {
+          experimentId: result.experiment_id,
+          experimentName: experimentName,
+          resultName: result.experiment_name
+        });
+        
         toast({
           title: "Training Submitted",
-          description: `Experiment ${experimentName || result.experiment_name || result.experiment_id} started and now processing...`,
+          description: `Experiment ${experimentName} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');

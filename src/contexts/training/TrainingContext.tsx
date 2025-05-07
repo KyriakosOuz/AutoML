@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -325,6 +324,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           resultStatus = 'completed';
         }
         
+        // MODIFIED: Don't overwrite the experiment name if we already have one
+        // Only use the API-returned name if our current name is null
+        const updatedExperimentName = state.experimentName || results.experiment_name;
+        
+        console.log("[TrainingContext] Experiment name logic:", {
+          currentName: state.experimentName,
+          resultName: results.experiment_name,
+          updatedName: updatedExperimentName
+        });
+        
         // Update all related state values to ensure consistency
         setState(prev => ({ 
           ...prev, 
@@ -333,7 +342,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false, // Ensure isTraining is false when results are loaded
-          experimentName: results.experiment_name || prev.experimentName, // Update experiment name if available
+          experimentName: updatedExperimentName, // Prioritize existing name
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
             status: resultStatus as ExperimentStatus,
@@ -341,9 +350,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           }
         }));
         
-        // Also update experiment name in local storage if available
-        if (results.experiment_name) {
-          localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, results.experiment_name);
+        // Also update experiment name in local storage if we have one
+        if (updatedExperimentName) {
+          localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, updatedExperimentName);
         }
       } else {
         console.log("[TrainingContext] No results returned from API");
@@ -382,7 +391,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         variant: "destructive"
       });
     }
-  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, toast]);
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, toast]);
 
   const contextValue: TrainingContextValue = {
     ...state,
