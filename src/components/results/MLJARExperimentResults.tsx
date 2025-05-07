@@ -47,6 +47,24 @@ const formatTaskType = (type: string = '') => {
   }
 };
 
+// Enhanced helper function to format visualization names for MLJAR
+const formatVisualizationName = (fileType: string): string => {
+  if (fileType.includes('confusion_matrix')) {
+    return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
+  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    return 'ROC Curve';
+  } else if (fileType.includes('precision_recall')) {
+    return 'Precision-Recall Curve';
+  } else if (fileType.includes('learning_curve')) {
+    return 'Learning Curve';
+  } else if (fileType.includes('feature_importance')) {
+    return 'Feature Importance';
+  }
+  
+  // Default formatting: capitalize each word and replace underscores with spaces
+  return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
 const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   experimentId,
   status,
@@ -59,6 +77,22 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
+  
+  // Format metric for display
+  const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
+    if (value === undefined) return 'N/A';
+    if (isPercentage) {
+      return `${(value * 100).toFixed(2)}%`;
+    }
+    return value.toFixed(4);
+  };
+  
+  // Helper function to determine if metric should be shown as percentage
+  const isPercentageMetric = (metricName: string): boolean => {
+    return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
+      metricName.toLowerCase().includes(m)
+    );
+  };
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -182,7 +216,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy)
+        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics.f1)
       };
     } else {
       return {
@@ -194,7 +228,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type
+  // Filter files by type - expanded to include all visualization types
   const getFilesByType = (fileType: string) => {
     return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
@@ -202,6 +236,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const visualizationFiles = [
     ...getFilesByType('confusion_matrix'),
     ...getFilesByType('roc_curve'),
+    ...getFilesByType('evaluation_curve'),
     ...getFilesByType('precision_recall_curve'),
     ...getFilesByType('learning_curve'),
     ...getFilesByType('feature_importance')
@@ -221,22 +256,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type === 'predictions_csv' ||
     file.file_type.includes('predictions')
   );
-
-  // Format chart display name
-  const formatChartName = (fileType: string) => {
-    if (fileType.includes('confusion_matrix')) {
-      return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
-    } else if (fileType.includes('roc_curve')) {
-      return 'ROC Curve';
-    } else if (fileType.includes('precision_recall')) {
-      return 'Precision-Recall Curve';
-    } else if (fileType.includes('learning_curve')) {
-      return 'Learning Curve';
-    } else if (fileType.includes('feature_importance')) {
-      return 'Feature Importance';
-    }
-    return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
 
   // Format metric for display
   const formatMetric = (value: number | undefined) => {
@@ -339,6 +358,13 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       <span className="text-sm text-muted-foreground">Training Time:</span>
                       <span className="text-sm font-medium">{training_time_sec?.toFixed(2)} seconds</span>
                       
+                      {automl_engine && (
+                        <>
+                          <span className="text-sm text-muted-foreground">Engine:</span>
+                          <span className="text-sm font-medium">{automl_engine.toUpperCase()}</span>
+                        </>
+                      )}
+                      
                       {completed_at && (
                         <>
                           <span className="text-sm text-muted-foreground">Completed:</span>
@@ -373,16 +399,26 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           key === 'metric_value' ||
                           key === 'classification_report' ||
                           key === 'confusion_matrix' ||
+                          key === 'source' ||
                           typeof value !== 'number'
                         ) return null;
+                        
+                        // Enhanced formatting of metric display names
+                        const metricDisplayName = key
+                          .replace(/_/g, ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ');
+                        
+                        const isPercent = isPercentageMetric(key);
                         
                         return (
                           <div key={key}>
                             <span className="text-sm text-muted-foreground">
-                              {key.replace(/_/g, ' ')}:
+                              {metricDisplayName}:
                             </span>
                             <span className="text-sm font-medium ml-2">
-                              {formatMetric(value as number)}
+                              {formatMetricValue(value as number, isPercent)}
                             </span>
                           </div>
                         );
@@ -404,7 +440,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base">
-                            {formatChartName(file.file_type)}
+                            {formatVisualizationName(file.file_type)}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-3">
@@ -419,7 +455,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl">
                       <DialogHeader>
-                        <DialogTitle>{formatChartName(file.file_type)}</DialogTitle>
+                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
                       </DialogHeader>
                       <div className="p-1">
                         <img 
@@ -513,75 +549,96 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 <TableIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Predictions Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  No predictions file was found for this experiment.
+                  Prediction data is not available for this experiment.
                 </p>
               </div>
             )}
           </TabsContent>
           
-          {/* Model Details Tab */}
+          {/* Metadata Tab */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Engine Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Badge variant="outline" className="bg-primary/10 px-3 py-1 text-sm">
+                      Engine: {automl_engine?.toUpperCase() || 'Not specified'}
+                    </Badge>
+                    
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-muted-foreground">Model Type:</span>
+                      <span className="font-medium">{bestModelLabel}</span>
+                      
+                      {Object.entries(hyperparameters).slice(0, 6).map(([key, value]) => (
+                        <React.Fragment key={key}>
+                          <span className="text-muted-foreground">{key}:</span>
+                          <span className="font-medium truncate">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
               {modelMetadataFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Best Model Metadata</CardTitle>
-                    <CardDescription>
-                      Technical details about the selected model
-                    </CardDescription>
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Model Metadata</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
-                      <pre className="text-xs font-mono">
-                        {JSON.stringify(hyperparameters, null, 2)}
-                      </pre>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Metadata
-                        </a>
-                      </Button>
-                    </div>
+                    <Button asChild>
+                      <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Model Metadata
+                      </a>
+                    </Button>
                   </CardContent>
                 </Card>
               )}
               
               {readmeFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Model Documentation</CardTitle>
-                    <CardDescription>
-                      README file for the MLJAR model
-                    </CardDescription>
+                <Card className="shadow-sm md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Documentation</CardTitle>
+                    <CardDescription>Model documentation and usage instructions</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-64 overflow-y-auto">
-                      <p className="text-sm">
-                        Model documentation is available for download
-                      </p>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={readmeFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Documentation
-                        </a>
-                      </Button>
-                    </div>
+                    <Button onClick={() => setReadmePreviewOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Documentation
+                    </Button>
+                    
+                    <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Model Documentation</DialogTitle>
+                        </DialogHeader>
+                        
+                        <div className="mt-4">
+                          <iframe
+                            src={readmeFile.file_url}
+                            className="w-full h-[60vh] border rounded"
+                            title="Model Documentation"
+                          />
+                          
+                          <div className="flex justify-end mt-4">
+                            <Button asChild variant="outline" size="sm">
+                              <a href={readmeFile.file_url} target="_blank" rel="noopener noreferrer">
+                                <FileText className="h-4 w-4 mr-2" />
+                                Open in New Tab
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
-              )}
-              
-              {!modelMetadataFile && !readmeFile && (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Model Details Available</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    No metadata or documentation files were found for this model.
-                  </p>
-                </div>
               )}
             </div>
           </TabsContent>
@@ -589,18 +646,27 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       </CardContent>
       
       <CardFooter className="flex justify-between border-t p-4">
-        {onReset && (
-          <Button variant="outline" onClick={onReset}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Run New Experiment
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {onReset && (
+            <Button variant="outline" onClick={onReset}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              New Experiment
+            </Button>
+          )}
+          
+          {onRefresh && (
+            <Button variant="secondary" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
         
-        {onRefresh && (
-          <Button variant="secondary" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Results
-          </Button>
+        {completed_at && (
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            {new Date(completed_at).toLocaleString()}
+          </div>
         )}
       </CardFooter>
     </Card>

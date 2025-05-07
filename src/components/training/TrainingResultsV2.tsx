@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +11,7 @@ import { trainingApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentResults } from '@/types/training';
 import { useTraining } from '@/contexts/training/TrainingContext';
+import MetricsGrid from './charts/MetricsGrid';
 import {
   Award, 
   BarChart4, 
@@ -43,6 +45,40 @@ const formatTaskType = (type: string) => {
     default:
       return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   }
+};
+
+// Enhanced helper function to format visualization names
+const formatVisualizationName = (fileType: string): string => {
+  if (fileType.includes('confusion_matrix')) {
+    return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
+  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    return 'ROC Curve';
+  } else if (fileType.includes('precision_recall')) {
+    return 'Precision-Recall Curve';
+  } else if (fileType.includes('learning_curve')) {
+    return 'Learning Curve';
+  } else if (fileType.includes('feature_importance')) {
+    return 'Feature Importance';
+  }
+  
+  // Default formatting: capitalize each word and replace underscores with spaces
+  return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+// Helper function to categorize visualization files
+const categorizeVisualizations = (files: {file_type: string, file_url: string}[]) => {
+  // Filter out model and label encoder files
+  return files.filter(file => 
+    file.file_type !== 'model' && 
+    !file.file_type.includes('label_encoder') &&
+    // Include explicitly requested visualization types
+    (file.file_type.includes('confusion_matrix') ||
+     file.file_type.includes('evaluation_curve') ||
+     file.file_type.includes('learning_curve') ||
+     file.file_type.includes('feature_importance') ||
+     file.file_type.includes('roc_curve') ||
+     file.file_type.includes('precision_recall'))
+  );
 };
 
 // Helper function to get F1 score from either f1 or f1_score fields
@@ -152,7 +188,8 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     columns_to_keep = [],
     hyperparameters = {},
     model_file_url,
-    report_file_url
+    report_file_url,
+    automl_engine
   } = results;
   
   // Get unique downloadable files (model and report)
@@ -166,13 +203,13 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     return file ? file : null;
   }).filter(Boolean) as typeof files;
 
-  // Now we can safely use the files variable since it's been declared
-  const visualizationFiles = files.filter(file => 
-    file.file_type !== 'model' && 
-    !file.file_type.includes('report')
-  );
+  // Enhanced visualization files categorization
+  const visualizationFiles = categorizeVisualizations(files);
   
   const isClassification = task_type?.includes('classification');
+  
+  // Display algorithm or engine based on what's available
+  const displayAlgorithm = algorithm || (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -184,7 +221,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </div>
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {algorithm || formatTaskType(task_type)}
+            {automl_engine ? `Engine: ${automl_engine.toUpperCase()}` : 
+             algorithm ? `Algorithm: ${algorithm}` : 
+             formatTaskType(task_type)}
           </Badge>
         </div>
         
@@ -233,121 +272,12 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </TabsList>
           
           <TabsContent value="metrics" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {isClassification ? (
-                // Classification metrics
-                <>
-                  {metrics.accuracy !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Accuracy</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.accuracy)}`}>
-                          {formatMetric(metrics.accuracy)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {getF1Score(metrics) !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">F1 Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(getF1Score(metrics))}`}>
-                          {formatMetric(getF1Score(metrics))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {metrics.precision !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Precision</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.precision)}`}>
-                          {formatMetric(metrics.precision)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {metrics.recall !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Recall</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.recall)}`}>
-                          {formatMetric(metrics.recall)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              ) : (
-                // Regression metrics
-                <>
-                  {metrics.r2_score !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">R² Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-2xl font-bold ${getMetricColor(metrics.r2_score)}`}>
-                          {formatRegressionMetric(metrics.r2_score)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {metrics.mae !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Mean Absolute Error</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {formatRegressionMetric(metrics.mae)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {metrics.mse !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Mean Squared Error</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {formatRegressionMetric(metrics.mse)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {metrics.rmse !== undefined && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Root Mean Squared Error</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {formatRegressionMetric(metrics.rmse)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              )}
-              
-              {/* Add Download Model button as a card */}
-              {model_file_url && (
+            {/* Use the enhanced MetricsGrid component */}
+            <MetricsGrid metrics={metrics} taskType={task_type} />
+            
+            {/* Add Download Model button as a card */}
+            {model_file_url && (
+              <div className="mt-6">
                 <Card className="shadow-sm">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Download Model</CardTitle>
@@ -361,8 +291,8 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     </Button>
                   </CardContent>
                 </Card>
-              )}
-            </div>
+              </div>
+            )}
             
             {metrics.classification_report && (
               <div className="mt-6">
@@ -385,17 +315,38 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                   <Card key={index} className="overflow-hidden">
                     <CardHeader className="py-2 px-4 bg-muted/30">
                       <CardTitle className="text-sm font-medium">
-                        {file.file_type.split('_').map(word => 
-                          word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(' ')}
+                        {formatVisualizationName(file.file_type)}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4">
-                      <img 
-                        src={file.file_url} 
-                        alt={file.file_type} 
-                        className="w-full rounded-md"
-                      />
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div className="cursor-pointer hover:opacity-90 transition-opacity rounded-md overflow-hidden">
+                            <img 
+                              src={file.file_url} 
+                              alt={formatVisualizationName(file.file_type)} 
+                              className="w-full rounded-md"
+                            />
+                          </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <div className="p-1">
+                            <img 
+                              src={file.file_url} 
+                              alt={formatVisualizationName(file.file_type)} 
+                              className="w-full rounded-md"
+                            />
+                            <div className="mt-4 flex justify-end">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       <div className="mt-2 flex justify-end">
                         <Button variant="outline" size="sm" asChild>
                           <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
@@ -428,8 +379,17 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                 <CardContent>
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Algorithm:</span>
-                      <span className="font-medium">{algorithm || 'AutoML'}</span>
+                      {automl_engine ? (
+                        <>
+                          <span className="text-muted-foreground">Engine:</span>
+                          <span className="font-medium">{automl_engine.toUpperCase()}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-muted-foreground">Algorithm:</span>
+                          <span className="font-medium">{algorithm || 'Not specified'}</span>
+                        </>
+                      )}
                       
                       <span className="text-muted-foreground">Task Type:</span>
                       <span className="font-medium">{formatTaskType(task_type)}</span>
