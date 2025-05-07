@@ -22,7 +22,10 @@ import {
   Activity,
   LineChart,
   Table as TableIcon,
-  FileText
+  FileText,
+  Info,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { 
   Table,
@@ -45,6 +48,29 @@ interface CustomTrainingResultsProps {
 const formatTime = (date: string) => {
   try {
     return new Date(date).toLocaleString();
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
+const formatDuration = (startDate: string, endDate: string) => {
+  try {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMilliseconds = end.getTime() - start.getTime();
+    
+    // Calculate hours, minutes, seconds
+    const hours = Math.floor(diffMilliseconds / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMilliseconds % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   } catch (e) {
     return 'N/A';
   }
@@ -73,7 +99,9 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     task_type = '', 
     metrics = {}, 
     files = [],
-    algorithm
+    algorithm,
+    created_at,
+    completed_at
   } = experimentResults;
 
   // Helper function to filter files by type and check for specific visualization types
@@ -172,6 +200,10 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 Classification Report
               </TabsTrigger>
             )}
+            <TabsTrigger value="details" className="data-[state=active]:bg-primary/10">
+              <Info className="mr-1 h-4 w-4" />
+              Details
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="metrics" className="p-6">
@@ -387,6 +419,157 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                 <ClassificationReportTable report={metrics.classification_report} />
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="details" className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Experiment Information */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Experiment Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-muted-foreground">Experiment ID:</span>
+                      <span className="font-mono">{experiment_id}</span>
+                      
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{experiment_name}</span>
+                      
+                      <span className="text-muted-foreground">Algorithm:</span>
+                      <span className="font-medium">{algorithm || 'Not specified'}</span>
+                      
+                      <span className="text-muted-foreground">Task Type:</span>
+                      <span className="font-medium">{formattedTaskType}</span>
+                      
+                      <span className="text-muted-foreground">Target Column:</span>
+                      <span className="font-medium">{target_column}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Timing Information */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Timing Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Created:
+                      </div>
+                      <span>{formatTime(created_at)}</span>
+                      
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Completed:
+                      </div>
+                      <span>{completed_at ? formatTime(completed_at) : 'N/A'}</span>
+                      
+                      {created_at && completed_at && (
+                        <>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="mr-2 h-4 w-4" />
+                            Duration:
+                          </div>
+                          <span>{formatDuration(created_at, completed_at)}</span>
+                        </>
+                      )}
+                      
+                      {experimentResults.training_time_sec !== undefined && (
+                        <>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="mr-2 h-4 w-4" />
+                            Training Time:
+                          </div>
+                          <span>{experimentResults.training_time_sec.toFixed(2)} seconds</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Hyperparameters */}
+              {experimentResults.hyperparameters && Object.keys(experimentResults.hyperparameters).length > 0 && (
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Hyperparameters</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Parameter</TableHead>
+                          <TableHead>Value</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(experimentResults.hyperparameters).map(([key, value]) => (
+                          <TableRow key={key}>
+                            <TableCell className="font-medium">{key}</TableCell>
+                            <TableCell>
+                              {typeof value === 'object' 
+                                ? JSON.stringify(value) 
+                                : String(value)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Files Information */}
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Files</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Created At</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {files.slice(0, 5).map((file, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {file.file_type.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </TableCell>
+                            <TableCell>{formatTime(file.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                  <DownloadCloud className="h-3 w-3 mr-1" />
+                                  Download
+                                </a>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {files.length > 5 && (
+                    <p className="text-xs text-muted-foreground mt-2 text-right">
+                      Showing 5 of {files.length} files
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
