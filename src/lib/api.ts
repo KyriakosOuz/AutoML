@@ -112,7 +112,6 @@ const handleApiResponse = async (response: Response) => {
   }
 };
 
-// Export the datasetApi object for data operations
 export const datasetApi = {
   uploadDataset: async (file: File, customMissingSymbol?: string): Promise<Dataset | ApiResponse<Dataset>> => {
     const formData = new FormData();
@@ -299,7 +298,6 @@ export const datasetApi = {
   },
 };
 
-// Export trainingApi object for model training operations
 export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
     try {
@@ -662,6 +660,3 @@ export const trainingApi = {
     }
   }
 };
-
-// Import/export the lib/training.ts functions
-export { getExperimentResults } from '@/lib/training';

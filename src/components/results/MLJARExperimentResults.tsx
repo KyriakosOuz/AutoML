@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -18,8 +17,7 @@ import {
   Table as TableIcon,
   Info,
   Loader,
-  Image,
-  Database
+  Image
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
@@ -172,8 +170,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     created_at,
     completed_at,
     hyperparameters = {},
-    automl_engine,
-    engine
+    automl_engine
   } = experimentResults;
 
   // Find best model label if available
@@ -185,78 +182,44 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.f1 || metrics.accuracy)
+        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy)
       };
     } else {
       return {
         name: metrics.metric_used || 'rmse',
-        value: metrics.metric_value || (metrics.rmse || metrics.mse || metrics.mae || metrics.r2_score || metrics.r2)
+        value: metrics.metric_value || (metrics.rmse || metrics.mse || metrics.mae || metrics.r2_score)
       };
     }
   };
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type with improved type detection
+  // Filter files by type
   const getFilesByType = (fileType: string) => {
-    return files.filter(file => 
-      file.file_type === fileType || 
-      file.file_type.includes(fileType)
-    );
+    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
 
-  // Improved visualization files filtering - explicitly define what visualization files are
-  const visualizationFiles = files.filter(file => {
-    // Include only visualization files
-    const isVisualization = 
-      file.file_type.includes('confusion_matrix') ||
-      file.file_type.includes('roc_curve') ||
-      file.file_type.includes('precision_recall') ||
-      file.file_type.includes('learning_curve') ||
-      file.file_type.includes('evaluation') ||
-      file.file_type.includes('evaluation_curve') ||
-      file.file_type.includes('feature_importance') ||
-      file.file_type.includes('distribution') ||
-      file.file_type.includes('plot');
-    
-    // Explicitly exclude README and prediction files
-    const isExcluded = 
-      file.file_type.includes('readme') || 
-      file.file_type.includes('README') ||
-      file.file_type.includes('prediction') ||
-      file.file_type.includes('csv') ||
-      file.file_type.includes('model') ||
-      file.file_type.includes('ensemble') ||
-      file.file_type.includes('metadata');
-      
-    return isVisualization && !isExcluded;
-  });
+  const visualizationFiles = [
+    ...getFilesByType('confusion_matrix'),
+    ...getFilesByType('roc_curve'),
+    ...getFilesByType('precision_recall_curve'),
+    ...getFilesByType('learning_curve'),
+    ...getFilesByType('feature_importance')
+  ];
 
-  // Get documentation files (README)
-  const readmeFile = files.find(file => 
-    file.file_type === 'readme' || 
-    file.file_type.includes('README.md') ||
-    file.file_type.includes('README')
-  );
-  
-  // Get prediction files
-  const predictionsFile = files.find(file => 
-    file.file_type === 'predictions_csv' ||
-    file.file_type.includes('predictions') ||
-    file.file_type.includes('csv')
-  );
-
-  // Get model file
-  const modelFile = files.find(file => 
-    file.file_type === 'model' || 
-    file.file_type.includes('model') ||
-    file.file_type.includes('ensemble')
-  );
-
-  // Get metadata files
   const modelMetadataFile = files.find(file => 
     file.file_type === 'model_metadata' || 
     file.file_type.includes('ensemble.json')
+  );
+  
+  const readmeFile = files.find(file => 
+    file.file_type === 'readme' || 
+    file.file_type.includes('README.md')
+  );
+  
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' ||
+    file.file_type.includes('predictions')
   );
 
   // Format chart display name
@@ -269,12 +232,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       return 'Precision-Recall Curve';
     } else if (fileType.includes('learning_curve')) {
       return 'Learning Curve';
-    } else if (fileType.includes('evaluation')) {
-      return 'Evaluation Curve';
     } else if (fileType.includes('feature_importance')) {
       return 'Feature Importance';
-    } else if (fileType.includes('distribution')) {
-      return 'Distribution Plot';
     }
     return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
@@ -293,9 +252,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       : value.toFixed(4);
   };
 
-  // Use the engine from either automl_engine or engine property
-  const displayEngine = automl_engine?.toUpperCase() || engine?.toUpperCase() || 'MLJAR';
-
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -305,7 +261,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             <CardTitle className="text-xl">{experiment_name || 'MLJAR Experiment Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            Engine: {displayEngine}
+            Engine: {automl_engine?.toUpperCase() || 'AutoML'}
           </Badge>
         </div>
         
@@ -339,20 +295,15 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
+          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
             <TabsTrigger value="summary" className="text-sm flex items-center gap-1">
               <Award className="h-4 w-4" />
               <span>Summary</span>
             </TabsTrigger>
             
-            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
-              <span>Visualizations</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="metadata" className="text-sm flex items-center gap-1">
-              <Info className="h-4 w-4" />
-              <span>Model Details</span>
+              <span>Charts</span>
             </TabsTrigger>
             
             <TabsTrigger value="predictions" className="text-sm flex items-center gap-1">
@@ -360,9 +311,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               <span>Predictions</span>
             </TabsTrigger>
             
-            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1">
-              <Download className="h-4 w-4" />
-              <span>Downloads</span>
+            <TabsTrigger value="metadata" className="text-sm flex items-center gap-1">
+              <Info className="h-4 w-4" />
+              <span>Model Details</span>
             </TabsTrigger>
           </TabsList>
           
@@ -387,9 +338,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       
                       <span className="text-sm text-muted-foreground">Training Time:</span>
                       <span className="text-sm font-medium">{training_time_sec?.toFixed(2)} seconds</span>
-                      
-                      <span className="text-sm text-muted-foreground">Engine:</span>
-                      <span className="text-sm font-medium">{displayEngine}</span>
                       
                       {completed_at && (
                         <>
@@ -446,8 +394,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Visualizations Tab */}
-          <TabsContent value="visualizations" className="p-6">
+          {/* Charts Tab */}
+          <TabsContent value="charts" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {visualizationFiles.map((file, index) => (
@@ -495,53 +443,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             ) : (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Visualizations Available</h3>
+                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
                   No visualization files were found for this experiment.
                 </p>
               </div>
             )}
-          </TabsContent>
-          
-          {/* Model Details Tab */}
-          <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-1 gap-6">
-              {modelMetadataFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Best Model Metadata</CardTitle>
-                    <CardDescription>
-                      Technical details about the selected model
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
-                      <pre className="text-xs font-mono">
-                        {JSON.stringify(hyperparameters, null, 2)}
-                      </pre>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Metadata
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {!modelMetadataFile && (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Model Details Available</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    No metadata files were found for this model.
-                  </p>
-                </div>
-              )}
-            </div>
           </TabsContent>
           
           {/* Predictions Tab */}
@@ -551,7 +458,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 <CardHeader>
                   <CardTitle>Model Predictions</CardTitle>
                   <CardDescription>
-                    View predictions made by the model
+                    View predictions made by the MLJAR model
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -612,35 +519,54 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Downloads Tab - New Tab for Documentation and Downloads */}
-          <TabsContent value="downloads" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Model Details Tab */}
+          <TabsContent value="metadata" className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-6">
+              {modelMetadataFile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Best Model Metadata</CardTitle>
+                    <CardDescription>
+                      Technical details about the selected model
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                      <pre className="text-xs font-mono">
+                        {JSON.stringify(hyperparameters, null, 2)}
+                      </pre>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Metadata
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               {readmeFile && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Model Documentation</CardTitle>
                     <CardDescription>
-                      README file for the model
+                      README file for the MLJAR model
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-48 overflow-y-auto">
-                      <p className="text-sm mb-4">
-                        Documentation contains important information about the trained model, including:
+                    <div className="bg-muted p-4 rounded-md h-64 overflow-y-auto">
+                      <p className="text-sm">
+                        Model documentation is available for download
                       </p>
-                      <ul className="list-disc pl-5 text-sm space-y-1">
-                        <li>Model architecture details</li>
-                        <li>Training parameters</li>
-                        <li>Evaluation metrics</li>
-                        <li>Usage instructions</li>
-                        <li>Model limitations</li>
-                      </ul>
                     </div>
                     <div className="mt-4 flex justify-end">
-                      <Button asChild>
+                      <Button variant="outline" size="sm" asChild>
                         <a href={readmeFile.file_url} download target="_blank" rel="noopener noreferrer">
                           <Download className="h-4 w-4 mr-2" />
-                          Download README
+                          Download Documentation
                         </a>
                       </Button>
                     </div>
@@ -648,100 +574,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </Card>
               )}
               
-              {modelFile ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Model File</CardTitle>
-                    <CardDescription>
-                      Download the trained model file
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-48 flex flex-col justify-center items-center">
-                      <Database className="h-12 w-12 text-primary/60 mb-4" />
-                      <p className="text-sm text-center mb-2">
-                        Download the complete model file
-                      </p>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Use this file to make predictions with the model
-                      </p>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button asChild>
-                        <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Model
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Model File</CardTitle>
-                    <CardDescription>
-                      Download the trained model file
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-48 flex flex-col justify-center items-center">
-                      <Database className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-sm text-center mb-2">
-                        Model file not available
-                      </p>
-                      <p className="text-xs text-muted-foreground text-center">
-                        The model file may not be available for download yet
-                      </p>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button asChild disabled>
-                        <span>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Model
-                        </span>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {predictionsFile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Predictions Dataset</CardTitle>
-                    <CardDescription>
-                      CSV file containing model predictions
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-md h-48 flex flex-col justify-center items-center">
-                      <Database className="h-12 w-12 text-primary/60 mb-4" />
-                      <p className="text-sm text-center mb-2">
-                        Download the complete predictions dataset in CSV format
-                      </p>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Contains all test data with predicted values
-                      </p>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button asChild>
-                        <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Predictions CSV
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {!readmeFile && !predictionsFile && !modelFile && (
-                <div className="col-span-2 text-center py-12">
+              {!modelMetadataFile && !readmeFile && (
+                <div className="text-center py-12">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
+                  <h3 className="text-lg font-medium mb-2">No Model Details Available</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    No downloadable files were found for this experiment.
+                    No metadata or documentation files were found for this model.
                   </p>
                 </div>
               )}

@@ -97,15 +97,13 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Updated API call to include experiment_name
       const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
         testSize,
         stratify,
-        randomSeed,
-        experimentName // Pass experiment name to the API
+        randomSeed
       );
 
       if (result && result.experiment_id) {
@@ -114,7 +112,7 @@ const AutoMLTraining: React.FC = () => {
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${result.experiment_name || experimentName || result.experiment_id} started and now processing...`,
+          description: `Experiment ${result.experiment_name || result.experiment_id} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');

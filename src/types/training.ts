@@ -1,6 +1,7 @@
-export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
+
+export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
-export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle';
+export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing';
 export type TrainingType = 'automl' | 'custom';
 
 export interface AutoMLParameters {
@@ -74,7 +75,6 @@ export interface ExperimentResults {
   hyperparameters?: Record<string, any>;
   message?: string;
   automl_engine?: string;
-  engine?: string; 
   class_labels?: string[];
   training_type?: TrainingType;
 }

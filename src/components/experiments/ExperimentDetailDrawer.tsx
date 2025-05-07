@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -130,44 +129,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const getVisualizationFiles = () => {
     if (!results?.files) return [];
     
-    return results.files.filter(file => {
-      // Include only visualization files
-      const isVisualization = 
-        file.file_type.includes('confusion_matrix') ||
-        file.file_type.includes('roc_curve') ||
-        file.file_type.includes('precision_recall') ||
-        file.file_type.includes('learning_curve') ||
-        file.file_type.includes('evaluation') ||
-        file.file_type.includes('feature_importance');
-      
-      // Explicitly exclude README and prediction files
-      const isExcluded = 
-        file.file_type.includes('readme') || 
-        file.file_type.includes('README') ||
-        file.file_type.includes('prediction') ||
-        file.file_type.includes('csv');
-        
-      return isVisualization && !isExcluded;
-    });
-  };
-  
-  // New function to get documentation files (README)
-  const getDocumentationFiles = () => {
-    if (!results?.files) return [];
-    
     return results.files.filter(file => 
-      file.file_type.includes('readme') || 
-      file.file_type.includes('README')
-    );
-  };
-  
-  // New function to get CSV prediction files
-  const getPredictionFiles = () => {
-    if (!results?.files) return [];
-    
-    return results.files.filter(file => 
-      file.file_type.includes('prediction') || 
-      file.file_type.includes('csv')
+      !file.file_type.includes('model') && 
+      !file.file_type.includes('report')
     );
   };
   
@@ -636,7 +600,12 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                             </div>
                           </CardContent>
                         </Card>
-                      ) : null}
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <DownloadIcon className="h-12 w-12 mx-auto mb-4" />
+                          <p>No downloadable model available</p>
+                        </div>
+                      )}
                       
                       {results.report_file_url && (
                         <Card className="bg-muted/40">
@@ -664,62 +633,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Card>
                       )}
                       
-                      {/* Show README files only in Download tab */}
-                      {getDocumentationFiles().map((file, index) => (
-                        <Card key={`readme-${index}`} className="bg-muted/40">
-                          <CardContent className="pt-6">
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                              <div>
-                                <h3 className="font-medium">Documentation (README)</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Model documentation and usage instructions
-                                </p>
-                              </div>
-                              <Button asChild variant="outline" className="w-full sm:w-auto">
-                                <a 
-                                  href={file.file_url} 
-                                  download 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  View README
-                                </a>
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                      
-                      {/* Show prediction CSV files only in Download tab */}
-                      {getPredictionFiles().map((file, index) => (
-                        <Card key={`predictions-${index}`} className="bg-muted/40">
-                          <CardContent className="pt-6">
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                              <div>
-                                <h3 className="font-medium">Predictions CSV</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Download model predictions on test data
-                                </p>
-                              </div>
-                              <Button asChild variant="outline" className="w-full sm:w-auto">
-                                <a 
-                                  href={file.file_url} 
-                                  download 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <DownloadIcon className="h-4 w-4 mr-2" />
-                                  Download Predictions
-                                </a>
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                      
-                      {(!getModelFile() && !results.report_file_url && 
-                        getDocumentationFiles().length === 0 && getPredictionFiles().length === 0) && (
+                      {(!getModelFile() && !results.report_file_url) && (
                         <div className="text-center py-12 text-muted-foreground">
                           <DownloadIcon className="h-12 w-12 mx-auto mb-4" />
                           <p>No downloadable files available for this experiment</p>

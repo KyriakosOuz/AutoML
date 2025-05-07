@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -11,9 +10,9 @@ import { useTraining } from '@/contexts/training/TrainingContext';
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
-  results?: ExperimentResultsType | null;
-  isLoading?: boolean;
-  onReset?: () => void;
+  results?: ExperimentResultsType | null; // Make results optional
+  isLoading?: boolean; // Make isLoading optional
+  onReset?: () => void; // Make onReset optional but will be overridden
   onRefresh?: () => void;
 }
 
@@ -22,7 +21,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   status,
   results: providedResults,
   isLoading: providedIsLoading,
-  onReset,
+  onReset, // We'll use this only if we don't have access to the training context
   onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);
@@ -115,9 +114,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     if (onRefresh) onRefresh();
   };
 
-  // Improved check for MLJAR experiments - more comprehensive detection
-  const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar" || 
-                            results?.engine?.toLowerCase() === "mljar";
+  // Check if this is a MLJAR experiment
+  const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
 
   return (
     <div className="w-full overflow-x-hidden">
