@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ interface Experiment {
   metrics: ExperimentMetrics;
   target_column: string;
   auto_train: boolean;
+  training_type?: 'automl' | 'custom'; // Added this field to match backend response
   dataset_id: string;
   dataset_filename: string;
   has_model: boolean;
@@ -125,7 +127,7 @@ const ExperimentsTab: React.FC = () => {
     return () => {
       window.removeEventListener('refresh-experiments', handleRefreshExperiments);
     };
-  }, [activeTab, taskType, searchQuery]); // Changed from searchTerm to searchQuery
+  }, [activeTab, taskType, searchQuery]);
 
   useEffect(() => {
     setSelectedExperiments([]);
@@ -139,20 +141,24 @@ const ExperimentsTab: React.FC = () => {
       
       const url = new URL(`${API_BASE_URL}/experiments/search-experiments/`);
       
+      // Apply experiment type filter (engine parameter)
       if (activeTab === 'automl') {
-        url.searchParams.append("auto_train", "true");
+        url.searchParams.append("engine", "mljar,h2o");
       } else if (activeTab === 'custom') {
-        url.searchParams.append("auto_train", "false");
+        url.searchParams.append("engine", "custom");
       }
       
+      // Apply task type filter
       if (taskType !== 'all') {
         url.searchParams.append("task_type", taskType);
       }
       
+      // Apply search query
       if (searchQuery) {
         url.searchParams.append("search", searchQuery);
       }
       
+      // Add pagination parameters
       url.searchParams.append("limit", "20");
       url.searchParams.append("offset", "0");
       
@@ -643,11 +649,15 @@ const ExperimentsTab: React.FC = () => {
                         {formatTaskType(experiment.task_type)}
                       </TableCell>
                       <TableCell>
-                        {experiment.auto_train ? (
+                        {/* Use training_type if available, otherwise fall back to the previous logic */}
+                        {experiment.training_type === 'automl' || (!experiment.training_type && experiment.auto_train) ? (
                           <span>{experiment.automl_engine ? experiment.automl_engine.toUpperCase() : 'Unknown Engine'}</span>
                         ) : (
                           <span>{experiment.algorithm_choice}</span>
                         )}
+                        <Badge variant="outline" className="ml-2">
+                          {experiment.training_type || (experiment.auto_train ? 'AutoML' : 'Custom')}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

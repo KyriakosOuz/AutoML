@@ -26,6 +26,7 @@ interface ExperimentListResponse {
     };
     target_column: string;
     auto_train: boolean; 
+    training_type?: 'automl' | 'custom';  // Added this field
     dataset_id: string;
     dataset_filename: string;
     has_model: boolean;
@@ -54,6 +55,7 @@ interface ExperimentDetailResponse {
   completed_at: string;
   error_message: string | null;
   training_time_sec?: number;
+  training_type?: 'automl' | 'custom';  // Added this field
   metrics: {
     accuracy?: number;
     f1_score?: number;
