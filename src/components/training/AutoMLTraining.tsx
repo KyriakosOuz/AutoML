@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Rocket, HelpCircle, Play, Settings, Loader } from 'lucide-react';
+import { AlertCircle, Rocket, HelpCircle, Play, Settings, Loader, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
@@ -219,6 +220,14 @@ const AutoMLTraining: React.FC = () => {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* New persistent information alert about background processing */}
+            <Alert className="mb-4 bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600 mr-2" />
+              <AlertDescription>
+                <span className="font-semibold">Training continues in the background:</span> You can close this browser tab or window, and your training will continue on our servers. Return anytime to check progress.
+              </AlertDescription>
+            </Alert>
             
             <div className="space-y-2">
               <Label>AutoML Engine</Label>

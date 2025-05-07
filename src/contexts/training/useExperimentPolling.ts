@@ -38,10 +38,19 @@ export const useExperimentPolling = ({
     setPollingAttempts(0);
     setExperimentStatus('processing');
 
+    // Show toast notification with information about the background processing
     toast({
       title: "Training Started",
-      description: "Your model training has started. Please wait while we process your request."
+      description: "Your model training has started and will continue even if you close the app. You can return anytime to check progress."
     });
+
+    // Show a second toast with important information about background processing
+    setTimeout(() => {
+      toast({
+        title: "Background Processing",
+        description: "This training job will continue on our servers even if you close this browser tab or window. You can return later to check the results.",
+      });
+    }, 1500);
 
     const poller = setInterval(async () => {
       try {
@@ -77,10 +86,10 @@ export const useExperimentPolling = ({
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');
           stopPolling();
-          onError('Timeout while waiting for training completion');
+          onError('Timeout while waiting for training completion. The training job may still be running on our servers - please check back later.');
           toast({
             title: "Training Timeout",
-            description: "The training process took too long to complete",
+            description: "The training process took too long to complete. However, the job may still be running on our servers. You can check back later for results.",
             variant: "destructive"
           });
           return;
