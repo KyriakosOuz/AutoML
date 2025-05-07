@@ -105,11 +105,7 @@ const MainHeader = () => {
                   className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
                 >
                   <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
-                    <img 
-                      src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
-                      alt="KyrO Logo" 
-                      className="h-4 w-4" 
-                    />
+                    <BarChart2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Training</span>
                   </Link>
                 </TabsTrigger>
