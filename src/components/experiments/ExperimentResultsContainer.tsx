@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -114,7 +115,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     if (onRefresh) onRefresh();
   };
 
-  // Check if this is a MLJAR experiment
+  // Improved check for MLJAR experiments - case insensitive
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
 
   return (
