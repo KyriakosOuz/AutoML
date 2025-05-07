@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -48,17 +47,27 @@ export const automlTrain = async (
       formData.append('experiment_name', experimentName);
     }
     
-    // Fixed endpoint URL: changed from '/training/train-automl/' to '/training/automl/'
+    // FIXED: When sending FormData, don't set Content-Type header
+    // Let the browser set it automatically with proper multipart boundary
     const response = await fetch(`${API_BASE_URL}/training/automl/`, {
       method: 'POST',
-      headers: { ...headers },
+      headers: {
+        Authorization: headers.Authorization
+      },
       body: formData,
     });
 
+    // Enhanced error logging
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('[API] AutoML training error response:', errorData);
-      throw new Error(errorData || `HTTP error ${response.status}`);
+      console.error('[API] AutoML training error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        body: errorData.substring(0, 500),
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      throw new Error(errorData || `HTTP error ${response.status}: ${response.statusText}`);
     }
 
     const result = await response.json();

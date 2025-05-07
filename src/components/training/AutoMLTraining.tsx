@@ -113,6 +113,17 @@ const AutoMLTraining: React.FC = () => {
 
       console.log("AutoMLTraining - Starting training with experiment name:", experimentName);
 
+      // ENHANCED: Add more debugging info before making the API call
+      console.log("AutoMLTraining - Training parameters:", {
+        datasetId,
+        taskType,
+        automlEngine,
+        testSize,
+        stratify,
+        randomSeed,
+        experimentName
+      });
+
       // Use the function from training.ts instead of api.ts
       const result = await trainingLib.automlTrain(
         datasetId,
