@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -392,10 +391,15 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  // Helper to check if all inputs are filled
+  // Helper to check if all inputs are filled - updated to properly handle zero values
   const areAllInputsFilled = () => {
     return columnSchemas.every(col => {
       const value = manualInputs[col.name];
+      // Check if the value is defined and not an empty string
+      // For numbers, explicitly check if it's 0 or any other number
+      if (typeof value === 'number') {
+        return true; // Any number including 0 is valid
+      }
       return value !== undefined && value !== '';
     });
   };
