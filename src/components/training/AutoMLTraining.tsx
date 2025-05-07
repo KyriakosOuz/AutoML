@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import { useAuth } from '@/contexts/AuthContext';
+import * as trainingLib from '@/lib/training';  // Import from training.ts explicitly
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
@@ -109,8 +110,8 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Pass the experiment name to the API
-      const result = await trainingApi.automlTrain(
+      // Use the function from training.ts instead of api.ts
+      const result = await trainingLib.automlTrain(
         datasetId,
         taskType,
         automlEngine,

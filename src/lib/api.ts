@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -373,7 +374,8 @@ export const trainingApi = {
     automlEngine: string, 
     testSize: number, 
     stratify: boolean, 
-    randomSeed: number
+    randomSeed: number,
+    experimentName?: string | null // Add the experimentName parameter as optional
   ) => {
     try {
       const formData = new FormData();
@@ -383,6 +385,11 @@ export const trainingApi = {
       formData.append('test_size', testSize.toString());
       formData.append('stratify', stratify.toString());
       formData.append('random_seed', randomSeed.toString());
+      
+      // Add the experiment name to form data if provided
+      if (experimentName) {
+        formData.append('experiment_name', experimentName);
+      }
       
       const response = await fetch(`${API_URL}/training/automl/`, {
         method: 'POST',
