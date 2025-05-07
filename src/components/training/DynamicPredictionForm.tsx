@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -227,7 +228,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
   // Render the appropriate input control based on column type
   const renderInputControl = (column: ColumnSchema) => {
-    const value = manualInputs[column.name] || '';
+    // Fix: Use a conditional to properly handle 0 values
+    const value = manualInputs[column.name];
+    const displayValue = value === 0 ? '0' : value || '';
     const placeholder = example[column.name] !== undefined ? String(example[column.name]) : '';
     const isOutOfRange = outOfRangeWarnings[column.name];
 
@@ -237,7 +240,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
         return (
           <Select 
             onValueChange={(val) => handleInputChange(column.name, val)}
-            value={value.toString()}
+            value={displayValue.toString()}
             disabled={isPredicting}
             defaultValue={column.values[0]}
           >
@@ -258,7 +261,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       return (
         <Input
           id={`field-${column.name}`}
-          value={value}
+          value={displayValue}
           onChange={(e) => handleInputChange(column.name, e.target.value)}
           placeholder={column.values === 'too_many' 
             ? `Enter category (many options)` 
@@ -277,7 +280,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
           <Input
             id={`field-${column.name}`}
             type="number"
-            value={value}
+            value={displayValue}
             onChange={(e) => handleInputChange(column.name, e.target.value)}
             placeholder={placeholder}
             step="any"
@@ -304,7 +307,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     return (
       <Input
         id={`field-${column.name}`}
-        value={value}
+        value={displayValue}
         onChange={(e) => handleInputChange(column.name, e.target.value)}
         placeholder={placeholder}
         disabled={isPredicting}
