@@ -48,7 +48,8 @@ export const automlTrain = async (
       formData.append('experiment_name', experimentName);
     }
     
-    const response = await fetch(`${API_BASE_URL}/training/train-automl/`, {
+    // Fixed endpoint URL: changed from '/training/train-automl/' to '/training/automl/'
+    const response = await fetch(`${API_BASE_URL}/training/automl/`, {
       method: 'POST',
       headers: { ...headers },
       body: formData,
