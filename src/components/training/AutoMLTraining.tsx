@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -97,16 +96,17 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Updated API call to include experiment_name
-      const result = await trainingApi.automlTrain(
+      // Fix: Add experimentName parameter to the automlTrain function call
+      // Check the API interface to ensure we're passing the correct parameters
+      const result = await trainingApi.automlTrain({
         datasetId,
         taskType,
-        automlEngine,
+        engine: automlEngine,
         testSize,
         stratify,
         randomSeed,
         experimentName // Pass experiment name to the API
-      );
+      });
 
       if (result && result.experiment_id) {
         setLastTrainingType('automl');
