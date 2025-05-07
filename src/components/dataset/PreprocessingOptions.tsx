@@ -1,706 +1,693 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useDataset } from '@/contexts/DatasetContext';
-import { datasetApi } from '@/lib/api';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle, 
-  CardFooter 
-} from '@/components/ui/card';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Sparkles, InfoIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { 
-  TooltipProvider, 
-  Tooltip, 
-  TooltipContent, 
-  TooltipTrigger 
-} from '@/components/ui/tooltip';
+  Award, 
+  BarChart4, 
+  Image as ImageIcon, 
+  DownloadCloud,
+  Activity,
+  LineChart,
+  Table as TableIcon,
+  FileText,
+  Info,
+  Calendar,
+  Clock,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ExperimentResults } from '@/types/training';
+import ClassificationReportTable from './ClassificationReportTable';
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card';
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
-// Define types properly to avoid type comparison issues
-type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
-type BalanceStrategy = 'undersample' | 'oversample' | 'skip';
-type UndersamplingMethod = 'random' | 'enn' | 'tomek' | 'ncr';
-type OversamplingMethod = 'random' | 'smote' | 'borderline_smote' | 'adasyn' | 'smotenc';
-type BalanceMethod = UndersamplingMethod | OversamplingMethod | 'none';
-
-// Method descriptions for tooltips based on the provided specifications
-interface MethodInfo {
-  name: string;
-  description: string;
-  requiresNumerical: boolean;
-  requiresMixed: boolean;
-  tooltip: string;
+interface CustomTrainingResultsProps {
+  experimentResults: ExperimentResults;
+  onReset: () => void;
 }
 
-const methodDescriptions: Record<string, MethodInfo> = {
-  // Undersampling methods
-  random_under: {
-    name: 'Random Undersampling',
-    description: 'Randomly removes samples from majority classes until classes are balanced.',
-    requiresNumerical: false,
-    requiresMixed: false,
-    tooltip: "Works with any data type by randomly duplicating or removing samples."
-  },
-  enn: {
-    name: 'Edited Nearest Neighbors',
-    description: 'Removes majority samples whose class differs from the class of their nearest neighbors.',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Removes ambiguous samples using nearest neighbors. Requires numerical features."
-  },
-  tomek: {
-    name: 'Tomek Links',
-    description: 'Identifies and removes majority samples that form "Tomek links" (pairs of closest samples from different classes).',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Removes overlapping samples. Requires numerical features."
-  },
-  ncr: {
-    name: 'Neighborhood Cleaning Rule',
-    description: 'Combines ENN with additional cleaning rules to remove more majority samples.',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Cleans noisy data by removing mislabeled examples. Requires numerical features."
-  },
-  
-  // Oversampling methods
-  random_over: {
-    name: 'Random Oversampling',
-    description: 'Creates exact duplicates of minority class samples.',
-    requiresNumerical: false,
-    requiresMixed: false,
-    tooltip: "Works with any data type by randomly duplicating or removing samples."
-  },
-  smote: {
-    name: 'SMOTE',
-    description: 'Creates synthetic samples along the line segments joining minority class neighbors.',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Requires numerical features. Creates synthetic samples using distance-based interpolation."
-  },
-  borderline_smote: {
-    name: 'Borderline SMOTE',
-    description: 'Creates synthetic samples specifically for minority samples near the class boundary.',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Like SMOTE, but focuses on borderline examples. Requires numerical features."
-  },
-  adasyn: {
-    name: 'ADASYN',
-    description: 'Generates more synthetic samples for minority instances that are harder to learn.',
-    requiresNumerical: true,
-    requiresMixed: false,
-    tooltip: "Generates more synthetic data for harder examples. Requires numerical features."
-  },
-  smotenc: {
-    name: 'SMOTENC',
-    description: 'SMOTE adaptation for datasets with mixed numerical and categorical features.',
-    requiresNumerical: true,
-    requiresMixed: true,
-    tooltip: "Handles both numerical and categorical features. Use only if dataset is mixed."
-  },
+const formatTime = (date: string) => {
+  try {
+    return new Date(date).toLocaleString();
+  } catch (e) {
+    return 'N/A';
+  }
 };
 
-const PreprocessingOptions: React.FC = () => {
-  const { 
-    datasetId, 
-    taskType,
-    updateState,
-    columnsToKeep,
-    overview
-  } = useDataset();
-  
-  const [previewData, setPreviewData] = useState<any>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  
-  // Extract information about columns from preview data response
-  const numericalColumns = previewData?.numerical_columns || [];
-  const categoricalColumns = previewData?.categorical_columns || [];
-  
-  // Debug logging to identify what's happening
-  useEffect(() => {
-    console.log('PreprocessingOptions - Preview data:', previewData);
-    console.log('PreprocessingOptions - Columns to keep:', columnsToKeep);
-    console.log('PreprocessingOptions - Overview data_types:', overview?.data_types);
-    console.log('PreprocessingOptions - numerical_columns:', numericalColumns);
-    console.log('PreprocessingOptions - categorical_columns:', categoricalColumns);
-  }, [previewData, columnsToKeep, overview?.data_types, numericalColumns, categoricalColumns]);
-  
-  // Fetch preview data to get accurate column information
-  useEffect(() => {
-    const fetchPreviewData = async () => {
-      if (!datasetId) return;
-      
-      try {
-        setIsLoadingPreview(true);
-        const response = await datasetApi.previewDataset(datasetId, 'final');
-        console.log('Preview API response:', response);
-        
-        // Handle both direct response and nested data
-        const data = response.data || response;
-        setPreviewData(data);
-      } catch (error) {
-        console.error('Error fetching preview data:', error);
-      } finally {
-        setIsLoadingPreview(false);
-      }
-    };
+const formatDuration = (startDate: string, endDate: string) => {
+  try {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMilliseconds = end.getTime() - start.getTime();
     
-    fetchPreviewData();
-  }, [datasetId]);
-
-  // Determine if normalization should be enabled based on preview data
-  const hasNumericalToNormalize = useMemo(() => {
-    if (!previewData || !columnsToKeep) {
-      console.log('No preview data or columns to keep available');
-      return false;
-    }
-
-    // Check if any of the columns to keep are in the numerical_columns from preview
-    const hasNumerical = columnsToKeep.some(col => 
-      (previewData.numerical_columns || []).includes(col)
-    );
+    // Calculate hours, minutes, seconds
+    const hours = Math.floor(diffMilliseconds / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMilliseconds % (1000 * 60)) / 1000);
     
-    console.log('Has numerical columns to normalize:', hasNumerical);
-    return hasNumerical && previewData.numerical_features > 0;
-  }, [previewData, columnsToKeep]);
-
-  // Initialize normalization method - default to minmax only when initializing
-  const [normalizationMethod, setNormalizationMethod] = useState<NormalizationMethod>('minmax');
-  
-  // Only set a default when component first mounts and data is loaded
-  useEffect(() => {
-    if (hasNumericalToNormalize && normalizationMethod === 'skip') {
-      // Set initial default only if not explicitly chosen by user
-      console.log('Setting initial default normalization method to minmax');
-      setNormalizationMethod('minmax');
-      setDebugInfo(null);
-    } else if (!hasNumericalToNormalize) {
-      console.log('No numerical features detected, defaulting to skip');
-      setNormalizationMethod('skip');
-      setDebugInfo('Normalization disabled: No numerical features detected in selected columns');
-    }
-  }, [hasNumericalToNormalize]); // Only run when hasNumericalToNormalize changes, not when normalizationMethod changes
-  
-  // Enhanced balance strategy state
-  const [balanceStrategy, setBalanceStrategy] = useState<BalanceStrategy>('skip');
-  const [balanceMethod, setBalanceMethod] = useState<BalanceMethod>('random');
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  
-  // Debug message for UI feedback
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-
-  const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
-  
-  // Feature type detection for appropriate balancing methods using direct API response
-  const featureTypes = useMemo(() => {
-    if (!previewData) {
-      console.log('No preview data available for feature type detection');
-      return {
-        hasNumerical: false,
-        hasCategorical: false,
-        isMixed: false
-      };
-    }
-    
-    // Direct usage of numerical_columns and categorical_columns from API
-    const numericalFeatures = previewData.numerical_columns || [];
-    const categoricalFeatures = previewData.categorical_columns || [];
-    
-    const hasNumerical = numericalFeatures.length > 0;
-    const hasCategorical = categoricalFeatures.length > 0;
-    const isMixed = hasNumerical && hasCategorical;
-    
-    const result = {
-      hasNumerical,
-      hasCategorical,
-      isMixed,
-      numericalCount: numericalFeatures.length,
-      categoricalCount: categoricalFeatures.length
-    };
-    
-    console.log('Feature types detected:', result);
-    return result;
-  }, [previewData]);
-
-  // Effect to reset balance method when strategy changes
-  useEffect(() => {
-    if (balanceStrategy === 'undersample') {
-      setBalanceMethod('random' as UndersamplingMethod);
-    } else if (balanceStrategy === 'oversample') {
-      setBalanceMethod('random' as OversamplingMethod);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
     } else {
-      setBalanceMethod('none');
+      return `${seconds}s`;
     }
-  }, [balanceStrategy]);
+  } catch (e) {
+    return 'N/A';
+  }
+};
 
-  const handlePreprocess = async () => {
-    if (!datasetId) {
-      setError('No dataset selected');
-      return;
-    }
+const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({ 
+  experimentResults, 
+  onReset 
+}) => {
+  const [activeTab, setActiveTab] = useState('metrics');
+  const [currentFilesPage, setCurrentFilesPage] = useState(1);
+  const filesPerPage = 5;
+  
+  console.log('[CustomTrainingResults] Rendering with experiment results:', {
+    experimentId: experimentResults.experiment_id,
+    experimentName: experimentResults.experiment_name,
+    taskType: experimentResults.task_type,
+    hasMetrics: !!experimentResults.metrics,
+    metricsKeys: Object.keys(experimentResults.metrics || {}),
+    hasClassificationReport: experimentResults.metrics ? 
+      'classification_report' in experimentResults.metrics : false
+  });
 
-    if (!columnsToKeep || columnsToKeep.length === 0) {
-      setError('You need to save your feature selection first');
-      return;
-    }
+  const { 
+    experiment_id, 
+    experiment_name, 
+    target_column, 
+    task_type = '', 
+    metrics = {}, 
+    files = [],
+    algorithm,
+    created_at,
+    completed_at
+  } = experimentResults;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      setSuccess(null);
-      setDebugInfo(null);
-      
-      const response = await datasetApi.preprocessDataset(
-        datasetId,
-        normalizationMethod,
-        balanceStrategy,
-        balanceStrategy !== 'skip' ? balanceMethod : undefined
-      );
-      
-      // CRITICAL FIX: Just update the processingStage to 'processed'
-      // This preserves all other state data and prevents tab navigation from breaking
-      updateState({
-        processingStage: 'processed'
-      });
-      
-      // Extract message from the appropriate location in the response
-      const responseData = response.data || response;
-      const message = responseData.message || response.message || 'Data preprocessing completed successfully';
-      setSuccess(message);
-      
-    } catch (error) {
-      console.error('Error preprocessing dataset:', error);
-      setError(error instanceof Error ? error.message : 'Failed to preprocess dataset');
-    } finally {
-      setIsLoading(false);
-    }
+  // Helper function to filter files by type and check for specific visualization types
+  const isVisualizationFile = (file: any) => {
+    const visualTypes = [
+      'distribution', 'shap', 'confusion_matrix', 'importance', 
+      'plot', 'chart', 'graph', 'visualization', 'roc_curve', 
+      'precision_recall_curve', 'pr_curve', 'metrics_summary'
+    ];
+    const nonVisualTypes = ['model', 'report', 'label_encoder'];
+    
+    // Return true if contains visual type and doesn't contain non-visual type
+    return visualTypes.some(type => file.file_type.includes(type)) && 
+           !nonVisualTypes.some(type => file.file_type.includes(type));
   };
 
-  // Improved method options with updated tooltip logic
-  const getBalanceMethodOptions = () => {
-    if (balanceStrategy === 'undersample') {
-      return (
-        <>
-          {/* Random Undersampling - always enabled */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="random">
-                Random Undersampling
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.random_under.name}</h5>
-                <p className="text-sm">{methodDescriptions.random_under.tooltip}</p>
-                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
-                  <span className="text-xs text-green-700">Works with any data types</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* ENN method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="enn" disabled={!featureTypes.hasNumerical}>
-                ENN (Edited Nearest Neighbors)
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.enn.name}</h5>
-                <p className="text-sm">{methodDescriptions.enn.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* Tomek Links method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="tomek" disabled={!featureTypes.hasNumerical}>
-                Tomek Links
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.tomek.name}</h5>
-                <p className="text-sm">{methodDescriptions.tomek.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* NCR method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="ncr" disabled={!featureTypes.hasNumerical}>
-                NCR (Neighborhood Cleaning Rule)
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.ncr.name}</h5>
-                <p className="text-sm">{methodDescriptions.ncr.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        </>
-      );
-    } else if (balanceStrategy === 'oversample') {
-      return (
-        <>
-          {/* Random Oversampling - always enabled */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="random">
-                Random Oversampling
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.random_over.name}</h5>
-                <p className="text-sm">{methodDescriptions.random_over.tooltip}</p>
-                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
-                  <span className="text-xs text-green-700">Works with any data types</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* SMOTE - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="smote" disabled={!featureTypes.hasNumerical}>
-                SMOTE
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.smote.name}</h5>
-                <p className="text-sm">{methodDescriptions.smote.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* Borderline SMOTE - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="borderline_smote" disabled={!featureTypes.hasNumerical}>
-                Borderline SMOTE
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.borderline_smote.name}</h5>
-                <p className="text-sm">{methodDescriptions.borderline_smote.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* ADASYN - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="adasyn" disabled={!featureTypes.hasNumerical}>
-                ADASYN
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.adasyn.name}</h5>
-                <p className="text-sm">{methodDescriptions.adasyn.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* SMOTENC - requires mixed features (numerical and categorical) */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="smotenc" disabled={!featureTypes.isMixed}>
-                SMOTENC
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.smotenc.name}</h5>
-                <p className="text-sm">{methodDescriptions.smotenc.tooltip}</p>
-                <div className="bg-cyan-50 border border-cyan-100 rounded p-1 mt-1">
-                  <span className="text-xs text-cyan-700">Requires both categorical and numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        </>
-      );
+  // Filter files to keep only the first model file and exclude label encoder files
+  const filteredFiles = files.reduce((acc, file) => {
+    // Check if it's a model file
+    const isModelFile = file.file_type === 'model' || file.file_type.includes('model');
+    
+    // Check if it's a label encoder file
+    const isLabelEncoderFile = file.file_type === 'label_encoder' || file.file_type.includes('label_encoder');
+    
+    // Add to accumulator if:
+    // 1. It's the first model file we've seen (using the length check to find first model in acc)
+    // 2. It's not a model file or label encoder file
+    if ((isModelFile && !acc.some(f => f.file_type === 'model' || f.file_type.includes('model'))) || 
+        (!isModelFile && !isLabelEncoderFile)) {
+      acc.push(file);
     }
-    return null;
-  };
+    
+    return acc;
+  }, [] as typeof files);
 
-  // Get the tooltip and style for the currently selected balancing method
-  const getSelectedMethodInfo = () => {
-    // Compare directly without casting since the types are properly defined
-    if (balanceStrategy === 'skip' || balanceMethod === 'none') {
-      return {
-        tooltip: "No class balancing will be applied",
-        bgColor: "bg-gray-50",
-        borderColor: "border-gray-100",
-        textColor: "text-gray-700"
-      };
-    }
-    
-    // Use type checking to ensure proper method selection
-    let methodKey = '';
-    if (balanceStrategy === 'undersample') {
-      methodKey = balanceMethod === 'random' ? 'random_under' : balanceMethod;
-    } else if (balanceStrategy === 'oversample') {
-      methodKey = balanceMethod === 'random' ? 'random_over' : balanceMethod;
-    }
-    
-    // Set style based on method requirements
-    let bgColor = "bg-amber-50";
-    let borderColor = "border-amber-100";
-    let textColor = "text-amber-800";
-    
-    if (methodKey === 'random_under' || methodKey === 'random_over') {
-      bgColor = "bg-green-50";
-      borderColor = "border-green-100";
-      textColor = "text-green-800";
-    } else if (methodKey === 'smotenc') {
-      bgColor = "bg-cyan-50";
-      borderColor = "border-cyan-100";
-      textColor = "text-cyan-700";
-    }
-    
-    return {
-      tooltip: methodDescriptions[methodKey]?.tooltip || "No description available",
-      bgColor,
-      borderColor,
-      textColor
-    };
+  // Get model files - make sure to include only unique model files
+  const modelFiles = files
+    .filter(file => file.file_type === 'model' || file.file_type.includes('model'))
+    // Remove duplicates based on file_url
+    .filter((file, index, self) => 
+      index === self.findIndex(f => f.file_url === file.file_url)
+    );
+  
+  const firstModelFile = modelFiles.length > 0 ? modelFiles[0] : null;
+  
+  // Get visualization files (excluding models and reports)
+  const visualizationFiles = files.filter(isVisualizationFile);
+
+  // Check if task_type exists before using it
+  const isClassification = task_type ? task_type.includes('classification') : false;
+  const isRegression = task_type ? task_type.includes('regression') : false;
+  
+  const formatMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
+    return typeof value === 'number' ? (value * 100).toFixed(2) + '%' : String(value);
   };
   
-  const methodInfo = getSelectedMethodInfo();
+  const formatRegressionMetric = (value: number | undefined) => {
+    if (value === undefined) return 'N/A';
+    return typeof value === 'number' ? value.toFixed(4) : String(value);
+  };
+  
+  const getMetricColor = (value: number | undefined) => {
+    if (value === undefined) return 'text-gray-400';
+    if (value >= 0.9) return 'text-green-600';
+    if (value >= 0.7) return 'text-emerald-600';
+    if (value >= 0.5) return 'text-amber-600';
+    return 'text-red-600';
+  };
 
-  if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
-    return null;
+  // Format task type for display with null check
+  const formattedTaskType = task_type ? task_type.replace(/_/g, ' ') : 'unknown task';
+  
+  // Check and log classification report if it exists
+  if (metrics && metrics.classification_report) {
+    console.log('[CustomTrainingResults] Classification report type:', typeof metrics.classification_report);
+    if (typeof metrics.classification_report === 'object') {
+      console.log('[CustomTrainingResults] Classification report keys:', Object.keys(metrics.classification_report));
+    }
   }
 
+  // Calculate pagination for filtered files
+  const totalFiles = filteredFiles.length;
+  const totalFilesPages = Math.ceil(totalFiles / filesPerPage);
+  
+  // Get current page of files
+  const indexOfLastFile = currentFilesPage * filesPerPage;
+  const indexOfFirstFile = indexOfLastFile - filesPerPage;
+  const currentFiles = filteredFiles.slice(indexOfFirstFile, indexOfLastFile);
+  
+  // Change page
+  const goToFilesPage = (pageNumber: number) => {
+    setCurrentFilesPage(pageNumber);
+  };
+
   return (
-    <Card className="w-full mt-6">
-      <CardHeader>
-        <CardTitle className="text-xl text-primary">Preprocess Dataset</CardTitle>
+    <Card className="shadow-lg border-primary/10 mt-6">
+      <CardHeader className="bg-primary/5 border-b border-primary/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="h-6 w-6 text-primary" />
+            <CardTitle>{experiment_name || 'Custom Training Results'}</CardTitle>
+          </div>
+          <Badge variant="outline" className="px-3 py-1">
+            {algorithm || formattedTaskType}
+          </Badge>
+        </div>
         <CardDescription>
-          Apply normalization and balancing techniques to prepare your data for modeling
+          Target: <span className="font-medium">{target_column}</span> • 
+          Task: <span className="font-medium">{formattedTaskType}</span> • 
+          ID: <span className="font-mono text-xs">{experiment_id}</span>
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-            <Sparkles className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
-          </Alert>
-        )}
-        
-        {debugInfo && (
-          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-            <InfoIcon className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">{debugInfo}</AlertDescription>
-          </Alert>
-        )}
-        
-        {isLoadingPreview && (
-          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-            <InfoIcon className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">Loading dataset preview data...</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-medium mb-2">Normalization</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Select
-                      value={normalizationMethod}
-                      onValueChange={(value) => setNormalizationMethod(value as NormalizationMethod)}
-                      disabled={!hasNumericalToNormalize || isLoadingPreview}
-                    >
-                      <SelectTrigger className="w-full" aria-disabled={!hasNumericalToNormalize || isLoadingPreview}>
-                        <SelectValue placeholder="Select normalization method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minmax">Min-Max Scaling</SelectItem>
-                        <SelectItem value="standard">Standard Scaling (Z-score)</SelectItem>
-                        <SelectItem value="robust">Robust Scaling</SelectItem>
-                        <SelectItem value="log">Log Transformation</SelectItem>
-                        <SelectItem value="skip">Skip Normalization</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                {!hasNumericalToNormalize && (
-                  <TooltipContent>
-                    <p>Normalization is disabled because no numerical features are selected.</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            <p className="text-xs text-gray-500 mt-1">
-              {normalizationMethod === 'minmax' && 'Scales features to a range of [0,1]'}
-              {normalizationMethod === 'standard' && 'Transforms features to have mean=0 and variance=1'}
-              {normalizationMethod === 'robust' && 'Uses median and IQR, less sensitive to outliers'}
-              {normalizationMethod === 'log' && 'Applies log transformation to handle skewed data'}
-              {normalizationMethod === 'skip' && 'No normalization will be applied'}
-            </p>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h4 className="font-medium mb-2">Balance Classes</h4>
-            
-            {!isClassification && (
-              <Alert className="mb-4 bg-amber-50 border-amber-200">
-                <InfoIcon className="h-4 w-4 text-amber-500" />
-                <AlertDescription className="text-amber-700">
-                  Class balancing is only applicable to classification tasks (binary or multiclass), not regression.
-                </AlertDescription>
-              </Alert>
+      
+      <CardContent className="p-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full justify-start rounded-none border-b px-4">
+            <TabsTrigger value="metrics" className="data-[state=active]:bg-primary/10">
+              <Activity className="mr-1 h-4 w-4" /> 
+              Metrics
+            </TabsTrigger>
+            <TabsTrigger value="visualizations" className="data-[state=active]:bg-primary/10">
+              <BarChart4 className="mr-1 h-4 w-4" />
+              Visualizations
+            </TabsTrigger>
+            {metrics.classification_report && (
+              <TabsTrigger value="report" className="data-[state=active]:bg-primary/10">
+                <TableIcon className="mr-1 h-4 w-4" />
+                Classification Report
+              </TabsTrigger>
             )}
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Select
-                      value={balanceStrategy}
-                      onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
-                      disabled={!isClassification || isLoadingPreview}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select balance strategy" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="skip">Skip Balancing</SelectItem>
-                        <SelectItem value="undersample">Undersampling</SelectItem>
-                        <SelectItem value="oversample">Oversampling</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                {!isClassification && (
-                  <TooltipContent>
-                    <p>Balancing is only supported for classification tasks, not regression.</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            <p className="text-xs text-gray-500 mt-1">
-              {balanceStrategy === 'undersample' && 'Reduces samples from majority classes to balance class distribution'}
-              {balanceStrategy === 'oversample' && 'Increases samples in minority classes through duplication or synthetic generation'}
-              {balanceStrategy === 'skip' && 'No class balancing will be applied'}
-              {!isClassification && 'Class balancing is only applicable for classification tasks'}
-            </p>
-            
-            {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
-                <div className="relative">
-                  <Select
-                    value={balanceMethod}
-                    onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                    disabled={!isClassification || isLoadingPreview}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select balancing method" />
-                    </SelectTrigger>
-                    <SelectContent className="relative z-50">
-                      {getBalanceMethodOptions()}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Method information section - replaced dataset type info */}
-                  {balanceStrategy !== 'skip' && balanceMethod !== 'none' && (
-                    <div className="text-xs mt-2 space-y-1">
-                      <div className={`px-3 py-2 rounded ${methodInfo.bgColor} ${methodInfo.borderColor} ${methodInfo.textColor}`}>
-                        {methodInfo.tooltip}
-                      </div>
-                      
-                      {/* Keep error messages for incompatible methods */}
-                      {balanceStrategy === 'undersample' && balanceMethod !== 'random' && !featureTypes.hasNumerical && (
-                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
-                      )}
-                      {balanceStrategy === 'oversample' && balanceMethod !== 'random' && balanceMethod !== 'smotenc' && !featureTypes.hasNumerical && (
-                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
-                      )}
-                      {balanceStrategy === 'oversample' && balanceMethod === 'smotenc' && !featureTypes.isMixed && (
-                        <p className="text-amber-500 mt-1 px-1">SMOTENC requires both numerical and categorical features.</p>
-                      )}
-                    </div>
+            <TabsTrigger value="details" className="data-[state=active]:bg-primary/10">
+              <Info className="mr-1 h-4 w-4" />
+              Details
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="metrics" className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {isClassification && (
+                <>
+                  {metrics.accuracy !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Accuracy</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.accuracy)}`}>
+                          {formatMetric(metrics.accuracy)}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
-                </div>
+                  
+                  {metrics.f1_score !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">F1 Score</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.f1_score)}`}>
+                          {formatMetric(metrics.f1_score)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {metrics.precision !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Precision</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.precision)}`}>
+                          {formatMetric(metrics.precision)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {metrics.recall !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Recall</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.recall)}`}>
+                          {formatMetric(metrics.recall)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+              
+              {isRegression && (
+                <>
+                  {metrics.r2 !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">R² Score</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className={`text-2xl font-bold ${getMetricColor(metrics.r2)}`}>
+                          {formatRegressionMetric(metrics.r2)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {metrics.mae !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Mean Absolute Error</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold">
+                          {formatRegressionMetric(metrics.mae)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {metrics.mse !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Mean Squared Error</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold">
+                          {formatRegressionMetric(metrics.mse)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {metrics.rmse !== undefined && (
+                    <Card className="overflow-hidden">
+                      <CardHeader className="p-4 pb-2">
+                        <CardTitle className="text-base">Root Mean Squared Error</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold">
+                          {formatRegressionMetric(metrics.rmse)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+              
+              {/* Add Download Model Button as a card */}
+              {firstModelFile && (
+                <Card className="overflow-hidden">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Download Model</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Button 
+                      className="w-full" 
+                      asChild
+                    >
+                      <a href={firstModelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                        <DownloadCloud className="h-4 w-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="visualizations" className="p-6">
+            {visualizationFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {visualizationFiles.map((file, index) => (
+                  <Dialog key={index}>
+                    <DialogTrigger asChild>
+                      <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
+                            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
+                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
+                              <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <h3 className="font-medium text-sm">
+                              {file.file_type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            </h3>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt={file.file_type} 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-2 flex justify-between items-center">
+                          <h3 className="font-medium">
+                            {file.file_type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </h3>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <DownloadCloud className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download this visualization</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Visualizations Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Visualizations may not be available for this model or are still being generated.
+                </p>
               </div>
             )}
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="report" className="p-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Classification Report</CardTitle>
+                <CardDescription>
+                  Detailed metrics breakdown by class
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ClassificationReportTable report={metrics.classification_report} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="details" className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Experiment Information */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Experiment Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-muted-foreground">Experiment ID:</span>
+                      <span className="font-mono">{experiment_id}</span>
+                      
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{experiment_name}</span>
+                      
+                      <span className="text-muted-foreground">Algorithm:</span>
+                      <span className="font-medium">{algorithm || 'Not specified'}</span>
+                      
+                      <span className="text-muted-foreground">Task Type:</span>
+                      <span className="font-medium">{formattedTaskType}</span>
+                      
+                      <span className="text-muted-foreground">Target Column:</span>
+                      <span className="font-medium">{target_column}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Timing Information */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Timing Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Created:
+                      </div>
+                      <span>{formatTime(created_at)}</span>
+                      
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Completed:
+                      </div>
+                      <span>{completed_at ? formatTime(completed_at) : 'N/A'}</span>
+                      
+                      {created_at && completed_at && (
+                        <>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="mr-2 h-4 w-4" />
+                            Duration:
+                          </div>
+                          <span>{formatDuration(created_at, completed_at)}</span>
+                        </>
+                      )}
+                      
+                      {experimentResults.training_time_sec !== undefined && (
+                        <>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="mr-2 h-4 w-4" />
+                            Training Time:
+                          </div>
+                          <span>{experimentResults.training_time_sec.toFixed(2)} seconds</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Hyperparameters */}
+              {experimentResults.hyperparameters && Object.keys(experimentResults.hyperparameters).length > 0 && (
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Hyperparameters</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Parameter</TableHead>
+                          <TableHead>Value</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(experimentResults.hyperparameters).map(([key, value]) => (
+                          <TableRow key={key}>
+                            <TableCell className="font-medium">{key}</TableCell>
+                            <TableCell>
+                              {typeof value === 'object' 
+                                ? JSON.stringify(value) 
+                                : String(value)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Files Information */}
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Files</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Created At</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentFiles.map((file, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {file.file_type.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </TableCell>
+                            <TableCell>{formatTime(file.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                  <DownloadCloud className="h-3 w-3 mr-1" />
+                                  Download
+                                </a>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Pagination for files */}
+                  {totalFiles > filesPerPage && (
+                    <div className="mt-4">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => goToFilesPage(Math.max(1, currentFilesPage - 1))}
+                              className={currentFilesPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          
+                          {/* Dynamic page numbers with ellipsis */}
+                          {Array.from({ length: totalFilesPages }).map((_, i) => {
+                            const pageNum = i + 1;
+                            
+                            // Always show first page, current page, last page,
+                            // and pages that are one position away from current
+                            if (
+                              pageNum === 1 || 
+                              pageNum === totalFilesPages ||
+                              pageNum === currentFilesPage ||
+                              pageNum === currentFilesPage - 1 ||
+                              pageNum === currentFilesPage + 1
+                            ) {
+                              return (
+                                <PaginationItem key={i}>
+                                  <PaginationLink
+                                    onClick={() => goToFilesPage(pageNum)}
+                                    isActive={currentFilesPage === pageNum}
+                                  >
+                                    {pageNum}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            }
+                            
+                            // Show ellipsis for skipped pages
+                            // Only show one ellipsis between groups of visible pages
+                            if (
+                              (pageNum === 2 && currentFilesPage > 3) ||
+                              (pageNum === totalFilesPages - 1 && currentFilesPage < totalFilesPages - 2)
+                            ) {
+                              return (
+                                <PaginationItem key={i}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            
+                            // Hide other pages
+                            return null;
+                          })}
+                          
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => goToFilesPage(Math.min(totalFilesPages, currentFilesPage + 1))}
+                              className={currentFilesPage === totalFilesPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                      
+                      <div className="text-center text-xs text-muted-foreground mt-2">
+                        Showing {currentFiles.length} of {totalFiles} files
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
-      <CardFooter>
-        <Button 
-          onClick={handlePreprocess} 
-          disabled={isLoading || isLoadingPreview}
-          className="w-full"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : 'Preprocess Dataset'}
+      
+      <CardFooter className="flex justify-between border-t p-4">
+        <Button variant="outline" onClick={onReset}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Run New Experiment
         </Button>
+        
+        {completed_at && (
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            Completed: {new Date(completed_at).toLocaleString()}
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
 };
 
-export default PreprocessingOptions;
+export default CustomTrainingResults;
