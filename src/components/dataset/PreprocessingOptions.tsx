@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -31,6 +30,10 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
+
+// Import the components we need for balance strategy and method selection
+import BalanceStrategySelector, { BalanceStrategy } from './preprocessing/BalanceStrategySelector';
+import BalanceMethodSelector, { BalanceMethod } from './preprocessing/BalanceMethodSelector';
 
 // Define types properly to avoid type comparison issues
 type NormalizationMethod = 'minmax' | 'standard' | 'robust' | 'log' | 'skip';
@@ -245,9 +248,9 @@ const PreprocessingOptions: React.FC = () => {
   // Effect to reset balance method when strategy changes
   useEffect(() => {
     if (balanceStrategy === 'undersample') {
-      setBalanceMethod('random' as UndersamplingMethod);
+      setBalanceMethod('random' as BalanceMethod);
     } else if (balanceStrategy === 'oversample') {
-      setBalanceMethod('random' as OversamplingMethod);
+      setBalanceMethod('random' as BalanceMethod);
     } else {
       setBalanceMethod('none');
     }
@@ -295,227 +298,6 @@ const PreprocessingOptions: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  // Improved method options with updated tooltip logic
-  const getBalanceMethodOptions = () => {
-    if (balanceStrategy === 'undersample') {
-      return (
-        <>
-          {/* Random Undersampling - always enabled */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="random">
-                Random Undersampling
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.random_under.name}</h5>
-                <p className="text-sm">{methodDescriptions.random_under.tooltip}</p>
-                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
-                  <span className="text-xs text-green-700">Works with any data types</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* ENN method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="enn" disabled={!featureTypes.hasNumerical}>
-                ENN (Edited Nearest Neighbors)
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.enn.name}</h5>
-                <p className="text-sm">{methodDescriptions.enn.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* Tomek Links method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="tomek" disabled={!featureTypes.hasNumerical}>
-                Tomek Links
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.tomek.name}</h5>
-                <p className="text-sm">{methodDescriptions.tomek.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* NCR method - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="ncr" disabled={!featureTypes.hasNumerical}>
-                NCR (Neighborhood Cleaning Rule)
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.ncr.name}</h5>
-                <p className="text-sm">{methodDescriptions.ncr.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        </>
-      );
-    } else if (balanceStrategy === 'oversample') {
-      return (
-        <>
-          {/* Random Oversampling - always enabled */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="random">
-                Random Oversampling
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.random_over.name}</h5>
-                <p className="text-sm">{methodDescriptions.random_over.tooltip}</p>
-                <div className="bg-green-50 border border-green-100 rounded p-1 mt-1">
-                  <span className="text-xs text-green-700">Works with any data types</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* SMOTE - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="smote" disabled={!featureTypes.hasNumerical}>
-                SMOTE
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.smote.name}</h5>
-                <p className="text-sm">{methodDescriptions.smote.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* Borderline SMOTE - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="borderline_smote" disabled={!featureTypes.hasNumerical}>
-                Borderline SMOTE
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.borderline_smote.name}</h5>
-                <p className="text-sm">{methodDescriptions.borderline_smote.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* ADASYN - requires numerical features */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="adasyn" disabled={!featureTypes.hasNumerical}>
-                ADASYN
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.adasyn.name}</h5>
-                <p className="text-sm">{methodDescriptions.adasyn.tooltip}</p>
-                <div className="bg-amber-50 border border-amber-100 rounded p-1 mt-1">
-                  <span className="text-xs text-amber-700">Requires numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          
-          {/* SMOTENC - requires mixed features (numerical and categorical) */}
-          <HoverCard openDelay={100} closeDelay={200}>
-            <HoverCardTrigger asChild>
-              <SelectItem value="smotenc" disabled={!featureTypes.isMixed}>
-                SMOTENC
-              </SelectItem>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80" side="right">
-              <div className="space-y-2">
-                <h5 className="font-semibold text-sm">{methodDescriptions.smotenc.name}</h5>
-                <p className="text-sm">{methodDescriptions.smotenc.tooltip}</p>
-                <div className="bg-cyan-50 border border-cyan-100 rounded p-1 mt-1">
-                  <span className="text-xs text-cyan-700">Requires both categorical and numerical features</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        </>
-      );
-    }
-    return null;
-  };
-
-  // Get the tooltip and style for the currently selected balancing method
-  const getSelectedMethodInfo = () => {
-    // Compare directly without casting since the types are properly defined
-    if (balanceStrategy === 'skip' || balanceMethod === 'none') {
-      return {
-        tooltip: "No class balancing will be applied",
-        bgColor: "bg-gray-50",
-        borderColor: "border-gray-100",
-        textColor: "text-gray-700"
-      };
-    }
-    
-    // Use type checking to ensure proper method selection
-    let methodKey = '';
-    if (balanceStrategy === 'undersample') {
-      methodKey = balanceMethod === 'random' ? 'random_under' : balanceMethod;
-    } else if (balanceStrategy === 'oversample') {
-      methodKey = balanceMethod === 'random' ? 'random_over' : balanceMethod;
-    }
-    
-    // Set style based on method requirements
-    let bgColor = "bg-amber-50";
-    let borderColor = "border-amber-100";
-    let textColor = "text-amber-800";
-    
-    if (methodKey === 'random_under' || methodKey === 'random_over') {
-      bgColor = "bg-green-50";
-      borderColor = "border-green-100";
-      textColor = "text-green-800";
-    } else if (methodKey === 'smotenc') {
-      bgColor = "bg-cyan-50";
-      borderColor = "border-cyan-100";
-      textColor = "text-cyan-700";
-    }
-    
-    return {
-      tooltip: methodDescriptions[methodKey]?.tooltip || "No description available",
-      bgColor,
-      borderColor,
-      textColor
-    };
-  };
-  
-  const methodInfo = getSelectedMethodInfo();
 
   if (!datasetId || !taskType || !columnsToKeep || columnsToKeep.length === 0) {
     return null;
@@ -595,34 +377,24 @@ const PreprocessingOptions: React.FC = () => {
                 </TooltipProvider>
               </h3>
               <div className="space-y-3">
-                <Select 
-                  value={balanceStrategy} 
-                  onValueChange={(v) => setBalanceStrategy(v as BalanceStrategy)}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select balancing strategy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="undersample">Undersample majority class</SelectItem>
-                    <SelectItem value="oversample">Oversample minority class</SelectItem>
-                    <SelectItem value="skip">Skip balancing</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Use the BalanceStrategySelector component for strategy selection */}
+                <BalanceStrategySelector
+                  value={balanceStrategy}
+                  onChange={setBalanceStrategy}
+                  isClassification={isClassification}
+                  isLoading={isLoading}
+                />
                 
+                {/* Use the BalanceMethodSelector component for method selection */}
                 {balanceStrategy !== 'skip' && (
-                  <Select 
-                    value={balanceMethod} 
-                    onValueChange={(v) => setBalanceMethod(v as BalanceMethod)}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Method options will be rendered by getBalanceMethodOptions() */}
-                    </SelectContent>
-                  </Select>
+                  <BalanceMethodSelector
+                    balanceStrategy={balanceStrategy}
+                    balanceMethod={balanceMethod}
+                    onChange={setBalanceMethod}
+                    featureTypes={featureTypes}
+                    isClassification={isClassification}
+                    isLoading={isLoading}
+                  />
                 )}
               </div>
             </div>
