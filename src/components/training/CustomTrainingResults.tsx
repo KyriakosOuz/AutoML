@@ -25,7 +25,9 @@ import {
   FileText,
   Info,
   Calendar,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Table,
@@ -39,6 +41,15 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ExperimentResults } from '@/types/training';
 import ClassificationReportTable from './ClassificationReportTable';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface CustomTrainingResultsProps {
   experimentResults: ExperimentResults;
@@ -81,6 +92,8 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   onReset 
 }) => {
   const [activeTab, setActiveTab] = useState('metrics');
+  const [currentFilesPage, setCurrentFilesPage] = useState(1);
+  const filesPerPage = 5;
   
   console.log('[CustomTrainingResults] Rendering with experiment results:', {
     experimentId: experimentResults.experiment_id,
@@ -163,6 +176,20 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
       console.log('[CustomTrainingResults] Classification report keys:', Object.keys(metrics.classification_report));
     }
   }
+
+  // Calculate pagination for files
+  const totalFiles = files.length;
+  const totalFilesPages = Math.ceil(totalFiles / filesPerPage);
+  
+  // Get current page of files
+  const indexOfLastFile = currentFilesPage * filesPerPage;
+  const indexOfFirstFile = indexOfLastFile - filesPerPage;
+  const currentFiles = files.slice(indexOfFirstFile, indexOfLastFile);
+  
+  // Change page
+  const goToFilesPage = (pageNumber: number) => {
+    setCurrentFilesPage(pageNumber);
+  };
 
   return (
     <Card className="shadow-lg border-primary/10 mt-6">
@@ -541,7 +568,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {files.slice(0, 5).map((file, index) => (
+                        {currentFiles.map((file, index) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">
                               {file.file_type.split('_').map(word => 
@@ -562,10 +589,68 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                       </TableBody>
                     </Table>
                   </div>
-                  {files.length > 5 && (
-                    <p className="text-xs text-muted-foreground mt-2 text-right">
-                      Showing 5 of {files.length} files
-                    </p>
+                  
+                  {/* Pagination for files */}
+                  {totalFiles > filesPerPage && (
+                    <div className="mt-4">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => goToFilesPage(Math.max(1, currentFilesPage - 1))}
+                              className={currentFilesPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          
+                          {Array.from({ length: Math.min(totalFilesPages, 5) }).map((_, i) => {
+                            // Logic for showing pages
+                            let pageNumber;
+                            if (totalFilesPages <= 5) {
+                              // If 5 or fewer pages, show all page numbers
+                              pageNumber = i + 1;
+                            } else if (currentFilesPage <= 3) {
+                              // If near start, show first 5 pages
+                              pageNumber = i + 1;
+                            } else if (currentFilesPage >= totalFilesPages - 2) {
+                              // If near end, show last 5 pages
+                              pageNumber = totalFilesPages - 4 + i;
+                            } else {
+                              // Otherwise show current page and 2 on each side
+                              pageNumber = currentFilesPage - 2 + i;
+                            }
+                            
+                            return (
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  isActive={currentFilesPage === pageNumber}
+                                  onClick={() => goToFilesPage(pageNumber)}
+                                >
+                                  {pageNumber}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          
+                          {/* Show ellipsis if there are more than 5 pages and we're not showing the last pages */}
+                          {totalFilesPages > 5 && currentFilesPage < totalFilesPages - 2 && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                          
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => goToFilesPage(Math.min(totalFilesPages, currentFilesPage + 1))}
+                              className={currentFilesPage === totalFilesPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                      
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Showing {indexOfFirstFile + 1}-{Math.min(indexOfLastFile, totalFiles)} of {totalFiles} files
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
