@@ -53,6 +53,9 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   const useScrolling = experimentsCount > 5;
   const minWidth = useScrolling ? `${180 + (experimentsCount * 180)}px` : undefined;
   
+  // Check if all experiments are MLJAR experiments
+  const allMljarExperiments = experiments.every(exp => exp.engine?.toLowerCase() === 'mljar');
+  
   return (
     <div className="space-y-6">
       <ResponsiveTable minWidth={minWidth}>
@@ -70,12 +73,20 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell className="font-medium sticky left-0 bg-background z-10">Algorithm</TableCell>
+            <TableCell className="font-medium sticky left-0 bg-background z-10">
+              {allMljarExperiments ? 'Engine' : 'Algorithm'}
+            </TableCell>
             {experiments.map((exp) => (
               <TableCell key={`${exp.experiment_id}-algorithm`}>
-                <Badge variant="outline">{exp.algorithm}</Badge>
-                {exp.engine && (
-                  <Badge variant="outline" className="ml-1 bg-primary/10">{exp.engine}</Badge>
+                {allMljarExperiments ? (
+                  <Badge variant="outline" className="bg-primary/10">{exp.engine?.toUpperCase() || 'MLJAR'}</Badge>
+                ) : (
+                  <>
+                    {exp.algorithm && <Badge variant="outline">{exp.algorithm}</Badge>}
+                    {exp.engine && (
+                      <Badge variant="outline" className="ml-1 bg-primary/10">{exp.engine.toUpperCase()}</Badge>
+                    )}
+                  </>
                 )}
               </TableCell>
             ))}
