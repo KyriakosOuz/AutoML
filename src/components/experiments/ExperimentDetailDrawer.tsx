@@ -29,7 +29,8 @@ import {
   Image as ImageIcon,
   X,
   Sliders,
-  Table as TableIcon
+  Table as TableIcon,
+  FileText as FileTextIcon
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -552,7 +553,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {getVisualizationFiles().length > 0 || getReadmeFile() || getPredictionsFile() ? (
+                    {getVisualizationFiles().length > 0 ? (
                       <div className="space-y-6">
                         {getVisualizationFiles().length > 0 && (
                           <div>
@@ -582,68 +583,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                        
-                        {/* Document Section for README */}
-                        {getReadmeFile() && (
-                          <div className="mt-6">
-                            <h3 className="text-lg font-medium mb-3">Documentation</h3>
-                            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-base flex items-center">
-                                  <FileText className="h-5 w-5 mr-2 text-primary/70" />
-                                  README Documentation
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  This file contains detailed documentation about the model and experiment.
-                                </p>
-                                <Button asChild className="w-full" variant="outline">
-                                  <a 
-                                    href={getReadmeFile()?.file_url} 
-                                    download 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Documentation
-                                  </a>
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        )}
-                        
-                        {/* Predictions Section for CSV */}
-                        {getPredictionsFile() && (
-                          <div className="mt-6">
-                            <h3 className="text-lg font-medium mb-3">Model Predictions</h3>
-                            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-base flex items-center">
-                                  <TableIcon className="h-5 w-5 mr-2 text-primary/70" />
-                                  Predictions Dataset
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                <p className="text-sm text-muted-foreground mb-3">
-                                  CSV file containing model predictions on test data.
-                                </p>
-                                <Button asChild className="w-full" variant="outline">
-                                  <a 
-                                    href={getPredictionsFile()?.file_url} 
-                                    download 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Predictions CSV
-                                  </a>
-                                </Button>
-                              </CardContent>
-                            </Card>
                           </div>
                         )}
                       </div>
@@ -724,7 +663,63 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Card>
                       )}
                       
-                      {(!getModelFile() && !results.report_file_url) && (
+                      {/* Documentation Section for README */}
+                      {getReadmeFile() && (
+                        <Card className="bg-muted/40">
+                          <CardHeader className="pb-2 pt-4">
+                            <CardTitle className="text-base flex items-center">
+                              <FileTextIcon className="h-5 w-5 mr-2 text-primary/70" />
+                              Documentation
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              This file contains detailed documentation about the model and experiment.
+                            </p>
+                            <Button asChild className="w-full" variant="outline">
+                              <a 
+                                href={getReadmeFile()?.file_url} 
+                                download 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Documentation
+                              </a>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {/* Predictions Section for CSV */}
+                      {getPredictionsFile() && (
+                        <Card className="bg-muted/40">
+                          <CardHeader className="pb-2 pt-4">
+                            <CardTitle className="text-base flex items-center">
+                              <TableIcon className="h-5 w-5 mr-2 text-primary/70" />
+                              Model Predictions
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              CSV file containing model predictions on test data.
+                            </p>
+                            <Button asChild className="w-full" variant="outline">
+                              <a 
+                                href={getPredictionsFile()?.file_url} 
+                                download 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Predictions CSV
+                              </a>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {(!getModelFile() && !results.report_file_url && !getReadmeFile() && !getPredictionsFile()) && (
                         <div className="text-center py-12 text-muted-foreground">
                           <DownloadIcon className="h-12 w-12 mx-auto mb-4" />
                           <p>No downloadable files available for this experiment</p>
