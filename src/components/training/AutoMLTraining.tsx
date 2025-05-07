@@ -53,9 +53,10 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
-  // Only generate a default name when automlEngine changes or if experimentName is empty
+  // FIXED: Only generate a default name when automlEngine changes AND experimentName is null (not just empty)
+  // This allows users to clear the input field and type their own name
   useEffect(() => {
-    if (taskType && automlEngine && !experimentName) {
+    if (taskType && automlEngine && experimentName === null) {
       const newName = generateExperimentName('AutoML', automlEngine.toUpperCase());
       console.log("AutoMLTraining - Generated default experiment name:", newName);
       setExperimentName(newName);
