@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -649,15 +648,12 @@ const ExperimentsTab: React.FC = () => {
                         {formatTaskType(experiment.task_type)}
                       </TableCell>
                       <TableCell>
-                        {/* Use training_type if available, otherwise fall back to the previous logic */}
+                        {/* Modified to remove the Badge, keeping only the algorithm/engine name */}
                         {experiment.training_type === 'automl' || (!experiment.training_type && experiment.auto_train) ? (
                           <span>{experiment.automl_engine ? experiment.automl_engine.toUpperCase() : 'Unknown Engine'}</span>
                         ) : (
                           <span>{experiment.algorithm_choice}</span>
                         )}
-                        <Badge variant="outline" className="ml-2">
-                          {experiment.training_type || (experiment.auto_train ? 'AutoML' : 'Custom')}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
