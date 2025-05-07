@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { BarChart2, Upload, HelpCircle, Star } from 'lucide-react';
+import { BarChart2, Upload, HelpCircle, Star, LineChart } from 'lucide-react';
 import AuthHeader from '@/components/auth/AuthHeader';
 import {
   Dialog,
@@ -105,7 +105,7 @@ const MainHeader = () => {
                   className="rounded-none shadow-none data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-none"
                 >
                   <Link to="/training" className="flex items-center justify-center gap-2 w-full h-full">
-                    <BarChart2 className="h-4 w-4" />
+                    <LineChart className="h-4 w-4" />
                     <span className="hidden sm:inline">Training</span>
                   </Link>
                 </TabsTrigger>
