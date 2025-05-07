@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -119,6 +120,26 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     completed_at
   } = experimentResults;
 
+  // Format chart display name - matching MLJARExperimentResults implementation
+  const formatChartName = (fileType: string) => {
+    if (fileType.includes('confusion_matrix')) {
+      return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
+    } else if (fileType.includes('roc_curve')) {
+      return 'ROC Curve';
+    } else if (fileType.includes('precision_recall')) {
+      return 'Precision-Recall Curve';
+    } else if (fileType.includes('learning_curve')) {
+      return 'Learning Curve';
+    } else if (fileType.includes('evaluation')) {
+      return 'Evaluation Curve';
+    } else if (fileType.includes('feature_importance')) {
+      return 'Feature Importance';
+    } else if (fileType.includes('distribution')) {
+      return 'Distribution Plot';
+    }
+    return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
   // Filter files to show only the first model file and hide label encoder files
   const filteredFiles = files.filter((file, index, self) => {
     // Exclude all label encoder files
@@ -141,13 +162,17 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
   });
 
   // Helper function to filter files by type and check for specific visualization types
+  // Updated to match MLJARExperimentResults implementation for consistency
   const isVisualizationFile = (file: any) => {
+    // Include all these visualization types
     const visualTypes = [
       'distribution', 'shap', 'confusion_matrix', 'importance', 
       'plot', 'chart', 'graph', 'visualization', 'roc_curve', 
-      'precision_recall_curve', 'pr_curve', 'metrics_summary'
+      'precision_recall_curve', 'pr_curve', 'metrics_summary',
+      'learning_curve', 'evaluation_curve', 'evaluation'
     ];
-    const nonVisualTypes = ['model', 'report', 'label_encoder'];
+    // Exclude these file types
+    const nonVisualTypes = ['model', 'report', 'label_encoder', 'ensemble', 'metadata', 'predictions'];
     
     // Return true if contains visual type and doesn't contain non-visual type
     return visualTypes.some(type => file.file_type.includes(type)) && 
@@ -394,17 +419,17 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                   <Dialog key={index}>
                     <DialogTrigger asChild>
                       <Card className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                        <CardHeader className="py-2 px-4 bg-muted/30">
+                          <CardTitle className="text-sm font-medium">
+                            {formatChartName(file.file_type)}
+                          </CardTitle>
+                        </CardHeader>
                         <CardContent className="p-4">
                           <div className="aspect-video bg-muted flex flex-col items-center justify-center rounded-md relative overflow-hidden">
                             <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${file.file_url})` }}></div>
                             <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors">
                               <ImageIcon className="h-8 w-8 text-white drop-shadow-md" />
                             </div>
-                          </div>
-                          <div className="mt-3 text-center">
-                            <h3 className="font-medium text-sm">
-                              {file.file_type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            </h3>
                           </div>
                         </CardContent>
                       </Card>
@@ -413,12 +438,12 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                       <div className="p-1">
                         <img 
                           src={file.file_url} 
-                          alt={file.file_type} 
+                          alt={formatChartName(file.file_type)} 
                           className="w-full rounded-md"
                         />
                         <div className="mt-2 flex justify-between items-center">
                           <h3 className="font-medium">
-                            {file.file_type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            {formatChartName(file.file_type)}
                           </h3>
                           <TooltipProvider>
                             <Tooltip>
@@ -589,9 +614,7 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                         {currentFiles.map((file, index) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">
-                              {file.file_type.split('_').map(word => 
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                              ).join(' ')}
+                              {formatChartName(file.file_type)}
                             </TableCell>
                             <TableCell>{formatTime(file.created_at)}</TableCell>
                             <TableCell className="text-right">
