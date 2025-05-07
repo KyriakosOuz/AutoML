@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -131,7 +132,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     
     return results.files.filter(file => 
       !file.file_type.includes('model') && 
-      !file.file_type.includes('report')
+      !file.file_type.includes('report') &&
+      !file.file_type.includes('label_encoder')  // Add filter for label encoder files
     );
   };
   
