@@ -16,7 +16,7 @@ interface ExperimentResultsViewProps {
 const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
-  const { setResultsLoaded } = useTraining();
+  const { setResultsLoaded, resetTrainingState } = useTraining();
   
   const { data, isLoading, error } = useQuery<ExperimentResults>({
     queryKey: ['experiment', experimentId],
@@ -38,6 +38,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       }
     }
   }, [data, isLoading, setResultsLoaded]);
+
+  // Handler for the "Run New Experiment" button
+  const handleReset = () => {
+    console.log("[ExperimentResultsView] Resetting training state");
+    resetTrainingState();
+  };
 
   if (isLoading) {
     return (
@@ -63,7 +69,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     <div className="w-full">
       <CustomTrainingResults 
         experimentResults={data} 
-        onReset={() => {}}
+        onReset={handleReset}
       />
     </div>
   );

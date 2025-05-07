@@ -15,8 +15,20 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
   const { 
     activeExperimentId, 
     experimentStatus,
-    error
+    error,
+    resetTrainingState
   } = useTraining();
+
+  // A proper reset handler that uses the training context
+  const handleReset = () => {
+    // Call the provided onReset (for any parent component handlers)
+    if (onReset) {
+      onReset();
+    }
+    
+    // Also call the training context resetTrainingState
+    resetTrainingState();
+  };
 
   if (error) {
     return (
@@ -34,7 +46,7 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
           <div className="text-destructive mb-4">
             {error}
           </div>
-          <Button onClick={onReset}>
+          <Button onClick={handleReset}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -56,7 +68,7 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={onReset} variant="outline">
+          <Button onClick={handleReset} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Start New Training
           </Button>
@@ -70,7 +82,8 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
       <ExperimentResultsContainer 
         experimentId={activeExperimentId}
         status={experimentStatus}
-        onReset={onReset}
+        // No need to explicitly pass onReset as ExperimentResultsContainer 
+        // now uses the training context directly
       />
       
       {experimentStatus === 'success' && (

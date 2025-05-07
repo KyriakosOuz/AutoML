@@ -6,13 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus } from '@/contexts/training/types';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
+import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
   results?: ExperimentResultsType | null; // Make results optional
   isLoading?: boolean; // Make isLoading optional
-  onReset?: () => void; // Make onReset optional
+  onReset?: () => void; // Make onReset optional but will be overridden
   onRefresh?: () => void;
 }
 
@@ -21,13 +22,16 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   status,
   results: providedResults,
   isLoading: providedIsLoading,
-  onReset = () => {}, // Default no-op function
+  onReset, // We'll use this only if we don't have access to the training context
   onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);
   const [isLoading, setIsLoading] = useState<boolean>(providedIsLoading !== undefined ? providedIsLoading : false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Access the training context to reset training state
+  const { resetTrainingState, stopPolling, setActiveTab } = useTraining();
 
   useEffect(() => {
     if (providedResults) {
@@ -75,6 +79,31 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     }
   };
 
+  // Handler for the "Run New Experiment" button
+  const handleReset = () => {
+    console.log("[ExperimentResultsContainer] Resetting training state");
+    
+    // First stop any active polling
+    stopPolling();
+    
+    // Then reset the training state
+    resetTrainingState();
+    
+    // Set active tab to 'automl' to match behavior of Reset Training button
+    setActiveTab('automl');
+    
+    // If an external onReset was provided, call it as well
+    if (onReset) {
+      onReset();
+    }
+    
+    // Show a toast notification
+    toast({
+      title: "Training Reset",
+      description: "Ready to start a new experiment",
+    });
+  };
+
   const handleRefresh = () => {
     fetchResults();
     if (onRefresh) onRefresh();
@@ -92,7 +121,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
           experimentResults={results}
           isLoading={isLoading}
           error={error}
-          onReset={onReset}
+          onReset={handleReset}
           onRefresh={handleRefresh}
         />
       ) : (
@@ -102,7 +131,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
           experimentResults={results}
           isLoading={isLoading}
           error={error}
-          onReset={onReset}
+          onReset={handleReset}
           onRefresh={handleRefresh}
         />
       )}
