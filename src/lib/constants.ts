@@ -14,12 +14,6 @@ export const ALLOWED_ALGORITHMS = {
   ]
 } as const;
 
-// Mapping from frontend algorithm names to backend algorithm names
-export const ALGORITHM_NAME_MAPPING: Record<string, string> = {
-  "Linear Regression": "Linear",
-  // Add other mappings if needed, defaulting to the same name if not specified
-};
-
 export const DEFAULT_HYPERPARAMETERS = {
   "Decision Tree": {
     max_depth: 5,
@@ -62,10 +56,6 @@ export const DEFAULT_HYPERPARAMETERS = {
     weights: "uniform"
   },
   "Linear Regression": {
-    fit_intercept: true,
-    n_jobs: null
-  },
-  "Linear": {
     fit_intercept: true,
     n_jobs: null
   },

@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Beaker, HelpCircle, Play, Settings, Loader } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
-import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS, ALGORITHM_NAME_MAPPING } from '@/lib/constants';
+import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
 import HyperParameterEditor from './HyperParameterEditor';
 // The CustomTrainingResults import is still needed for TypeScript
 import CustomTrainingResults from './CustomTrainingResults';
@@ -157,21 +157,13 @@ const CustomTraining: React.FC = () => {
       const formData = new FormData();
       formData.append('dataset_id', datasetId);
       formData.append('task_type', datasetTaskType);
-      
-      // Map frontend algorithm name to backend algorithm name if a mapping exists
-      const backendAlgorithmName = ALGORITHM_NAME_MAPPING[customParameters.algorithm] || customParameters.algorithm;
-      formData.append('algorithm', backendAlgorithmName);
-      
+      formData.append('algorithm', customParameters.algorithm);
       formData.append('use_default_hyperparams', String(customParameters.useDefaultHyperparameters));
       
       // CRITICAL FIX: Always send hyperparameters, whether using defaults or custom
-      let hyperparamsToSend = customParameters.hyperparameters;
-      
-      if (customParameters.useDefaultHyperparameters) {
-        // Use backend algorithm name to find default hyperparameters
-        hyperparamsToSend = DEFAULT_HYPERPARAMETERS[backendAlgorithmName] || 
-                           DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {};
-      }
+      const hyperparamsToSend = customParameters.useDefaultHyperparameters 
+        ? DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {}
+        : customParameters.hyperparameters;
       
       formData.append('hyperparameters', JSON.stringify(hyperparamsToSend));
       
