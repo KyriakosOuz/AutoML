@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -15,6 +16,54 @@ export const checkStatus = async (experimentId: string): Promise<ApiResponse<Exp
     return handleApiResponse<ExperimentStatusResponse>(response);
   } catch (error) {
     console.error('[API] Error checking training status:', error);
+    throw error;
+  }
+};
+
+// New function to train AutoML models with custom experiment name
+export const automlTrain = async (
+  datasetId: string,
+  taskType: string,
+  automlEngine: string,
+  testSize: number,
+  stratify: boolean,
+  randomSeed: number,
+  experimentName?: string | null
+) => {
+  try {
+    console.log('[API] Starting AutoML training with custom name:', experimentName);
+    const headers = await getAuthHeaders();
+    
+    const formData = new FormData();
+    formData.append('dataset_id', datasetId);
+    formData.append('task_type', taskType);
+    formData.append('automl_engine', automlEngine);
+    formData.append('test_size', testSize.toString());
+    formData.append('stratify', stratify ? 'true' : 'false');
+    formData.append('random_seed', randomSeed.toString());
+    
+    // Add experiment name if provided
+    if (experimentName) {
+      formData.append('experiment_name', experimentName);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/training/train-automl/`, {
+      method: 'POST',
+      headers: { ...headers },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('[API] AutoML training error response:', errorData);
+      throw new Error(errorData || `HTTP error ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('[API] AutoML training started successfully:', result);
+    return result.data;
+  } catch (error) {
+    console.error('[API] Error in automlTrain:', error);
     throw error;
   }
 };

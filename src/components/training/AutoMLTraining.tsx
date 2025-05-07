@@ -35,11 +35,12 @@ const AutoMLTraining: React.FC = () => {
     startPolling,
     setLastTrainingType,
     setActiveExperimentId,
-    experimentStatus
+    experimentStatus,
+    experimentName,
+    setExperimentName
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [experimentName, setExperimentName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -52,12 +53,13 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
+  // Only generate a default name when automlEngine changes or if experimentName is empty
   useEffect(() => {
-    if (taskType && automlEngine) {
+    if (taskType && automlEngine && !experimentName) {
       const newName = generateExperimentName('AutoML', automlEngine.toUpperCase());
       setExperimentName(newName);
     }
-  }, [taskType, automlEngine]);
+  }, [taskType, automlEngine, experimentName, setExperimentName]);
 
   const handleTrainModel = async () => {
     if (!datasetId || !taskType || !automlEngine) {
@@ -86,6 +88,16 @@ const AutoMLTraining: React.FC = () => {
       return;
     }
 
+    // Validate that we have an experiment name
+    if (!experimentName || experimentName.trim() === '') {
+      toast({
+        title: "Missing Experiment Name",
+        description: "Please provide a name for this experiment",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setIsTraining(true);
@@ -97,13 +109,15 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
+      // Pass the experiment name to the API
       const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
         testSize,
         stratify,
-        randomSeed
+        randomSeed,
+        experimentName // Pass the user-defined experiment name
       );
 
       if (result && result.experiment_id) {
@@ -112,7 +126,7 @@ const AutoMLTraining: React.FC = () => {
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${result.experiment_name || result.experiment_id} started and now processing...`,
+          description: `Experiment ${experimentName || result.experiment_name || result.experiment_id} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');
@@ -140,7 +154,8 @@ const AutoMLTraining: React.FC = () => {
       taskType,
       automlEngine,
       testSize,
-      processingStage
+      processingStage,
+      experimentName
     });
     
     // Check if we have the required data and if dataset is properly processed
@@ -153,7 +168,9 @@ const AutoMLTraining: React.FC = () => {
       automlEngine &&
       testSize >= 0.1 &&
       testSize <= 0.5 &&
-      isValidProcessingStage
+      isValidProcessingStage &&
+      experimentName && 
+      experimentName.trim() !== ''
     );
     
     console.log("AutoML - Form validation result:", { 
@@ -262,7 +279,7 @@ const AutoMLTraining: React.FC = () => {
               </Label>
               <Input
                 id="experiment-name"
-                value={experimentName}
+                value={experimentName || ''}
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
                 disabled={isTraining || isSubmitting}

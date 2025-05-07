@@ -1,3 +1,4 @@
+
 import { ExperimentResults } from '@/types/training';
 
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
@@ -49,6 +50,7 @@ export interface TrainingContextState {
   activeTab: TrainingTab;
   isCheckingLastExperiment: boolean;
   resultsLoaded?: boolean;
+  experimentName: string | null; // Added field for experiment name
 }
 
 export interface TrainingContextValue extends TrainingContextState {
@@ -70,6 +72,7 @@ export interface TrainingContextValue extends TrainingContextState {
   setRandomSeed: (seed: number) => void;
   setActiveTab: (tab: TrainingTab) => void;
   setResultsLoaded?: (loaded: boolean) => void;
+  setExperimentName: (name: string) => void; // Added setter for experiment name
   resetTrainingState: () => void;
   clearExperimentResults: () => void;
   checkLastExperiment: () => void;

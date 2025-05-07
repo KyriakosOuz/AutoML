@@ -10,6 +10,9 @@ import { checkStatus } from '@/lib/training';
 
 const TrainingContext = createContext<TrainingContextValue | undefined>(undefined);
 
+// New constant for experiment name storage
+const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
+
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
   const [state, setState] = useState<TrainingContextState>({
@@ -31,6 +34,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
     isCheckingLastExperiment: false,
+    experimentName: null, // Initialize experiment name as null
   });
 
   // Enhanced experiment restoration with improved logging and error handling
@@ -39,6 +43,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       try {
         const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
         const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
+        const savedExperimentName = localStorage.getItem(EXPERIMENT_NAME_STORAGE_KEY);
         
         if (savedExperimentId) {
           console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
@@ -49,7 +54,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             activeExperimentId: savedExperimentId,
             lastTrainingType: savedTrainingType,
             experimentStatus: 'processing', // Start with processing status until we know more
-            isLoadingResults: true
+            isLoadingResults: true,
+            experimentName: savedExperimentName // Restore saved experiment name
           }));
           
           // Then check the actual experiment status from the API
@@ -148,12 +154,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         activeExperimentId: experimentId,
         experimentStatus: 'processing',
         lastTrainingType: latestExperiment.automl_engine ? 'automl' : 'custom',
-        isLoadingResults: true
+        isLoadingResults: true,
+        experimentName: latestExperiment.experiment_name || null // Get experiment name from response
       }));
       
       // Save to localStorage for persistence between page refreshes
       localStorage.setItem(EXPERIMENT_STORAGE_KEY, experimentId);
       localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, latestExperiment.automl_engine ? 'automl' : 'custom');
+      if (latestExperiment.experiment_name) {
+        localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, latestExperiment.experiment_name);
+      }
       
       // Then check the actual status
       const statusResponse = await checkStatus(experimentId);
@@ -208,14 +218,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (state.lastTrainingType) {
           localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, state.lastTrainingType);
         }
+        if (state.experimentName) {
+          localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, state.experimentName);
+        }
       } else {
         localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
         localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
       }
     } catch (error) {
       console.error("Error saving experiment data to localStorage:", error);
     }
-  }, [state.activeExperimentId, state.lastTrainingType]);
+  }, [state.activeExperimentId, state.lastTrainingType, state.experimentName]);
 
   // Effect to fetch results when status indicates they're ready
   useEffect(() => {
@@ -319,12 +333,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false, // Ensure isTraining is false when results are loaded
+          experimentName: results.experiment_name || prev.experimentName, // Update experiment name if available
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
             status: resultStatus as ExperimentStatus,
             hasTrainingResults: true
           }
         }));
+        
+        // Also update experiment name in local storage if available
+        if (results.experiment_name) {
+          localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, results.experiment_name);
+        }
       } else {
         console.log("[TrainingContext] No results returned from API");
         setState(prev => ({ 
@@ -383,6 +403,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
+    setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })), // Add setter for experimentName
     checkLastExperiment,
     resetTrainingState: () => {
       setState({
@@ -404,9 +425,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
         isCheckingLastExperiment: false,
+        experimentName: null, // Reset experiment name
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY); // Also clear experiment name from storage
       stopPolling(); // Make sure to stop any active polling
     },
     clearExperimentResults: () => {
@@ -414,10 +437,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         ...prev,
         experimentResults: null,
         activeExperimentId: null,
-        statusResponse: null
+        statusResponse: null,
+        experimentName: null // Clear experiment name
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY); // Also clear experiment name from storage
       stopPolling(); // Make sure to stop any active polling
     },
     getExperimentResults,
