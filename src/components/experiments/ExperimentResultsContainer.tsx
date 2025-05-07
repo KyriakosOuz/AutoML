@@ -115,9 +115,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     if (onRefresh) onRefresh();
   };
 
-  // Improved check for MLJAR experiments - case insensitive and matching both automl_engine and engine fields
-  const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar" || 
-                            results?.engine?.toLowerCase() === "mljar";
+  // Improved check for MLJAR experiments - case insensitive
+  const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
 
   return (
     <div className="w-full overflow-x-hidden">
