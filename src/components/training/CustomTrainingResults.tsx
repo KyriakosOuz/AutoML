@@ -131,25 +131,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
            !nonVisualTypes.some(type => file.file_type.includes(type));
   };
 
-  // Filter files to keep only the first model file and exclude label encoder files
-  const filteredFiles = files.reduce((acc, file) => {
-    // Check if it's a model file
-    const isModelFile = file.file_type === 'model' || file.file_type.includes('model');
-    
-    // Check if it's a label encoder file
-    const isLabelEncoderFile = file.file_type === 'label_encoder' || file.file_type.includes('label_encoder');
-    
-    // Add to accumulator if:
-    // 1. It's the first model file we've seen (using the length check to find first model in acc)
-    // 2. It's not a model file or label encoder file
-    if ((isModelFile && !acc.some(f => f.file_type === 'model' || f.file_type.includes('model'))) || 
-        (!isModelFile && !isLabelEncoderFile)) {
-      acc.push(file);
-    }
-    
-    return acc;
-  }, [] as typeof files);
-
   // Get model files - make sure to include only unique model files
   const modelFiles = files
     .filter(file => file.file_type === 'model' || file.file_type.includes('model'))
@@ -196,14 +177,14 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     }
   }
 
-  // Calculate pagination for filtered files
-  const totalFiles = filteredFiles.length;
+  // Calculate pagination for files
+  const totalFiles = files.length;
   const totalFilesPages = Math.ceil(totalFiles / filesPerPage);
   
   // Get current page of files
   const indexOfLastFile = currentFilesPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
-  const currentFiles = filteredFiles.slice(indexOfFirstFile, indexOfLastFile);
+  const currentFiles = files.slice(indexOfFirstFile, indexOfLastFile);
   
   // Change page
   const goToFilesPage = (pageNumber: number) => {
@@ -621,47 +602,41 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                             />
                           </PaginationItem>
                           
-                          {/* Dynamic page numbers with ellipsis */}
-                          {Array.from({ length: totalFilesPages }).map((_, i) => {
-                            const pageNum = i + 1;
-                            
-                            // Always show first page, current page, last page,
-                            // and pages that are one position away from current
-                            if (
-                              pageNum === 1 || 
-                              pageNum === totalFilesPages ||
-                              pageNum === currentFilesPage ||
-                              pageNum === currentFilesPage - 1 ||
-                              pageNum === currentFilesPage + 1
-                            ) {
-                              return (
-                                <PaginationItem key={i}>
-                                  <PaginationLink
-                                    onClick={() => goToFilesPage(pageNum)}
-                                    isActive={currentFilesPage === pageNum}
-                                  >
-                                    {pageNum}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              );
+                          {Array.from({ length: Math.min(totalFilesPages, 5) }).map((_, i) => {
+                            // Logic for showing pages
+                            let pageNumber;
+                            if (totalFilesPages <= 5) {
+                              // If 5 or fewer pages, show all page numbers
+                              pageNumber = i + 1;
+                            } else if (currentFilesPage <= 3) {
+                              // If near start, show first 5 pages
+                              pageNumber = i + 1;
+                            } else if (currentFilesPage >= totalFilesPages - 2) {
+                              // If near end, show last 5 pages
+                              pageNumber = totalFilesPages - 4 + i;
+                            } else {
+                              // Otherwise show current page and 2 on each side
+                              pageNumber = currentFilesPage - 2 + i;
                             }
                             
-                            // Show ellipsis for skipped pages
-                            // Only show one ellipsis between groups of visible pages
-                            if (
-                              (pageNum === 2 && currentFilesPage > 3) ||
-                              (pageNum === totalFilesPages - 1 && currentFilesPage < totalFilesPages - 2)
-                            ) {
-                              return (
-                                <PaginationItem key={i}>
-                                  <PaginationEllipsis />
-                                </PaginationItem>
-                              );
-                            }
-                            
-                            // Hide other pages
-                            return null;
+                            return (
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  isActive={currentFilesPage === pageNumber}
+                                  onClick={() => goToFilesPage(pageNumber)}
+                                >
+                                  {pageNumber}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
                           })}
+                          
+                          {/* Show ellipsis if there are more than 5 pages and we're not showing the last pages */}
+                          {totalFilesPages > 5 && currentFilesPage < totalFilesPages - 2 && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
                           
                           <PaginationItem>
                             <PaginationNext 
@@ -672,9 +647,9 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
                         </PaginationContent>
                       </Pagination>
                       
-                      <div className="text-center text-xs text-muted-foreground mt-2">
-                        Showing {currentFiles.length} of {totalFiles} files
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Showing {indexOfFirstFile + 1}-{Math.min(indexOfLastFile, totalFiles)} of {totalFiles} files
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -683,12 +658,6 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
           </TabsContent>
         </Tabs>
       </CardContent>
-      
-      <CardFooter className="flex justify-end">
-        <Button variant="outline" onClick={onReset}>
-          Reset
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
