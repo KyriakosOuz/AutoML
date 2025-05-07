@@ -23,6 +23,7 @@ interface ComparisonExperiment {
     mae?: number;
     mse?: number;
     rmse?: number;
+    f1?: number; // Add f1 as a possible metric
   };
   dataset_name: string;
 }
@@ -30,6 +31,11 @@ interface ComparisonExperiment {
 interface ComparisonResultsViewProps {
   experiments: ComparisonExperiment[];
 }
+
+// Helper function to get F1 score from either f1 or f1_score
+const getF1Score = (metrics: ComparisonExperiment['metrics']): number | undefined => {
+  return metrics.f1_score !== undefined ? metrics.f1_score : metrics.f1;
+};
 
 const formatMetricValue = (value: number | undefined): string => {
   if (value === undefined) return 'N/A';
@@ -45,7 +51,7 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   // Remove AUC from metrics list
   const metrics = isRegression 
     ? ['r2', 'mae', 'mse', 'rmse'] 
-    : ['accuracy', 'precision', 'recall', 'f1_score']; // Removed 'auc'
+    : ['accuracy', 'precision', 'recall', 'f1_score']; // Kept as f1_score for display purposes
   
   // Calculate minimum width based on number of experiments
   // Base width for metric column + each experiment takes approximately 180px
@@ -70,13 +76,12 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell className="font-medium sticky left-0 bg-background z-10">Algorithm</TableCell>
+            <TableCell className="font-medium sticky left-0 bg-background z-10">Engine</TableCell>
             {experiments.map((exp) => (
-              <TableCell key={`${exp.experiment_id}-algorithm`}>
-                <Badge variant="outline">{exp.algorithm}</Badge>
-                {exp.engine && (
-                  <Badge variant="outline" className="ml-1 bg-primary/10">{exp.engine}</Badge>
-                )}
+              <TableCell key={`${exp.experiment_id}-engine`}>
+                <Badge variant="outline" className="bg-primary/10">
+                  {exp.engine ? exp.engine.toUpperCase() : 'Unknown'}
+                </Badge>
               </TableCell>
             ))}
           </TableRow>
@@ -104,24 +109,34 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
                 {metric === 'r2' ? 'R²' : metric.replace('_', ' ')}
               </TableCell>
               {experiments.map((exp) => {
+                // For f1_score, use our helper function to get the value from either f1 or f1_score
+                const metricValue = metric === 'f1_score' ? 
+                  getF1Score(exp.metrics) : 
+                  exp.metrics[metric as keyof typeof exp.metrics] as number | undefined;
+                  
                 // Find the best value for this metric across all experiments
-                const metricValues = experiments.map(e => e.metrics[metric as keyof typeof e.metrics] as number | undefined);
+                const metricValues = experiments.map(e => {
+                  if (metric === 'f1_score') {
+                    return getF1Score(e.metrics);
+                  }
+                  return e.metrics[metric as keyof typeof e.metrics] as number | undefined;
+                });
+                
                 const bestValue = isRegression 
                   ? (metric === 'r2' ? Math.max(...metricValues.filter(Boolean) as number[]) : Math.min(...metricValues.filter(Boolean) as number[]))
                   : Math.max(...metricValues.filter(Boolean) as number[]);
                 
-                const currentValue = exp.metrics[metric as keyof typeof exp.metrics] as number | undefined;
-                const isBest = currentValue !== undefined && 
-                  ((isRegression && metric === 'r2' && currentValue === bestValue) || 
-                   (isRegression && metric !== 'r2' && currentValue === bestValue) ||
-                   (!isRegression && currentValue === bestValue));
+                const isBest = metricValue !== undefined && 
+                  ((isRegression && metric === 'r2' && metricValue === bestValue) || 
+                   (isRegression && metric !== 'r2' && metricValue === bestValue) ||
+                   (!isRegression && metricValue === bestValue));
                 
                 return (
                   <TableCell 
                     key={`${exp.experiment_id}-${metric}`}
                     className={isBest ? 'font-bold text-primary' : ''}
                   >
-                    {formatMetricValue(currentValue)}
+                    {formatMetricValue(metricValue)}
                   </TableCell>
                 );
               })}
