@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -116,7 +115,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   };
 
   // Check if this is a MLJAR experiment
-  const isMljarExperiment = results?.automl_engine === "mljar";
+  const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
 
   return (
     <div className="w-full overflow-x-hidden">

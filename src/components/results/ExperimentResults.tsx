@@ -46,6 +46,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   onRefresh
 }) => {
   const [activeTab, setActiveTab] = useState<string>('metrics');
+  const [csvPreviewOpen, setCsvPreviewOpen] = useState<boolean>(false);
+  const [readmePreviewOpen, setReadmePreviewOpen] = useState<boolean>(false);
   const { toast } = useToast();
 
   const formatTaskType = (type: string = '') => {
@@ -83,7 +85,18 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     }
     
     // Then check if it's a visualization file type
-    const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
+    const visualTypes = [
+      'distribution', 
+      'shap', 
+      'confusion_matrix', 
+      'importance', 
+      'plot', 
+      'chart', 
+      'graph', 
+      'visualization',
+      'evaluation_curve',
+      'learning_curve'
+    ];
     return visualTypes.some(type => fileType.includes(type));
   };
   
@@ -94,6 +107,26 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       file.file_type === 'model' || 
       file.file_type === 'report' || 
       file.file_type.includes('report')
+    );
+  };
+
+  const getReadmeFile = () => {
+    if (!experimentResults) return null;
+    
+    return experimentResults.files.find(file => 
+      file.file_type === 'readme' || 
+      file.file_type.includes('README') ||
+      file.file_name?.toLowerCase().includes('readme')
+    );
+  };
+
+  const getCsvFile = () => {
+    if (!experimentResults) return null;
+    
+    return experimentResults.files.find(file => 
+      file.file_type === 'predictions_csv' || 
+      file.file_type.includes('predictions') ||
+      (file.file_name && file.file_name.endsWith('.csv'))
     );
   };
   
@@ -212,6 +245,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const metrics = experimentResults.metrics || {};
   const files = experimentResults.files || [];
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
+  const readmeFile = getReadmeFile();
+  const csvFile = getCsvFile();
   
   const classificationReport = metrics.classification_report && 
     (typeof metrics.classification_report === 'string' || typeof metrics.classification_report === 'object') 
@@ -229,7 +264,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
             {training_type === 'automl' || automl_engine 
-              ? `Engine: ${automl_engine}` 
+              ? `Engine: ${automl_engine?.toUpperCase() || 'AutoML'}` 
               : `Algorithm: ${algorithm || 'Auto-selected'}`}
           </Badge>
         </div>
@@ -396,28 +431,192 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                 </p>
               </div>
             )}
+
+            {readmeFile && (
+              <div className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Documentation</CardTitle>
+                    <CardDescription>
+                      README file containing experiment details
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setReadmePreviewOpen(true)}
+                      className="w-full"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      View README
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
+                  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <div className="p-4">
+                      <h2 className="text-xl font-bold mb-4">README</h2>
+                      <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                        <iframe 
+                          src={readmeFile.file_url} 
+                          className="w-full h-[50vh]" 
+                          title="README"
+                        />
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <Button variant="outline" asChild>
+                          <a href={readmeFile.file_url} download target="_blank" rel="noopener noreferrer">
+                            <DownloadCloud className="h-4 w-4 mr-2" />
+                            Download README
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="details" className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <span className="font-semibold">Experiment ID:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {experiment_id?.substring(0, 8)}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Experiment Name:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {experiment_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Task Type:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatTaskType(task_type)}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Algorithm:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {algorithm || 'Auto-selected'}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Target Column:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {target_column}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Training Time:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {training_time_sec?.toFixed(1)}s
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Created At:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {created_at}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Completed At:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {completed_at}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="font-semibold">Training Type:</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {training_type}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="downloads" className="p-6">
-            {getDownloadableFiles().length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {getDownloadableFiles().map((file, index) => (
-                  <Card key={index} className="shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button asChild className="w-full">
-                        <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
-                          <DownloadCloud className="h-4 w-4 mr-2" /> 
-                          Download {file.file_name}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {getDownloadableFiles().map((file, index) => (
+                <Card key={index} className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base capitalize">{file.file_type.replace(/_/g, ' ')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild className="w-full">
+                      <a href={file.file_url} download={file.file_name} target="_blank" rel="noopener noreferrer">
+                        <DownloadCloud className="h-4 w-4 mr-2" /> 
+                        Download {file.file_name}
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {csvFile && (
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Predictions CSV</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button 
+                      variant="secondary" 
+                      className="w-full mb-2"
+                      onClick={() => setCsvPreviewOpen(true)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Preview CSV Data
+                    </Button>
+                    <Button asChild className="w-full">
+                      <a href={csvFile.file_url} download={csvFile.file_name} target="_blank" rel="noopener noreferrer">
+                        <DownloadCloud className="h-4 w-4 mr-2" /> 
+                        Download CSV
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Dialog open={csvPreviewOpen} onOpenChange={setCsvPreviewOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                  <div className="p-4">
+                    <h2 className="text-xl font-bold mb-4">CSV Preview</h2>
+                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Showing preview of CSV data. Download the full file for complete dataset.
+                      </p>
+                      <iframe 
+                        src={csvFile?.file_url} 
+                        className="w-full h-[40vh]" 
+                        title="CSV Preview"
+                      />
+                    </div>
+                    <div className="flex justify-end mt-4">
+                      <Button variant="default" asChild>
+                        <a href={csvFile?.file_url} download target="_blank" rel="noopener noreferrer">
+                          <DownloadCloud className="h-4 w-4 mr-2" />
+                          Download Full CSV
                         </a>
                       </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {getDownloadableFiles().length === 0 && !csvFile && !readmeFile && (
               <div className="text-center py-12">
                 <DownloadCloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>

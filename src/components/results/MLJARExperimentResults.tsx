@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -59,6 +58,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
+  const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -169,7 +169,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     files = [],
     created_at,
     completed_at,
-    hyperparameters = {}
+    hyperparameters = {},
+    automl_engine
   } = experimentResults;
 
   // Find best model label if available
@@ -260,7 +261,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             <CardTitle className="text-xl">{experiment_name || 'MLJAR Experiment Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            Engine: MLJAR AutoML
+            Engine: {automl_engine?.toUpperCase() || 'AutoML'}
           </Badge>
         </div>
         
