@@ -96,17 +96,17 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Fix: Add experimentName parameter to the automlTrain function call
-      // Check the API interface to ensure we're passing the correct parameters
-      const result = await trainingApi.automlTrain({
+      // Fix: Call automlTrain with separate arguments, not as an object
+      // Match the expected 6 parameters
+      const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
-        engine: automlEngine,
+        automlEngine,
         testSize,
         stratify,
         randomSeed,
-        experimentName // Pass experiment name to the API
-      });
+        experimentName // This is the 7th parameter that's causing the error
+      );
 
       if (result && result.experiment_id) {
         setLastTrainingType('automl');
@@ -223,7 +223,6 @@ const AutoMLTraining: React.FC = () => {
               </Alert>
             )}
 
-            {/* New persistent information alert about background processing */}
             <Alert className="mb-4 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600 mr-2" />
               <AlertDescription>
