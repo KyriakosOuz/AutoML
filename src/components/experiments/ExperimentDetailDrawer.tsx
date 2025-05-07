@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -29,9 +28,10 @@ import {
   Download as DownloadIcon,
   Image as ImageIcon,
   X,
-  Sliders
+  Sliders,
+  Table as TableIcon
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -133,7 +133,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     return results.files.filter(file => 
       !file.file_type.includes('model') && 
       !file.file_type.includes('report') &&
-      !file.file_type.includes('label_encoder')  // Add filter for label encoder files
+      !file.file_type.includes('label_encoder') &&
+      !file.file_type.includes('readme') &&
+      !file.file_type.includes('predictions')
     );
   };
   
@@ -143,6 +145,24 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     return results.files.find(file => 
       file.file_type === 'model' || 
       file.file_type.includes('model')
+    );
+  };
+
+  const getReadmeFile = () => {
+    if (!results?.files) return null;
+    
+    return results.files.find(file => 
+      file.file_type === 'readme' || 
+      file.file_type.includes('README.md')
+    );
+  };
+  
+  const getPredictionsFile = () => {
+    if (!results?.files) return null;
+    
+    return results.files.find(file => 
+      file.file_type === 'predictions_csv' ||
+      file.file_type.includes('predictions')
     );
   };
 
@@ -532,31 +552,100 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {getVisualizationFiles().length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {getVisualizationFiles().map((file, index) => (
-                          <div 
-                            key={index}
-                            className="overflow-hidden rounded-md border cursor-pointer hover:border-primary/50 transition-colors"
-                            onClick={() => setSelectedImage(file.file_url)}
-                          >
-                            <div className="aspect-[4/3] relative bg-muted">
-                              <img 
-                                src={file.file_url} 
-                                alt={file.file_type} 
-                                className="object-cover w-full h-full"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://placehold.co/400x300?text=Error+Loading+Image';
-                                }}
-                              />
-                            </div>
-                            <div className="p-2">
-                              <p className="text-xs font-medium capitalize">
-                                {file.file_type.replace(/_/g, ' ')}
-                              </p>
+                    {getVisualizationFiles().length > 0 || getReadmeFile() || getPredictionsFile() ? (
+                      <div className="space-y-6">
+                        {getVisualizationFiles().length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-medium mb-3">Charts & Plots</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {getVisualizationFiles().map((file, index) => (
+                                <div 
+                                  key={index}
+                                  className="overflow-hidden rounded-md border cursor-pointer hover:border-primary/50 transition-colors"
+                                  onClick={() => setSelectedImage(file.file_url)}
+                                >
+                                  <div className="aspect-[4/3] relative bg-muted">
+                                    <img 
+                                      src={file.file_url} 
+                                      alt={file.file_type} 
+                                      className="object-cover w-full h-full"
+                                      onError={(e) => {
+                                        e.currentTarget.src = 'https://placehold.co/400x300?text=Error+Loading+Image';
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="p-2">
+                                    <p className="text-xs font-medium capitalize">
+                                      {file.file_type.replace(/_/g, ' ')}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        ))}
+                        )}
+                        
+                        {/* Document Section for README */}
+                        {getReadmeFile() && (
+                          <div className="mt-6">
+                            <h3 className="text-lg font-medium mb-3">Documentation</h3>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base flex items-center">
+                                  <FileText className="h-5 w-5 mr-2 text-primary/70" />
+                                  README Documentation
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-4">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  This file contains detailed documentation about the model and experiment.
+                                </p>
+                                <Button asChild className="w-full" variant="outline">
+                                  <a 
+                                    href={getReadmeFile()?.file_url} 
+                                    download 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Documentation
+                                  </a>
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+                        
+                        {/* Predictions Section for CSV */}
+                        {getPredictionsFile() && (
+                          <div className="mt-6">
+                            <h3 className="text-lg font-medium mb-3">Model Predictions</h3>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base flex items-center">
+                                  <TableIcon className="h-5 w-5 mr-2 text-primary/70" />
+                                  Predictions Dataset
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-4">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  CSV file containing model predictions on test data.
+                                </p>
+                                <Button asChild className="w-full" variant="outline">
+                                  <a 
+                                    href={getPredictionsFile()?.file_url} 
+                                    download 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Predictions CSV
+                                  </a>
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
