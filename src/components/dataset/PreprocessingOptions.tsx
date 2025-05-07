@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -629,7 +630,7 @@ const PreprocessingOptions: React.FC = () => {
           
           {/* Debug Information */}
           {debugInfo && (
-            <Alert variant="outline" className="bg-amber-50 border-amber-200">
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-700 text-xs">
                 {debugInfo}
@@ -647,7 +648,7 @@ const PreprocessingOptions: React.FC = () => {
           
           {/* Success Message */}
           {success && (
-            <Alert variant="default" className="bg-green-50 border-green-200">
+            <Alert variant="success" className="bg-green-50 border-green-200">
               <Sparkles className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-700">{success}</AlertDescription>
             </Alert>
