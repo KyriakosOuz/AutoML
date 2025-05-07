@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { trainingApi } from '@/lib/api';
@@ -263,7 +262,11 @@ const ExperimentResultsPage: React.FC = () => {
     const { training_results, files = [] } = results;
     const metrics = training_results?.metrics || {};
     const modelFile = files.find(file => file.file_type === 'model');
-    const visualizationFiles = files.filter(file => file.file_type !== 'model');
+    
+    // Updated: Filter out both 'model' and 'label_encoder' files from visualizations
+    const visualizationFiles = files.filter(file => 
+      file.file_type !== 'model' && !file.file_type.includes('label_encoder')
+    );
 
     return (
       <div className="container py-10">
