@@ -8,9 +8,15 @@ interface ClassDistributionChartProps {
   targetColumn: string;
 }
 
+// Consistent colors that match the application's theme
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
 const ClassDistributionChart: React.FC<ClassDistributionChartProps> = ({ classData, targetColumn }) => {
+  // Early return if no data is provided
+  if (!classData || Object.keys(classData).length === 0) {
+    return null;
+  }
+
   const data = Object.entries(classData).map(([name, value]) => ({
     name,
     value: Math.round(value * 100), // Convert to percentage

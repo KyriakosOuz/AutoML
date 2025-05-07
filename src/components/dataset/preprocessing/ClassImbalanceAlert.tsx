@@ -9,6 +9,8 @@ interface ClassImbalanceAlertProps {
 }
 
 const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanceData }) => {
+  if (!classImbalanceData) return null;
+  
   const { needs_balancing, target_column, recommendation } = classImbalanceData;
 
   if (needs_balancing) {

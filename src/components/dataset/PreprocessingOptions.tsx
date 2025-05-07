@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -99,11 +98,20 @@ const PreprocessingOptions: React.FC = () => {
     fetchPreviewData();
   }, [datasetId]);
   
-  // Effect to check for class imbalance when the component mounts
+  // Effect to check for class imbalance when the component mounts - FIX: Added dependencies and check to prevent infinite calls
   useEffect(() => {
-    const checkClassImbalance = async () => {
-      if (!datasetId || !isClassification || isCheckingImbalance) return;
+    // Check if we already have class imbalance data to prevent unnecessary API calls
+    if (!datasetId || !isClassification || isCheckingImbalance || classImbalanceData) {
+      console.log('Skipping class imbalance check:', { 
+        hasDatasetId: !!datasetId, 
+        isClassification, 
+        isCheckingImbalance, 
+        hasExistingData: !!classImbalanceData 
+      });
+      return;
+    }
 
+    const checkClassImbalance = async () => {
       try {
         setIsCheckingImbalance(true);
         console.log('Checking class imbalance for dataset:', datasetId);
@@ -140,7 +148,7 @@ const PreprocessingOptions: React.FC = () => {
     };
 
     checkClassImbalance();
-  }, [datasetId, isClassification, setClassImbalanceData]);
+  }, [datasetId, isClassification, setClassImbalanceData, classImbalanceData]); // Added classImbalanceData as dependency
 
   // Determine if normalization should be enabled based on preview data
   const hasNumericalToNormalize = useMemo(() => {

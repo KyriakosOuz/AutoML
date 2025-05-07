@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -63,17 +62,26 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
 
-  // Effect to check for class imbalance when the component mounts
+  // Effect to check for class imbalance when the component mounts - FIX: Added dependencies and check to prevent infinite calls
   useEffect(() => {
-    const checkClassImbalance = async () => {
-      if (!datasetId || !isClassification || isCheckingImbalance) return;
+    // Check if we already have class imbalance data to prevent unnecessary API calls
+    if (!datasetId || !isClassification || isCheckingImbalance || classImbalanceData) {
+      console.log('PreprocessingCard: Skipping class imbalance check:', { 
+        hasDatasetId: !!datasetId, 
+        isClassification, 
+        isCheckingImbalance, 
+        hasExistingData: !!classImbalanceData 
+      });
+      return;
+    }
 
+    const checkClassImbalance = async () => {
       try {
         setIsCheckingImbalance(true);
-        console.log('Checking class imbalance for dataset:', datasetId);
+        console.log('PreprocessingCard: Checking class imbalance for dataset:', datasetId);
         
         const response = await datasetApi.checkClassImbalance(datasetId);
-        console.log('Class imbalance response:', response);
+        console.log('PreprocessingCard: Class imbalance response:', response);
         
         const imbalanceData = response.data || response;
         
@@ -96,7 +104,7 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error checking class imbalance:', error);
+        console.error('PreprocessingCard: Error checking class imbalance:', error);
         setDebugInfo('Failed to check class imbalance: ' + (error instanceof Error ? error.message : String(error)));
       } finally {
         setIsCheckingImbalance(false);
@@ -104,7 +112,7 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
     };
 
     checkClassImbalance();
-  }, [datasetId, isClassification, setClassImbalanceData]);
+  }, [datasetId, isClassification, setClassImbalanceData, classImbalanceData]); // Added classImbalanceData as dependency
 
   const handlePreprocess = async () => {
     if (!datasetId) {
