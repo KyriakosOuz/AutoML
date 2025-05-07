@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileText, Loader2 } from 'lucide-react';
+import { Upload, Download, FileText, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -19,10 +19,17 @@ interface BatchPredictionViewProps {
   experimentId: string;
 }
 
+interface FormattedError {
+  title: string;
+  description: React.ReactNode;
+  isMissingColumns?: boolean;
+  missingColumns?: string[];
+}
+
 const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FormattedError | null>(null);
   const [result, setResult] = useState<BatchPredictionResponse | null>(null);
   const { toast } = useToast();
 
@@ -30,7 +37,10 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       if (!file.name.endsWith('.csv')) {
-        setError('Please select a CSV file');
+        setError({
+          title: "Invalid File Format",
+          description: "Please select a CSV file. Other file formats are not supported."
+        });
         setSelectedFile(null);
         return;
       }
@@ -39,10 +49,70 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     }
   };
 
+  const parseErrorMessage = (errorMessage: string): FormattedError => {
+    // Check for missing columns error pattern
+    const missingColumnsMatch = errorMessage.match(/Missing required columns: (\[.*?\])/);
+    if (missingColumnsMatch) {
+      try {
+        // Try to parse the columns as a JSON array
+        const columnsString = missingColumnsMatch[1].replace(/'/g, '"');
+        const missingColumns = JSON.parse(columnsString);
+        
+        return {
+          title: "Missing Required Columns",
+          isMissingColumns: true,
+          missingColumns,
+          description: (
+            <div className="space-y-2">
+              <p>Your CSV file is missing the following required columns:</p>
+              <div className="flex flex-wrap gap-2 my-2">
+                {missingColumns.map((col: string) => (
+                  <Badge key={col} variant="outline" className="bg-amber-50 text-amber-900 border-amber-300">
+                    {col}
+                  </Badge>
+                ))}
+              </div>
+              <p>Please ensure your CSV file includes all required columns for this model.</p>
+            </div>
+          )
+        };
+      } catch (e) {
+        // Fallback if JSON parsing fails
+        console.error("Failed to parse missing columns", e);
+      }
+    }
+
+    // Check for malformed CSV error
+    if (errorMessage.includes("csv") && 
+        (errorMessage.includes("parse") || errorMessage.includes("format"))) {
+      return {
+        title: "CSV Format Error",
+        description: "The CSV file appears to be malformed or contains invalid data. Please check the file format and try again."
+      };
+    }
+
+    // Default error handling
+    return {
+      title: "Prediction Error",
+      description: errorMessage
+    };
+  };
+
+  const handleTryAgain = () => {
+    setSelectedFile(null);
+    setError(null);
+    if (document.getElementById('csv-file') instanceof HTMLInputElement) {
+      (document.getElementById('csv-file') as HTMLInputElement).value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setError('Please select a CSV file');
+      setError({
+        title: "No File Selected",
+        description: "Please select a CSV file before proceeding."
+      });
       return;
     }
 
@@ -71,7 +141,8 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       const json = await response.json();
@@ -85,10 +156,15 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process CSV file';
-      setError(message);
+      console.error("CSV prediction error:", message);
+      
+      // Parse and format the error message for better user understanding
+      const formattedError = parseErrorMessage(message);
+      setError(formattedError);
+      
       toast({
         title: "Error",
-        description: message,
+        description: formattedError.title,
         variant: "destructive"
       });
     } finally {
@@ -311,6 +387,43 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     );
   };
 
+  const renderErrorAlert = () => {
+    if (!error) return null;
+    
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertTriangle className="h-4 w-4 mr-2" />
+        <div className="space-y-2">
+          <h4 className="font-medium">{error.title}</h4>
+          <AlertDescription>{error.description}</AlertDescription>
+          
+          {error.isMissingColumns && (
+            <div className="mt-4 bg-destructive/10 p-3 rounded-md text-sm">
+              <p className="font-medium mb-1">How to fix this:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Open your CSV file in a spreadsheet program</li>
+                <li>Add the missing column headers to the first row</li>
+                <li>Fill in appropriate data for these columns</li>
+                <li>Save the file and upload again</li>
+              </ol>
+            </div>
+          )}
+          
+          <div className="pt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleTryAgain} 
+              className="mt-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+            </Button>
+          </div>
+        </div>
+      </Alert>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -320,11 +433,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {renderErrorAlert()}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid w-full gap-4">
@@ -332,14 +441,16 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
             <div className="flex flex-col items-center justify-center w-full">
               <label 
                 htmlFor="csv-file" 
-                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/40 hover:bg-muted/60"
+                className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/40 hover:bg-muted/60 ${error ? 'border-destructive/50' : ''}`}
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                   <p className="mb-1 text-sm text-muted-foreground">
                     <span className="font-semibold">Click to upload</span> or drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground">CSV file with feature columns</p>
+                  <p className="text-xs text-muted-foreground">
+                    CSV file with {error?.isMissingColumns ? 'all required columns' : 'feature columns'}
+                  </p>
                 </div>
                 <Input 
                   id="csv-file" 
