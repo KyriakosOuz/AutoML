@@ -159,9 +159,14 @@ const CustomTraining: React.FC = () => {
       formData.append('task_type', datasetTaskType);
       formData.append('algorithm', customParameters.algorithm);
       formData.append('use_default_hyperparams', String(customParameters.useDefaultHyperparameters));
-      if (!customParameters.useDefaultHyperparameters) {
-        formData.append('hyperparameters', JSON.stringify(customParameters.hyperparameters));
-      }
+      
+      // CRITICAL FIX: Always send hyperparameters, whether using defaults or custom
+      const hyperparamsToSend = customParameters.useDefaultHyperparameters 
+        ? DEFAULT_HYPERPARAMETERS[customParameters.algorithm] || {}
+        : customParameters.hyperparameters;
+      
+      formData.append('hyperparameters', JSON.stringify(hyperparamsToSend));
+      
       formData.append('test_size', String(customParameters.testSize));
       formData.append('stratify', String(customParameters.stratify));
       formData.append('random_seed', String(customParameters.randomSeed));
