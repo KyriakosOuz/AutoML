@@ -11,9 +11,9 @@ import { useTraining } from '@/contexts/training/TrainingContext';
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
-  results?: ExperimentResultsType | null; // Make results optional
-  isLoading?: boolean; // Make isLoading optional
-  onReset?: () => void; // Make onReset optional but will be overridden
+  results?: ExperimentResultsType | null;
+  isLoading?: boolean;
+  onReset?: () => void;
   onRefresh?: () => void;
 }
 
@@ -22,7 +22,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   status,
   results: providedResults,
   isLoading: providedIsLoading,
-  onReset, // We'll use this only if we don't have access to the training context
+  onReset,
   onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);
@@ -115,7 +115,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     if (onRefresh) onRefresh();
   };
 
-  // Improved check for MLJAR experiments - case insensitive and matching both automl_engine and engine fields
+  // Improved check for MLJAR experiments - more comprehensive detection
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar" || 
                             results?.engine?.toLowerCase() === "mljar";
 

@@ -75,6 +75,7 @@ export interface ExperimentResults {
   hyperparameters?: Record<string, any>;
   message?: string;
   automl_engine?: string;
+  engine?: string; // Add engine property
   class_labels?: string[];
   training_type?: TrainingType;
 }

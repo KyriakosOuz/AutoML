@@ -172,7 +172,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     created_at,
     completed_at,
     hyperparameters = {},
-    automl_engine
+    automl_engine,
+    engine
   } = experimentResults;
 
   // Find best model label if available
@@ -184,12 +185,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy)
+        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.f1 || metrics.accuracy)
       };
     } else {
       return {
         name: metrics.metric_used || 'rmse',
-        value: metrics.metric_value || (metrics.rmse || metrics.mse || metrics.mae || metrics.r2_score)
+        value: metrics.metric_value || (metrics.rmse || metrics.mse || metrics.mae || metrics.r2_score || metrics.r2)
       };
     }
   };
@@ -204,7 +205,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     );
   };
 
-  // Improved visualization files filtering - explicitly exclude README and prediction files
+  // Improved visualization files filtering - explicitly define what visualization files are
   const visualizationFiles = files.filter(file => {
     // Include only visualization files
     const isVisualization = 
@@ -213,14 +214,20 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       file.file_type.includes('precision_recall') ||
       file.file_type.includes('learning_curve') ||
       file.file_type.includes('evaluation') ||
-      file.file_type.includes('feature_importance');
+      file.file_type.includes('evaluation_curve') ||
+      file.file_type.includes('feature_importance') ||
+      file.file_type.includes('distribution') ||
+      file.file_type.includes('plot');
     
     // Explicitly exclude README and prediction files
     const isExcluded = 
       file.file_type.includes('readme') || 
       file.file_type.includes('README') ||
       file.file_type.includes('prediction') ||
-      file.file_type.includes('csv');
+      file.file_type.includes('csv') ||
+      file.file_type.includes('model') ||
+      file.file_type.includes('ensemble') ||
+      file.file_type.includes('metadata');
       
     return isVisualization && !isExcluded;
   });
@@ -228,7 +235,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   // Get documentation files (README)
   const readmeFile = files.find(file => 
     file.file_type === 'readme' || 
-    file.file_type.includes('README.md')
+    file.file_type.includes('README.md') ||
+    file.file_type.includes('README')
   );
   
   // Get prediction files
@@ -236,6 +244,13 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type === 'predictions_csv' ||
     file.file_type.includes('predictions') ||
     file.file_type.includes('csv')
+  );
+
+  // Get model file
+  const modelFile = files.find(file => 
+    file.file_type === 'model' || 
+    file.file_type.includes('model') ||
+    file.file_type.includes('ensemble')
   );
 
   // Get metadata files
@@ -258,6 +273,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       return 'Evaluation Curve';
     } else if (fileType.includes('feature_importance')) {
       return 'Feature Importance';
+    } else if (fileType.includes('distribution')) {
+      return 'Distribution Plot';
     }
     return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
@@ -276,6 +293,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       : value.toFixed(4);
   };
 
+  // Use the engine from either automl_engine or engine property
+  const displayEngine = automl_engine?.toUpperCase() || engine?.toUpperCase() || 'MLJAR';
+
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -285,7 +305,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             <CardTitle className="text-xl">{experiment_name || 'MLJAR Experiment Results'}</CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            Engine: {automl_engine?.toUpperCase() || 'MLJAR'}
+            Engine: {displayEngine}
           </Badge>
         </div>
         
@@ -369,7 +389,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       <span className="text-sm font-medium">{training_time_sec?.toFixed(2)} seconds</span>
                       
                       <span className="text-sm text-muted-foreground">Engine:</span>
-                      <span className="text-sm font-medium">{automl_engine?.toUpperCase() || 'MLJAR'}</span>
+                      <span className="text-sm font-medium">{displayEngine}</span>
                       
                       {completed_at && (
                         <>
@@ -531,7 +551,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 <CardHeader>
                   <CardTitle>Model Predictions</CardTitle>
                   <CardDescription>
-                    View predictions made by the MLJAR model
+                    View predictions made by the model
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -600,7 +620,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   <CardHeader>
                     <CardTitle>Model Documentation</CardTitle>
                     <CardDescription>
-                      README file for the MLJAR model
+                      README file for the model
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -622,6 +642,64 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           <Download className="h-4 w-4 mr-2" />
                           Download README
                         </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {modelFile ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Model File</CardTitle>
+                    <CardDescription>
+                      Download the trained model file
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted p-4 rounded-md h-48 flex flex-col justify-center items-center">
+                      <Database className="h-12 w-12 text-primary/60 mb-4" />
+                      <p className="text-sm text-center mb-2">
+                        Download the complete model file
+                      </p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Use this file to make predictions with the model
+                      </p>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button asChild>
+                        <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Model
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Model File</CardTitle>
+                    <CardDescription>
+                      Download the trained model file
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted p-4 rounded-md h-48 flex flex-col justify-center items-center">
+                      <Database className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-sm text-center mb-2">
+                        Model file not available
+                      </p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        The model file may not be available for download yet
+                      </p>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button asChild disabled>
+                        <span>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Model
+                        </span>
                       </Button>
                     </div>
                   </CardContent>
@@ -658,7 +736,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </Card>
               )}
               
-              {!readmeFile && !predictionsFile && (
+              {!readmeFile && !predictionsFile && !modelFile && (
                 <div className="col-span-2 text-center py-12">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
