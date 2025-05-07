@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ColumnSchema, getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
@@ -47,6 +47,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const [isLoading, setIsLoading] = useState(true);
   const [isPredicting, setIsPredicting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [outOfRangeWarnings, setOutOfRangeWarnings] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,6 +58,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setExample({});
     setManualInputs({});
     setPrediction(null);
+    setOutOfRangeWarnings({});
 
     if (!experimentId) return;
 
@@ -76,11 +78,16 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
           // Enhanced schema with type information
           setColumnSchemas(schema.columns.filter(col => col.name !== schema.target));
           
-          // Initialize inputs with empty values
+          // Initialize inputs with default values
           const newInputs: Record<string, any> = {};
           schema.columns.forEach(col => {
             if (col.name !== schema.target) {
-              newInputs[col.name] = '';
+              // For categorical columns with defined values, use the first value as default
+              if (col.type === 'categorical' && Array.isArray(col.values) && col.values.length > 0) {
+                newInputs[col.name] = col.values[0];
+              } else {
+                newInputs[col.name] = '';
+              }
             }
           });
           setManualInputs(newInputs);
@@ -121,10 +128,28 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     setManualInputs(prev => {
       // Convert numerical values to numbers
       const columnSchema = columnSchemas.find(schema => schema.name === col);
+      
+      // Check if the input is out of range for numerical columns
       if (columnSchema?.type === 'numerical' && value !== '') {
         const numValue = parseFloat(value);
+        
+        // Check if the value is significantly outside the recommended range
+        if (!isNaN(numValue) && columnSchema.range && columnSchema.range.length === 2) {
+          const [min, max] = columnSchema.range;
+          const range = max - min;
+          const buffer = range * 0.2; // 20% buffer
+          
+          const isOutOfRange = numValue < (min - buffer) || numValue > (max + buffer);
+          
+          setOutOfRangeWarnings(prev => ({
+            ...prev,
+            [col]: isOutOfRange
+          }));
+        }
+        
         return { ...prev, [col]: isNaN(numValue) ? value : numValue };
       }
+      
       return { ...prev, [col]: value };
     });
   };
@@ -205,6 +230,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const renderInputControl = (column: ColumnSchema) => {
     const value = manualInputs[column.name] || '';
     const placeholder = example[column.name] !== undefined ? String(example[column.name]) : '';
+    const isOutOfRange = outOfRangeWarnings[column.name];
 
     if (column.type === 'categorical') {
       // If it's a categorical column with values
@@ -214,6 +240,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             onValueChange={(val) => handleInputChange(column.name, val)}
             value={value.toString()}
             disabled={isPredicting}
+            defaultValue={column.values[0]}
           >
             <SelectTrigger>
               <SelectValue placeholder={`Select ${column.name}`} />
@@ -245,21 +272,32 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     // If it's a numerical column
     if (column.type === 'numerical') {
       const hasRange = column.range && column.range.length === 2;
-      const min = hasRange ? column.range[0] : undefined;
-      const max = hasRange ? column.range[1] : undefined;
       
       return (
-        <Input
-          id={`field-${column.name}`}
-          type="number"
-          value={value}
-          onChange={(e) => handleInputChange(column.name, e.target.value)}
-          placeholder={placeholder}
-          min={min}
-          max={max}
-          step="any"
-          disabled={isPredicting}
-        />
+        <div className="space-y-2">
+          <Input
+            id={`field-${column.name}`}
+            type="number"
+            value={value}
+            onChange={(e) => handleInputChange(column.name, e.target.value)}
+            placeholder={placeholder}
+            step="any"
+            disabled={isPredicting}
+            className={isOutOfRange ? "border-amber-500" : ""}
+          />
+          {hasRange && (
+            <p className="text-xs text-muted-foreground">
+              <Info className="inline-block h-3 w-3 mr-1" />
+              Typical range: {column.range[0]} - {column.range[1]}
+            </p>
+          )}
+          {isOutOfRange && (
+            <p className="text-xs text-amber-600 flex items-center">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              This value is outside the typical training data range and may lead to less reliable predictions
+            </p>
+          )}
+        </div>
       );
     }
     
@@ -384,11 +422,6 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
                   <div key={column.name} className="space-y-2">
                     <Label htmlFor={`field-${column.name}`}>
                       {column.name}
-                      {column.type === 'numerical' && column.range && (
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          (Range: {column.range[0]} - {column.range[1]})
-                        </span>
-                      )}
                     </Label>
                     {renderInputControl(column)}
                   </div>
