@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, Loader, Info } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -14,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
+import { Input } from '@/components/ui/input';
 
 const formatTaskType = (taskType: string): string => {
   const taskTypeMap: Record<string, string> = {
@@ -56,7 +58,7 @@ interface Experiment {
   status: string;
   metrics: ExperimentMetrics;
   target_column: string;
-  auto_tune: boolean;
+  auto_train: boolean;
   dataset_id: string;
   dataset_filename: string;
   has_model: boolean;
@@ -64,7 +66,7 @@ interface Experiment {
   automl_engine?: string;
 }
 
-type TrainingMethod = 'all' | 'automl' | 'custom';
+type TrainingTab = 'automl' | 'custom' | 'all';
 type TaskType = 'all' | 'binary_classification' | 'multiclass_classification' | 'regression';
 
 interface ComparisonExperiment {
@@ -96,8 +98,9 @@ const ExperimentsTab: React.FC = () => {
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   
-  const [trainingMethod, setTrainingMethod] = useState<TrainingMethod>('all');
+  const [activeTab, setActiveTab] = useState<TrainingTab>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const [comparisonResults, setComparisonResults] = useState<ComparisonExperiment[]>([]);
   const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
@@ -120,11 +123,11 @@ const ExperimentsTab: React.FC = () => {
     return () => {
       window.removeEventListener('refresh-experiments', handleRefreshExperiments);
     };
-  }, [trainingMethod, taskType]);
+  }, [activeTab, taskType, searchTerm]);
 
   useEffect(() => {
     setSelectedExperiments([]);
-  }, [trainingMethod, taskType]);
+  }, [activeTab, taskType]);
 
   const fetchExperiments = async () => {
     try {
@@ -134,14 +137,18 @@ const ExperimentsTab: React.FC = () => {
       
       const url = new URL(`${API_BASE_URL}/experiments/search-experiments/`);
       
-      if (trainingMethod === 'automl') {
-        url.searchParams.append("engine", "mljar,h2o");
-      } else if (trainingMethod === 'custom') {
-        url.searchParams.append("engine", "custom");
+      if (activeTab === 'automl') {
+        url.searchParams.append("auto_train", "true");
+      } else if (activeTab === 'custom') {
+        url.searchParams.append("auto_train", "false");
       }
       
       if (taskType !== 'all') {
         url.searchParams.append("task_type", taskType);
+      }
+      
+      if (searchTerm) {
+        url.searchParams.append("search", searchTerm);
       }
       
       url.searchParams.append("limit", "20");
@@ -241,7 +248,7 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    if (trainingMethod === 'all') {
+    if (activeTab === 'all') {
       toast({
         title: "Filter Required",
         description: "Please filter experiments by training method before comparing.",
@@ -345,64 +352,93 @@ const ExperimentsTab: React.FC = () => {
     setSelectedExperimentId(null);
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+  };
+
   const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
     if (typeof value === 'undefined') return 'N/A';
     return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
   const isCompareButtonEnabled = () => {
-    return trainingMethod !== 'all' && selectedExperiments.length >= 2;
+    return activeTab !== 'all' && selectedExperiments.length >= 2;
   };
 
-  const FilterButtons = () => (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button 
-          variant={trainingMethod === 'all' ? "default" : "outline"} 
-          onClick={() => setTrainingMethod('all')}
-        >
-          All
-        </Button>
-        <Button 
-          variant={trainingMethod === 'automl' ? "default" : "outline"} 
-          onClick={() => setTrainingMethod('automl')}
-        >
-          AutoML
-        </Button>
-        <Button 
-          variant={trainingMethod === 'custom' ? "default" : "outline"} 
-          onClick={() => setTrainingMethod('custom')}
-        >
-          Custom Training
-        </Button>
-      </div>
+  const renderTabButtons = () => (
+    <div className="flex gap-2">
+      <Button 
+        variant={activeTab === 'all' ? "default" : "outline"} 
+        onClick={() => setActiveTab('all')}
+      >
+        All
+      </Button>
+      <Button 
+        variant={activeTab === 'automl' ? "default" : "outline"} 
+        onClick={() => setActiveTab('automl')}
+      >
+        AutoML
+      </Button>
+      <Button 
+        variant={activeTab === 'custom' ? "default" : "outline"} 
+        onClick={() => setActiveTab('custom')}
+      >
+        Custom Training
+      </Button>
+    </div>
+  );
 
-      <div className="flex gap-2">
-        <Button 
-          variant={taskType === 'all' ? "default" : "outline"} 
-          onClick={() => setTaskType('all')}
+  const renderTaskTypeFilters = () => (
+    <div className="flex gap-2">
+      <Button 
+        variant={taskType === 'all' ? "default" : "outline"} 
+        onClick={() => setTaskType('all')}
+      >
+        All Types
+      </Button>
+      <Button 
+        variant={taskType === 'binary_classification' ? "default" : "outline"} 
+        onClick={() => setTaskType('binary_classification')}
+      >
+        Binary Classification
+      </Button>
+      <Button 
+        variant={taskType === 'multiclass_classification' ? "default" : "outline"} 
+        onClick={() => setTaskType('multiclass_classification')}
+      >
+        Multiclass Classification
+      </Button>
+      <Button 
+        variant={taskType === 'regression' ? "default" : "outline"} 
+        onClick={() => setTaskType('regression')}
+      >
+        Regression
+      </Button>
+    </div>
+  );
+
+  const renderSearchBar = () => (
+    <div className="relative w-64">
+      <Input
+        type="text"
+        placeholder="Search experiments..."
+        value={searchTerm}
+        onChange={handleSearchChange}
+        className="pl-8 pr-8"
+      />
+      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      {searchTerm && (
+        <button 
+          onClick={handleClearSearch}
+          className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
         >
-          All Types
-        </Button>
-        <Button 
-          variant={taskType === 'binary_classification' ? "default" : "outline"} 
-          onClick={() => setTaskType('binary_classification')}
-        >
-          Binary Classification
-        </Button>
-        <Button 
-          variant={taskType === 'multiclass_classification' ? "default" : "outline"} 
-          onClick={() => setTaskType('multiclass_classification')}
-        >
-          Multiclass Classification
-        </Button>
-        <Button 
-          variant={taskType === 'regression' ? "default" : "outline"} 
-          onClick={() => setTaskType('regression')}
-        >
-          Regression
-        </Button>
-      </div>
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 
@@ -435,7 +471,7 @@ const ExperimentsTab: React.FC = () => {
   }
 
   const renderEmptyState = () => {
-    if (trainingMethod !== 'all' || taskType !== 'all') {
+    if (activeTab !== 'all' || taskType !== 'all' || searchTerm) {
       return (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -444,7 +480,7 @@ const ExperimentsTab: React.FC = () => {
             <p className="text-center text-gray-500 mb-4 max-w-md">
               No experiments match your current filter criteria. Try different filters or create a new experiment.
             </p>
-            <Button variant="outline" onClick={() => { setTrainingMethod('all'); setTaskType('all'); }}>
+            <Button variant="outline" onClick={() => { setActiveTab('all'); setTaskType('all'); setSearchTerm(''); }}>
               Clear Filters
             </Button>
           </CardContent>
@@ -511,8 +547,21 @@ const ExperimentsTab: React.FC = () => {
         <CardHeader>
           <CardTitle>Filter Experiments</CardTitle>
         </CardHeader>
-        <CardContent>
-          <FilterButtons />
+        <CardContent className="space-y-6">
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-sm font-medium">Experiment Type</h3>
+            {renderTabButtons()}
+          </div>
+          
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-sm font-medium">Task Type</h3>
+            {renderTaskTypeFilters()}
+          </div>
+          
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-sm font-medium">Search</h3>
+            {renderSearchBar()}
+          </div>
         </CardContent>
       </Card>
 
@@ -521,11 +570,11 @@ const ExperimentsTab: React.FC = () => {
           <div className="flex gap-2 text-sm text-muted-foreground">
             <Info className="h-5 w-5 flex-shrink-0" />
             <p>
-              Browse and manage your machine learning experiments here. Filter experiments by training method and task type,
-              compare multiple experiments, or view detailed results for each experiment. To compare experiments, first select either AutoML
-              or Custom Training method (mixing comparison between methods is not allowed), then select your task type. You can then select multiple
-              experiments to compare by clicking the compare icon. Click on the view icon to see full metrics,
-              or the delete icon to remove an experiment.
+              Browse and manage your machine learning experiments here. Filter experiments by training method (AutoML or Custom) 
+              and task type, search by name, compare multiple experiments, or view detailed results for each experiment. 
+              To compare experiments, first select either AutoML or Custom Training method (mixing comparison between methods is not allowed). 
+              You can then select multiple experiments to compare by clicking the compare icon. 
+              Click on the view icon to see full metrics, or the delete icon to remove an experiment.
             </p>
           </div>
         </CardContent>
@@ -545,7 +594,7 @@ const ExperimentsTab: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Algorithm</TableHead>
+                  <TableHead>Algorithm/Engine</TableHead>
                   <TableHead>Metrics</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -553,12 +602,21 @@ const ExperimentsTab: React.FC = () => {
               <TableBody>
                 {experiments.map((experiment) => {
                   const isRegression = experiment.task_type === 'regression';
+                  const algorithmInfo = experiment.auto_train 
+                    ? experiment.automl_engine 
+                    : experiment.algorithm_choice;
+                  
                   return (
                     <TableRow key={experiment.id}>
                       <TableCell>{experiment.experiment_name}</TableCell>
                       <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
-                      <TableCell>{formatTaskType(experiment.task_type)}</TableCell>
-                      <TableCell>{experiment.algorithm_choice}</TableCell>
+                      <TableCell>
+                        {formatTaskType(experiment.task_type)}
+                        <Badge variant="outline" className="ml-2">
+                          {experiment.auto_train ? 'AutoML' : 'Custom'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{algorithmInfo}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           {isRegression ? (

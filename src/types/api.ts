@@ -1,4 +1,5 @@
 
+
 interface ApiResponse<T = any> {
   status: 'success' | 'error';
   message?: string;
@@ -24,7 +25,7 @@ interface ExperimentListResponse {
       rmse?: number;
     };
     target_column: string;
-    auto_tune: boolean;
+    auto_train: boolean; // Updated: Changed from auto_tune to auto_train
     dataset_id: string;
     dataset_filename: string;
     has_model: boolean;
@@ -79,6 +80,7 @@ interface ExperimentDetailResponse {
   hyperparameters?: Record<string, any>;
   class_labels?: string[];
   automl_engine?: string;
+  auto_train?: boolean; // Added: field to indicate AutoML vs Custom
 }
 
 interface ExperimentSearchParams {
@@ -86,6 +88,10 @@ interface ExperimentSearchParams {
   task_type?: string;
   limit?: number;
   offset?: number;
+  auto_train?: boolean; // Added: parameter to filter by experiment type
+  search?: string; // Added: parameter to search by name
+  metric_name?: string; // Added: parameter for metric filtering
+  metric_threshold?: number; // Added: parameter for metric threshold
 }
 
 export type { 
