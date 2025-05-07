@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -34,6 +35,9 @@ import {
 // Import the components we need for balance strategy and method selection
 import BalanceStrategySelector, { BalanceStrategy } from './preprocessing/BalanceStrategySelector';
 import BalanceMethodSelector, { BalanceMethod } from './preprocessing/BalanceMethodSelector';
+// Import the class imbalance components
+import ClassImbalanceAlert from './preprocessing/ClassImbalanceAlert';
+import ClassDistributionChart from './preprocessing/ClassDistributionChart';
 // Import method descriptions
 import { methodDescriptions } from './preprocessing/MethodDescriptions';
 
@@ -46,11 +50,15 @@ const PreprocessingOptions: React.FC = () => {
     taskType,
     updateState,
     columnsToKeep,
-    overview
+    overview,
+    classImbalanceData,
+    setClassImbalanceData
   } = useDataset();
   
   const [previewData, setPreviewData] = useState<any>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  // State for tracking class imbalance check
+  const [isCheckingImbalance, setIsCheckingImbalance] = useState(false);
   
   // Extract information about columns from preview data response
   const numericalColumns = previewData?.numerical_columns || [];
@@ -64,6 +72,9 @@ const PreprocessingOptions: React.FC = () => {
     console.log('PreprocessingOptions - numerical_columns:', numericalColumns);
     console.log('PreprocessingOptions - categorical_columns:', categoricalColumns);
   }, [previewData, columnsToKeep, overview?.data_types, numericalColumns, categoricalColumns]);
+  
+  // Check if we're dealing with a classification task
+  const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
   
   // Fetch preview data to get accurate column information
   useEffect(() => {
@@ -87,6 +98,49 @@ const PreprocessingOptions: React.FC = () => {
     
     fetchPreviewData();
   }, [datasetId]);
+  
+  // Effect to check for class imbalance when the component mounts
+  useEffect(() => {
+    const checkClassImbalance = async () => {
+      if (!datasetId || !isClassification || isCheckingImbalance) return;
+
+      try {
+        setIsCheckingImbalance(true);
+        console.log('Checking class imbalance for dataset:', datasetId);
+        
+        const response = await datasetApi.checkClassImbalance(datasetId);
+        console.log('Class imbalance response:', response);
+        
+        const imbalanceData = response.data || response;
+        
+        // Update the class imbalance data in the context
+        setClassImbalanceData(imbalanceData);
+        
+        // If imbalance is detected and there's a recommendation, update the balance strategy
+        if (imbalanceData.needs_balancing && imbalanceData.recommendation) {
+          const lowerCaseRec = imbalanceData.recommendation.toLowerCase();
+          
+          if (lowerCaseRec.includes('smote')) {
+            setBalanceStrategy('oversample');
+            setBalanceMethod('smote');
+          } else if (lowerCaseRec.includes('oversample')) {
+            setBalanceStrategy('oversample');
+            setBalanceMethod('random');
+          } else if (lowerCaseRec.includes('undersample')) {
+            setBalanceStrategy('undersample');
+            setBalanceMethod('random');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking class imbalance:', error);
+        setDebugInfo('Failed to check class imbalance: ' + (error instanceof Error ? error.message : String(error)));
+      } finally {
+        setIsCheckingImbalance(false);
+      }
+    };
+
+    checkClassImbalance();
+  }, [datasetId, isClassification, setClassImbalanceData]);
 
   // Determine if normalization should be enabled based on preview data
   const hasNumericalToNormalize = useMemo(() => {
@@ -132,8 +186,6 @@ const PreprocessingOptions: React.FC = () => {
   // Debug message for UI feedback
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
-  
   // Feature type detection for appropriate balancing methods using direct API response
   const featureTypes = useMemo(() => {
     if (!previewData) {
@@ -236,6 +288,27 @@ const PreprocessingOptions: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Loading and Error States */}
+          {isCheckingImbalance && (
+            <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
+              <InfoIcon className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">Analyzing class distribution...</AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Class Imbalance Alert - Only for classification tasks */}
+          {isClassification && classImbalanceData && !isCheckingImbalance && (
+            <>
+              <ClassImbalanceAlert classImbalanceData={classImbalanceData} />
+              {/* Display chart for class distribution */}
+              <ClassDistributionChart 
+                classData={classImbalanceData.class_distribution} 
+                targetColumn={classImbalanceData.target_column} 
+              />
+              <Separator className="my-6" />
+            </>
+          )}
+          
           {/* Normalization/Scaling Section */}
           <div>
             <h3 className="text-sm font-medium mb-2 flex items-center">
