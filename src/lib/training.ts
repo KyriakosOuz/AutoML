@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -100,13 +99,21 @@ export const getExperimentResults = async (
 };
 
 // Get prediction schema for an experiment
+export interface ColumnSchema {
+  name: string;
+  type: 'categorical' | 'numerical';
+  values?: string[] | 'too_many';
+  range?: [number, number];
+}
+
 export interface PredictionSchema {
-  features: string[];
-  target_column: string;
-  sample_row: Record<string, any>;
-  columns: string[];
+  columns: ColumnSchema[];
   target: string;
   example: Record<string, any>;
+  // Maintain backward compatibility with old API response
+  features?: string[];
+  target_column?: string;
+  sample_row?: Record<string, any>;
 }
 
 export const getPredictionSchema = async (experimentId: string): Promise<PredictionSchema> => {
@@ -125,16 +132,23 @@ export const getPredictionSchema = async (experimentId: string): Promise<Predict
     }
     const data = await response.json();
     console.log('[API] Prediction schema:', data);
-    // Map the response to the expected interface format if needed
+    
+    // Map the response to the expected interface format
     const payload = data.data ?? data;
+    
+    // Return the unified schema format
     const result: PredictionSchema = {
+      // Handle new format
+      columns: payload.columns || [],
+      target: payload.target || '',
+      example: payload.example || {},
+      
+      // Handle legacy format for backward compatibility
       features: payload.features || [],
-      target_column: payload.target_column || '',
-      sample_row: payload.sample_row || {},
-      columns: payload.columns || payload.features || [],
-      target: payload.target || payload.target_column || '',
-      example: payload.example || payload.sample_row || {}
+      target_column: payload.target_column || payload.target || '',
+      sample_row: payload.sample_row || payload.example || {}
     };
+    
     return result;
   } catch (error) {
     console.error('[API] Error in getPredictionSchema:', error);

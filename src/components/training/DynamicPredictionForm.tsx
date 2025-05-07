@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,22 +6,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPredictionSchema } from '@/lib/training';
+import { ColumnSchema, getPredictionSchema } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import BatchPredictionView from './prediction/BatchPredictionView';
 import { ManualPredictionResponse } from './prediction/PredictionResponse.types';
 import { ProbabilitiesCell } from './prediction/table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface DynamicPredictionFormProps {
   experimentId: string;
 }
 
 const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimentId }) => {
-  const [columns, setColumns] = useState<string[]>([]);
+  const [columnSchemas, setColumnSchemas] = useState<ColumnSchema[]>([]);
   const [target, setTarget] = useState<string>('');
   const [example, setExample] = useState<Record<string, any>>({});
   const [manualInputs, setManualInputs] = useState<Record<string, any>>({});
@@ -33,7 +52,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    setColumns([]);
+    setColumnSchemas([]);
     setTarget('');
     setExample({});
     setManualInputs({});
@@ -41,19 +60,48 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
     if (!experimentId) return;
 
-    // Always fetch the prediction schema directly from the backend
     const fetchSchema = async () => {
       try {
         const schema = await getPredictionSchema(experimentId);
-        setColumns(Array.isArray(schema.columns) ? schema.columns : []);
-        setTarget(schema.target ?? '');
-        setExample(schema.example ?? {});
+        console.log('Fetched schema:', schema);
+
+        // Set the target column
+        setTarget(schema.target || schema.target_column || '');
         
-        const newInputs: Record<string, any> = {};
-        (schema.columns ?? []).forEach(col => {
-          if (col !== schema.target) newInputs[col] = '';
-        });
-        setManualInputs(newInputs);
+        // Set example data
+        setExample(schema.example || schema.sample_row || {});
+        
+        // Process column schemas
+        if (Array.isArray(schema.columns) && schema.columns.length > 0) {
+          // Enhanced schema with type information
+          setColumnSchemas(schema.columns.filter(col => col.name !== schema.target));
+          
+          // Initialize inputs with empty values
+          const newInputs: Record<string, any> = {};
+          schema.columns.forEach(col => {
+            if (col.name !== schema.target) {
+              newInputs[col.name] = '';
+            }
+          });
+          setManualInputs(newInputs);
+        } else {
+          // Legacy schema format - construct basic column schemas
+          const legacyColumns = (schema.features || [])
+            .filter(feat => feat !== schema.target_column)
+            .map(feat => ({
+              name: feat,
+              type: 'categorical' as const, // Default to categorical if no type info
+            }));
+            
+          setColumnSchemas(legacyColumns);
+          
+          // Initialize inputs with empty values
+          const newInputs: Record<string, any> = {};
+          legacyColumns.forEach(col => {
+            newInputs[col.name] = '';
+          });
+          setManualInputs(newInputs);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to fetch prediction schema';
         setError(msg);
@@ -70,7 +118,15 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   }, [experimentId, toast]);
 
   const handleInputChange = (col: string, value: string) => {
-    setManualInputs(prev => ({ ...prev, [col]: value }));
+    setManualInputs(prev => {
+      // Convert numerical values to numbers
+      const columnSchema = columnSchemas.find(schema => schema.name === col);
+      if (columnSchema?.type === 'numerical' && value !== '') {
+        const numValue = parseFloat(value);
+        return { ...prev, [col]: isNaN(numValue) ? value : numValue };
+      }
+      return { ...prev, [col]: value };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,8 +140,14 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
-        const numValue = Number(value);
-        processedInputs[key] = isNaN(numValue) ? value : numValue;
+        // Ensure numeric values are sent as numbers
+        const columnSchema = columnSchemas.find(schema => schema.name === key);
+        if (columnSchema?.type === 'numerical' && typeof value === 'string') {
+          const numValue = Number(value);
+          processedInputs[key] = isNaN(numValue) ? value : numValue;
+        } else {
+          processedInputs[key] = value;
+        }
       }
       
       // Use only experiment_id and input_values - let backend handle model loading
@@ -137,6 +199,80 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     } finally {
       setIsPredicting(false);
     }
+  };
+
+  // Render the appropriate input control based on column type
+  const renderInputControl = (column: ColumnSchema) => {
+    const value = manualInputs[column.name] || '';
+    const placeholder = example[column.name] !== undefined ? String(example[column.name]) : '';
+
+    if (column.type === 'categorical') {
+      // If it's a categorical column with values
+      if (Array.isArray(column.values) && column.values.length > 0) {
+        return (
+          <Select 
+            onValueChange={(val) => handleInputChange(column.name, val)}
+            value={value.toString()}
+            disabled={isPredicting}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${column.name}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {column.values.map((val) => (
+                <SelectItem key={val} value={val}>
+                  {val}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      } 
+      // If it's a categorical column with too many values or no values specified
+      return (
+        <Input
+          id={`field-${column.name}`}
+          value={value}
+          onChange={(e) => handleInputChange(column.name, e.target.value)}
+          placeholder={column.values === 'too_many' 
+            ? `Enter category (many options)` 
+            : placeholder}
+          disabled={isPredicting}
+        />
+      );
+    } 
+    
+    // If it's a numerical column
+    if (column.type === 'numerical') {
+      const hasRange = column.range && column.range.length === 2;
+      const min = hasRange ? column.range[0] : undefined;
+      const max = hasRange ? column.range[1] : undefined;
+      
+      return (
+        <Input
+          id={`field-${column.name}`}
+          type="number"
+          value={value}
+          onChange={(e) => handleInputChange(column.name, e.target.value)}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step="any"
+          disabled={isPredicting}
+        />
+      );
+    }
+    
+    // Default fallback (should not reach here if schema is correct)
+    return (
+      <Input
+        id={`field-${column.name}`}
+        value={value}
+        onChange={(e) => handleInputChange(column.name, e.target.value)}
+        placeholder={placeholder}
+        disabled={isPredicting}
+      />
+    );
   };
 
   const renderPredictionValue = (prediction: ManualPredictionResponse) => {
@@ -208,7 +344,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  if (!columns.length || !target) {
+  if (!columnSchemas.length || !target) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -218,7 +354,13 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  const inputColumns = columns.filter(col => col !== target);
+  // Helper to check if all inputs are filled
+  const areAllInputsFilled = () => {
+    return columnSchemas.every(col => {
+      const value = manualInputs[col.name];
+      return value !== undefined && value !== '';
+    });
+  };
 
   return (
     <Tabs defaultValue="manual" className="w-full">
@@ -238,16 +380,17 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {inputColumns.map(col => (
-                  <div key={col} className="space-y-2">
-                    <Label htmlFor={`field-${col}`}>{col}</Label>
-                    <Input
-                      id={`field-${col}`}
-                      placeholder={String(example[col] ?? '')}
-                      value={manualInputs[col] || ''}
-                      onChange={(e) => handleInputChange(col, e.target.value)}
-                      disabled={isPredicting}
-                    />
+                {columnSchemas.map(column => (
+                  <div key={column.name} className="space-y-2">
+                    <Label htmlFor={`field-${column.name}`}>
+                      {column.name}
+                      {column.type === 'numerical' && column.range && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          (Range: {column.range[0]} - {column.range[1]})
+                        </span>
+                      )}
+                    </Label>
+                    {renderInputControl(column)}
                   </div>
                 ))}
               </div>
@@ -271,7 +414,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
               <Button
                 type="submit"
                 className="mt-6 w-full"
-                disabled={isPredicting || inputColumns.some(col => manualInputs[col] === '')}
+                disabled={isPredicting || !areAllInputsFilled()}
               >
                 {isPredicting ? (
                   <>
