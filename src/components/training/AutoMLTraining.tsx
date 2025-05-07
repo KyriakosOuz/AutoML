@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -96,16 +97,15 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Fix: Call automlTrain with separate arguments, not as an object
-      // Match the expected 6 parameters
+      // Fix: The automlTrain function expects 6 parameters according to the error
+      // Pass experimentName as part of the sixth parameter (options object)
       const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
         testSize,
         stratify,
-        randomSeed,
-        experimentName // This is the 7th parameter that's causing the error
+        { randomSeed, experimentName } // Combine randomSeed and experimentName into options object
       );
 
       if (result && result.experiment_id) {
