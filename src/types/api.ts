@@ -1,5 +1,4 @@
 
-
 interface ApiResponse<T = any> {
   status: 'success' | 'error';
   message?: string;
@@ -17,6 +16,7 @@ interface ExperimentListResponse {
     metrics: {
       accuracy?: number;
       f1_score?: number;
+      f1?: number; // Added this field for AutoML engines
       precision?: number;
       recall?: number;
       r2?: number;
@@ -25,7 +25,7 @@ interface ExperimentListResponse {
       rmse?: number;
     };
     target_column: string;
-    auto_train: boolean; // Updated: Changed from auto_tune to auto_train
+    auto_train: boolean; 
     dataset_id: string;
     dataset_filename: string;
     has_model: boolean;
@@ -57,6 +57,7 @@ interface ExperimentDetailResponse {
   metrics: {
     accuracy?: number;
     f1_score?: number;
+    f1?: number; // Added this field for AutoML engines
     precision?: number;
     recall?: number;
     auc?: number;
@@ -80,7 +81,7 @@ interface ExperimentDetailResponse {
   hyperparameters?: Record<string, any>;
   class_labels?: string[];
   automl_engine?: string;
-  auto_train?: boolean; // Added: field to indicate AutoML vs Custom
+  auto_train?: boolean;
 }
 
 interface ExperimentSearchParams {
@@ -88,10 +89,10 @@ interface ExperimentSearchParams {
   task_type?: string;
   limit?: number;
   offset?: number;
-  auto_train?: boolean; // Added: parameter to filter by experiment type
-  search?: string; // Added: parameter to search by name
-  metric_name?: string; // Added: parameter for metric filtering
-  metric_threshold?: number; // Added: parameter for metric threshold
+  auto_train?: boolean;
+  search?: string;
+  metric_name?: string;
+  metric_threshold?: number;
 }
 
 export type { 

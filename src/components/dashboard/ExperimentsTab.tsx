@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +38,7 @@ interface ClassificationReport {
 interface ExperimentMetrics {
   accuracy?: number;
   f1_score?: number;
+  f1?: number; // Added this field for AutoML engines
   precision?: number;
   recall?: number;
   confusion_matrix?: number[][];
@@ -79,6 +79,7 @@ interface ComparisonExperiment {
   metrics: {
     accuracy?: number;
     f1_score?: number;
+    f1?: number;
     precision?: number;
     recall?: number;
     auc?: number;
@@ -101,6 +102,7 @@ const ExperimentsTab: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TrainingTab>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [comparisonResults, setComparisonResults] = useState<ComparisonExperiment[]>([]);
   const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
@@ -123,7 +125,7 @@ const ExperimentsTab: React.FC = () => {
     return () => {
       window.removeEventListener('refresh-experiments', handleRefreshExperiments);
     };
-  }, [activeTab, taskType, searchTerm]);
+  }, [activeTab, taskType, searchQuery]); // Changed from searchTerm to searchQuery
 
   useEffect(() => {
     setSelectedExperiments([]);
@@ -147,8 +149,8 @@ const ExperimentsTab: React.FC = () => {
         url.searchParams.append("task_type", taskType);
       }
       
-      if (searchTerm) {
-        url.searchParams.append("search", searchTerm);
+      if (searchQuery) {
+        url.searchParams.append("search", searchQuery);
       }
       
       url.searchParams.append("limit", "20");
@@ -356,8 +358,24 @@ const ExperimentsTab: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
+  const handleSearchSubmit = () => {
+    setSearchQuery(searchTerm);
+  };
+  
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
   const handleClearSearch = () => {
     setSearchTerm('');
+    setSearchQuery('');
+  };
+
+  // Helper function to get F1 score from either f1 or f1_score fields
+  const getF1Score = (metrics: ExperimentMetrics): number | undefined => {
+    return metrics.f1_score !== undefined ? metrics.f1_score : metrics.f1;
   };
 
   const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -422,23 +440,37 @@ const ExperimentsTab: React.FC = () => {
   );
 
   const renderSearchBar = () => (
-    <div className="relative w-64">
+    <div className="relative flex w-full max-w-sm items-center">
       <Input
         type="text"
         placeholder="Search experiments..."
         value={searchTerm}
         onChange={handleSearchChange}
-        className="pl-8 pr-8"
+        onKeyPress={handleKeyPress}
+        className="pl-8 pr-24"
       />
       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-      {searchTerm && (
-        <button 
-          onClick={handleClearSearch}
-          className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+      <div className="absolute right-2 top-1 flex gap-1">
+        {searchTerm && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearSearch}
+            className="h-7 px-2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <Button 
+          variant="default" 
+          size="sm" 
+          onClick={handleSearchSubmit}
+          className="h-7"
         >
-          <X className="h-4 w-4" />
-        </button>
-      )}
+          <Search className="h-4 w-4 mr-1" />
+          Search
+        </Button>
+      </div>
     </div>
   );
 
@@ -594,7 +626,7 @@ const ExperimentsTab: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Algorithm/Engine</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead>Metrics</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -602,9 +634,6 @@ const ExperimentsTab: React.FC = () => {
               <TableBody>
                 {experiments.map((experiment) => {
                   const isRegression = experiment.task_type === 'regression';
-                  const algorithmInfo = experiment.auto_train 
-                    ? experiment.automl_engine 
-                    : experiment.algorithm_choice;
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -612,11 +641,17 @@ const ExperimentsTab: React.FC = () => {
                       <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
                       <TableCell>
                         {formatTaskType(experiment.task_type)}
+                      </TableCell>
+                      <TableCell>
+                        {experiment.auto_train ? (
+                          <span>{experiment.automl_engine || 'Unknown Engine'}</span>
+                        ) : (
+                          <span>{experiment.algorithm_choice}</span>
+                        )}
                         <Badge variant="outline" className="ml-2">
                           {experiment.auto_train ? 'AutoML' : 'Custom'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{algorithmInfo}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           {isRegression ? (
@@ -629,7 +664,7 @@ const ExperimentsTab: React.FC = () => {
                           ) : (
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
-                              <div>F1 Score: {renderMetricValue(experiment.metrics?.f1_score)}</div>
+                              <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
                               <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
                               <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>

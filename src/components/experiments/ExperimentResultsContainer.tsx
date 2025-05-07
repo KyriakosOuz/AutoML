@@ -60,6 +60,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       
       if (data) {
         console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
+        
+        // Ensure metrics are correctly mapped (handle both f1 and f1_score)
+        if (data.metrics && data.metrics.f1 !== undefined && data.metrics.f1_score === undefined) {
+          data.metrics.f1_score = data.metrics.f1;
+        }
+        
         setResults(data);
       } else {
         console.log("[ExperimentResultsContainer] No results returned from API");
