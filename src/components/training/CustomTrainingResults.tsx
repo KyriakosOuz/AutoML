@@ -4,7 +4,8 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle
+  CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { 
   Tabs, 
@@ -27,7 +28,8 @@ import {
   Calendar,
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { 
   Table,
@@ -117,6 +119,27 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     completed_at
   } = experimentResults;
 
+  // Filter files to show only the first model file and hide label encoder files
+  const filteredFiles = files.filter((file, index, self) => {
+    // Exclude all label encoder files
+    if (file.file_type.includes('label_encoder')) {
+      return false;
+    }
+
+    // For model files, only include the first one
+    if (file.file_type === 'model' || file.file_type.includes('model')) {
+      // Get the index of the first model file
+      const firstModelIndex = self.findIndex(f => 
+        f.file_type === 'model' || f.file_type.includes('model')
+      );
+      // Only include if this is the first model file
+      return index === firstModelIndex;
+    }
+
+    // Include all other files
+    return true;
+  });
+
   // Helper function to filter files by type and check for specific visualization types
   const isVisualizationFile = (file: any) => {
     const visualTypes = [
@@ -131,18 +154,13 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
            !nonVisualTypes.some(type => file.file_type.includes(type));
   };
 
-  // Get model files - make sure to include only unique model files
-  const modelFiles = files
-    .filter(file => file.file_type === 'model' || file.file_type.includes('model'))
-    // Remove duplicates based on file_url
-    .filter((file, index, self) => 
-      index === self.findIndex(f => f.file_url === file.file_url)
-    );
-  
-  const firstModelFile = modelFiles.length > 0 ? modelFiles[0] : null;
+  // Get model files - make sure to include only the first model file
+  const firstModelFile = filteredFiles.find(file => 
+    file.file_type === 'model' || file.file_type.includes('model')
+  );
   
   // Get visualization files (excluding models and reports)
-  const visualizationFiles = files.filter(isVisualizationFile);
+  const visualizationFiles = filteredFiles.filter(isVisualizationFile);
 
   // Check if task_type exists before using it
   const isClassification = task_type ? task_type.includes('classification') : false;
@@ -177,14 +195,14 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
     }
   }
 
-  // Calculate pagination for files
-  const totalFiles = files.length;
+  // Calculate pagination for filtered files
+  const totalFiles = filteredFiles.length;
   const totalFilesPages = Math.ceil(totalFiles / filesPerPage);
   
-  // Get current page of files
+  // Get current page of filtered files
   const indexOfLastFile = currentFilesPage * filesPerPage;
   const indexOfFirstFile = indexOfLastFile - filesPerPage;
-  const currentFiles = files.slice(indexOfFirstFile, indexOfLastFile);
+  const currentFiles = filteredFiles.slice(indexOfFirstFile, indexOfLastFile);
   
   // Change page
   const goToFilesPage = (pageNumber: number) => {
@@ -658,6 +676,20 @@ const CustomTrainingResults: React.FC<CustomTrainingResultsProps> = ({
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      <CardFooter className="flex justify-between border-t p-4">
+        <Button variant="outline" onClick={onReset}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Run New Experiment
+        </Button>
+        
+        {completed_at && (
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            Completed: {new Date(completed_at).toLocaleString()}
+          </div>
+        )}
+      </CardFooter>
     </Card>
   );
 };

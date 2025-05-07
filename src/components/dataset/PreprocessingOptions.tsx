@@ -6,8 +6,7 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle, 
-  CardFooter 
+  CardTitle 
 } from '@/components/ui/card';
 import { 
   Select, 
@@ -522,184 +521,163 @@ const PreprocessingOptions: React.FC = () => {
   }
 
   return (
-    <Card className="w-full mt-6">
-      <CardHeader>
-        <CardTitle className="text-xl text-primary">Preprocess Dataset</CardTitle>
-        <CardDescription>
-          Apply normalization and balancing techniques to prepare your data for modeling
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-            <Sparkles className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
-          </Alert>
-        )}
-        
-        {debugInfo && (
-          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-            <InfoIcon className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">{debugInfo}</AlertDescription>
-          </Alert>
-        )}
-        
-        {isLoadingPreview && (
-          <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-            <InfoIcon className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">Loading dataset preview data...</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-6">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-base">
+            <Sparkles className="h-4 w-4 mr-2 text-primary" />
+            Preprocessing Options
+          </CardTitle>
+          <CardDescription>
+            Apply transformations to prepare your data for better model performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Normalization/Scaling Section */}
           <div>
-            <h4 className="font-medium mb-2">Normalization</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Select
-                      value={normalizationMethod}
-                      onValueChange={(value) => setNormalizationMethod(value as NormalizationMethod)}
-                      disabled={!hasNumericalToNormalize || isLoadingPreview}
-                    >
-                      <SelectTrigger className="w-full" aria-disabled={!hasNumericalToNormalize || isLoadingPreview}>
-                        <SelectValue placeholder="Select normalization method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minmax">Min-Max Scaling</SelectItem>
-                        <SelectItem value="standard">Standard Scaling (Z-score)</SelectItem>
-                        <SelectItem value="robust">Robust Scaling</SelectItem>
-                        <SelectItem value="log">Log Transformation</SelectItem>
-                        <SelectItem value="skip">Skip Normalization</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                {!hasNumericalToNormalize && (
-                  <TooltipContent>
-                    <p>Normalization is disabled because no numerical features are selected.</p>
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              Feature Scaling
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="h-4 w-4 ml-1 text-gray-400" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      Scaling puts numerical features on a similar scale for better model performance
+                    </p>
                   </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            <p className="text-xs text-gray-500 mt-1">
-              {normalizationMethod === 'minmax' && 'Scales features to a range of [0,1]'}
-              {normalizationMethod === 'standard' && 'Transforms features to have mean=0 and variance=1'}
-              {normalizationMethod === 'robust' && 'Uses median and IQR, less sensitive to outliers'}
-              {normalizationMethod === 'log' && 'Applies log transformation to handle skewed data'}
-              {normalizationMethod === 'skip' && 'No normalization will be applied'}
-            </p>
+                </Tooltip>
+              </TooltipProvider>
+            </h3>
+            <Select 
+              value={normalizationMethod} 
+              onValueChange={(v) => setNormalizationMethod(v as NormalizationMethod)}
+              disabled={!hasNumericalToNormalize || isLoading}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select scaling method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minmax">Min-Max Scaling (0-1 range)</SelectItem>
+                <SelectItem value="standard">Standard Scaling (Z-score)</SelectItem>
+                <SelectItem value="robust">Robust Scaling (handles outliers)</SelectItem>
+                <SelectItem value="log">Log Transformation</SelectItem>
+                <SelectItem value="skip">Skip Scaling</SelectItem>
+              </SelectContent>
+            </Select>
+            {!hasNumericalToNormalize && (
+              <p className="text-xs text-amber-600 mt-1">
+                No numerical features detected for scaling
+              </p>
+            )}
           </div>
           
           <Separator />
           
-          <div>
-            <h4 className="font-medium mb-2">Balance Classes</h4>
-            
-            {!isClassification && (
-              <Alert className="mb-4 bg-amber-50 border-amber-200">
-                <InfoIcon className="h-4 w-4 text-amber-500" />
-                <AlertDescription className="text-amber-700">
-                  Class balancing is only applicable to classification tasks (binary or multiclass), not regression.
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Select
-                      value={balanceStrategy}
-                      onValueChange={(value) => setBalanceStrategy(value as BalanceStrategy)}
-                      disabled={!isClassification || isLoadingPreview}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select balance strategy" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="skip">Skip Balancing</SelectItem>
-                        <SelectItem value="undersample">Undersampling</SelectItem>
-                        <SelectItem value="oversample">Oversampling</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TooltipTrigger>
-                {!isClassification && (
-                  <TooltipContent>
-                    <p>Balancing is only supported for classification tasks, not regression.</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            <p className="text-xs text-gray-500 mt-1">
-              {balanceStrategy === 'undersample' && 'Reduces samples from majority classes to balance class distribution'}
-              {balanceStrategy === 'oversample' && 'Increases samples in minority classes through duplication or synthetic generation'}
-              {balanceStrategy === 'skip' && 'No class balancing will be applied'}
-              {!isClassification && 'Class balancing is only applicable for classification tasks'}
-            </p>
-            
-            {(balanceStrategy === 'undersample' || balanceStrategy === 'oversample') && isClassification && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2 text-sm">Balancing Method</h4>
-                <div className="relative">
-                  <Select
-                    value={balanceMethod}
-                    onValueChange={(value) => setBalanceMethod(value as BalanceMethod)}
-                    disabled={!isClassification || isLoadingPreview}
+          {/* Class Balancing Section - Only for classification */}
+          {isClassification && (
+            <div>
+              <h3 className="text-sm font-medium mb-2 flex items-center">
+                Class Balancing
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className="h-4 w-4 ml-1 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">
+                        Balances classes for better performance on imbalanced datasets
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h3>
+              <div className="space-y-3">
+                <Select 
+                  value={balanceStrategy} 
+                  onValueChange={(v) => setBalanceStrategy(v as BalanceStrategy)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select balancing strategy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="undersample">Undersample majority class</SelectItem>
+                    <SelectItem value="oversample">Oversample minority class</SelectItem>
+                    <SelectItem value="skip">Skip balancing</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {balanceStrategy !== 'skip' && (
+                  <Select 
+                    value={balanceMethod} 
+                    onValueChange={(v) => setBalanceMethod(v as BalanceMethod)}
+                    disabled={isLoading}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select balancing method" />
+                      <SelectValue placeholder="Select method" />
                     </SelectTrigger>
-                    <SelectContent className="relative z-50">
-                      {getBalanceMethodOptions()}
+                    <SelectContent>
+                      {/* Method options will be rendered by getBalanceMethodOptions() */}
                     </SelectContent>
                   </Select>
-                  
-                  {/* Method information section - replaced dataset type info */}
-                  {balanceStrategy !== 'skip' && balanceMethod !== 'none' && (
-                    <div className="text-xs mt-2 space-y-1">
-                      <div className={`px-3 py-2 rounded ${methodInfo.bgColor} ${methodInfo.borderColor} ${methodInfo.textColor}`}>
-                        {methodInfo.tooltip}
-                      </div>
-                      
-                      {/* Keep error messages for incompatible methods */}
-                      {balanceStrategy === 'undersample' && balanceMethod !== 'random' && !featureTypes.hasNumerical && (
-                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
-                      )}
-                      {balanceStrategy === 'oversample' && balanceMethod !== 'random' && balanceMethod !== 'smotenc' && !featureTypes.hasNumerical && (
-                        <p className="text-amber-500 mt-1 px-1">This method requires numerical features which are not present in your selected columns.</p>
-                      )}
-                      {balanceStrategy === 'oversample' && balanceMethod === 'smotenc' && !featureTypes.isMixed && (
-                        <p className="text-amber-500 mt-1 px-1">SMOTENC requires both numerical and categorical features.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-            )}
+            </div>
+          )}
+          
+          {/* Debug Information */}
+          {debugInfo && (
+            <Alert variant="outline" className="bg-amber-50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 text-xs">
+                {debugInfo}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Error Message */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Success Message */}
+          {success && (
+            <Alert variant="default" className="bg-green-50 border-green-200">
+              <Sparkles className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">{success}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={handlePreprocess} 
+              disabled={isLoading}
+              className="bg-primary text-white"
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Apply Preprocessing
+                </span>
+              )}
+            </Button>
           </div>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button 
-          onClick={handlePreprocess} 
-          disabled={isLoading || isLoadingPreview}
-          className="w-full"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
-          {isLoading ? 'Processing...' : 'Preprocess Dataset'}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
