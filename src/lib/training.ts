@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -60,14 +59,6 @@ export const getExperimentResults = async (
       return null;
     }
 
-    // Handle f1 vs f1_score normalization
-    if (result.metrics && result.metrics.f1 !== undefined && result.metrics.f1_score === undefined) {
-      result.metrics.f1_score = result.metrics.f1;
-    }
-    if (result.metrics && result.metrics.f1_score !== undefined && result.metrics.f1 === undefined) {
-      result.metrics.f1 = result.metrics.f1_score;
-    }
-
     // Map the API response to our ExperimentResults type
     const experimentResults: ExperimentResults = {
       experimentId: result.experimentId || result.experiment_id,
@@ -90,7 +81,6 @@ export const getExperimentResults = async (
       hyperparameters: result.hyperparameters,
       message: result.message,
       automl_engine: result.automl_engine,
-      engine: result.engine || result.automl_engine, // Add engine property
       class_labels: result.class_labels,
       training_type: result.training_type || (result.automl_engine ? 'automl' : 'custom'),
       training_results: {

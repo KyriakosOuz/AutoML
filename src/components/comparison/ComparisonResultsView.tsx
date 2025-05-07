@@ -16,7 +16,6 @@ interface ComparisonExperiment {
   metrics: {
     accuracy?: number;
     f1_score?: number;
-    f1?: number;
     precision?: number;
     recall?: number;
     auc?: number;
@@ -42,20 +41,6 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   
   const firstExperiment = experiments[0];
   const isRegression = firstExperiment.task_type.includes('regression');
-  
-  // Normalize metrics to handle both f1 and f1_score
-  experiments = experiments.map(exp => {
-    const normalizedExp = { ...exp };
-    // If f1 exists but f1_score doesn't, copy f1 to f1_score
-    if (normalizedExp.metrics.f1 !== undefined && normalizedExp.metrics.f1_score === undefined) {
-      normalizedExp.metrics.f1_score = normalizedExp.metrics.f1;
-    }
-    // If f1_score exists but f1 doesn't, copy f1_score to f1
-    if (normalizedExp.metrics.f1_score !== undefined && normalizedExp.metrics.f1 === undefined) {
-      normalizedExp.metrics.f1 = normalizedExp.metrics.f1_score;
-    }
-    return normalizedExp;
-  });
   
   // Remove AUC from metrics list
   const metrics = isRegression 

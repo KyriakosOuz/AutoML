@@ -97,15 +97,13 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      // Fix: The automlTrain function expects 6 parameters according to the error
-      // Pass experimentName as part of the sixth parameter (options object)
       const result = await trainingApi.automlTrain(
         datasetId,
         taskType,
         automlEngine,
         testSize,
         stratify,
-        { randomSeed, experimentName } // Combine randomSeed and experimentName into options object
+        randomSeed
       );
 
       if (result && result.experiment_id) {
@@ -114,7 +112,7 @@ const AutoMLTraining: React.FC = () => {
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${result.experiment_name || experimentName || result.experiment_id} started and now processing...`,
+          description: `Experiment ${result.experiment_name || result.experiment_id} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');
@@ -223,6 +221,7 @@ const AutoMLTraining: React.FC = () => {
               </Alert>
             )}
 
+            {/* New persistent information alert about background processing */}
             <Alert className="mb-4 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600 mr-2" />
               <AlertDescription>
