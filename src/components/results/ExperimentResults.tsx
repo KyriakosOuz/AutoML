@@ -77,6 +77,12 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   };
 
   const isVisualizationFile = (fileType: string) => {
+    // First check if we should exclude this file type
+    if (fileType.includes('label_encoder')) {
+      return false;
+    }
+    
+    // Then check if it's a visualization file type
     const visualTypes = ['distribution', 'shap', 'confusion_matrix', 'importance', 'plot', 'chart', 'graph', 'visualization'];
     return visualTypes.some(type => fileType.includes(type));
   };
@@ -429,6 +435,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 
 export default ExperimentResults;
 
-function isVisualizationFile(type: string) {
-  return !type.includes('model') && !type.includes('report');
-}
+// Remove this duplicate function at the end of the file as it's not needed
+// function isVisualizationFile(type: string) {
+//   return !type.includes('model') && !type.includes('report');
+// }
