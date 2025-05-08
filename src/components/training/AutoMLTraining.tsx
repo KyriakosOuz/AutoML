@@ -144,6 +144,7 @@ const AutoMLTraining: React.FC = () => {
 
       if (result && result.experiment_id) {
         setLastTrainingType('automl');
+        setActiveExperimentId(result.experiment_id); // Add this line to explicitly set the experiment ID
         startPolling(result.experiment_id);
         
         // Log the experiment ID and name for debugging
