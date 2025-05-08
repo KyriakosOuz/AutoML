@@ -19,15 +19,17 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const { setResultsLoaded, resetTrainingState, setIsTraining, setExperimentStatus } = useTraining();
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
   
+  // Use React Query with improved configuration
   const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
     queryFn: () => getExperimentResults(experimentId),
     enabled: !!experimentId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 2, // Retry up to 2 times if the request fails
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // Notify parent components when results are loaded or loading
+  // Notify parent components when results are loaded or loading, with improved flow
   useEffect(() => {
     if (data && !isLoading) {
       console.log("[ExperimentResultsView] Results loaded successfully", {
@@ -40,12 +42,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       setIsTraining(false);
       
       // Handle 'success' status from API
-      if (data.status === 'success') {
-        console.log("[ExperimentResultsView] Mapping 'success' status to 'completed'");
+      if (data.status === 'success' || data.status === 'completed') {
+        console.log("[ExperimentResultsView] Setting status to 'completed'");
         setExperimentStatus('completed');
       }
       
-      // Set resultsLoaded to true when we have data and we're not loading
+      // Set resultsLoaded to true when we have data
       console.log("[ExperimentResultsView] Setting resultsLoaded to TRUE");
       setResultsLoaded(true);
       setLocalLoadingState(false);
@@ -67,6 +69,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     resetTrainingState();
   };
 
+  // Use localLoadingState instead of isLoading to prevent UI flickering
   if (localLoadingState) {
     return (
       <div className="space-y-4">

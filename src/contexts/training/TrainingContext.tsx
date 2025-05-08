@@ -39,7 +39,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     experimentName: null, // Initialize experiment name as null
   });
 
-  // Track if we just completed polling
+  // Track if we just completed polling - extend timeout for more reliability
   const [recentlyCompletedPolling, setRecentlyCompletedPolling] = useState(false);
 
   // Enhanced experiment restoration with improved logging and error handling
@@ -261,12 +261,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
     
     // Set flag to prevent resultsLoaded reset during subsequent API calls
+    // IMPORTANT: Extended timeout from 5 to 15 seconds to ensure all loading completes
     setRecentlyCompletedPolling(true);
     
     // Clear the flag after a delay
     setTimeout(() => {
       setRecentlyCompletedPolling(false);
-    }, 5000); // longer timeout to ensure all loading completes
+    }, 15000); // Extended timeout to ensure all loading completes
     
     setState(prev => ({
       ...prev,
@@ -288,7 +289,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Automatically fetch results when training completes
     try {
       console.log("[TrainingContext] Fetching results after successful training");
-      getExperimentResults();
+      await getExperimentResults();
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
     }
@@ -337,20 +338,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId, 
       "recentlyCompletedPolling:", recentlyCompletedPolling);
 
-    // IMPORTANT: Only set isLoadingResults to true, but don't reset resultsLoaded
-    // if we recently completed polling
-    if (!recentlyCompletedPolling) {
-      setState(prev => ({ 
-        ...prev, 
-        isLoadingResults: true,
-        // Don't reset resultsLoaded here if we just completed polling
-      }));
-    } else {
-      setState(prev => ({ 
-        ...prev, 
-        isLoadingResults: true,
-      }));
-    }
+    // IMPROVED: Only set isLoadingResults to true, but don't reset resultsLoaded
+    // if we recently completed polling or already have resultsLoaded=true
+    setState(prev => ({ 
+      ...prev, 
+      isLoadingResults: true,
+      // NEVER reset resultsLoaded to false if:
+      // 1. We recently completed polling
+      // 2. We already have resultsLoaded=true 
+      resultsLoaded: recentlyCompletedPolling || prev.resultsLoaded || prev.resultsLoaded
+    }));
 
     try {
       // Use the correct endpoint for full experiment results
@@ -380,7 +377,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           updatedName: updatedExperimentName
         });
         
-        // Update all related state values to ensure consistency
+        // Update all related state values to ensure consistency - ALWAYS set resultsLoaded to true
         setState(prev => ({ 
           ...prev, 
           experimentResults: results, 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -55,24 +54,33 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [experimentStatus, isTraining, setIsTraining]);
 
-  // Define a function to determine if results and predict tabs should be shown
+  // IMPROVED: More robust function to determine if results and predict tabs should be shown
   const showResultsAndPredict = () => {
-    // IMPROVED LOGIC: Show tabs when experiment is completed OR results are loaded
-    // This makes the function more resilient to race conditions
+    // Base conditions: Has valid experiment ID
     const hasValidExperiment = !!activeExperimentId;
+    if (!hasValidExperiment) return false;
+    
+    // Show tabs when ANY of these conditions are true:
+    // 1. Results are explicitly loaded (most reliable indicator)
+    // 2. Experiment is completed according to status AND we're not actively training
+    // 3. We have experiment results object cached
     const isExperimentDone = experimentStatus === 'completed' || experimentStatus === 'success';
+    const hasLoadedResults = resultsLoaded;
+    const hasResultsObject = !!experimentResults;
     const isCurrentlyTraining = isTraining;
     
-    // New condition: either results are explicitly loaded OR experiment is done and not actively training
     const shouldShow = 
       hasValidExperiment && 
-      (resultsLoaded || (isExperimentDone && !isCurrentlyTraining));
+      (hasLoadedResults || 
+       (isExperimentDone && !isCurrentlyTraining) ||
+       hasResultsObject);
     
     console.log("ModelTrainingContent - showResultsAndPredict check:", {
       experimentStatus,
-      activeExperimentId: hasValidExperiment,
+      hasValidExperiment,
       notTraining: !isCurrentlyTraining,
-      resultsLoaded,
+      resultsLoaded: hasLoadedResults,
+      hasExperimentResults: hasResultsObject,
       shouldShow
     });
     
