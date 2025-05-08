@@ -1,9 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults as ExperimentResultsType } from '@/types/training';
+import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus } from '@/contexts/training/types';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
