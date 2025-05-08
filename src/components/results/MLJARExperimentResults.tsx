@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import {
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { formatTrainingTime } from '@/utils/formatUtils';
+import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 
 interface MLJARExperimentResultsProps {
@@ -209,9 +211,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     hyperparameters = {},
     automl_engine
   } = experimentResults;
-  
-  // Log the training time for debugging
-  console.log("MLJAR training time:", training_time_sec);
 
   // Find best model label if available
   const bestModelLabel = metrics.best_model_label || 
@@ -283,6 +282,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       ? `${(value * 100).toFixed(2)}%` 
       : value.toFixed(4);
   };
+  
+  // Format created_at date for display
+  const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -310,10 +312,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </span>
           )}
           
-          {/* Ensure training_time_sec is always passed to formatTrainingTime */}
+          {/* Show created_at date instead of training time for MLJAR */}
           <span className="inline-flex items-center">
             <Clock className="h-3.5 w-3.5 mr-1" />
-            Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
+            Created: <span className="font-semibold ml-1">{formattedCreatedAt}</span>
           </span>
           
           {experiment_id && (

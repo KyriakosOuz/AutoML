@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -37,6 +36,7 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from 
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { formatDateForGreece } from '@/lib/dateUtils';
 import TuneModelModal from './TuneModelModal';
 
 interface ExperimentDetailDrawerProps {
@@ -188,6 +188,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       onRefresh();
     }
   };
+
+  // Format created_at date for display if this is a MLJAR experiment
+  const formattedCreatedAt = results?.created_at && results?.automl_engine === 'mljar' 
+    ? formatDateForGreece(new Date(results.created_at), 'PP p')
+    : null;
 
   // Function to handle file downloads
   const handleFileDownload = async (url: string, filename: string) => {
@@ -353,7 +358,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       {results.created_at && (
                         <>
                           <div className="text-muted-foreground">Created:</div>
-                          <div>{new Date(results.created_at).toLocaleString()}</div>
+                          <div>{formattedCreatedAt || new Date(results.created_at).toLocaleString()}</div>
                         </>
                       )}
                       
@@ -364,7 +369,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </>
                       )}
                       
-                      {results.training_time_sec && (
+                      {results.training_time_sec && !results.automl_engine && (
                         <>
                           <div className="text-muted-foreground">Training Time:</div>
                           <div>{results.training_time_sec.toFixed(2)} seconds</div>
