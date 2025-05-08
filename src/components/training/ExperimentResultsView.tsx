@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
@@ -16,25 +16,6 @@ interface ExperimentResultsViewProps {
   experimentId: string;
 }
 
-// Development-only logging utility to prevent excessive logs
-const logDebug = (message: string, data?: any) => {
-  if (process.env.NODE_ENV !== 'production') {
-    // Using a simple counter to prevent excessive identical logs
-    const now = new Date().getTime();
-    const key = `${message}-${JSON.stringify(data || {})}`;
-    const lastLog = (window as any)._lastLogTime || {};
-    
-    // Only log if 2 seconds have passed since the identical log
-    if (now - (lastLog[key] || 0) > 2000) {
-      console.log(message, data || '');
-      (window as any)._lastLogTime = {
-        ...((window as any)._lastLogTime || {}),
-        [key]: now
-      };
-    }
-  }
-};
-
 const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
@@ -44,12 +25,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     setIsTraining, 
     setExperimentStatus, 
     lastTrainingType,
-    experimentStatus,
-    resultsLoaded
+    experimentStatus 
   } = useTraining();
   
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
-  const [lastProcessedData, setLastProcessedData] = useState<string | null>(null);
   
   // Use React Query with improved configuration
   const { data, isLoading, error } = useQuery({
@@ -61,103 +40,75 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // Log key state changes (with reduced frequency)
+  // Log key state changes
   useEffect(() => {
-    logDebug("[ExperimentResultsView] Component status:", { 
+    console.log("[ExperimentResultsView] Component mounted or updated:", { 
       experimentId, 
       lastTrainingType, 
       experimentStatus,
       isLoading,
       hasData: !!data,
-      hasError: !!error,
-      resultsLoaded
+      hasError: !!error
     });
-  }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error, resultsLoaded]);
+  }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
   
-  // Create data fingerprint to detect changes
-  const getDataFingerprint = useCallback((data: any) => {
-    if (!data) return null;
-    // Create a simple fingerprint with key data properties
-    return JSON.stringify({
-      id: data.id,
-      status: data.status,
-      updated_at: data.updated_at
-    });
-  }, []);
-  
-  // Special handling for AutoML results with guard conditions
+  // Special handling for AutoML results
   useEffect(() => {
-    // Skip if no data or if already loaded
-    if (!data || isLoading) return;
+    const isAutoML = lastTrainingType === 'automl';
     
-    // Create a fingerprint of the current data
-    const currentDataFingerprint = getDataFingerprint(data);
-    
-    // Skip if we've already processed this exact data state
-    if (currentDataFingerprint && currentDataFingerprint === lastProcessedData) {
-      return;
-    }
-    
-    // Update the fingerprint to prevent duplicate processing
-    setLastProcessedData(currentDataFingerprint);
-    
-    const isAutoML = lastTrainingType === 'automl' || data.automl_engine;
-    
-    if (isAutoML && data.status === 'completed' || data.status === 'success') {
-      logDebug("[ExperimentResultsView] Setting resultsLoaded for AutoML explicitly");
+    // For AutoML experiments, make extra sure resultsLoaded is set to true when data is available
+    if (isAutoML && data && !isLoading) {
+      console.log("[ExperimentResultsView] Setting resultsLoaded for AutoML explicitly");
+      // Force resultsLoaded to true for AutoML
+      setResultsLoaded(true);
       
-      // Batch state updates to prevent cascading renders
-      Promise.resolve().then(() => {
-        setIsTraining(false);
-        setResultsLoaded(true);
-        
-        if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
-          setExperimentStatus('completed');
-        }
-      });
+      // Also ensure isTraining is set to false
+      setIsTraining(false);
+      
+      // Ensure status is set to completed
+      if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
+        setExperimentStatus('completed');
+      }
     }
-  }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, 
-      setExperimentStatus, experimentStatus, lastProcessedData, getDataFingerprint]);
+  }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
   
   // Notify parent components when results are loaded or loading, with improved flow
   useEffect(() => {
-    // Skip if no data change or still loading
-    if (!data || isLoading) {
-      setLocalLoadingState(isLoading);
-      return;
-    }
-
-    // Skip unnecessary updates with a local fingerprint
-    const currentFingerprint = getDataFingerprint(data);
-    if (currentFingerprint && currentFingerprint === lastProcessedData) {
-      setLocalLoadingState(false);
-      return;
-    }
-
-    if (data.status === 'completed' || data.status === 'success') {
-      logDebug("[ExperimentResultsView] Results loaded successfully", {
+    if (data && !isLoading) {
+      console.log("[ExperimentResultsView] Results loaded successfully", {
         status: data.status,
         algorithm: data.algorithm,
         automl_engine: data.automl_engine
       });
       
-      // Batch state updates to prevent cascading renders
-      Promise.resolve().then(() => {
-        setIsTraining(false);
+      // Ensure isTraining is set to false and status is set to completed
+      setIsTraining(false);
+      
+      // Handle 'success' status from API
+      if (data.status === 'success' || data.status === 'completed') {
+        console.log("[ExperimentResultsView] Setting status to 'completed'");
         setExperimentStatus('completed');
-        setResultsLoaded(true);
-      });
+      }
+      
+      // Set resultsLoaded to true when we have data
+      console.log("[ExperimentResultsView] Setting resultsLoaded to TRUE");
+      setResultsLoaded(true);
+      setLocalLoadingState(false);
     } else if (error) {
+      // Only set resultsLoaded to false on actual errors, not during loading
+      console.log("[ExperimentResultsView] Error loading results, setting resultsLoaded to FALSE");
       setResultsLoaded(false);
+      setLocalLoadingState(false);
+    } else {
+      // Use local loading state instead of modifying global state during initial load
+      console.log("[ExperimentResultsView] Still loading, using local state only");
+      setLocalLoadingState(isLoading);
     }
-    
-    setLocalLoadingState(false);
-  }, [data, isLoading, error, setResultsLoaded, setIsTraining, 
-      setExperimentStatus, lastProcessedData, getDataFingerprint]);
+  }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus]);
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
-    logDebug("[ExperimentResultsView] Resetting training state");
+    console.log("[ExperimentResultsView] Resetting training state");
     resetTrainingState();
   };
 
@@ -187,8 +138,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const isAutoMLExperiment = !!data.automl_engine;
   const isCustomTrainingExperiment = data.training_type === "custom" || (!data.automl_engine && !data.training_type);
 
-  // Additional logging with reduced frequency
-  logDebug("[ExperimentResultsView] Rendering results component:", {
+  // Additional logging to help diagnose render issues
+  console.log("[ExperimentResultsView] Rendering results component:", {
     isMljarExperiment,
     isAutoMLExperiment,
     isCustomTrainingExperiment,

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -14,25 +15,6 @@ import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
-
-// Development-only logging utility to prevent excessive logs
-const logDebug = (message: string, data?: any) => {
-  if (process.env.NODE_ENV !== 'production') {
-    // Using a simple counter to prevent excessive identical logs
-    const now = new Date().getTime();
-    const key = `${message}-${JSON.stringify(data || {})}`;
-    const lastLog = (window as any)._lastLogTimeTraining || {};
-    
-    // Only log if 2 seconds have passed since the identical log
-    if (now - (lastLog[key] || 0) > 2000) {
-      console.log(message, data || '');
-      (window as any)._lastLogTimeTraining = {
-        ...((window as any)._lastLogTimeTraining || {}),
-        [key]: now
-      };
-    }
-  }
-};
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -57,51 +39,30 @@ const ModelTrainingContent: React.FC = () => {
   
   // Add a debug state to track tab switching attempts
   const [autoSwitchAttempts, setAutoSwitchAttempts] = useState(0);
-  const [lastCheckedState, setLastCheckedState] = useState<string | null>(null);
   
-  // Create a memoized state fingerprint to detect actual changes
-  const getStateFingerprint = useCallback(() => {
-    return JSON.stringify({
-      status: experimentStatus,
-      isTraining,
+  // Detailed logging for relevant state changes
+  useEffect(() => {
+    console.log("ModelTrainingContent - State update:", { 
+      experimentStatus, 
+      isTraining, 
+      isLoadingResults, 
       resultsLoaded,
       lastTrainingType,
-      activeTab,
-      hasResults: !!experimentResults,
-      hasExperimentId: !!activeExperimentId
+      showResultsAndPredict: showResultsAndPredict(),
+      activeTab
     });
-  }, [experimentStatus, isTraining, resultsLoaded, lastTrainingType, activeTab, experimentResults, activeExperimentId]);
-  
-  // Detailed logging for relevant state changes - with guard condition
-  useEffect(() => {
-    const currentFingerprint = getStateFingerprint();
-    
-    // Only log if state has meaningfully changed
-    if (currentFingerprint !== lastCheckedState) {
-      setLastCheckedState(currentFingerprint);
-      
-      logDebug("ModelTrainingContent - State update:", { 
-        experimentStatus, 
-        isTraining, 
-        isLoadingResults, 
-        resultsLoaded,
-        lastTrainingType,
-        showResultsAndPredict: showResultsAndPredict(),
-        activeTab
-      });
-    }
-  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab, getStateFingerprint, lastCheckedState]);
+  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
 
   // Ensure isTraining is set to false when status is completed or success
   useEffect(() => {
     if ((experimentStatus === 'completed' || experimentStatus === 'success') && isTraining) {
-      logDebug("ModelTrainingContent - Setting isTraining to false because status is", experimentStatus);
+      console.log("ModelTrainingContent - Setting isTraining to false because status is", experimentStatus);
       setIsTraining(false);
     }
   }, [experimentStatus, isTraining, setIsTraining]);
 
   // IMPROVED: More robust function to determine if results and predict tabs should be shown
-  const showResultsAndPredict = useCallback(() => {
+  const showResultsAndPredict = () => {
     // Base conditions: Has valid experiment ID
     const hasValidExperiment = !!activeExperimentId;
     if (!hasValidExperiment) return false;
@@ -125,8 +86,7 @@ const ModelTrainingContent: React.FC = () => {
        hasResultsObject ||
        (isAutoML && isExperimentDone)); // Special case for AutoML experiments
     
-    // Log this check less frequently - only when it changes
-    const checkResult = {
+    console.log("ModelTrainingContent - showResultsAndPredict check:", {
       experimentStatus,
       hasValidExperiment,
       notTraining: !isCurrentlyTraining,
@@ -134,10 +94,10 @@ const ModelTrainingContent: React.FC = () => {
       hasExperimentResults: hasResultsObject,
       isAutoML,
       shouldShow
-    };
+    });
     
     return shouldShow;
-  }, [activeExperimentId, experimentStatus, resultsLoaded, experimentResults, isTraining, lastTrainingType]);
+  };
 
   // Add status indicator - Using the explicit resultsLoaded state
   const isProcessing = 
@@ -148,7 +108,7 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     const canShowResultsAndPredict = showResultsAndPredict();
     if ((activeTab === 'results' || activeTab === 'predict') && !canShowResultsAndPredict) {
-      logDebug("ModelTrainingContent - Switching to automl tab because results/predict not available");
+      console.log("ModelTrainingContent - Switching to automl tab because results/predict not available");
       setActiveTab('automl');
     }
   }, [activeTab, showResultsAndPredict, setActiveTab]);
@@ -157,7 +117,7 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     if (datasetId && taskType && experimentStatus === 'processing' && !activeExperimentId) {
       // Only reset to idle if we don't have an active experiment
-      logDebug("ModelTrainingContent - Resetting experimentStatus from 'processing' to 'idle'");
+      console.log("ModelTrainingContent - Resetting experimentStatus from 'processing' to 'idle'");
       setExperimentStatus('idle');
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
@@ -184,20 +144,19 @@ const ModelTrainingContent: React.FC = () => {
       activeExperimentId && 
       (activeTab === 'automl');
     
-    // Only log when we're actually switching
-    if (shouldSwitch || shouldSwitchAutoML) {
-      logDebug("ModelTrainingContent - Tab switching check:", {
-        resultsLoaded,
-        isAutoML,
-        isCompleted,
-        activeTab,
-        shouldSwitch,
-        shouldSwitchAutoML,
-        canShowResults,
-        autoSwitchAttempts
-      });
+    console.log("ModelTrainingContent - Tab switching check:", {
+      resultsLoaded,
+      isAutoML,
+      isCompleted,
+      activeTab,
+      shouldSwitch,
+      shouldSwitchAutoML,
+      canShowResults,
+      autoSwitchAttempts
+    });
     
-      logDebug(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
+    if (shouldSwitch || shouldSwitchAutoML) {
+      console.log(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
       setActiveTab('results');
       // Increment attempt counter
       setAutoSwitchAttempts(prev => prev + 1);
@@ -211,7 +170,7 @@ const ModelTrainingContent: React.FC = () => {
         !isLoadingResults && 
         !experimentResults && 
         !resultsLoaded) { 
-      logDebug("ModelTrainingContent - Fetching experiment results for completed experiment");
+      console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
       getExperimentResults();
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults, resultsLoaded]);
@@ -246,12 +205,11 @@ const ModelTrainingContent: React.FC = () => {
 
   // Handle reset button click
   const handleReset = () => {
-    logDebug("Reset button clicked, stopping polling and resetting training state");
+    console.log("Reset button clicked, stopping polling and resetting training state");
     stopPolling(); // First stop any active polling
     resetTrainingState(); // Then reset the training state
     setActiveTab('automl'); // Set the active tab to automl
     setAutoSwitchAttempts(0); // Reset the auto switch counter
-    setLastCheckedState(null); // Reset the state fingerprint
   };
 
   return (

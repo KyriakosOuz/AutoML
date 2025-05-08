@@ -1,30 +1,11 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
-
-// Development-only logging utility
-const logDebug = (message: string, data?: any) => {
-  if (process.env.NODE_ENV !== 'production') {
-    // Using a simple counter to prevent excessive identical logs
-    const now = new Date().getTime();
-    const key = `${message}-${JSON.stringify(data || {})}`;
-    const lastLog = (window as any)._lastLogContainerTime || {};
-    
-    // Only log if 2 seconds have passed since the identical log
-    if (now - (lastLog[key] || 0) > 2000) {
-      console.log(message, data || '');
-      (window as any)._lastLogContainerTime = {
-        ...((window as any)._lastLogContainerTime || {}),
-        [key]: now
-      };
-    }
-  }
-};
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
@@ -47,7 +28,6 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(providedIsLoading !== undefined ? providedIsLoading : false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const fetchAttemptedRef = useRef(false);
   
   // Access the training context to reset training state
   const { resetTrainingState, stopPolling, setActiveTab, lastTrainingType } = useTraining();
@@ -60,13 +40,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     }
     
     if (!experimentId) return;
-
-    // Skip if we've already attempted to fetch and no refresh is requested
-    if (fetchAttemptedRef.current && !isLoading) return;
     
     // Fetch results when status is completed, success, or failed (to show error details)
     if ((status === 'completed' || status === 'success' || status === 'failed')) {
-      fetchAttemptedRef.current = true;
       fetchResults();
     }
   }, [experimentId, status, providedResults]);
@@ -78,15 +54,11 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     setError(null);
     
     try {
-      logDebug("[ExperimentResultsContainer] Fetching results for experiment:", experimentId);
+      console.log("[ExperimentResultsContainer] Fetching results for experiment:", experimentId);
       const data = await getExperimentResults(experimentId);
       
       if (data) {
-        logDebug("[ExperimentResultsContainer] Successfully fetched experiment results:", {
-          id: data.id,
-          status: data.status,
-          hasMetrics: !!data.metrics
-        });
+        console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
         
         // Ensure metrics are correctly mapped (handle both f1 and f1_score)
         if (data.metrics && data.metrics.f1 !== undefined && data.metrics.f1_score === undefined) {
@@ -95,7 +67,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
         
         setResults(data);
       } else {
-        logDebug("[ExperimentResultsContainer] No results returned from API");
+        console.log("[ExperimentResultsContainer] No results returned from API");
         setError("Failed to load experiment results");
       }
     } catch (err) {
@@ -114,7 +86,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
-    logDebug("[ExperimentResultsContainer] Resetting training state and stopping all polling");
+    console.log("[ExperimentResultsContainer] Resetting training state and stopping all polling");
     
     // First ensure all polling is explicitly stopped
     stopPolling();
@@ -140,7 +112,6 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const handleRefresh = () => {
     // Stop any running polling before refreshing results
     stopPolling();
-    fetchAttemptedRef.current = false; // Reset the fetch attempt flag
     fetchResults();
     if (onRefresh) onRefresh();
   };
@@ -152,30 +123,34 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const determineTrainingType = () => {
     // First check if results have explicit training_type
     if (results?.training_type) {
+      console.log("[ExperimentResultsContainer] Using training_type from results:", results.training_type);
       return results.training_type;
     }
     
     // Then check if results have algorithm (custom training indicator)
     if (results?.algorithm) {
+      console.log("[ExperimentResultsContainer] Detected custom training from algorithm field:", results.algorithm);
       return 'custom';
     }
     
     // Then check if results have automl_engine (legacy detection)
     if (results?.automl_engine) {
+      console.log("[ExperimentResultsContainer] Using automl_engine from results:", results.automl_engine);
       return 'automl';
     }
     
     // If neither is available, use lastTrainingType from context
+    console.log("[ExperimentResultsContainer] Falling back to lastTrainingType from context:", lastTrainingType);
     return lastTrainingType;
   };
   
   const currentTrainingType = determineTrainingType();
 
-  // Reduced final logging with key data only
-  logDebug("[ExperimentResultsContainer] Determined training type:", {
-    type: currentTrainingType,
+  console.log("[ExperimentResultsContainer] Final determined training type:", currentTrainingType, "from results:", {
+    resultType: results?.training_type,
+    algorithm: results?.algorithm,
     automlEngine: results?.automl_engine,
-    hasAlgorithm: !!results?.algorithm
+    contextType: lastTrainingType
   });
 
   return (
