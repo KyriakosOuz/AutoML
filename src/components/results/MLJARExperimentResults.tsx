@@ -265,7 +265,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type.includes('model') ||
     file.file_name?.includes('.pkl')
   );
-
+  
   // Format metric for display
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
@@ -525,10 +525,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Updated to match the UI in the image */}
+          {/* Model Details Tab - Enhanced UI with better grid layout */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Engine Information Card */}
+              {/* Engine Information Card - Improved layout */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Engine Information</CardTitle>

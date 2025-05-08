@@ -7,6 +7,11 @@
 export const formatTrainingTime = (seconds: number | undefined): string => {
   if (seconds === undefined) return "N/A";
   
+  // Convert from minutes to seconds if needed based on magnitude
+  if (seconds < 1 && seconds > 0) {
+    seconds = seconds * 60; // Convert from minutes to seconds if the value is too small
+  }
+  
   if (seconds < 60) {
     return `${seconds.toFixed(1)} seconds`;
   }

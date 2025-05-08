@@ -144,7 +144,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       {downloadUrl && (
         <div className="mt-4 flex justify-end">
           <Button asChild>
-            <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+            <a href={downloadUrl} download>
               <DownloadCloud className="h-4 w-4 mr-2" />
               Download Full CSV
             </a>
