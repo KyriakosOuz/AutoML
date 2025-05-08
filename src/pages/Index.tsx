@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Upload, BarChart2 } from "lucide-react";
+import { ArrowRight, Upload, BarChart2, LineChart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -82,11 +81,7 @@ const Index = () => {
           {/* Model Training Card */}
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 hover:border-gray-300">
             <div className="bg-gray-100 p-3 rounded-full w-fit mb-4">
-              <img 
-                src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
-                alt="KyrO Logo" 
-                className="h-6 w-6 sm:h-7 sm:w-7" 
-              />
+              <LineChart className="h-6 w-6 sm:h-7 sm:w-7 text-gray-700" />
             </div>
             <h2 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Model Training</h2>
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
