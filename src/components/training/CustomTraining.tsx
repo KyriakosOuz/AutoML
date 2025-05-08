@@ -193,8 +193,8 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // FIXED: Now explicitly passing 'custom' as the type parameter
-        startPolling(result.experiment_id, 'custom');
+        // FIX: Remove the second parameter 'custom' since startPolling only accepts one parameter in this context
+        startPolling(result.experiment_id);
         
         toast({
           title: "Training Submitted",

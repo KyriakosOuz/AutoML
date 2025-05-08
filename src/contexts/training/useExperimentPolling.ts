@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
+import { ExperimentStatus, ExperimentStatusResponse, TrainingType } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
 
 export interface UseExperimentPollingProps {
@@ -20,7 +20,7 @@ export const useExperimentPolling = ({
 }: UseExperimentPollingProps) => {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
-  const [experimentType, setExperimentType] = useState<'automl' | 'custom' | null>(null);
+  const [experimentType, setExperimentType] = useState<TrainingType | null>(null);
   const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -29,14 +29,27 @@ export const useExperimentPolling = ({
   // Track if polling is currently active
   const isPollingActiveRef = useRef<boolean>(false);
 
+  // Log the state whenever experimentType changes
+  useEffect(() => {
+    console.log('[useExperimentPolling] Experiment type changed:', experimentType);
+  }, [experimentType]);
+  
+  // Log the state whenever activeExperimentId changes
+  useEffect(() => {
+    console.log('[useExperimentPolling] Active experiment ID changed:', activeExperimentId);
+  }, [activeExperimentId]);
+
   const stopPolling = useCallback(() => {
-    if (pollingInterval) {
+    if (pollingInterval || isPollingActiveRef.current) {
       console.log('[useExperimentPolling] Stopping polling for experiment:', activeExperimentId);
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
       isManuallyStoppedRef.current = true;
       isPollingActiveRef.current = false;
       
+      console.log('[useExperimentPolling] Resetting experiment state');
       // Reset active experiment ID when polling is stopped
       setActiveExperimentId(null);
       
@@ -51,14 +64,9 @@ export const useExperimentPolling = ({
   }, [pollingInterval, activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
-  const startPolling = useCallback(async (experimentId: string, type: 'automl' | 'custom' = 'automl') => {
+  const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
     // Always stop any existing polling first
-    if (pollingInterval) {
-      console.log('[useExperimentPolling] Stopping existing polling before starting new one');
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-      isPollingActiveRef.current = false;
-    }
+    stopPolling();
 
     console.log(`[useExperimentPolling] Starting polling for ${type} experiment:`, experimentId);
     setIsLoading(true);
@@ -129,13 +137,20 @@ export const useExperimentPolling = ({
 
         if (isCompleted) {
           console.log(`[useExperimentPolling] ${type.toUpperCase()} experiment completed — stopping poller`);
-          stopPolling();
-
+          
+          // Call onSuccess first, before stopping polling, to ensure state is available
+          console.log(`[useExperimentPolling] Calling onSuccess for ${type} experiment:`, experimentId);
+          
           // Add a small delay to ensure backend is ready - slightly longer for AutoML
           const delay = type === 'automl' ? 1500 : 1000;
+          
           setTimeout(() => {
-            console.log(`[useExperimentPolling] Calling onSuccess for ${type} experiment:`, experimentId);
-            onSuccess(experimentId);
+            // Make sure we're still in a valid state before calling onSuccess
+            if (!isManuallyStoppedRef.current) {
+              onSuccess(experimentId);
+            }
+            // Now stop polling after onSuccess has been called
+            stopPolling();
           }, delay);
           return;
         }
@@ -202,7 +217,7 @@ export const useExperimentPolling = ({
       type,
       stop: stopPolling
     };
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, pollingInterval]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
   // Ensure we clean up on unmount
   useEffect(() => {

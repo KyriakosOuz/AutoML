@@ -122,19 +122,33 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   // Determine the correct training type from results or context
   const determineTrainingType = () => {
     // First check if results have explicit training_type
-    if (results?.training_type) return results.training_type;
+    if (results?.training_type) {
+      console.log("[ExperimentResultsContainer] Using training_type from results:", results.training_type);
+      return results.training_type;
+    }
+    
+    // Then check if results have algorithm (custom training indicator)
+    if (results?.algorithm) {
+      console.log("[ExperimentResultsContainer] Detected custom training from algorithm field:", results.algorithm);
+      return 'custom';
+    }
     
     // Then check if results have automl_engine (legacy detection)
-    if (results?.automl_engine) return 'automl';
+    if (results?.automl_engine) {
+      console.log("[ExperimentResultsContainer] Using automl_engine from results:", results.automl_engine);
+      return 'automl';
+    }
     
     // If neither is available, use lastTrainingType from context
+    console.log("[ExperimentResultsContainer] Falling back to lastTrainingType from context:", lastTrainingType);
     return lastTrainingType;
   };
   
   const currentTrainingType = determineTrainingType();
 
-  console.log("[ExperimentResultsContainer] Determined training type:", currentTrainingType, "from results:", {
+  console.log("[ExperimentResultsContainer] Final determined training type:", currentTrainingType, "from results:", {
     resultType: results?.training_type,
+    algorithm: results?.algorithm,
     automlEngine: results?.automl_engine,
     contextType: lastTrainingType
   });
