@@ -29,11 +29,15 @@ const ModelTrainingContent: React.FC = () => {
     getExperimentResults,
     experimentResults,
     stopPolling,
-    resultsLoaded // Import resultsLoaded directly from context
+    resultsLoaded,
+    lastTrainingType
   } = useTraining();
   
   const { datasetId, taskType, processingStage } = useDataset();
   const isMobile = useIsMobile();
+  
+  // Add a debug state to track tab switching attempts
+  const [autoSwitchAttempts, setAutoSwitchAttempts] = useState(0);
   
   // Detailed logging for relevant state changes
   useEffect(() => {
@@ -42,9 +46,11 @@ const ModelTrainingContent: React.FC = () => {
       isTraining, 
       isLoadingResults, 
       resultsLoaded,
-      showResultsAndPredict: showResultsAndPredict()
+      lastTrainingType,
+      showResultsAndPredict: showResultsAndPredict(),
+      activeTab
     });
-  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded]);
+  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
 
   // Ensure isTraining is set to false when status is completed or success
   useEffect(() => {
@@ -64,16 +70,20 @@ const ModelTrainingContent: React.FC = () => {
     // 1. Results are explicitly loaded (most reliable indicator)
     // 2. Experiment is completed according to status AND we're not actively training
     // 3. We have experiment results object cached
+    // 4. For AutoML experiments, explicitly check lastTrainingType
     const isExperimentDone = experimentStatus === 'completed' || experimentStatus === 'success';
     const hasLoadedResults = resultsLoaded;
     const hasResultsObject = !!experimentResults;
     const isCurrentlyTraining = isTraining;
+    const isAutoML = lastTrainingType === 'automl';
     
+    // Add special logic for AutoML experiments
     const shouldShow = 
       hasValidExperiment && 
       (hasLoadedResults || 
        (isExperimentDone && !isCurrentlyTraining) ||
-       hasResultsObject);
+       hasResultsObject ||
+       (isAutoML && isExperimentDone)); // Special case for AutoML experiments
     
     console.log("ModelTrainingContent - showResultsAndPredict check:", {
       experimentStatus,
@@ -81,6 +91,7 @@ const ModelTrainingContent: React.FC = () => {
       notTraining: !isCurrentlyTraining,
       resultsLoaded: hasLoadedResults,
       hasExperimentResults: hasResultsObject,
+      isAutoML,
       shouldShow
     });
     
@@ -91,22 +102,6 @@ const ModelTrainingContent: React.FC = () => {
   const isProcessing = 
     (experimentStatus === 'processing' || experimentStatus === 'running' || isTraining) && 
     !resultsLoaded;
-  
-  // More detailed status logging
-  useEffect(() => {
-    console.log("ModelTrainingContent - Current state:", { 
-      datasetId,
-      taskType,
-      processingStage,
-      activeTab,
-      experimentStatus,
-      isTraining,
-      isLoadingResults,
-      activeExperimentId,
-      resultsLoaded,
-      showResultsAndPredict: showResultsAndPredict()
-    });
-  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded]);
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
@@ -126,28 +121,58 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
-  // Trigger experiment results fetch when appropriate - with added safeguards
+  // Auto-switch to results tab when results are loaded - ENHANCED for AutoML
+  useEffect(() => {
+    // Track switch attempts for debugging
+    if (autoSwitchAttempts > 5) return; // Prevent infinite loop
+    
+    const isAutoML = lastTrainingType === 'automl';
+    const isCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
+    const canShowResults = showResultsAndPredict();
+    const shouldSwitch = 
+      resultsLoaded && 
+      activeExperimentId && 
+      isCompleted &&
+      canShowResults &&
+      (activeTab === 'automl' || activeTab === 'custom');
+    
+    // Add special case for AutoML
+    const shouldSwitchAutoML = 
+      isAutoML && 
+      isCompleted && 
+      activeExperimentId && 
+      (activeTab === 'automl');
+    
+    console.log("ModelTrainingContent - Tab switching check:", {
+      resultsLoaded,
+      isAutoML,
+      isCompleted,
+      activeTab,
+      shouldSwitch,
+      shouldSwitchAutoML,
+      canShowResults,
+      autoSwitchAttempts
+    });
+    
+    if (shouldSwitch || shouldSwitchAutoML) {
+      console.log(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
+      setActiveTab('results');
+      // Increment attempt counter
+      setAutoSwitchAttempts(prev => prev + 1);
+    }
+  }, [resultsLoaded, activeExperimentId, experimentStatus, activeTab, setActiveTab, lastTrainingType, autoSwitchAttempts, showResultsAndPredict]);
+
+  // If experiment is completed, but we don't have results, try to fetch them
   useEffect(() => {
     if (activeExperimentId && 
         (experimentStatus === 'completed' || experimentStatus === 'success') && 
         !isLoadingResults && 
         !experimentResults && 
-        !resultsLoaded) { // Only fetch if we don't have results loaded yet
+        !resultsLoaded) { 
       console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
       getExperimentResults();
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults, resultsLoaded]);
-
-  // Auto-switch to results tab when results are loaded
-  useEffect(() => {
-    if (resultsLoaded && 
-        activeExperimentId && 
-        (experimentStatus === 'completed' || experimentStatus === 'success') &&
-        (activeTab === 'automl' || activeTab === 'custom')) {
-      console.log("ModelTrainingContent - Auto-switching to results tab because resultsLoaded =", resultsLoaded);
-      setActiveTab('results');
-    }
-  }, [resultsLoaded, activeExperimentId, experimentStatus, activeTab, setActiveTab]);
 
   // Determine if dataset is ready for training
   const isDatasetReady = !!(
@@ -183,6 +208,7 @@ const ModelTrainingContent: React.FC = () => {
     stopPolling(); // First stop any active polling
     resetTrainingState(); // Then reset the training state
     setActiveTab('automl'); // Set the active tab to automl
+    setAutoSwitchAttempts(0); // Reset the auto switch counter
   };
 
   return (
@@ -212,6 +238,9 @@ const ModelTrainingContent: React.FC = () => {
               <span className="font-semibold">
                 {getStatusMessage()}
               </span>
+              {lastTrainingType === 'automl' && (
+                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AutoML</span>
+              )}
             </div>
             <Progress 
               value={isTraining ? 70 : isLoadingResults ? 90 : 50} 
@@ -229,7 +258,7 @@ const ModelTrainingContent: React.FC = () => {
         <Alert variant="info" className="mb-4">
           <Info className="h-4 w-4 text-blue-500 mr-2" />
           <AlertDescription className="text-sm">
-            Viewing results for experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
+            Viewing results for {lastTrainingType === 'automl' && <span className="font-medium">AutoML</span>} experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
             {experimentResults.algorithm && ` using ${experimentResults.algorithm}`}
             {getExperimentTimeInfo() && ` (created ${getExperimentTimeInfo()})`}
           </AlertDescription>

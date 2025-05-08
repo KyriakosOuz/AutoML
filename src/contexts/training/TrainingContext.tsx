@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -12,7 +13,7 @@ const TrainingContext = createContext<TrainingContextValue | undefined>(undefine
 // New constant for experiment name storage
 const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
 // New flag to prevent resultsLoaded from being reset during loading
-const RESULTS_LOADED_DELAY_MS = 500; // delay before potentially setting resultsLoaded back to false
+const RESULTS_LOADED_DELAY_MS = 1500; // Extended delay before potentially setting resultsLoaded back to false
 
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
@@ -41,6 +42,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Track if we just completed polling - extend timeout for more reliability
   const [recentlyCompletedPolling, setRecentlyCompletedPolling] = useState(false);
+  const [isAutoMLExperiment, setIsAutoMLExperiment] = useState(false);
 
   // Enhanced experiment restoration with improved logging and error handling
   useEffect(() => {
@@ -247,7 +249,76 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.statusResponse, state.activeExperimentId, state.experimentResults, state.isLoadingResults]);
 
+  // IMPROVED: Separate success handler specifically for AutoML experiments
+  const handleAutoMLPollingSuccess = useCallback(async (experimentId: string) => {
+    console.log("[TrainingContext] ★★★ AUTOML EXPERIMENT COMPLETED ★★★");
+    console.log("[TrainingContext] Current state before status update:", {
+      experimentStatus: state.experimentStatus,
+      isTraining: state.isTraining,
+      isLoadingResults: state.isLoadingResults,
+      hasResults: !!state.experimentResults,
+      resultsLoaded: state.resultsLoaded,
+      lastTrainingType: state.lastTrainingType
+    });
+    
+    // Flag this as an AutoML experiment
+    setIsAutoMLExperiment(true);
+    
+    // Set flag to prevent resultsLoaded reset during subsequent API calls
+    setRecentlyCompletedPolling(true);
+    
+    // Extended timeout for AutoML specifically
+    setTimeout(() => {
+      setRecentlyCompletedPolling(false);
+    }, 20000); // Even longer timeout for AutoML to ensure all loading completes
+    
+    // CRITICAL: Explicitly set all relevant states for AutoML
+    setState(prev => ({
+      ...prev,
+      statusResponse: {
+        status: 'completed',
+        hasTrainingResults: true
+      },
+      experimentStatus: 'completed',
+      isTraining: false,
+      isLoadingResults: false,
+      resultsLoaded: true, // CRITICAL: Set this to true for AutoML
+      lastTrainingType: 'automl' // Ensure this is set for AutoML
+    }));
+    
+    // Show toast notification
+    toast({
+      title: "AutoML Training Complete",
+      description: "Your AutoML model has finished training successfully!"
+    });
+    
+    try {
+      console.log("[TrainingContext] Fetching results after successful AutoML training");
+      // Set a slight delay to ensure the backend has processed everything
+      setTimeout(async () => {
+        await getExperimentResults();
+        
+        // Verify resultsLoaded is true after getting results
+        if (!state.resultsLoaded) {
+          console.log("[TrainingContext] Forcing resultsLoaded to TRUE for AutoML experiment");
+          setState(prev => ({
+            ...prev,
+            resultsLoaded: true
+          }));
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("[TrainingContext] Error fetching AutoML results:", error);
+    }
+  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType]);
+
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
+    // Check if this is an AutoML experiment
+    if (state.lastTrainingType === 'automl' || isAutoMLExperiment) {
+      console.log("[TrainingContext] Detected AutoML experiment, using specialized handler");
+      return handleAutoMLPollingSuccess(experimentId);
+    }
+    
     console.log("[TrainingContext] Polling completed successfully for experiment:", experimentId);
     
     // Enhanced debugging for status transition
@@ -261,7 +332,6 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
     
     // Set flag to prevent resultsLoaded reset during subsequent API calls
-    // IMPORTANT: Extended timeout from 5 to 15 seconds to ensure all loading completes
     setRecentlyCompletedPolling(true);
     
     // Clear the flag after a delay
@@ -293,7 +363,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
     }
-  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded]);
+  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType, isAutoMLExperiment, handleAutoMLPollingSuccess]);
 
   const handlePollingError = useCallback((error: string) => {
     console.log("[TrainingContext] Polling error:", error);
@@ -319,12 +389,37 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [toast]);
 
-  const { startPolling, stopPolling } = useExperimentPolling({
+  const { startPolling, stopPolling, experimentType } = useExperimentPolling({
     onSuccess: handlePollingSuccess,
     onError: handlePollingError,
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
   });
+
+  // Updated to set isAutoMLExperiment for proper tracking
+  const wrappedStartPolling = useCallback((experimentId: string, type?: 'automl' | 'custom') => {
+    // Default to the current lastTrainingType if type is not provided
+    const trainingType = type || state.lastTrainingType || 'automl';
+    
+    console.log(`[TrainingContext] Starting polling for ${trainingType} experiment:`, experimentId);
+    
+    // Update the auto-detection flag for AutoML experiments
+    if (trainingType === 'automl') {
+      setIsAutoMLExperiment(true);
+      
+      // Update the lastTrainingType if not already set
+      if (state.lastTrainingType !== 'automl') {
+        setState(prev => ({
+          ...prev,
+          lastTrainingType: 'automl'
+        }));
+      }
+    } else {
+      setIsAutoMLExperiment(false);
+    }
+    
+    startPolling(experimentId, trainingType);
+  }, [startPolling, state.lastTrainingType]);
 
   const getExperimentResults = React.useCallback(async () => {
     if (!state.activeExperimentId) return;
@@ -335,7 +430,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
     
-    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId, 
+    // Get the current experiment type (automl or custom)
+    const currentExperimentType = state.lastTrainingType || 
+                                (experimentType || 
+                                (isAutoMLExperiment ? 'automl' : 'custom'));
+    
+    console.log(`[TrainingContext] Fetching results for ${currentExperimentType} experiment:`, state.activeExperimentId, 
       "recentlyCompletedPolling:", recentlyCompletedPolling);
 
     // IMPROVED: Only set isLoadingResults to true, but don't reset resultsLoaded
@@ -346,7 +446,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       // NEVER reset resultsLoaded to false if:
       // 1. We recently completed polling
       // 2. We already have resultsLoaded=true 
-      resultsLoaded: recentlyCompletedPolling || prev.resultsLoaded || prev.resultsLoaded
+      // 3. This is an AutoML experiment that just completed
+      resultsLoaded: recentlyCompletedPolling || 
+                    prev.resultsLoaded || 
+                    (currentExperimentType === 'automl' && isAutoMLExperiment)
     }));
 
     try {
@@ -354,11 +457,15 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
 
       if (results) {
-        console.log("[TrainingContext] Successfully fetched experiment results", {
+        // Check if this is an AutoML experiment from the results
+        const isAutoML = results.automl_engine || results.training_type === 'automl';
+        
+        console.log(`[TrainingContext] Successfully fetched ${isAutoML ? 'AutoML' : 'custom'} experiment results`, {
           status: results.status,
           algorithm: results.algorithm,
           automl_engine: results.automl_engine,
           hasMetrics: !!results.metrics,
+          training_type: results.training_type || (isAutoML ? 'automl' : 'custom')
         });
         
         // Handle 'success' status from API by mapping it to 'completed'
@@ -371,10 +478,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         // Prioritize existing experiment name if we have one
         const updatedExperimentName = state.experimentName || results.experiment_name;
         
-        console.log("[TrainingContext] Experiment name logic:", {
-          currentName: state.experimentName,
-          resultName: results.experiment_name,
-          updatedName: updatedExperimentName
+        // Determine training type - be more aggressive about detecting AutoML
+        const trainingType = results.training_type || 
+                           (results.automl_engine ? 'automl' : 
+                           (state.lastTrainingType || 'custom'));
+        
+        console.log("[TrainingContext] Experiment type detection:", {
+          fromResults: results.training_type,
+          fromAutomlEngine: results.automl_engine ? 'automl' : null,
+          fromState: state.lastTrainingType,
+          final: trainingType
         });
         
         // Update all related state values to ensure consistency - ALWAYS set resultsLoaded to true
@@ -385,8 +498,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false, // Ensure isTraining is false when results are loaded
-          resultsLoaded: true, // Always set resultsLoaded to true when results are successfully fetched
+          // CRITICAL: For AutoML, ALWAYS force resultsLoaded to true
+          resultsLoaded: trainingType === 'automl' ? true : (prev.resultsLoaded || true),
           experimentName: updatedExperimentName,
+          lastTrainingType: trainingType as 'automl' | 'custom' | null,
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
             status: resultStatus as ExperimentStatus,
@@ -394,9 +509,31 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           }
         }));
         
+        // Set the AutoML detection flag
+        setIsAutoMLExperiment(trainingType === 'automl');
+        
         // Also update experiment name in local storage if we have one
         if (updatedExperimentName) {
           localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, updatedExperimentName);
+        }
+        
+        // For AutoML experiments, double-check that tab switching is triggered
+        if (trainingType === 'automl' && resultStatus === 'completed') {
+          console.log("[TrainingContext] AutoML experiment completed and results fetched - ensure resultsLoaded is true");
+          // Double check after a short delay to ensure state has been updated
+          setTimeout(() => {
+            setState(prev => {
+              // Only update if not already set
+              if (!prev.resultsLoaded) {
+                console.log("[TrainingContext] Forcing resultsLoaded to TRUE for completed AutoML experiment");
+                return {
+                  ...prev,
+                  resultsLoaded: true
+                };
+              }
+              return prev;
+            });
+          }, 1000);
         }
       } else {
         console.log("[TrainingContext] No results returned from API");
@@ -440,12 +577,20 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         variant: "destructive"
       });
     }
-  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, recentlyCompletedPolling, toast]);
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, state.lastTrainingType, recentlyCompletedPolling, toast, experimentType, isAutoMLExperiment]);
 
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
-    setLastTrainingType: (type) => setState(prev => ({ ...prev, lastTrainingType: type })),
+    setLastTrainingType: (type) => {
+      setState(prev => ({ ...prev, lastTrainingType: type }));
+      // Update the auto-detection flag for AutoML experiments
+      if (type === 'automl') {
+        setIsAutoMLExperiment(true);
+      } else {
+        setIsAutoMLExperiment(false);
+      }
+    },
     setAutomlParameters: (params) => setState(prev => ({ ...prev, automlParameters: { ...prev.automlParameters, ...params } })),
     setCustomParameters: (params) => setState(prev => ({ ...prev, customParameters: { ...prev.customParameters, ...params } })),
     setAutomlResult: (result) => setState(prev => ({ ...prev, automlResult: result })),
@@ -491,6 +636,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
       stopPolling();
       setRecentlyCompletedPolling(false);
+      setIsAutoMLExperiment(false);
     },
     clearExperimentResults: () => {
       setState(prev => ({
@@ -506,9 +652,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
       stopPolling();
       setRecentlyCompletedPolling(false);
+      setIsAutoMLExperiment(false);
     },
     getExperimentResults,
-    startPolling,
+    startPolling: wrappedStartPolling,
     stopPolling,
     checkLastExperiment,
   };

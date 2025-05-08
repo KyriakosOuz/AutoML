@@ -19,7 +19,15 @@ interface ExperimentResultsViewProps {
 const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
-  const { setResultsLoaded, resetTrainingState, setIsTraining, setExperimentStatus } = useTraining();
+  const { 
+    setResultsLoaded, 
+    resetTrainingState, 
+    setIsTraining, 
+    setExperimentStatus, 
+    lastTrainingType,
+    experimentStatus 
+  } = useTraining();
+  
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
   
   // Use React Query with improved configuration
@@ -31,6 +39,38 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     retry: 2, // Retry up to 2 times if the request fails
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
+  
+  // Log key state changes
+  useEffect(() => {
+    console.log("[ExperimentResultsView] Component mounted or updated:", { 
+      experimentId, 
+      lastTrainingType, 
+      experimentStatus,
+      isLoading,
+      hasData: !!data,
+      hasError: !!error
+    });
+  }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
+  
+  // Special handling for AutoML results
+  useEffect(() => {
+    const isAutoML = lastTrainingType === 'automl';
+    
+    // For AutoML experiments, make extra sure resultsLoaded is set to true when data is available
+    if (isAutoML && data && !isLoading) {
+      console.log("[ExperimentResultsView] Setting resultsLoaded for AutoML explicitly");
+      // Force resultsLoaded to true for AutoML
+      setResultsLoaded(true);
+      
+      // Also ensure isTraining is set to false
+      setIsTraining(false);
+      
+      // Ensure status is set to completed
+      if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
+        setExperimentStatus('completed');
+      }
+    }
+  }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
   
   // Notify parent components when results are loaded or loading, with improved flow
   useEffect(() => {
@@ -97,6 +137,15 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const isMljarExperiment = data.automl_engine?.toLowerCase() === "mljar";
   const isAutoMLExperiment = !!data.automl_engine;
   const isCustomTrainingExperiment = data.training_type === "custom" || (!data.automl_engine && !data.training_type);
+
+  // Additional logging to help diagnose render issues
+  console.log("[ExperimentResultsView] Rendering results component:", {
+    isMljarExperiment,
+    isAutoMLExperiment,
+    isCustomTrainingExperiment,
+    training_type: data.training_type,
+    automl_engine: data.automl_engine
+  });
 
   // Render the appropriate component based on experiment type
   if (isMljarExperiment) {

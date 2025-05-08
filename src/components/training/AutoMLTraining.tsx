@@ -37,7 +37,8 @@ const AutoMLTraining: React.FC = () => {
     setActiveExperimentId,
     experimentStatus,
     experimentName,
-    setExperimentName
+    setExperimentName,
+    setResultsLoaded // Make sure we're using this
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -111,6 +112,8 @@ const AutoMLTraining: React.FC = () => {
       setIsSubmitting(true);
       setIsTraining(true);
       setError(null);
+      // Reset the results loaded state at the beginning of training
+      setResultsLoaded(false);
       setActiveExperimentId(null);
 
       toast({
@@ -143,8 +146,22 @@ const AutoMLTraining: React.FC = () => {
       );
 
       if (result && result.experiment_id) {
+        // Enhanced logging for AutoML experiment tracking
+        console.log("[AutoMLTraining] AutoML training submitted successfully:", {
+          experimentId: result.experiment_id,
+          experimentName: finalExperimentName,
+          engine: automlEngine,
+          setLastTrainingType: 'automl' 
+        });
+
+        // IMPROVED: First set the training type to 'automl' explicitly
         setLastTrainingType('automl');
-        setActiveExperimentId(result.experiment_id); // Add this line to explicitly set the experiment ID
+        
+        // CRITICAL: Then set the active experiment ID
+        setActiveExperimentId(result.experiment_id);
+        
+        // ENHANCED: Start polling with additional debugging
+        console.log("[AutoMLTraining] Starting polling for experiment:", result.experiment_id);
         startPolling(result.experiment_id);
         
         // Log the experiment ID and name for debugging

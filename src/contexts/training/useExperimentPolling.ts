@@ -20,6 +20,7 @@ export const useExperimentPolling = ({
 }: UseExperimentPollingProps) => {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
+  const [experimentType, setExperimentType] = useState<'automl' | 'custom' | null>(null);
   const { toast } = useToast();
 
   const stopPolling = useCallback(() => {
@@ -30,12 +31,13 @@ export const useExperimentPolling = ({
   }, [pollingInterval]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
-  const startPolling = useCallback(async (experimentId: string) => {
+  const startPolling = useCallback(async (experimentId: string, type: 'automl' | 'custom' = 'automl') => {
     stopPolling();
 
-    console.log('[TrainingContext] Starting polling for experiment:', experimentId);
+    console.log(`[TrainingContext] Starting polling for ${type} experiment:`, experimentId);
     setIsLoading(true);
     setPollingAttempts(0);
+    setExperimentType(type);
     setExperimentStatus('processing');
 
     // Show toast notification with information about the background processing
@@ -56,7 +58,7 @@ export const useExperimentPolling = ({
       try {
         const response = await checkStatus(experimentId);
         const data = response.data;
-        console.log('[TrainingContext] Status response data:', data);
+        console.log(`[TrainingContext] Status response data (${type} experiment):`, data);
 
         if (data.status === 'failed' || !!data.error_message) {
           setExperimentStatus('failed');
@@ -74,15 +76,22 @@ export const useExperimentPolling = ({
         const mappedStatus = data.status === 'success' ? 'completed' : data.status;
         setExperimentStatus(mappedStatus);
 
-        // Stop polling immediately if results are available or status is 'success'/'completed'
-        if (data.hasTrainingResults === true || data.status === 'success' || data.status === 'completed') {
-          console.log('[TrainingContext] Results ready or training completed — stopping poller');
+        // Enhanced check for AutoML experiment completion
+        const isCompleted = data.hasTrainingResults === true || 
+                          data.status === 'success' || 
+                          data.status === 'completed';
+
+        if (isCompleted) {
+          console.log(`[TrainingContext] ${type.toUpperCase()} experiment completed — stopping poller`);
           clearInterval(poller);
           setPollingInterval(null);
 
+          // Add a small delay to ensure backend is ready - slightly longer for AutoML
+          const delay = type === 'automl' ? 1500 : 1000;
           setTimeout(() => {
+            console.log(`[TrainingContext] Calling onSuccess for ${type} experiment:`, experimentId);
             onSuccess(experimentId);
-          }, 1000); // (optional: allow backend ready time)
+          }, delay);
           return;
         }
         
@@ -140,5 +149,5 @@ export const useExperimentPolling = ({
     };
   }, [stopPolling]);
 
-  return { startPolling, stopPolling };
+  return { startPolling, stopPolling, experimentType };
 };
