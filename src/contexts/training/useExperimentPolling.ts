@@ -69,11 +69,14 @@ export const useExperimentPolling = ({
           });
           return;
         }
-        setExperimentStatus(data.status);
+        
+        // Map 'success' status to 'completed' for consistency
+        const mappedStatus = data.status === 'success' ? 'completed' : data.status;
+        setExperimentStatus(mappedStatus);
 
-        // Stop polling immediately if results are available
-        if (data.hasTrainingResults === true) {
-          console.log('[TrainingContext] Results ready — stopping poller');
+        // Stop polling immediately if results are available or status is 'success'/'completed'
+        if (data.hasTrainingResults === true || data.status === 'success' || data.status === 'completed') {
+          console.log('[TrainingContext] Results ready or training completed — stopping poller');
           clearInterval(poller);
           setPollingInterval(null);
 
@@ -82,6 +85,7 @@ export const useExperimentPolling = ({
           }, 1000); // (optional: allow backend ready time)
           return;
         }
+        
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');

@@ -216,7 +216,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1 || metrics.accuracy)
+        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics.f1)
       };
     } else {
       return {
@@ -228,33 +228,20 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Updated visualization file filtering - exclude readme and predictions
-  const getVisualizations = () => {
-    return files.filter(file => {
-      // Explicitly exclude these file types
-      if (file.file_type === 'readme' || 
-          file.file_type.includes('README') || 
-          file.file_type === 'predictions_csv' ||
-          file.file_type.includes('predictions') ||
-          file.file_type === 'model' ||
-          file.file_type.includes('label_encoder')) {
-        return false;
-      }
-      
-      // Include only visualization file types
-      return (
-        file.file_type.includes('confusion_matrix') ||
-        file.file_type.includes('roc_curve') ||
-        file.file_type.includes('evaluation_curve') ||
-        file.file_type.includes('precision_recall') ||
-        file.file_type.includes('learning_curve') ||
-        file.file_type.includes('feature_importance')
-      );
-    });
+  // Filter files by type - expanded to include all visualization types
+  const getFilesByType = (fileType: string) => {
+    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
 
-  const visualizationFiles = getVisualizations();
-  
+  const visualizationFiles = [
+    ...getFilesByType('confusion_matrix'),
+    ...getFilesByType('roc_curve'),
+    ...getFilesByType('evaluation_curve'),
+    ...getFilesByType('precision_recall_curve'),
+    ...getFilesByType('learning_curve'),
+    ...getFilesByType('feature_importance')
+  ];
+
   const modelMetadataFile = files.find(file => 
     file.file_type === 'model_metadata' || 
     file.file_type.includes('ensemble.json')

@@ -11,10 +11,10 @@ interface MetricsBlockProps {
     f1_macro?: number;
     f1?: number;
     auc?: number;
-    mcc?: number;
-    recall?: number;
-    logloss?: number;
     precision?: number;
+    recall?: number;
+    mcc?: number;
+    logloss?: number;
     mae?: number;
     rmse?: number;
     r2?: number;
@@ -47,40 +47,21 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFil
               </CardContent>
             </Card>
           )}
-          
+          {/* Display f1 from either f1_macro or f1 */}
           {(metrics.f1_macro !== undefined || metrics.f1 !== undefined) && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">F1 Score</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.f1_macro ?? metrics.f1!)}</div>
+                <div className="text-2xl font-bold">
+                  {formatMetric(metrics.f1_macro !== undefined ? metrics.f1_macro : metrics.f1!)}
+                </div>
               </CardContent>
             </Card>
           )}
           
-          {metrics.precision !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Precision</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.precision)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {metrics.recall !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Recall</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.recall)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
+          {/* Add AUC if available (common in MLJAR) */}
           {metrics.auc !== undefined && (
             <Card>
               <CardHeader className="pb-2">
@@ -92,24 +73,38 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFil
             </Card>
           )}
           
-          {metrics.mcc !== undefined && (
+          {/* Add precision if available */}
+          {metrics.precision !== undefined && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">MCC</CardTitle>
+                <CardTitle className="text-base">Precision</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.mcc)}</div>
+                <div className="text-2xl font-bold">{formatMetric(metrics.precision)}</div>
               </CardContent>
             </Card>
           )}
           
-          {metrics.logloss !== undefined && (
+          {/* Add recall if available */}
+          {metrics.recall !== undefined && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Log Loss</CardTitle>
+                <CardTitle className="text-base">Recall</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatRegressionMetric(metrics.logloss)}</div>
+                <div className="text-2xl font-bold">{formatMetric(metrics.recall)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Add MCC if available */}
+          {metrics.mcc !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Matthews CC</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatMetric(metrics.mcc)}</div>
               </CardContent>
             </Card>
           )}

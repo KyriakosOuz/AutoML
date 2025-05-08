@@ -16,19 +16,34 @@ interface ExperimentResultsViewProps {
 const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
-  const { setResultsLoaded, resetTrainingState } = useTraining();
+  const { setResultsLoaded, resetTrainingState, setIsTraining, setExperimentStatus } = useTraining();
   
-  const { data, isLoading, error } = useQuery<ExperimentResults>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
     queryFn: () => getExperimentResults(experimentId),
     enabled: !!experimentId,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2, // Retry up to 2 times if the request fails
   });
   
   // Notify parent components when results are loaded or loading
   useEffect(() => {
     if (data && !isLoading) {
-      console.log("[ExperimentResultsView] Results loaded successfully", data);
+      console.log("[ExperimentResultsView] Results loaded successfully", {
+        status: data.status,
+        algorithm: data.algorithm,
+        automl_engine: data.automl_engine
+      });
+      
+      // Ensure isTraining is set to false and status is set to completed
+      setIsTraining(false);
+      
+      // Handle 'success' status from API
+      if (data.status === 'success') {
+        console.log("[ExperimentResultsView] Mapping 'success' status to 'completed'");
+        setExperimentStatus('completed');
+      }
+      
       if (setResultsLoaded) {
         setResultsLoaded(true);
       }
@@ -37,7 +52,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         setResultsLoaded(false);
       }
     }
-  }, [data, isLoading, setResultsLoaded]);
+  }, [data, isLoading, setResultsLoaded, setIsTraining, setExperimentStatus]);
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
