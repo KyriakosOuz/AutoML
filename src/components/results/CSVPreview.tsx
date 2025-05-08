@@ -83,6 +83,27 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     
     return result;
   };
+  
+  // Function to trigger file download instead of opening in a new tab
+  const handleDownload = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `dataset_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+    } catch (err) {
+      console.error("Error downloading CSV:", err);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -100,11 +121,12 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         <p>Error loading CSV: {error}</p>
         {downloadUrl && (
           <div className="mt-4">
-            <Button asChild size="sm">
-              <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
-                <DownloadCloud className="h-4 w-4 mr-2" />
-                Download Full CSV
-              </a>
+            <Button 
+              onClick={() => handleDownload(downloadUrl)} 
+              size="sm"
+            >
+              <DownloadCloud className="h-4 w-4 mr-2" />
+              Download Full CSV
             </Button>
           </div>
         )}
@@ -143,11 +165,11 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       </p>
       {downloadUrl && (
         <div className="mt-4 flex justify-end">
-          <Button asChild>
-            <a href={downloadUrl} download>
-              <DownloadCloud className="h-4 w-4 mr-2" />
-              Download Full CSV
-            </a>
+          <Button 
+            onClick={() => handleDownload(downloadUrl)}
+          >
+            <DownloadCloud className="h-4 w-4 mr-2" />
+            Download Full CSV
           </Button>
         </div>
       )}
