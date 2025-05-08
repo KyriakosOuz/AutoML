@@ -9,6 +9,12 @@ interface MetricsBlockProps {
   metrics: {
     accuracy?: number;
     f1_macro?: number;
+    f1?: number;
+    auc?: number;
+    mcc?: number;
+    recall?: number;
+    logloss?: number;
+    precision?: number;
     mae?: number;
     rmse?: number;
     r2?: number;
@@ -41,13 +47,69 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFil
               </CardContent>
             </Card>
           )}
-          {metrics.f1_macro !== undefined && (
+          
+          {(metrics.f1_macro !== undefined || metrics.f1 !== undefined) && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">F1 Score (Macro)</CardTitle>
+                <CardTitle className="text-base">F1 Score</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.f1_macro)}</div>
+                <div className="text-2xl font-bold">{formatMetric(metrics.f1_macro ?? metrics.f1!)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {metrics.precision !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Precision</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatMetric(metrics.precision)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {metrics.recall !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Recall</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatMetric(metrics.recall)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {metrics.auc !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">AUC</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatMetric(metrics.auc)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {metrics.mcc !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">MCC</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatMetric(metrics.mcc)}</div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {metrics.logloss !== undefined && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Log Loss</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatRegressionMetric(metrics.logloss)}</div>
               </CardContent>
             </Card>
           )}

@@ -28,7 +28,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   // Notify parent components when results are loaded or loading
   useEffect(() => {
     if (data && !isLoading) {
-      console.log("[ExperimentResultsView] Results loaded successfully");
+      console.log("[ExperimentResultsView] Results loaded successfully", data);
       if (setResultsLoaded) {
         setResultsLoaded(true);
       }

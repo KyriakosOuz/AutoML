@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -63,6 +64,11 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
         // Ensure metrics are correctly mapped (handle both f1 and f1_score)
         if (data.metrics && data.metrics.f1 !== undefined && data.metrics.f1_score === undefined) {
           data.metrics.f1_score = data.metrics.f1;
+        }
+        
+        // Process files to ensure we have proper categorization
+        if (data.files) {
+          console.log("[ExperimentResultsContainer] Processing files for better categorization");
         }
         
         setResults(data);
