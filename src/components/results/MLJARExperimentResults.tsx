@@ -34,6 +34,7 @@ interface MLJARExperimentResultsProps {
   onRefresh?: () => void;
 }
 
+// Helper function to format task type
 const formatTaskType = (type: string = '') => {
   if (!type) return "Unknown";
   
@@ -208,6 +209,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     hyperparameters = {},
     automl_engine
   } = experimentResults;
+  
+  // Log the training time for debugging
+  console.log("MLJAR training time:", training_time_sec);
 
   // Find best model label if available
   const bestModelLabel = metrics.best_model_label || 
@@ -525,87 +529,114 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Enhanced UI with better grid layout */}
+          {/* Model Details Tab - Completely revised UI with improved layout */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Engine Information Card - Improved layout */}
-              <Card className="shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Engine Information Card */}
+              <Card className="shadow-sm flex flex-col h-full">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Engine Information</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <Badge variant="outline" className="bg-primary/10 px-3 py-1 text-sm">
-                      Engine: {automl_engine?.toUpperCase() || 'Not specified'}
-                    </Badge>
-                    
-                    {/* Replace Model Type with Download Button */}
-                    {modelFile && (
-                      <div className="mt-4">
-                        <Button asChild className="w-full bg-primary">
-                          <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Model
-                          </a>
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="mt-4">
-                      <h3 className="text-sm font-medium mb-2">Model Parameters</h3>
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        {Object.entries(hyperparameters).slice(0, 6).map(([key, value]) => (
-                          <div key={key} className="grid grid-cols-2 gap-2 mb-1">
-                            <span className="text-xs text-muted-foreground">{key}:</span>
-                            <span className="text-xs font-medium truncate">
-                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                <CardContent className="flex-grow">
+                  <div className="flex flex-col h-full gap-4">
+                    <div className="bg-primary/5 rounded-md p-4 mb-2">
+                      <h3 className="text-sm font-medium mb-1">AutoML Engine</h3>
+                      <p className="text-base font-bold">{automl_engine?.toUpperCase() || 'Not specified'}</p>
                     </div>
+                    
+                    {modelFile && (
+                      <Button asChild className="w-full bg-primary hover:bg-primary/90 mt-auto">
+                        <a href={modelFile.file_url} download>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Model File
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card */}
-              <Card className="shadow-sm">
+              {/* Hyperparameters Card */}
+              <Card className="shadow-sm col-span-2 flex flex-col h-full">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Model Metadata</CardTitle>
+                  <CardTitle className="text-base">Model Configuration</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {modelMetadataFile ? (
-                    <Button asChild className="w-full">
-                      <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Model Metadata
-                      </a>
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                      No metadata file available for this model.
+                <CardContent className="flex-grow overflow-auto">
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(hyperparameters).slice(0, 12).map(([key, value]) => (
+                      <div key={key} className="bg-muted/30 rounded-md p-3">
+                        <h3 className="text-xs font-medium text-muted-foreground mb-1">{key}</h3>
+                        <p className="text-sm font-medium truncate">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {Object.keys(hyperparameters).length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">No hyperparameters available</p>
+                  )}
+                  
+                  {Object.keys(hyperparameters).length > 12 && (
+                    <p className="text-xs text-muted-foreground mt-4 text-right">
+                      Showing 12 of {Object.keys(hyperparameters).length} parameters
                     </p>
                   )}
                 </CardContent>
               </Card>
               
-              {/* Documentation Card */}
-              <Card className="shadow-sm">
+              {/* Documentation and Resources Card */}
+              <Card className="shadow-sm md:col-span-3 mt-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Documentation</CardTitle>
+                  <CardTitle className="text-base">Documentation & Resources</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {readmeFile ? (
-                    <Button onClick={() => setReadmePreviewOpen(true)} className="w-full">
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Documentation
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                      No documentation available for this model.
-                    </p>
-                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Model File */}
+                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
+                      <h3 className="text-sm font-medium mb-2">Model File</h3>
+                      {modelFile ? (
+                        <Button asChild size="sm" className="w-full">
+                          <a href={modelFile.file_url} download>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Model
+                          </a>
+                        </Button>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                    
+                    {/* Model Metadata */}
+                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
+                      <h3 className="text-sm font-medium mb-2">Model Metadata</h3>
+                      {modelMetadataFile ? (
+                        <Button asChild size="sm" variant="outline" className="w-full">
+                          <a href={modelMetadataFile.file_url} download>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Download Metadata
+                          </a>
+                        </Button>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                    
+                    {/* Documentation */}
+                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
+                      <h3 className="text-sm font-medium mb-2">Documentation</h3>
+                      {readmeFile ? (
+                        <Button onClick={() => setReadmePreviewOpen(true)} size="sm" variant="outline" className="w-full">
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Documentation
+                        </Button>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                  </div>
                   
+                  {/* Documentation Dialog */}
                   <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
                     <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                       <DialogHeader>
