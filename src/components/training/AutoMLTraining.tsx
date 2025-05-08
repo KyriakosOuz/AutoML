@@ -90,14 +90,21 @@ const AutoMLTraining: React.FC = () => {
       return;
     }
 
-    // Validate that we have an experiment name
+    // Check if experimentName is empty or just whitespace
+    let finalExperimentName = experimentName;
     if (!experimentName || experimentName.trim() === '') {
+      // Generate a default experiment name as fallback
+      finalExperimentName = generateExperimentName('AutoML', automlEngine.toUpperCase());
+      console.log("[AutoMLTraining] Using generated fallback name:", finalExperimentName);
+      
+      // Update the experiment name in the context
+      setExperimentName(finalExperimentName);
+      
+      // Inform user we're using a default name
       toast({
-        title: "Missing Experiment Name",
-        description: "Please provide a name for this experiment",
-        variant: "destructive"
+        title: "Using Default Name",
+        description: `No name provided, using '${finalExperimentName}'`,
       });
-      return;
     }
 
     try {
@@ -111,7 +118,7 @@ const AutoMLTraining: React.FC = () => {
         description: `Starting AutoML training with ${automlEngine}...`,
       });
 
-      console.log("AutoMLTraining - Starting training with experiment name:", experimentName);
+      console.log("AutoMLTraining - Starting training with experiment name:", finalExperimentName);
 
       // ENHANCED: Add more debugging info before making the API call
       console.log("AutoMLTraining - Training parameters:", {
@@ -121,7 +128,7 @@ const AutoMLTraining: React.FC = () => {
         testSize,
         stratify,
         randomSeed,
-        experimentName
+        experimentName: finalExperimentName
       });
 
       // Use the function from training.ts instead of api.ts
@@ -132,7 +139,7 @@ const AutoMLTraining: React.FC = () => {
         testSize,
         stratify,
         randomSeed,
-        experimentName // Pass the user-defined experiment name
+        finalExperimentName // Pass the final experiment name (either user-defined or generated)
       );
 
       if (result && result.experiment_id) {
@@ -142,13 +149,13 @@ const AutoMLTraining: React.FC = () => {
         // Log the experiment ID and name for debugging
         console.log("AutoMLTraining - Training submitted:", {
           experimentId: result.experiment_id,
-          experimentName: experimentName,
+          experimentName: finalExperimentName,
           resultName: result.experiment_name
         });
         
         toast({
           title: "Training Submitted",
-          description: `Experiment ${experimentName} started and now processing...`,
+          description: `Experiment ${finalExperimentName} started and now processing...`,
         });
       } else {
         throw new Error('No experiment ID returned from the server');
@@ -184,15 +191,14 @@ const AutoMLTraining: React.FC = () => {
     // UPDATED: Accept both 'processed' and 'final' as valid processing stages
     const isValidProcessingStage = processingStage === 'final' || processingStage === 'processed';
     
+    // MODIFIED: Removed the experimentName check since we'll generate a default one if needed
     const result = !!(
       datasetId &&
       taskType &&
       automlEngine &&
       testSize >= 0.1 &&
       testSize <= 0.5 &&
-      isValidProcessingStage &&
-      experimentName && 
-      experimentName.trim() !== ''
+      isValidProcessingStage
     );
     
     console.log("AutoML - Form validation result:", { 
