@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import CustomTrainingResults from './CustomTrainingResults';
 import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
-import ExperimentResults as StandardExperimentResults from '@/components/results/ExperimentResults';
+// Fix: Import with a different name directly
+import StandardExperimentResults from '@/components/results/ExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsViewProps {
