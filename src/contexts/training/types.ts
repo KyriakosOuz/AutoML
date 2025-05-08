@@ -49,7 +49,7 @@ export interface TrainingContextState {
   randomSeed: number;
   activeTab: TrainingTab;
   isCheckingLastExperiment: boolean;
-  resultsLoaded?: boolean;
+  resultsLoaded: boolean; // Changed from optional to required boolean
   experimentName: string | null; // Added field for experiment name
 }
 
@@ -71,7 +71,7 @@ export interface TrainingContextValue extends TrainingContextState {
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
   setActiveTab: (tab: TrainingTab) => void;
-  setResultsLoaded?: (loaded: boolean) => void;
+  setResultsLoaded: (loaded: boolean) => void; // Make this required, not optional
   setExperimentName: (name: string) => void; // Added setter for experiment name
   resetTrainingState: () => void;
   clearExperimentResults: () => void;

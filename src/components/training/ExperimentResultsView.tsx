@@ -44,13 +44,13 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         setExperimentStatus('completed');
       }
       
-      if (setResultsLoaded) {
-        setResultsLoaded(true);
-      }
+      // Set resultsLoaded to true when we have data and we're not loading
+      console.log("[ExperimentResultsView] Setting resultsLoaded to TRUE");
+      setResultsLoaded(true);
     } else {
-      if (setResultsLoaded) {
-        setResultsLoaded(false);
-      }
+      // Explicitly set resultsLoaded to false when loading or no data
+      console.log("[ExperimentResultsView] Setting resultsLoaded to FALSE, isLoading:", isLoading);
+      setResultsLoaded(false);
     }
   }, [data, isLoading, setResultsLoaded, setIsTraining, setExperimentStatus]);
 

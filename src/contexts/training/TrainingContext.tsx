@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -33,6 +34,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     randomSeed: defaultAutomlParameters.randomSeed,
     activeTab: 'automl',
     isCheckingLastExperiment: false,
+    resultsLoaded: false, // Initialize resultsLoaded state explicitly
     experimentName: null, // Initialize experiment name as null
   });
 
@@ -251,6 +253,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       isTraining: state.isTraining,
       isLoadingResults: state.isLoadingResults,
       hasResults: !!state.experimentResults,
+      resultsLoaded: state.resultsLoaded,
     });
     
     setState(prev => ({
@@ -261,7 +264,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       },
       experimentStatus: 'completed',
       isTraining: false, // Make sure to set isTraining to false when completed
-      isLoadingResults: false // Ensure isLoadingResults is also set to false
+      isLoadingResults: false, // Ensure isLoadingResults is also set to false
+      resultsLoaded: true, // Explicitly set resultsLoaded to true when polling completes successfully
     }));
     
     toast({
@@ -276,7 +280,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
     }
-  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults]);
+  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded]);
 
   const handlePollingError = useCallback((error: string) => {
     console.log("[TrainingContext] Polling error:", error);
@@ -286,6 +290,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       error,
       isLoadingResults: false,
       isTraining: false,
+      resultsLoaded: false, // Make sure to set resultsLoaded to false on error
       statusResponse: {
         status: 'failed',
         hasTrainingResults: false,
@@ -357,6 +362,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false, // Ensure isTraining is false when results are loaded
+          resultsLoaded: true, // Explicitly set resultsLoaded to true when results are successfully fetched
           experimentName: updatedExperimentName, // Prioritize existing name
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
@@ -374,6 +380,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         setState(prev => ({ 
           ...prev, 
           isLoadingResults: false,
+          resultsLoaded: false, // Ensure resultsLoaded is false when no results
           experimentStatus: 'failed',
           statusResponse: {
             status: 'failed',
@@ -392,6 +399,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         ...prev, 
         error: errorMessage, 
         isLoadingResults: false,
+        resultsLoaded: false, // Ensure resultsLoaded is false on error
         experimentStatus: 'failed',
         isTraining: false,
         statusResponse: {
@@ -427,8 +435,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
+    setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })), // Properly implement the setResultsLoaded function
     setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })), // Add setter for experimentName
-    checkLastExperiment,
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -449,6 +457,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
         isCheckingLastExperiment: false,
+        resultsLoaded: false, // Reset resultsLoaded state
         experimentName: null, // Reset experiment name
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
@@ -462,6 +471,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         experimentResults: null,
         activeExperimentId: null,
         statusResponse: null,
+        resultsLoaded: false, // Clear resultsLoaded state
         experimentName: null // Clear experiment name
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
@@ -472,6 +482,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     getExperimentResults,
     startPolling,
     stopPolling,
+    checkLastExperiment,
   };
 
   return (

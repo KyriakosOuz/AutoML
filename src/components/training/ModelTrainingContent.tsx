@@ -29,14 +29,23 @@ const ModelTrainingContent: React.FC = () => {
     isLoadingResults,
     getExperimentResults,
     experimentResults,
-    stopPolling
+    stopPolling,
+    resultsLoaded // Import resultsLoaded directly from context
   } = useTraining();
   
   const { datasetId, taskType, processingStage } = useDataset();
   const isMobile = useIsMobile();
   
-  // State to track when results are fully loaded
-  const [resultsLoaded, setResultsLoaded] = useState(false);
+  // Detailed logging for relevant state changes
+  useEffect(() => {
+    console.log("ModelTrainingContent - State update:", { 
+      experimentStatus, 
+      isTraining, 
+      isLoadingResults, 
+      resultsLoaded,
+      showResultsAndPredict: showResultsAndPredict()
+    });
+  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded]);
 
   // Ensure isTraining is set to false when status is completed or success
   useEffect(() => {
@@ -46,13 +55,27 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [experimentStatus, isTraining, setIsTraining]);
 
-  // Show results and predict tabs only when experiment is completed
-  const showResultsAndPredict = 
-    (experimentStatus === 'completed' || experimentStatus === 'success') && 
-    activeExperimentId && 
-    !isTraining;
+  // Define a function to determine if results and predict tabs should be shown
+  const showResultsAndPredict = () => {
+    // Show tabs when experiment is completed AND we have an experiment ID AND results are loaded
+    const shouldShow = 
+      (experimentStatus === 'completed' || experimentStatus === 'success') && 
+      !!activeExperimentId &&
+      !isTraining &&
+      resultsLoaded; // Add resultsLoaded check
+    
+    console.log("ModelTrainingContent - showResultsAndPredict check:", {
+      experimentStatus,
+      activeExperimentId: !!activeExperimentId,
+      notTraining: !isTraining,
+      resultsLoaded,
+      shouldShow
+    });
+    
+    return shouldShow;
+  };
 
-  // Add status indicator - Modified to also check resultsLoaded
+  // Add status indicator - Using the explicit resultsLoaded state
   const isProcessing = 
     (experimentStatus === 'processing' || experimentStatus === 'running' || isTraining) && 
     !resultsLoaded;
@@ -69,13 +92,14 @@ const ModelTrainingContent: React.FC = () => {
       isLoadingResults,
       activeExperimentId,
       resultsLoaded,
-      showResultsAndPredict
+      showResultsAndPredict: showResultsAndPredict()
     });
-  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded, showResultsAndPredict]);
+  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded]);
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
-    if ((activeTab === 'results' || activeTab === 'predict') && !showResultsAndPredict) {
+    const canShowResultsAndPredict = showResultsAndPredict();
+    if ((activeTab === 'results' || activeTab === 'predict') && !canShowResultsAndPredict) {
       console.log("ModelTrainingContent - Switching to automl tab because results/predict not available");
       setActiveTab('automl');
     }
@@ -98,34 +122,16 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults]);
 
-  // Update resultsLoaded state when experimentResults are available
+  // Auto-switch to results tab when results are loaded
   useEffect(() => {
-    if (experimentResults && !isLoadingResults && 
-        (experimentStatus === 'completed' || experimentStatus === 'success')) {
-      console.log("ModelTrainingContent - Results are loaded, updating state");
-      // Add small delay to ensure UI updates properly
-      const timer = setTimeout(() => {
-        setResultsLoaded(true);
-        
-        // Ensure tabs become available by setting isTraining to false if it's still true
-        if (isTraining) {
-          console.log("ModelTrainingContent - Forcing isTraining to false since results are loaded");
-          setIsTraining(false);
-        }
-        
-        // If we're on the automl or custom tab when results load, automatically switch to results tab
-        if ((activeTab === 'automl' || activeTab === 'custom') && activeExperimentId) {
-          console.log("ModelTrainingContent - Auto-switching to results tab");
-          setActiveTab('results');
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    } else if (!experimentResults || isLoadingResults || 
-               (experimentStatus !== 'completed' && experimentStatus !== 'success')) {
-      setResultsLoaded(false);
+    if (resultsLoaded && 
+        activeExperimentId && 
+        (experimentStatus === 'completed' || experimentStatus === 'success') &&
+        (activeTab === 'automl' || activeTab === 'custom')) {
+      console.log("ModelTrainingContent - Auto-switching to results tab because resultsLoaded =", resultsLoaded);
+      setActiveTab('results');
     }
-  }, [experimentResults, isLoadingResults, experimentStatus, isTraining, setIsTraining, activeTab, setActiveTab, activeExperimentId]);
+  }, [resultsLoaded, activeExperimentId, experimentStatus, activeTab, setActiveTab]);
 
   // Determine if dataset is ready for training
   const isDatasetReady = !!(
@@ -242,17 +248,17 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger 
               value="results" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict}
+              disabled={!showResultsAndPredict()}
             >
-              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Results
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict}
+              disabled={!showResultsAndPredict()}
             >
-              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Predict
             </TabsTrigger>
           </TabsList>
@@ -265,7 +271,7 @@ const ModelTrainingContent: React.FC = () => {
           <CustomTraining />
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
-          {showResultsAndPredict && activeExperimentId ? (
+          {showResultsAndPredict() && activeExperimentId ? (
             <ExperimentResultsView experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
@@ -277,7 +283,7 @@ const ModelTrainingContent: React.FC = () => {
           )}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
-          {showResultsAndPredict && activeExperimentId ? (
+          {showResultsAndPredict() && activeExperimentId ? (
             <DynamicPredictionForm experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
