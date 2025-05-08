@@ -37,6 +37,7 @@ const CustomTraining: React.FC = () => {
     experimentResults,
     isLoadingResults,
     startPolling,
+    stopPolling,
     activeTab
   } = useTraining();
   
@@ -152,6 +153,8 @@ const CustomTraining: React.FC = () => {
       setActiveExperimentId(null);
       setIsTraining(true);
       setError(null);
+      
+      // Explicitly set the training type to 'custom'
       setLastTrainingType('custom');
 
       const formData = new FormData();
@@ -179,11 +182,19 @@ const CustomTraining: React.FC = () => {
         description: `Starting custom training with ${customParameters.algorithm}...`,
       });
 
+      // Stop any existing polling before starting a new experiment
+      if (stopPolling) stopPolling();
+
       const result = await trainingApi.customTrain(formData);
       
       if (result && result.experiment_id) {
         setActiveExperimentId(result.experiment_id);
-        startPolling(result.experiment_id);
+        
+        // Log the training type explicitly before starting polling
+        console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
+        
+        // Start polling with explicit 'custom' type
+        startPolling(result.experiment_id, 'custom');
         
         toast({
           title: "Training Submitted",

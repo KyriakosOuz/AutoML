@@ -26,6 +26,8 @@ export const useExperimentPolling = ({
   
   // Using a ref to track if polling has been stopped manually
   const isManuallyStoppedRef = useRef<boolean>(false);
+  // Track if polling is currently active
+  const isPollingActiveRef = useRef<boolean>(false);
 
   const stopPolling = useCallback(() => {
     if (pollingInterval) {
@@ -33,9 +35,15 @@ export const useExperimentPolling = ({
       clearInterval(pollingInterval);
       setPollingInterval(null);
       isManuallyStoppedRef.current = true;
+      isPollingActiveRef.current = false;
       
       // Reset active experiment ID when polling is stopped
       setActiveExperimentId(null);
+      
+      // Also reset the experiment type when polling stops
+      setExperimentType(null);
+      
+      console.log('[useExperimentPolling] Polling has been fully stopped');
     }
   }, [pollingInterval, activeExperimentId]);
 
@@ -46,6 +54,7 @@ export const useExperimentPolling = ({
       console.log('[useExperimentPolling] Stopping existing polling before starting new one');
       clearInterval(pollingInterval);
       setPollingInterval(null);
+      isPollingActiveRef.current = false;
     }
 
     console.log(`[useExperimentPolling] Starting polling for ${type} experiment:`, experimentId);
@@ -55,6 +64,7 @@ export const useExperimentPolling = ({
     setExperimentStatus('processing');
     setActiveExperimentId(experimentId);
     isManuallyStoppedRef.current = false;
+    isPollingActiveRef.current = true;
 
     // Show toast notification with information about the background processing
     toast({
@@ -80,7 +90,7 @@ export const useExperimentPolling = ({
 
         const response = await checkStatus(experimentId);
         const data = response.data;
-        console.log(`[useExperimentPolling] Status response data (${type} experiment):`, data);
+        console.log(`[useExperimentPolling] Status response for ${type} experiment (${experimentId}):`, data);
 
         // FIX: Properly check for failure status and error message in the response
         // Use type assertion to allow checking for 'error' status
@@ -106,7 +116,7 @@ export const useExperimentPolling = ({
         const mappedStatus = data.status === 'success' ? 'completed' : data.status;
         setExperimentStatus(mappedStatus);
 
-        // Enhanced check for AutoML experiment completion
+        // Enhanced check for experiment completion
         const isCompleted = data.hasTrainingResults === true || 
                           data.status === 'success' || 
                           data.status === 'completed';
@@ -189,6 +199,7 @@ export const useExperimentPolling = ({
       if (pollingInterval) {
         console.log('[useExperimentPolling] Cleaning up polling on unmount');
         clearInterval(pollingInterval);
+        isPollingActiveRef.current = false;
       }
     };
   }, [pollingInterval]);
@@ -198,6 +209,6 @@ export const useExperimentPolling = ({
     stopPolling, 
     experimentType,
     activeExperimentId,
-    isPolling: !!pollingInterval 
+    isPolling: !!pollingInterval || isPollingActiveRef.current
   };
 };

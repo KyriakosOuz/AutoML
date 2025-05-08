@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -238,8 +239,11 @@ const ModelTrainingContent: React.FC = () => {
               <span className="font-semibold">
                 {getStatusMessage()}
               </span>
-              {lastTrainingType === 'automl' && (
+              {lastTrainingType === 'automl' && activeTab !== 'custom' && (
                 <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AutoML</span>
+              )}
+              {lastTrainingType === 'custom' && (
+                <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Custom</span>
               )}
             </div>
             <Progress 
@@ -258,7 +262,9 @@ const ModelTrainingContent: React.FC = () => {
         <Alert variant="info" className="mb-4">
           <Info className="h-4 w-4 text-blue-500 mr-2" />
           <AlertDescription className="text-sm">
-            Viewing results for {lastTrainingType === 'automl' && <span className="font-medium">AutoML</span>} experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
+            Viewing results for {lastTrainingType === 'automl' ? 
+              <span className="font-medium">AutoML</span> : 
+              <span className="font-medium">Custom</span>} experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
             {experimentResults.algorithm && ` using ${experimentResults.algorithm}`}
             {getExperimentTimeInfo() && ` (created ${getExperimentTimeInfo()})`}
           </AlertDescription>

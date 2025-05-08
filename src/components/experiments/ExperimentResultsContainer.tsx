@@ -31,7 +31,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const { toast } = useToast();
   
   // Access the training context to reset training state
-  const { resetTrainingState, stopPolling, setActiveTab } = useTraining();
+  const { resetTrainingState, stopPolling, setActiveTab, lastTrainingType } = useTraining();
 
   useEffect(() => {
     if (providedResults) {
@@ -119,6 +119,20 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
 
   // Check if this is a MLJAR experiment
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
+  
+  // Determine the correct training type from results or context
+  const determineTrainingType = () => {
+    // First check if results have automl_engine
+    if (results?.automl_engine) return 'automl';
+    
+    // Then check if results have training_type
+    if (results?.training_type) return results.training_type;
+    
+    // If neither is available, use lastTrainingType from context
+    return lastTrainingType;
+  };
+  
+  const currentTrainingType = determineTrainingType();
 
   return (
     <div className="w-full overflow-x-hidden">
@@ -141,6 +155,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
           error={error}
           onReset={handleReset}
           onRefresh={handleRefresh}
+          trainingType={currentTrainingType} // Pass the training type to the component
         />
       )}
     </div>
