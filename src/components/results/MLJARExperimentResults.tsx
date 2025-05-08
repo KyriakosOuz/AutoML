@@ -529,141 +529,107 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Completely revised UI with improved layout */}
+          {/* Model Details Tab - Simplified clean UI */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Engine Information Card */}
-              <Card className="shadow-sm flex flex-col h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Model File Card */}
+              <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Engine Information</CardTitle>
+                  <CardTitle className="text-base text-center">Model File</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-grow">
-                  <div className="flex flex-col h-full gap-4">
-                    <div className="bg-primary/5 rounded-md p-4 mb-2">
-                      <h3 className="text-sm font-medium mb-1">AutoML Engine</h3>
-                      <p className="text-base font-bold">{automl_engine?.toUpperCase() || 'Not specified'}</p>
-                    </div>
-                    
-                    {modelFile && (
-                      <Button asChild className="w-full bg-primary hover:bg-primary/90 mt-auto">
-                        <a href={modelFile.file_url} download>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Model File
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Hyperparameters Card */}
-              <Card className="shadow-sm col-span-2 flex flex-col h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Model Configuration</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow overflow-auto">
-                  <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(hyperparameters).slice(0, 12).map(([key, value]) => (
-                      <div key={key} className="bg-muted/30 rounded-md p-3">
-                        <h3 className="text-xs font-medium text-muted-foreground mb-1">{key}</h3>
-                        <p className="text-sm font-medium truncate">
-                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {Object.keys(hyperparameters).length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No hyperparameters available</p>
-                  )}
-                  
-                  {Object.keys(hyperparameters).length > 12 && (
-                    <p className="text-xs text-muted-foreground mt-4 text-right">
-                      Showing 12 of {Object.keys(hyperparameters).length} parameters
-                    </p>
+                <CardContent className="flex flex-col items-center pt-2">
+                  {modelFile ? (
+                    <Button asChild>
+                      <a href={modelFile.file_url} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Model
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button disabled variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Not Available
+                    </Button>
                   )}
                 </CardContent>
               </Card>
               
-              {/* Documentation and Resources Card */}
-              <Card className="shadow-sm md:col-span-3 mt-2">
+              {/* Model Metadata Card */}
+              <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Documentation & Resources</CardTitle>
+                  <CardTitle className="text-base text-center">Metadata</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Model File */}
-                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
-                      <h3 className="text-sm font-medium mb-2">Model File</h3>
-                      {modelFile ? (
-                        <Button asChild size="sm" className="w-full">
-                          <a href={modelFile.file_url} download>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Model
-                          </a>
-                        </Button>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Not available</p>
-                      )}
-                    </div>
-                    
-                    {/* Model Metadata */}
-                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
-                      <h3 className="text-sm font-medium mb-2">Model Metadata</h3>
-                      {modelMetadataFile ? (
-                        <Button asChild size="sm" variant="outline" className="w-full">
-                          <a href={modelMetadataFile.file_url} download>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Download Metadata
-                          </a>
-                        </Button>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Not available</p>
-                      )}
-                    </div>
-                    
-                    {/* Documentation */}
-                    <div className="bg-muted/20 rounded-md p-4 flex flex-col items-center justify-center">
-                      <h3 className="text-sm font-medium mb-2">Documentation</h3>
-                      {readmeFile ? (
-                        <Button onClick={() => setReadmePreviewOpen(true)} size="sm" variant="outline" className="w-full">
-                          <FileText className="h-4 w-4 mr-2" />
-                          View Documentation
-                        </Button>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Not available</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Documentation Dialog */}
-                  <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
-                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Model Documentation</DialogTitle>
-                      </DialogHeader>
-                      
-                      <div className="mt-4">
-                        <iframe
-                          src={readmeFile?.file_url}
-                          className="w-full h-[60vh] border rounded"
-                          title="Model Documentation"
-                        />
-                        
-                        <div className="flex justify-end mt-4">
-                          <Button asChild variant="outline" size="sm">
-                            <a href={readmeFile?.file_url} target="_blank" rel="noopener noreferrer">
-                              <FileText className="h-4 w-4 mr-2" />
-                              Open in New Tab
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <CardContent className="flex flex-col items-center pt-2">
+                  {modelMetadataFile ? (
+                    <Button variant="outline" asChild>
+                      <a href={modelMetadataFile.file_url} download>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Download JSON
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button disabled variant="outline">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Not Available
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+              
+              {/* Documentation Card */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-center">Documentation</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center pt-2">
+                  {readmeFile ? (
+                    <Button variant="outline" onClick={() => setReadmePreviewOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Readme
+                    </Button>
+                  ) : (
+                    <Button disabled variant="outline">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Not Available
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Documentation Dialog - Keep this part */}
+            <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Model Documentation</DialogTitle>
+                </DialogHeader>
+                
+                <div className="mt-4">
+                  <iframe
+                    src={readmeFile?.file_url}
+                    className="w-full h-[60vh] border rounded"
+                    title="Model Documentation"
+                  />
+                  
+                  <div className="flex justify-end mt-4">
+                    <Button asChild variant="outline" size="sm">
+                      <a href={readmeFile?.file_url} target="_blank" rel="noopener noreferrer">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Open in New Tab
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Add some simple info below the cards if needed */}
+            {automl_engine && (
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                This model was trained using {automl_engine.toUpperCase()} AutoML engine
+                {training_time_sec && ` in ${formatTrainingTime(training_time_sec)}`}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
