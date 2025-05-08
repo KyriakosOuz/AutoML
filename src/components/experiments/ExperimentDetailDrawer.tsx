@@ -189,11 +189,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
-  // Format created_at date for display if this is a MLJAR experiment
-  const formattedCreatedAt = results?.created_at && results?.automl_engine === 'mljar' 
-    ? formatDateForGreece(new Date(results.created_at), 'PP p')
-    : null;
-
   // Function to handle file downloads
   const handleFileDownload = async (url: string, filename: string) => {
     try {
@@ -358,7 +353,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       {results.created_at && (
                         <>
                           <div className="text-muted-foreground">Created:</div>
-                          <div>{formattedCreatedAt || new Date(results.created_at).toLocaleString()}</div>
+                          <div>{new Date(results.created_at).toLocaleString()}</div>
                         </>
                       )}
                       
@@ -369,7 +364,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </>
                       )}
                       
-                      {results.training_time_sec && !results.automl_engine && (
+                      {results.training_time_sec && (
                         <>
                           <div className="text-muted-foreground">Training Time:</div>
                           <div>{results.training_time_sec.toFixed(2)} seconds</div>
