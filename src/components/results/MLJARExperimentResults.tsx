@@ -507,7 +507,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Replace the previous placeholder with the new CSV Preview component */}
                   <CSVPreview
                     fileUrl={predictionsFile.file_url}
                     downloadUrl={predictionsFile.file_url}
@@ -526,9 +525,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Metadata Tab */}
+          {/* Model Details Tab - Updated to match the UI in the image */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Engine Information Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Engine Information</CardTitle>
@@ -539,10 +539,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       Engine: {automl_engine?.toUpperCase() || 'Not specified'}
                     </Badge>
                     
-                    {/* Replace Model Type with Download Button if model file exists */}
+                    {/* Replace Model Type with Download Button */}
                     {modelFile && (
                       <div className="mt-4">
-                        <Button asChild className="w-full">
+                        <Button asChild className="w-full bg-primary">
                           <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
                             <Download className="h-4 w-4 mr-2" />
                             Download Model
@@ -568,60 +568,70 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {modelMetadataFile && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Model Metadata</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button asChild>
+              {/* Model Metadata Card */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Model Metadata</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {modelMetadataFile ? (
+                    <Button asChild className="w-full">
                       <a href={modelMetadataFile.file_url} download target="_blank" rel="noopener noreferrer">
                         <Download className="h-4 w-4 mr-2" />
                         Download Model Metadata
                       </a>
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">
+                      No metadata file available for this model.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
               
-              {readmeFile && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Documentation</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+              {/* Documentation Card */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Documentation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {readmeFile ? (
                     <Button onClick={() => setReadmePreviewOpen(true)} className="w-full">
                       <FileText className="h-4 w-4 mr-2" />
                       View Documentation
                     </Button>
-                    
-                    <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Model Documentation</DialogTitle>
-                        </DialogHeader>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">
+                      No documentation available for this model.
+                    </p>
+                  )}
+                  
+                  <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Model Documentation</DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="mt-4">
+                        <iframe
+                          src={readmeFile?.file_url}
+                          className="w-full h-[60vh] border rounded"
+                          title="Model Documentation"
+                        />
                         
-                        <div className="mt-4">
-                          <iframe
-                            src={readmeFile.file_url}
-                            className="w-full h-[60vh] border rounded"
-                            title="Model Documentation"
-                          />
-                          
-                          <div className="flex justify-end mt-4">
-                            <Button asChild variant="outline" size="sm">
-                              <a href={readmeFile.file_url} target="_blank" rel="noopener noreferrer">
-                                <FileText className="h-4 w-4 mr-2" />
-                                Open in New Tab
-                              </a>
-                            </Button>
-                          </div>
+                        <div className="flex justify-end mt-4">
+                          <Button asChild variant="outline" size="sm">
+                            <a href={readmeFile?.file_url} target="_blank" rel="noopener noreferrer">
+                              <FileText className="h-4 w-4 mr-2" />
+                              Open in New Tab
+                            </a>
+                          </Button>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  </CardContent>
-                </Card>
-              )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
