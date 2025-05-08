@@ -28,5 +28,6 @@ export interface BatchPredictionResponse {
   };
   y_true?: any[];
   y_pred?: any[];
-  target_column?: string; // Added target_column property
+  target_column?: string;
+  automl_engine?: string; // Added this property to match what's being used
 }
