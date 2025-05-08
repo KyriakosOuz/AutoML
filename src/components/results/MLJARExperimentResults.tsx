@@ -310,12 +310,11 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </span>
           )}
           
-          {training_time_sec && (
-            <span className="inline-flex items-center">
-              <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
-            </span>
-          )}
+          {/* Ensure training_time_sec is always passed to formatTrainingTime */}
+          <span className="inline-flex items-center">
+            <Clock className="h-3.5 w-3.5 mr-1" />
+            Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
+          </span>
           
           {experiment_id && (
             <span className="inline-flex items-center">

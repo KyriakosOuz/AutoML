@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +24,7 @@ import {
   Microscope,
   Loader
 } from 'lucide-react';
+import { formatTrainingTime } from '@/utils/formatUtils';
 
 export interface TrainingResultsV2Props {
   experimentId: string;
@@ -238,12 +238,11 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
             Target: <span className="font-semibold ml-1">{target_column}</span>
           </span>
           
-          {training_time_sec && (
-            <span className="inline-flex items-center">
-              <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{training_time_sec.toFixed(1)}s</span>
-            </span>
-          )}
+          {/* Always show training time using formatTrainingTime */}
+          <span className="inline-flex items-center">
+            <Clock className="h-3.5 w-3.5 mr-1" />
+            Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
+          </span>
         </CardDescription>
       </CardHeader>
       
