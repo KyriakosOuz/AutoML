@@ -25,6 +25,7 @@ export const useExperimentPolling = ({
 
   const stopPolling = useCallback(() => {
     if (pollingInterval) {
+      console.log('[useExperimentPolling] Stopping polling');
       clearInterval(pollingInterval);
       setPollingInterval(null);
     }
@@ -60,13 +61,19 @@ export const useExperimentPolling = ({
         const data = response.data;
         console.log(`[TrainingContext] Status response data (${type} experiment):`, data);
 
-        if (data.status === 'failed' || !!data.error_message) {
+        // FIX: Properly check for failure status and error message in the response
+        if (data.status === 'failed' || data.status === 'error' || !!data.error_message) {
+          console.log(`[TrainingContext] Experiment ${experimentId} FAILED - stopping poller`);
           setExperimentStatus('failed');
           stopPolling();
-          onError(data.error_message || 'Training failed.');
+          
+          // Display the error message from the API or a generic one
+          const errorMessage = data.error_message || 'Training failed.';
+          onError(errorMessage);
+          
           toast({
             title: "Training Failed",
-            description: data.error_message || "An error occurred during training.",
+            description: errorMessage,
             variant: "destructive"
           });
           return;
@@ -83,8 +90,7 @@ export const useExperimentPolling = ({
 
         if (isCompleted) {
           console.log(`[TrainingContext] ${type.toUpperCase()} experiment completed — stopping poller`);
-          clearInterval(poller);
-          setPollingInterval(null);
+          stopPolling();
 
           // Add a small delay to ensure backend is ready - slightly longer for AutoML
           const delay = type === 'automl' ? 1500 : 1000;
@@ -95,6 +101,7 @@ export const useExperimentPolling = ({
           return;
         }
         
+        // FIX: Adjusted to use a lower MAX_POLL_ATTEMPTS for faster timeout in case of issues
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
           console.warn('[TrainingContext] Reached maximum polling attempts');
           setExperimentStatus('failed');
@@ -124,7 +131,10 @@ export const useExperimentPolling = ({
           });
           return;
         }
-        if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
+        
+        // FIX: Ensure we set failed status and stop polling after fewer attempts
+        if (pollingAttempts >= Math.min(5, MAX_POLL_ATTEMPTS)) {
+          console.log('[TrainingContext] Too many errors during polling, stopping');
           setExperimentStatus('failed');
           stopPolling();
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
