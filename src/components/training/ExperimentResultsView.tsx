@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import CustomTrainingResults from './CustomTrainingResults';
+import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
+import ExperimentResults as StandardExperimentResults from '@/components/results/ExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsViewProps {
@@ -90,14 +92,49 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
 
-  return (
-    <div className="w-full">
-      <CustomTrainingResults 
-        experimentResults={data} 
-        onReset={handleReset}
-      />
-    </div>
-  );
+  // Determine which component to render based on the automl_engine
+  const isMljarExperiment = data.automl_engine?.toLowerCase() === "mljar";
+  const isAutoMLExperiment = !!data.automl_engine;
+  const isCustomTrainingExperiment = data.training_type === "custom" || (!data.automl_engine && !data.training_type);
+
+  // Render the appropriate component based on experiment type
+  if (isMljarExperiment) {
+    return (
+      <div className="w-full">
+        <MLJARExperimentResults
+          experimentId={experimentId}
+          status={data.status}
+          experimentResults={data}
+          isLoading={false}
+          error={null}
+          onReset={handleReset}
+        />
+      </div>
+    );
+  } else if (isAutoMLExperiment) {
+    return (
+      <div className="w-full">
+        <StandardExperimentResults
+          experimentId={experimentId}
+          status={data.status}
+          experimentResults={data}
+          isLoading={false}
+          error={null}
+          onReset={handleReset}
+        />
+      </div>
+    );
+  } else {
+    // Default to CustomTrainingResults for custom training experiments
+    return (
+      <div className="w-full">
+        <CustomTrainingResults 
+          experimentResults={data} 
+          onReset={handleReset}
+        />
+      </div>
+    );
+  }
 };
 
 export default ExperimentResultsView;
