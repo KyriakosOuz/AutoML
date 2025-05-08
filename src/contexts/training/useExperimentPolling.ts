@@ -62,7 +62,9 @@ export const useExperimentPolling = ({
         console.log(`[TrainingContext] Status response data (${type} experiment):`, data);
 
         // FIX: Properly check for failure status and error message in the response
-        if (data.status === 'failed' || data.status === 'error' || !!data.error_message) {
+        // Use type assertion to allow checking for 'error' status
+        const status = data.status as string;
+        if (status === 'failed' || status === 'error' || !!data.error_message) {
           console.log(`[TrainingContext] Experiment ${experimentId} FAILED - stopping poller`);
           setExperimentStatus('failed');
           stopPolling();

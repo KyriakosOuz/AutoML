@@ -2,7 +2,7 @@
 import { ExperimentResults } from '@/types/training';
 
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
-export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle';
+export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
 export type TrainingTab = 'automl' | 'custom' | 'results' | 'predict';
 
 export interface AutoMLParameters {
