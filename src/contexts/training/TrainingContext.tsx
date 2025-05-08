@@ -244,6 +244,15 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
     console.log("[TrainingContext] Polling completed successfully for experiment:", experimentId);
     
+    // Enhanced debugging for status transition
+    console.log("[TrainingContext] ★★★ EXPERIMENT COMPLETED ★★★");
+    console.log("[TrainingContext] Current state before status update:", {
+      experimentStatus: state.experimentStatus,
+      isTraining: state.isTraining,
+      isLoadingResults: state.isLoadingResults,
+      hasResults: !!state.experimentResults,
+    });
+    
     setState(prev => ({
       ...prev,
       statusResponse: {
@@ -267,7 +276,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
     }
-  }, [toast]);
+  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults]);
 
   const handlePollingError = useCallback((error: string) => {
     console.log("[TrainingContext] Polling error:", error);
@@ -316,12 +325,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       const results = await trainingApi.getExperimentResults(state.activeExperimentId);
 
       if (results) {
-        console.log("[TrainingContext] Successfully fetched experiment results");
+        console.log("[TrainingContext] Successfully fetched experiment results", {
+          status: results.status,
+          algorithm: results.algorithm,
+          automl_engine: results.automl_engine,
+          hasMetrics: !!results.metrics,
+        });
         
         // Handle 'success' status from API by mapping it to 'completed'
         let resultStatus = results.status || 'completed';
         if (resultStatus === 'success') {
           resultStatus = 'completed';
+          console.log("[TrainingContext] Mapped 'success' status to 'completed'");
         }
         
         // MODIFIED: Don't overwrite the experiment name if we already have one
