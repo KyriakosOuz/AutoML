@@ -515,6 +515,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     fileUrl={predictionsFile.file_url}
                     downloadUrl={predictionsFile.file_url}
                     maxRows={10}
+                    engineName={automl_engine?.toUpperCase()}
                   />
                 </CardContent>
               </Card>

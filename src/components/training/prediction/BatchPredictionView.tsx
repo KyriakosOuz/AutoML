@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -175,7 +176,12 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
   const handleDownloadPredictions = () => {
     if (!result?.filled_dataset_preview?.length) return;
     
-    const filename = `predictions_${new Date().toISOString().split('T')[0]}.csv`;
+    // Use engine name if available for the filename
+    const engineName = result.automl_engine?.toUpperCase();
+    const filename = engineName 
+      ? `${engineName}_Predictions_${new Date().toISOString().split('T')[0]}.csv`
+      : `predictions_${new Date().toISOString().split('T')[0]}.csv`;
+    
     downloadCSV(result.filled_dataset_preview, filename);
     
     toast({

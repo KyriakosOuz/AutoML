@@ -9,12 +9,14 @@ interface CSVPreviewProps {
   fileUrl: string;
   downloadUrl?: string;
   maxRows?: number;
+  engineName?: string;
 }
 
 const CSVPreview: React.FC<CSVPreviewProps> = ({ 
   fileUrl, 
   downloadUrl,
-  maxRows = 10 
+  maxRows = 10,
+  engineName
 }) => {
   const [data, setData] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -91,9 +93,14 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       const blob = await response.blob();
       const downloadUrl = URL.createObjectURL(blob);
       
+      // Create filename with engine name if available, or use default
+      const fileName = engineName 
+        ? `${engineName}_Predictions.csv`
+        : `dataset_${new Date().toISOString().slice(0, 10)}.csv`;
+      
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `dataset_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
