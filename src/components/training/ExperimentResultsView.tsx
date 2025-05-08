@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
@@ -17,6 +17,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
   const { setResultsLoaded, resetTrainingState, setIsTraining, setExperimentStatus } = useTraining();
+  const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
   
   const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -47,12 +48,18 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       // Set resultsLoaded to true when we have data and we're not loading
       console.log("[ExperimentResultsView] Setting resultsLoaded to TRUE");
       setResultsLoaded(true);
-    } else {
-      // Explicitly set resultsLoaded to false when loading or no data
-      console.log("[ExperimentResultsView] Setting resultsLoaded to FALSE, isLoading:", isLoading);
+      setLocalLoadingState(false);
+    } else if (error) {
+      // Only set resultsLoaded to false on actual errors, not during loading
+      console.log("[ExperimentResultsView] Error loading results, setting resultsLoaded to FALSE");
       setResultsLoaded(false);
+      setLocalLoadingState(false);
+    } else {
+      // Use local loading state instead of modifying global state during initial load
+      console.log("[ExperimentResultsView] Still loading, using local state only");
+      setLocalLoadingState(isLoading);
     }
-  }, [data, isLoading, setResultsLoaded, setIsTraining, setExperimentStatus]);
+  }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus]);
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
@@ -60,7 +67,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     resetTrainingState();
   };
 
-  if (isLoading) {
+  if (localLoadingState) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-12 w-full" />

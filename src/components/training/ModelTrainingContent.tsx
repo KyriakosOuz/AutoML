@@ -57,17 +57,21 @@ const ModelTrainingContent: React.FC = () => {
 
   // Define a function to determine if results and predict tabs should be shown
   const showResultsAndPredict = () => {
-    // Show tabs when experiment is completed AND we have an experiment ID AND results are loaded
+    // IMPROVED LOGIC: Show tabs when experiment is completed OR results are loaded
+    // This makes the function more resilient to race conditions
+    const hasValidExperiment = !!activeExperimentId;
+    const isExperimentDone = experimentStatus === 'completed' || experimentStatus === 'success';
+    const isCurrentlyTraining = isTraining;
+    
+    // New condition: either results are explicitly loaded OR experiment is done and not actively training
     const shouldShow = 
-      (experimentStatus === 'completed' || experimentStatus === 'success') && 
-      !!activeExperimentId &&
-      !isTraining &&
-      resultsLoaded; // Add resultsLoaded check
+      hasValidExperiment && 
+      (resultsLoaded || (isExperimentDone && !isCurrentlyTraining));
     
     console.log("ModelTrainingContent - showResultsAndPredict check:", {
       experimentStatus,
-      activeExperimentId: !!activeExperimentId,
-      notTraining: !isTraining,
+      activeExperimentId: hasValidExperiment,
+      notTraining: !isCurrentlyTraining,
       resultsLoaded,
       shouldShow
     });
@@ -114,13 +118,17 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
-  // Trigger experiment results fetch when appropriate
+  // Trigger experiment results fetch when appropriate - with added safeguards
   useEffect(() => {
-    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && !isLoadingResults && !experimentResults) {
+    if (activeExperimentId && 
+        (experimentStatus === 'completed' || experimentStatus === 'success') && 
+        !isLoadingResults && 
+        !experimentResults && 
+        !resultsLoaded) { // Only fetch if we don't have results loaded yet
       console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
       getExperimentResults();
     }
-  }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults]);
+  }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults, resultsLoaded]);
 
   // Auto-switch to results tab when results are loaded
   useEffect(() => {

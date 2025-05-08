@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -12,6 +11,8 @@ const TrainingContext = createContext<TrainingContextValue | undefined>(undefine
 
 // New constant for experiment name storage
 const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
+// New flag to prevent resultsLoaded from being reset during loading
+const RESULTS_LOADED_DELAY_MS = 500; // delay before potentially setting resultsLoaded back to false
 
 export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
@@ -37,6 +38,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     resultsLoaded: false, // Initialize resultsLoaded state explicitly
     experimentName: null, // Initialize experiment name as null
   });
+
+  // Track if we just completed polling
+  const [recentlyCompletedPolling, setRecentlyCompletedPolling] = useState(false);
 
   // Enhanced experiment restoration with improved logging and error handling
   useEffect(() => {
@@ -256,6 +260,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       resultsLoaded: state.resultsLoaded,
     });
     
+    // Set flag to prevent resultsLoaded reset during subsequent API calls
+    setRecentlyCompletedPolling(true);
+    
+    // Clear the flag after a delay
+    setTimeout(() => {
+      setRecentlyCompletedPolling(false);
+    }, 5000); // longer timeout to ensure all loading completes
+    
     setState(prev => ({
       ...prev,
       statusResponse: {
@@ -322,8 +334,23 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
     
-    setState(prev => ({ ...prev, isLoadingResults: true }));
-    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId);
+    console.log("[TrainingContext] Fetching experiment results for", state.activeExperimentId, 
+      "recentlyCompletedPolling:", recentlyCompletedPolling);
+
+    // IMPORTANT: Only set isLoadingResults to true, but don't reset resultsLoaded
+    // if we recently completed polling
+    if (!recentlyCompletedPolling) {
+      setState(prev => ({ 
+        ...prev, 
+        isLoadingResults: true,
+        // Don't reset resultsLoaded here if we just completed polling
+      }));
+    } else {
+      setState(prev => ({ 
+        ...prev, 
+        isLoadingResults: true,
+      }));
+    }
 
     try {
       // Use the correct endpoint for full experiment results
@@ -344,8 +371,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           console.log("[TrainingContext] Mapped 'success' status to 'completed'");
         }
         
-        // MODIFIED: Don't overwrite the experiment name if we already have one
-        // Only use the API-returned name if our current name is null
+        // Prioritize existing experiment name if we have one
         const updatedExperimentName = state.experimentName || results.experiment_name;
         
         console.log("[TrainingContext] Experiment name logic:", {
@@ -362,8 +388,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error: null,
           experimentStatus: resultStatus as ExperimentStatus,
           isTraining: false, // Ensure isTraining is false when results are loaded
-          resultsLoaded: true, // Explicitly set resultsLoaded to true when results are successfully fetched
-          experimentName: updatedExperimentName, // Prioritize existing name
+          resultsLoaded: true, // Always set resultsLoaded to true when results are successfully fetched
+          experimentName: updatedExperimentName,
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
             status: resultStatus as ExperimentStatus,
@@ -380,7 +406,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         setState(prev => ({ 
           ...prev, 
           isLoadingResults: false,
-          resultsLoaded: false, // Ensure resultsLoaded is false when no results
+          resultsLoaded: false,
           experimentStatus: 'failed',
           statusResponse: {
             status: 'failed',
@@ -395,11 +421,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           ? error.message
           : 'Failed to fetch experiment results';
       console.error("[TrainingContext] Error fetching results:", errorMessage);
+      
+      // On error, set resultsLoaded to false
       setState(prev => ({ 
         ...prev, 
         error: errorMessage, 
         isLoadingResults: false,
-        resultsLoaded: false, // Ensure resultsLoaded is false on error
+        resultsLoaded: false,
         experimentStatus: 'failed',
         isTraining: false,
         statusResponse: {
@@ -408,13 +436,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           error_message: errorMessage
         }
       }));
+      
       toast({
         title: "Error Fetching Results",
         description: errorMessage,
         variant: "destructive"
       });
     }
-  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, toast]);
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, recentlyCompletedPolling, toast]);
 
   const contextValue: TrainingContextValue = {
     ...state,
@@ -435,8 +464,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
     setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
-    setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })), // Properly implement the setResultsLoaded function
-    setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })), // Add setter for experimentName
+    setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })),
+    setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })),
     resetTrainingState: () => {
       setState({
         isTraining: false,
@@ -457,13 +486,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         randomSeed: defaultAutomlParameters.randomSeed,
         activeTab: 'automl',
         isCheckingLastExperiment: false,
-        resultsLoaded: false, // Reset resultsLoaded state
-        experimentName: null, // Reset experiment name
+        resultsLoaded: false,
+        experimentName: null,
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY); // Also clear experiment name from storage
-      stopPolling(); // Make sure to stop any active polling
+      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      stopPolling();
+      setRecentlyCompletedPolling(false);
     },
     clearExperimentResults: () => {
       setState(prev => ({
@@ -471,13 +501,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         experimentResults: null,
         activeExperimentId: null,
         statusResponse: null,
-        resultsLoaded: false, // Clear resultsLoaded state
-        experimentName: null // Clear experiment name
+        resultsLoaded: false,
+        experimentName: null
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY); // Also clear experiment name from storage
-      stopPolling(); // Make sure to stop any active polling
+      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      stopPolling();
+      setRecentlyCompletedPolling(false);
     },
     getExperimentResults,
     startPolling,
