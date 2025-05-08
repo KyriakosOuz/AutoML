@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus, ExperimentStatusResponse } from '@/types/training';
@@ -21,25 +21,40 @@ export const useExperimentPolling = ({
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
   const [experimentType, setExperimentType] = useState<'automl' | 'custom' | null>(null);
+  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Using a ref to track if polling has been stopped manually
+  const isManuallyStoppedRef = useRef<boolean>(false);
 
   const stopPolling = useCallback(() => {
     if (pollingInterval) {
-      console.log('[useExperimentPolling] Stopping polling');
+      console.log('[useExperimentPolling] Stopping polling for experiment:', activeExperimentId);
       clearInterval(pollingInterval);
       setPollingInterval(null);
+      isManuallyStoppedRef.current = true;
+      
+      // Reset active experiment ID when polling is stopped
+      setActiveExperimentId(null);
     }
-  }, [pollingInterval]);
+  }, [pollingInterval, activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string, type: 'automl' | 'custom' = 'automl') => {
-    stopPolling();
+    // Always stop any existing polling first
+    if (pollingInterval) {
+      console.log('[useExperimentPolling] Stopping existing polling before starting new one');
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
 
-    console.log(`[TrainingContext] Starting polling for ${type} experiment:`, experimentId);
+    console.log(`[useExperimentPolling] Starting polling for ${type} experiment:`, experimentId);
     setIsLoading(true);
     setPollingAttempts(0);
     setExperimentType(type);
     setExperimentStatus('processing');
+    setActiveExperimentId(experimentId);
+    isManuallyStoppedRef.current = false;
 
     // Show toast notification with information about the background processing
     toast({
@@ -57,15 +72,21 @@ export const useExperimentPolling = ({
 
     const poller = setInterval(async () => {
       try {
+        // Check if polling was manually stopped
+        if (isManuallyStoppedRef.current) {
+          console.log('[useExperimentPolling] Polling manually stopped, skipping interval');
+          return;
+        }
+
         const response = await checkStatus(experimentId);
         const data = response.data;
-        console.log(`[TrainingContext] Status response data (${type} experiment):`, data);
+        console.log(`[useExperimentPolling] Status response data (${type} experiment):`, data);
 
         // FIX: Properly check for failure status and error message in the response
         // Use type assertion to allow checking for 'error' status
         const status = data.status as string;
         if (status === 'failed' || status === 'error' || !!data.error_message) {
-          console.log(`[TrainingContext] Experiment ${experimentId} FAILED - stopping poller`);
+          console.log(`[useExperimentPolling] Experiment ${experimentId} FAILED - stopping poller`);
           setExperimentStatus('failed');
           stopPolling();
           
@@ -91,13 +112,13 @@ export const useExperimentPolling = ({
                           data.status === 'completed';
 
         if (isCompleted) {
-          console.log(`[TrainingContext] ${type.toUpperCase()} experiment completed — stopping poller`);
+          console.log(`[useExperimentPolling] ${type.toUpperCase()} experiment completed — stopping poller`);
           stopPolling();
 
           // Add a small delay to ensure backend is ready - slightly longer for AutoML
           const delay = type === 'automl' ? 1500 : 1000;
           setTimeout(() => {
-            console.log(`[TrainingContext] Calling onSuccess for ${type} experiment:`, experimentId);
+            console.log(`[useExperimentPolling] Calling onSuccess for ${type} experiment:`, experimentId);
             onSuccess(experimentId);
           }, delay);
           return;
@@ -105,7 +126,7 @@ export const useExperimentPolling = ({
         
         // FIX: Adjusted to use a lower MAX_POLL_ATTEMPTS for faster timeout in case of issues
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
-          console.warn('[TrainingContext] Reached maximum polling attempts');
+          console.warn('[useExperimentPolling] Reached maximum polling attempts');
           setExperimentStatus('failed');
           stopPolling();
           onError('Timeout while waiting for training completion. The training job may still be running on our servers - please check back later.');
@@ -118,7 +139,7 @@ export const useExperimentPolling = ({
         }
         setPollingAttempts(prev => prev + 1);
       } catch (error: any) {
-        console.error('[TrainingContext] Polling error:', error);
+        console.error('[useExperimentPolling] Polling error:', error);
         if (
           typeof error.message === 'string' &&
           (error.message.includes('Unauthorized') || error.message.includes('401'))
@@ -136,7 +157,7 @@ export const useExperimentPolling = ({
         
         // FIX: Ensure we set failed status and stop polling after fewer attempts
         if (pollingAttempts >= Math.min(5, MAX_POLL_ATTEMPTS)) {
-          console.log('[TrainingContext] Too many errors during polling, stopping');
+          console.log('[useExperimentPolling] Too many errors during polling, stopping');
           setExperimentStatus('failed');
           stopPolling();
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -153,13 +174,30 @@ export const useExperimentPolling = ({
     }, POLL_INTERVAL);
 
     setPollingInterval(poller);
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
+    
+    // Return an object containing info about the current polling operation
+    return {
+      experimentId,
+      type,
+      stop: stopPolling
+    };
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, pollingInterval]);
 
+  // Ensure we clean up on unmount
   useEffect(() => {
     return () => {
-      stopPolling();
+      if (pollingInterval) {
+        console.log('[useExperimentPolling] Cleaning up polling on unmount');
+        clearInterval(pollingInterval);
+      }
     };
-  }, [stopPolling]);
+  }, [pollingInterval]);
 
-  return { startPolling, stopPolling, experimentType };
+  return { 
+    startPolling, 
+    stopPolling, 
+    experimentType,
+    activeExperimentId,
+    isPolling: !!pollingInterval 
+  };
 };

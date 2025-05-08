@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -86,9 +87,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
-    console.log("[ExperimentResultsContainer] Resetting training state");
+    console.log("[ExperimentResultsContainer] Resetting training state and stopping all polling");
     
-    // First stop any active polling
+    // First ensure all polling is explicitly stopped
     stopPolling();
     
     // Then reset the training state
@@ -110,6 +111,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   };
 
   const handleRefresh = () => {
+    // Stop any running polling before refreshing results
+    stopPolling();
     fetchResults();
     if (onRefresh) onRefresh();
   };
