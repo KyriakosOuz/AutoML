@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -185,6 +186,37 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const handleTuneSuccess = () => {
     if (onRefresh) {
       onRefresh();
+    }
+  };
+
+  // Function to handle file downloads
+  const handleFileDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file (${response.status} ${response.statusText})`);
+      }
+      
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+    } catch (err) {
+      console.error("Error downloading file:", err);
+      toast({
+        title: "Download Failed",
+        description: err instanceof Error ? err.message : "Failed to download file",
+        variant: "destructive"
+      });
     }
   };
   
@@ -616,16 +648,20 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                   Download the trained machine learning model
                                 </p>
                               </div>
-                              <Button asChild className="w-full sm:w-auto">
-                                <a 
-                                  href={getModelFile()?.file_url} 
-                                  download 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <DownloadIcon className="h-4 w-4 mr-2" />
-                                  Download Model
-                                </a>
+                              <Button 
+                                onClick={() => {
+                                  const file = getModelFile();
+                                  if (file) {
+                                    handleFileDownload(
+                                      file.file_url, 
+                                      `${results.automl_engine || 'model'}_${results.algorithm || 'trained'}.pkl`
+                                    );
+                                  }
+                                }}
+                                className="w-full sm:w-auto"
+                              >
+                                <DownloadIcon className="h-4 w-4 mr-2" />
+                                Download Model
                               </Button>
                             </div>
                           </CardContent>
@@ -647,16 +683,20 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                   Detailed analysis and findings
                                 </p>
                               </div>
-                              <Button asChild variant="outline" className="w-full sm:w-auto">
-                                <a 
-                                  href={results.report_file_url} 
-                                  download 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Download Report
-                                </a>
+                              <Button 
+                                onClick={() => {
+                                  if (results.report_file_url) {
+                                    handleFileDownload(
+                                      results.report_file_url,
+                                      `${results.automl_engine || 'experiment'}_report.html`
+                                    );
+                                  }
+                                }}
+                                variant="outline" 
+                                className="w-full sm:w-auto"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Download Report
                               </Button>
                             </div>
                           </CardContent>
@@ -676,16 +716,21 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                             <p className="text-sm text-muted-foreground mb-3">
                               This file contains detailed documentation about the model and experiment.
                             </p>
-                            <Button asChild className="w-full" variant="outline">
-                              <a 
-                                href={getReadmeFile()?.file_url} 
-                                download 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Download Documentation
-                              </a>
+                            <Button 
+                              onClick={() => {
+                                const file = getReadmeFile();
+                                if (file) {
+                                  handleFileDownload(
+                                    file.file_url,
+                                    `${results.automl_engine || 'model'}_documentation.md`
+                                  );
+                                }
+                              }}
+                              className="w-full" 
+                              variant="outline"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Documentation
                             </Button>
                           </CardContent>
                         </Card>
@@ -704,16 +749,21 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                             <p className="text-sm text-muted-foreground mb-3">
                               CSV file containing model predictions on test data.
                             </p>
-                            <Button asChild className="w-full" variant="outline">
-                              <a 
-                                href={getPredictionsFile()?.file_url} 
-                                download 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Download Predictions CSV
-                              </a>
+                            <Button 
+                              onClick={() => {
+                                const file = getPredictionsFile();
+                                if (file) {
+                                  handleFileDownload(
+                                    file.file_url,
+                                    `${results.automl_engine || 'model'}_predictions.csv`
+                                  );
+                                }
+                              }}
+                              className="w-full" 
+                              variant="outline"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Predictions CSV
                             </Button>
                           </CardContent>
                         </Card>
