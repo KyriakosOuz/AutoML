@@ -25,6 +25,7 @@ const ModelTrainingContent: React.FC = () => {
     experimentStatus,
     setExperimentStatus,
     isTraining,
+    setIsTraining,
     isLoadingResults,
     getExperimentResults,
     experimentResults,
@@ -36,6 +37,14 @@ const ModelTrainingContent: React.FC = () => {
   
   // State to track when results are fully loaded
   const [resultsLoaded, setResultsLoaded] = useState(false);
+
+  // Ensure isTraining is set to false when status is completed or success
+  useEffect(() => {
+    if ((experimentStatus === 'completed' || experimentStatus === 'success') && isTraining) {
+      console.log("ModelTrainingContent - Setting isTraining to false because status is", experimentStatus);
+      setIsTraining(false);
+    }
+  }, [experimentStatus, isTraining, setIsTraining]);
 
   // Show results and predict tabs only when experiment is completed
   const showResultsAndPredict = 
@@ -59,9 +68,10 @@ const ModelTrainingContent: React.FC = () => {
       isTraining,
       isLoadingResults,
       activeExperimentId,
-      resultsLoaded
+      resultsLoaded,
+      showResultsAndPredict
     });
-  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded]);
+  }, [datasetId, taskType, processingStage, activeTab, experimentStatus, isTraining, isLoadingResults, activeExperimentId, resultsLoaded, showResultsAndPredict]);
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
@@ -82,11 +92,11 @@ const ModelTrainingContent: React.FC = () => {
 
   // Trigger experiment results fetch when appropriate
   useEffect(() => {
-    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && !isLoadingResults) {
+    if (activeExperimentId && (experimentStatus === 'completed' || experimentStatus === 'success') && !isLoadingResults && !experimentResults) {
       console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
       getExperimentResults();
     }
-  }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults]);
+  }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults]);
 
   // Update resultsLoaded state when experimentResults are available
   useEffect(() => {
@@ -96,6 +106,18 @@ const ModelTrainingContent: React.FC = () => {
       // Add small delay to ensure UI updates properly
       const timer = setTimeout(() => {
         setResultsLoaded(true);
+        
+        // Ensure tabs become available by setting isTraining to false if it's still true
+        if (isTraining) {
+          console.log("ModelTrainingContent - Forcing isTraining to false since results are loaded");
+          setIsTraining(false);
+        }
+        
+        // If we're on the automl or custom tab when results load, automatically switch to results tab
+        if ((activeTab === 'automl' || activeTab === 'custom') && activeExperimentId) {
+          console.log("ModelTrainingContent - Auto-switching to results tab");
+          setActiveTab('results');
+        }
       }, 100);
       
       return () => clearTimeout(timer);
@@ -103,7 +125,7 @@ const ModelTrainingContent: React.FC = () => {
                (experimentStatus !== 'completed' && experimentStatus !== 'success')) {
       setResultsLoaded(false);
     }
-  }, [experimentResults, isLoadingResults, experimentStatus]);
+  }, [experimentResults, isLoadingResults, experimentStatus, isTraining, setIsTraining, activeTab, setActiveTab, activeExperimentId]);
 
   // Determine if dataset is ready for training
   const isDatasetReady = !!(
