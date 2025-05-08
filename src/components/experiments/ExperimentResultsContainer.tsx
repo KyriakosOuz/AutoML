@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
@@ -58,6 +57,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       const data = await getExperimentResults(experimentId);
       
       if (data) {
+        // Only log this when actually receiving new data
         console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
         
         // Ensure metrics are correctly mapped (handle both f1 and f1_score)

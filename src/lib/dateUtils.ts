@@ -24,7 +24,7 @@ export function formatDateForGreece(
   if (!dateObj) return "N/A";
   
   try {
-    // Convert to Greece timezone then format
+    // Convert to Greece timezone then format using updated API
     const zonedDate = toZonedTime(dateObj, GREECE_TIMEZONE);
     return formatInTimeZone(zonedDate, GREECE_TIMEZONE, formatStr);
   } catch (error) {

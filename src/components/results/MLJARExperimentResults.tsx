@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -285,6 +284,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
+  const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -312,7 +312,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </span>
           )}
           
-          {/* Show created_at date instead of training time for MLJAR */}
+          {/* Show created_at date instead of Training time */}
           <span className="inline-flex items-center">
             <Clock className="h-3.5 w-3.5 mr-1" />
             Created: <span className="font-semibold ml-1">{formattedCreatedAt}</span>
@@ -369,8 +369,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       <span className="text-sm text-muted-foreground">Best Model:</span>
                       <span className="text-sm font-medium">{bestModelLabel}</span>
                       
-                      <span className="text-sm text-muted-foreground">Training Time:</span>
-                      <span className="text-sm font-medium">{formatTrainingTime(training_time_sec)}</span>
+                      {/* Replace Training Time: N/A with Created At date */}
+                      <span className="text-sm text-muted-foreground">Created At:</span>
+                      <span className="text-sm font-medium">{formattedCreatedAt}</span>
                       
                       {automl_engine && (
                         <>
@@ -382,7 +383,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       {completed_at && (
                         <>
                           <span className="text-sm text-muted-foreground">Completed:</span>
-                          <span className="text-sm font-medium">{new Date(completed_at).toLocaleString()}</span>
+                          <span className="text-sm font-medium">{formattedCompletedAt}</span>
                         </>
                       )}
                     </div>
@@ -656,7 +657,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         {completed_at && (
           <div className="text-xs text-muted-foreground flex items-center">
             <Clock className="h-3 w-3 mr-1" />
-            {new Date(completed_at).toLocaleString()}
+            {formattedCompletedAt}
           </div>
         )}
       </CardFooter>
