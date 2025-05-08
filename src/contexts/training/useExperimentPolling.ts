@@ -43,6 +43,9 @@ export const useExperimentPolling = ({
       // Also reset the experiment type when polling stops
       setExperimentType(null);
       
+      // Reset polling attempts
+      setPollingAttempts(0);
+      
       console.log('[useExperimentPolling] Polling has been fully stopped');
     }
   }, [pollingInterval, activeExperimentId]);
@@ -87,6 +90,9 @@ export const useExperimentPolling = ({
           console.log('[useExperimentPolling] Polling manually stopped, skipping interval');
           return;
         }
+
+        // Log current polling state
+        console.log(`[useExperimentPolling] Polling attempt ${pollingAttempts + 1} for ${type} experiment (${experimentId})`);
 
         const response = await checkStatus(experimentId);
         const data = response.data;
@@ -150,6 +156,11 @@ export const useExperimentPolling = ({
         setPollingAttempts(prev => prev + 1);
       } catch (error: any) {
         console.error('[useExperimentPolling] Polling error:', error);
+        
+        // Increment retry count
+        const newRetryCount = pollingAttempts + 1;
+        setPollingAttempts(newRetryCount);
+        
         if (
           typeof error.message === 'string' &&
           (error.message.includes('Unauthorized') || error.message.includes('401'))

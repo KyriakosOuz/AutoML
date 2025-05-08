@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +6,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, RotateCcw, RefreshCw, AlertCircle } from 'lucide-react';
 import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/types/training';
-import MetricsDisplay from './MetricsDisplay';
-import VisualizationDisplay from './VisualizationDisplay';
-import ModelSummary from './ModelSummary';
+import MetricsDisplay from '@/components/results/MetricsDisplay';
+import VisualizationDisplay from '@/components/results/VisualizationDisplay';
+import ModelSummary from '@/components/results/ModelSummary';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -39,13 +38,17 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     trainingType,
     isLoading, 
     hasResults: !!experimentResults,
-    hasError: !!error
+    hasError: !!error,
+    resultTrainingType: experimentResults?.training_type,
+    resultAutomlEngine: experimentResults?.automl_engine
   });
   
-  // Determine the actual training type to display in UI
+  // Determine the actual training type to display in UI - improved logic
   const displayedTrainingType = trainingType || 
                                (experimentResults?.training_type as 'automl' | 'custom') || 
                                (experimentResults?.automl_engine ? 'automl' : 'custom');
+                               
+  console.log("[ExperimentResults] Using display training type:", displayedTrainingType);
 
   if (isLoading) {
     return (
@@ -153,7 +156,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {experimentResults.experiment_name || `Experiment ${experimentId?.substring(0, 8)}`}
+          {experimentResults?.experiment_name || `Experiment ${experimentId?.substring(0, 8)}`}
           <span className="text-xs font-normal bg-gray-100 px-2 py-1 rounded">
             {displayedTrainingType === 'automl' ? 'AutoML' : 'Custom'}
           </span>

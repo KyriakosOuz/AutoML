@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
@@ -120,17 +121,23 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   
   // Determine the correct training type from results or context
   const determineTrainingType = () => {
-    // First check if results have automl_engine
-    if (results?.automl_engine) return 'automl';
-    
-    // Then check if results have training_type
+    // First check if results have explicit training_type
     if (results?.training_type) return results.training_type;
+    
+    // Then check if results have automl_engine (legacy detection)
+    if (results?.automl_engine) return 'automl';
     
     // If neither is available, use lastTrainingType from context
     return lastTrainingType;
   };
   
   const currentTrainingType = determineTrainingType();
+
+  console.log("[ExperimentResultsContainer] Determined training type:", currentTrainingType, "from results:", {
+    resultType: results?.training_type,
+    automlEngine: results?.automl_engine,
+    contextType: lastTrainingType
+  });
 
   return (
     <div className="w-full overflow-x-hidden">
