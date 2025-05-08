@@ -20,11 +20,14 @@ import {
   Activity,
   Loader,
   Image as ImageIcon,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import ClassificationReportTable from '../training/ClassificationReportTable';
+import { formatTrainingTime } from '@/utils/formatUtils';
+import CSVPreview from './CSVPreview';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -127,6 +130,17 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       file.file_type === 'predictions_csv' || 
       file.file_type.includes('predictions') ||
       (file.file_name && file.file_name.endsWith('.csv'))
+    );
+  };
+  
+  // Find the model file (if available)
+  const getModelFile = () => {
+    if (!experimentResults) return null;
+    
+    return experimentResults.files.find(file => 
+      file.file_type === 'model' || 
+      file.file_type.includes('model') ||
+      file.file_name?.includes('.pkl')
     );
   };
   
@@ -247,6 +261,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const visualizationFiles = files.filter(file => isVisualizationFile(file.file_type));
   const readmeFile = getReadmeFile();
   const csvFile = getCsvFile();
+  const modelFile = getModelFile();
   
   const classificationReport = metrics.classification_report && 
     (typeof metrics.classification_report === 'string' || typeof metrics.classification_report === 'object') 
@@ -285,7 +300,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           {training_time_sec && (
             <span className="inline-flex items-center">
               <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{training_time_sec.toFixed(1)}s</span>
+              Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
             </span>
           )}
           
@@ -323,7 +338,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           
           <TabsContent value="metrics" className="p-6">
             {Object.keys(metrics).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {Object.entries(metrics).map(([key, value]) => {
                   if (
                     key === 'classification_report'
@@ -480,75 +495,89 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           </TabsContent>
 
           <TabsContent value="details" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Details</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="flex items-center">
-                      <span className="font-semibold">Experiment ID:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {experiment_id?.substring(0, 8)}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Experiment Name:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {experiment_name}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Task Type:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {formatTaskType(task_type)}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Algorithm:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {algorithm || 'Auto-selected'}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Target Column:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {target_column}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Training Time:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {training_time_sec?.toFixed(1)}s
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Created At:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {created_at}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Completed At:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {completed_at}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="font-semibold">Training Type:</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {training_type}
-                      </span>
+                    <div className="flex flex-col space-y-2">
+                      <div>
+                        <span className="text-sm text-muted-foreground">Experiment ID:</span>
+                        <span className="text-sm font-medium ml-2">
+                          {experiment_id?.substring(0, 8)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Task Type:</span>
+                        <span className="text-sm font-medium ml-2">
+                          {formatTaskType(task_type)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Algorithm:</span>
+                        <span className="text-sm font-medium ml-2">
+                          {algorithm || 'Auto-selected'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Target Column:</span>
+                        <span className="text-sm font-medium ml-2">
+                          {target_column}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Training Time:</span>
+                        <span className="text-sm font-medium ml-2">
+                          {formatTrainingTime(training_time_sec)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+              
+              {hyperparameters && Object.keys(hyperparameters).length > 0 && (
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Parameters</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/30 p-3 rounded-md">
+                      {Object.entries(hyperparameters).slice(0, 8).map(([key, value]) => (
+                        <div key={key} className="grid grid-cols-2 gap-2 mb-1">
+                          <span className="text-xs text-muted-foreground">{key}:</span>
+                          <span className="text-xs font-medium truncate">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {modelFile && (
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Download Model</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild className="w-full">
+                      <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Model
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="downloads" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {getDownloadableFiles().map((file, index) => (
                 <Card key={index} className="shadow-sm">
                   <CardHeader className="pb-2">
@@ -570,64 +599,46 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Predictions CSV</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button 
-                      variant="secondary" 
-                      className="w-full mb-2"
-                      onClick={() => setCsvPreviewOpen(true)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Preview CSV Data
-                    </Button>
-                    <Button asChild className="w-full">
-                      <a href={csvFile.file_url} download={csvFile.file_name} target="_blank" rel="noopener noreferrer">
-                        <DownloadCloud className="h-4 w-4 mr-2" /> 
-                        Download CSV
-                      </a>
-                    </Button>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <CSVPreview
+                        fileUrl={csvFile.file_url}
+                        downloadUrl={csvFile.file_url}
+                        maxRows={10}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               )}
-
-              <Dialog open={csvPreviewOpen} onOpenChange={setCsvPreviewOpen}>
-                <DialogContent className="max-w-4xl max-h-[80vh]">
-                  <div className="p-4">
-                    <h2 className="text-xl font-bold mb-4">CSV Preview</h2>
-                    <div className="bg-muted p-4 rounded-md overflow-x-auto">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Showing preview of CSV data. Download the full file for complete dataset.
-                      </p>
-                      <iframe 
-                        src={csvFile?.file_url} 
-                        className="w-full h-[40vh]" 
-                        title="CSV Preview"
-                      />
-                    </div>
-                    <div className="flex justify-end mt-4">
-                      <Button variant="default" asChild>
-                        <a href={csvFile?.file_url} download target="_blank" rel="noopener noreferrer">
-                          <DownloadCloud className="h-4 w-4 mr-2" />
-                          Download Full CSV
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
-
-            {getDownloadableFiles().length === 0 && !csvFile && !readmeFile && (
-              <div className="text-center py-12">
-                <DownloadCloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  No downloadable artifacts were found for this experiment.
-                </p>
-              </div>
-            )}
           </TabsContent>
         </Tabs>
       </CardContent>
+      
+      <CardFooter className="flex justify-between border-t p-4">
+        <div className="flex gap-2">
+          {onReset && (
+            <Button variant="outline" onClick={onReset}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              New Experiment
+            </Button>
+          )}
+          
+          {onRefresh && (
+            <Button variant="secondary" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
+        
+        {completed_at && (
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            {new Date(completed_at).toLocaleString()}
+          </div>
+        )}
+      </CardFooter>
     </Card>
   );
 };

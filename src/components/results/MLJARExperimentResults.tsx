@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
+import { formatTrainingTime } from '@/utils/formatUtils';
+import CSVPreview from './CSVPreview';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -256,6 +258,13 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type === 'predictions_csv' ||
     file.file_type.includes('predictions')
   );
+  
+  // Find the model file (if available)
+  const modelFile = files.find(file => 
+    file.file_type === 'model' || 
+    file.file_type.includes('model') ||
+    file.file_name?.includes('.pkl')
+  );
 
   // Format metric for display
   const formatMetric = (value: number | undefined) => {
@@ -300,7 +309,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           {training_time_sec && (
             <span className="inline-flex items-center">
               <Clock className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{training_time_sec.toFixed(1)}s</span>
+              Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
             </span>
           )}
           
@@ -338,7 +347,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           
           {/* Summary Tab */}
           <TabsContent value="summary" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Experiment Overview</CardTitle>
@@ -356,7 +365,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       <span className="text-sm font-medium">{bestModelLabel}</span>
                       
                       <span className="text-sm text-muted-foreground">Training Time:</span>
-                      <span className="text-sm font-medium">{training_time_sec?.toFixed(2)} seconds</span>
+                      <span className="text-sm font-medium">{formatTrainingTime(training_time_sec)}</span>
                       
                       {automl_engine && (
                         <>
@@ -376,7 +385,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              <Card className="shadow-sm">
+              <Card className="shadow-sm col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
@@ -391,7 +400,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div className="grid grid-cols-3 gap-4 mt-4">
                       {Object.entries(metrics).map(([key, value]) => {
                         if (
                           key === 'best_model_label' ||
@@ -413,11 +422,11 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         const isPercent = isPercentageMetric(key);
                         
                         return (
-                          <div key={key}>
-                            <span className="text-sm text-muted-foreground">
-                              {metricDisplayName}:
+                          <div key={key} className="p-3 bg-muted/40 rounded-md">
+                            <span className="block text-sm text-muted-foreground">
+                              {metricDisplayName}
                             </span>
-                            <span className="text-sm font-medium ml-2">
+                            <span className="text-lg font-medium">
                               {formatMetricValue(value as number, isPercent)}
                             </span>
                           </div>
@@ -494,54 +503,16 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 <CardHeader>
                   <CardTitle>Model Predictions</CardTitle>
                   <CardDescription>
-                    View predictions made by the MLJAR model
+                    Preview of predictions made by the MLJAR model
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center py-4">
-                    <Button onClick={() => setPredictionsDialogOpen(true)} className="mb-4">
-                      <TableIcon className="h-4 w-4 mr-2" />
-                      View Predictions
-                    </Button>
-                    
-                    <p className="text-sm text-muted-foreground">
-                      Click to preview the model's predictions on the test dataset
-                    </p>
-                  </div>
-                  
-                  <Dialog open={predictionsDialogOpen} onOpenChange={setPredictionsDialogOpen}>
-                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Predictions Preview</DialogTitle>
-                      </DialogHeader>
-                      <div className="overflow-x-auto">
-                        {/* Predictions table would be loaded here */}
-                        <p className="text-muted-foreground mb-4">
-                          Preview of predictions (first 50 rows)
-                        </p>
-                        <p className="text-sm text-center py-8 text-muted-foreground">
-                          To view the full predictions, download the CSV file
-                        </p>
-                        <div className="flex justify-end mt-4">
-                          <Button asChild>
-                            <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Full Predictions CSV
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  
-                  <div className="mt-6">
-                    <Button asChild className="w-full">
-                      <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Predictions CSV
-                      </a>
-                    </Button>
-                  </div>
+                  {/* Replace the previous placeholder with the new CSV Preview component */}
+                  <CSVPreview
+                    fileUrl={predictionsFile.file_url}
+                    downloadUrl={predictionsFile.file_url}
+                    maxRows={10}
+                  />
                 </CardContent>
               </Card>
             ) : (
@@ -557,29 +528,41 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           
           {/* Metadata Tab */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Engine Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Badge variant="outline" className="bg-primary/10 px-3 py-1 text-sm">
                       Engine: {automl_engine?.toUpperCase() || 'Not specified'}
                     </Badge>
                     
-                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Model Type:</span>
-                      <span className="font-medium">{bestModelLabel}</span>
-                      
-                      {Object.entries(hyperparameters).slice(0, 6).map(([key, value]) => (
-                        <React.Fragment key={key}>
-                          <span className="text-muted-foreground">{key}:</span>
-                          <span className="font-medium truncate">
-                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                          </span>
-                        </React.Fragment>
-                      ))}
+                    {/* Replace Model Type with Download Button if model file exists */}
+                    {modelFile && (
+                      <div className="mt-4">
+                        <Button asChild className="w-full">
+                          <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Model
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <div className="mt-4">
+                      <h3 className="text-sm font-medium mb-2">Model Parameters</h3>
+                      <div className="bg-muted/30 p-3 rounded-md">
+                        {Object.entries(hyperparameters).slice(0, 6).map(([key, value]) => (
+                          <div key={key} className="grid grid-cols-2 gap-2 mb-1">
+                            <span className="text-xs text-muted-foreground">{key}:</span>
+                            <span className="text-xs font-medium truncate">
+                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -602,13 +585,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               )}
               
               {readmeFile && (
-                <Card className="shadow-sm md:col-span-2">
+                <Card className="shadow-sm">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Documentation</CardTitle>
-                    <CardDescription>Model documentation and usage instructions</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button onClick={() => setReadmePreviewOpen(true)}>
+                    <Button onClick={() => setReadmePreviewOpen(true)} className="w-full">
                       <FileText className="h-4 w-4 mr-2" />
                       View Documentation
                     </Button>

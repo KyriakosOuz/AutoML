@@ -1,0 +1,158 @@
+
+import React, { useState, useEffect } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DownloadCloud } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface CSVPreviewProps {
+  fileUrl: string;
+  downloadUrl?: string;
+  maxRows?: number;
+}
+
+const CSVPreview: React.FC<CSVPreviewProps> = ({ 
+  fileUrl, 
+  downloadUrl,
+  maxRows = 10 
+}) => {
+  const [data, setData] = useState<string[][]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCSV = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(fileUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        const rows = text.split('\n');
+        
+        // Extract headers from the first row
+        if (rows.length > 0) {
+          // Handle quoted CSV values
+          const headerRow = rows[0];
+          const extractedHeaders = parseCSVRow(headerRow);
+          setHeaders(extractedHeaders);
+          
+          // Parse data rows (skip header row, limit to maxRows)
+          const parsedData = rows.slice(1, maxRows + 1).map(row => parseCSVRow(row));
+          setData(parsedData);
+        }
+        
+      } catch (err) {
+        console.error("Error fetching CSV:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch CSV data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (fileUrl) {
+      fetchCSV();
+    }
+  }, [fileUrl, maxRows]);
+
+  // Helper function to handle CSV parsing with quotes
+  const parseCSVRow = (row: string): string[] => {
+    const result = [];
+    let insideQuote = false;
+    let currentValue = '';
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      
+      if (char === '"') {
+        insideQuote = !insideQuote;
+      } else if (char === ',' && !insideQuote) {
+        result.push(currentValue);
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    
+    // Add the last value
+    result.push(currentValue);
+    
+    return result;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 w-full">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-destructive p-4 border border-destructive/30 rounded-md">
+        <p>Error loading CSV: {error}</p>
+        {downloadUrl && (
+          <div className="mt-4">
+            <Button asChild size="sm">
+              <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+                <DownloadCloud className="h-4 w-4 mr-2" />
+                Download Full CSV
+              </a>
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <div className="rounded-md border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableHead key={index} className="bg-muted/50 font-medium">
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <TableCell key={cellIndex} className="font-mono text-xs">
+                    {cell}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        Showing {data.length} rows of data. Download the full CSV for complete dataset.
+      </p>
+      {downloadUrl && (
+        <div className="mt-4 flex justify-end">
+          <Button asChild>
+            <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+              <DownloadCloud className="h-4 w-4 mr-2" />
+              Download Full CSV
+            </a>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CSVPreview;
