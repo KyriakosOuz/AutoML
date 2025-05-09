@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -24,7 +25,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     setIsTraining, 
     setExperimentStatus, 
     lastTrainingType,
-    experimentStatus 
+    experimentStatus,
+    isTraining // Added this to properly access isTraining from context
   } = useTraining();
   
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
@@ -73,7 +75,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         setExperimentStatus('completed');
       }
     }
-  }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
+  }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus, isTraining]);
   
   // Notify parent components when results are loaded or loading - consolidated logic to prevent loops
   useEffect(() => {
