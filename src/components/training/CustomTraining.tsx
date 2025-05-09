@@ -217,7 +217,8 @@ const CustomTraining: React.FC = () => {
       });
       setIsTraining(false);
     } finally {
-      setIsSubmitting(false); // Always set isSubmitting to false when done
+      setIsSubmitting(false);
+      setIsTraining(false); // Also reset isTraining flag to ensure UI is properly updated
     }
   };
 
