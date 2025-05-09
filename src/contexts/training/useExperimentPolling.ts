@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -106,9 +105,13 @@ export const useExperimentPolling = ({
         const data = response.data;
         console.log(`[useExperimentPolling] Status response for ${type} experiment (${experimentId}):`, data);
 
-        // IMPROVED: Better failure detection - check explicitly for 'failed' status
-        // or an error_message in the response
-        if (data.status === 'failed' || data.status === 'error' || !!data.error_message) {
+        // FIXED: Type-safe failure detection - check explicitly for failure conditions
+        // using type narrowing and avoiding direct string comparison for 'error'
+        if (
+          data.status === 'failed' || 
+          data.error_message || 
+          (data.status as ExperimentStatus) === 'error'
+        ) {
           console.log(`[useExperimentPolling] Experiment ${experimentId} FAILED - stopping poller`);
           setExperimentStatus('failed');
           stopPolling();
