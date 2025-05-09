@@ -32,6 +32,7 @@ export interface ExperimentStatusResponse {
 
 export interface TrainingContextState {
   isTraining: boolean;
+  isSubmitting: boolean; // Added isSubmitting field
   lastTrainingType: 'automl' | 'custom' | null;
   automlParameters: AutoMLParameters;
   customParameters: CustomParameters;
@@ -49,12 +50,13 @@ export interface TrainingContextState {
   randomSeed: number;
   activeTab: TrainingTab;
   isCheckingLastExperiment: boolean;
-  resultsLoaded: boolean; // Changed from optional to required boolean
-  experimentName: string | null; // Added field for experiment name
+  resultsLoaded: boolean;
+  experimentName: string | null;
 }
 
 export interface TrainingContextValue extends TrainingContextState {
   setIsTraining: (isTraining: boolean) => void;
+  setIsSubmitting: (isSubmitting: boolean) => void; // Added setter for isSubmitting
   setLastTrainingType: (type: 'automl' | 'custom' | null) => void;
   setAutomlParameters: (params: Partial<AutoMLParameters>) => void;
   setCustomParameters: (params: Partial<CustomParameters>) => void;
@@ -71,8 +73,8 @@ export interface TrainingContextValue extends TrainingContextState {
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
   setActiveTab: (tab: TrainingTab) => void;
-  setResultsLoaded: (loaded: boolean) => void; // Make this required, not optional
-  setExperimentName: (name: string) => void; // Added setter for experiment name
+  setResultsLoaded: (loaded: boolean) => void;
+  setExperimentName: (name: string) => void;
   resetTrainingState: () => void;
   clearExperimentResults: () => void;
   checkLastExperiment: () => void;

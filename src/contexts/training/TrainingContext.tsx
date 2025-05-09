@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -19,6 +18,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const { toast } = useToast();
   const [state, setState] = useState<TrainingContextState>({
     isTraining: false,
+    isSubmitting: false, // Initialize isSubmitting state
     lastTrainingType: null,
     automlParameters: defaultAutomlParameters,
     customParameters: defaultCustomParameters,
@@ -674,6 +674,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
+    setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })), // Add setter for isSubmitting
     setLastTrainingType: (type) => {
       setState(prev => ({ ...prev, lastTrainingType: type }));
       // Update the auto-detection flag for AutoML experiments
@@ -712,6 +713,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       setState({
         isTraining: false,
+        isSubmitting: false, // Reset isSubmitting in resetTrainingState
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,

@@ -27,6 +27,8 @@ const CustomTraining: React.FC = () => {
   const {
     isTraining,
     setIsTraining,
+    isSubmitting, // Use global isSubmitting state
+    setIsSubmitting, // Use global setIsSubmitting function
     customParameters,
     setCustomParameters,
     setLastTrainingType,
@@ -152,6 +154,7 @@ const CustomTraining: React.FC = () => {
     try {
       setActiveExperimentId(null);
       setIsTraining(true);
+      setIsSubmitting(true); // Set isSubmitting to true when starting training
       setError(null);
       
       // Explicitly set the training type to 'custom'
@@ -213,6 +216,8 @@ const CustomTraining: React.FC = () => {
         variant: "destructive"
       });
       setIsTraining(false);
+    } finally {
+      setIsSubmitting(false); // Always set isSubmitting to false when done
     }
   };
 
@@ -398,11 +403,11 @@ const CustomTraining: React.FC = () => {
 
             <Button
               onClick={handleTrainModel}
-              disabled={isTraining || !isFormValid()}
+              disabled={isTraining || isSubmitting || !isFormValid()}
               className="w-full mt-4"
               size="lg"
             >
-              {isTraining ? (
+              {isTraining || isSubmitting ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Training in Progress...
@@ -432,21 +437,6 @@ const CustomTraining: React.FC = () => {
       </Card>
 
       {/* Commented out the results section to avoid duplication with the Results tab */}
-      {/*
-      {isLoadingResults && (
-        <div className="p-8 text-center">
-          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Fetching experiment results...</p>
-        </div>
-      )}
-
-      {experimentResults && (
-        <CustomTrainingResults 
-          experimentResults={experimentResults} 
-          onReset={resetExperiment}
-        />
-      )}
-      */}
     </div>
   );
 };
