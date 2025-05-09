@@ -50,6 +50,28 @@ const formatTaskType = (type: string = '') => {
   }
 };
 
+// Interface for visualization file
+interface VisualizationFile {
+  file_type: string;
+  file_url: string;
+  file_name?: string;
+  created_at?: string;
+  type?: string;
+  name?: string;
+}
+
+// Interface for grouped visualizations
+interface GroupedVisualizations {
+  predictions?: VisualizationFile[];
+  confusion_matrix?: VisualizationFile[];
+  evaluation?: VisualizationFile[];
+  explainability?: VisualizationFile[];
+  feature_importance?: VisualizationFile[];
+  model?: VisualizationFile[];
+  other?: VisualizationFile[];
+  [key: string]: VisualizationFile[] | undefined;
+}
+
 const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   experimentId,
   status,
@@ -186,8 +208,122 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     files = [],
     created_at,
     completed_at,
+    // New property to handle structured visualizations
+    visualizations_by_type
   } = experimentResults;
 
+  // Process visualizations - either use the structured format if present, 
+  // or fall back to the legacy approach
+  let visualizationFiles: VisualizationFile[] = [];
+  let groupedVisualizations: GroupedVisualizations = {};
+  
+  // Check if we have the new structured format
+  if (visualizations_by_type) {
+    // Convert the visualization_by_type structure to our visualization files array
+    groupedVisualizations = visualizations_by_type as GroupedVisualizations;
+    
+    // Process each category
+    Object.entries(groupedVisualizations).forEach(([category, categoryFiles]) => {
+      if (Array.isArray(categoryFiles)) {
+        // Add display names based on category
+        const processedFiles = categoryFiles.map(file => {
+          let displayName = file.file_type;
+          
+          switch (category) {
+            case 'confusion_matrix':
+              displayName = 'Confusion Matrix';
+              break;
+            case 'evaluation':
+              displayName = file.file_type.includes('roc') ? 'ROC Curve' : 'Evaluation Curve';
+              break;
+            case 'explainability':
+              displayName = file.file_type.includes('shap') ? 'SHAP Summary' : 'Model Explainability';
+              break;
+            case 'feature_importance':
+              displayName = 'Feature Importance';
+              break;
+            case 'predictions':
+              displayName = 'Predictions Plot';
+              break;
+            default:
+              displayName = file.file_type
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ');
+          }
+          
+          return {
+            ...file,
+            type: category,
+            name: displayName
+          };
+        });
+        
+        // Add to visualization files if not a model file
+        if (category !== 'model') {
+          visualizationFiles = [...visualizationFiles, ...processedFiles];
+        }
+      }
+    });
+  } else {
+    // Legacy approach: Process files array to find visualizations
+    visualizationFiles = files
+      .filter(file => 
+        (file.file_type.includes('png') || 
+         file.file_url.includes('png') ||
+         file.file_name?.includes('png')) &&
+        file.file_type !== 'model' &&
+        !file.file_type.includes('label_encoder')
+      )
+      .map(file => {
+        let type = 'other';
+        let name = file.file_type;
+        
+        if (file.file_type.includes('shap') || file.file_url.includes('shap')) {
+          type = 'explainability';
+          name = 'SHAP Importance';
+        }
+        else if (file.file_type.includes('importance') || file.file_url.includes('importance')) {
+          type = 'feature_importance';
+          name = 'Feature Importance';
+        }
+        else if (file.file_type.includes('roc') || file.file_url.includes('roc')) {
+          type = 'evaluation';
+          name = 'ROC Curve';
+        }
+        else if (file.file_type.includes('confusion') || file.file_url.includes('confusion')) {
+          type = 'confusion_matrix';
+          name = 'Confusion Matrix';
+        }
+        
+        return { ...file, type, name };
+      });
+  }
+  
+  // Find downloadable files using both new structure and legacy approach
+  const leaderboardFile = 
+    (groupedVisualizations?.model?.find(f => f.file_type.includes('leaderboard'))) ||
+    files.find(f => 
+      f.file_type.includes('leaderboard') || 
+      f.file_url.includes('leaderboard')
+    );
+  
+  const predictionsFile = 
+    (groupedVisualizations?.predictions?.find(f => f.file_type.includes('predictions'))) ||
+    files.find(f => 
+      f.file_type.includes('predictions') || 
+      f.file_url.includes('predictions')
+    );
+  
+  const modelFile = 
+    (groupedVisualizations?.model?.find(f => f.file_type.includes('trained_model') || f.file_type === 'model')) ||
+    files.find(f => 
+      f.file_type === 'model' || 
+      f.file_type === 'trained_model' ||
+      f.file_url.includes('model')
+    );
+  
   // Find best model details
   const bestModelName = metrics.best_model_details?.name || 
                        metrics.best_model_label || 
@@ -196,64 +332,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const bestModelScore = metrics.best_model_details?.metric_value || 
                         metrics.metric_value || 
                         '';
-
-  // Prepare visualizations
-  const visualizations = {};
-  const visualizationFiles = [];
-  
-  // Map files to visualization types
-  for (const file of files) {
-    // Check if the file is a visualization
-    if (file.file_type.includes('png') || 
-        file.file_url.includes('png') ||
-        file.file_name?.includes('png')) {
-      
-      if (file.file_type.includes('shap') || file.file_url.includes('shap')) {
-        visualizations['shap'] = file.file_url;
-        visualizationFiles.push({...file, type: 'shap', name: 'SHAP Importance'});
-      }
-      else if (file.file_type.includes('importance') || file.file_url.includes('importance')) {
-        visualizations['importance'] = file.file_url;
-        visualizationFiles.push({...file, type: 'importance', name: 'Feature Importance'});
-      }
-      else if (file.file_type.includes('roc') || file.file_url.includes('roc')) {
-        visualizations['roc'] = file.file_url;
-        visualizationFiles.push({...file, type: 'roc', name: 'ROC Curve'});
-      }
-      else if (file.file_type.includes('confusion') || file.file_url.includes('confusion')) {
-        visualizations['confusion'] = file.file_url;
-        visualizationFiles.push({...file, type: 'confusion', name: 'Confusion Matrix'});
-      }
-      else {
-        // Generic visualization
-        visualizationFiles.push({
-          ...file,
-          type: 'other', 
-          name: file.file_type
-            .replace(/_/g, ' ')
-            .split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ')
-        });
-      }
-    }
-  }
-  
-  // Find downloadable files
-  const leaderboardFile = files.find(f => 
-    f.file_type.includes('leaderboard') || 
-    f.file_url.includes('leaderboard')
-  );
-  
-  const predictionsFile = files.find(f => 
-    f.file_type.includes('predictions') || 
-    f.file_url.includes('predictions')
-  );
-  
-  const modelFile = files.find(f => 
-    f.file_type === 'model' || 
-    f.file_url.includes('model')
-  );
   
   // Extract confusion matrix if present
   const confusionMatrix = metrics.confusion_matrix;

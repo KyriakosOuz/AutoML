@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -30,6 +31,18 @@ export interface TrainingFile {
   file_url: string;
   file_name?: string;
   created_at: string;
+}
+
+// New interface for visualization by type
+export interface VisualizationsByType {
+  predictions?: TrainingFile[];
+  confusion_matrix?: TrainingFile[];
+  evaluation?: TrainingFile[];
+  explainability?: TrainingFile[];
+  feature_importance?: TrainingFile[];
+  model?: TrainingFile[];
+  other?: TrainingFile[];
+  [key: string]: TrainingFile[] | undefined;
 }
 
 export interface TrainingResults {
@@ -76,6 +89,8 @@ export interface ExperimentResults {
   automl_engine?: string;
   class_labels?: string[];
   training_type?: TrainingType;
+  // New property for structured visualizations
+  visualizations_by_type?: VisualizationsByType;
 }
 
 export interface ExperimentStatusResponse {
