@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -80,8 +80,7 @@ const ModelTrainingContent: React.FC = () => {
   }, [resultsLoaded, activeExperimentId, experimentStatus]);
 
   // IMPROVED: More robust function to determine if results and predict tabs should be shown
-  // Wrapped in useCallback to ensure it has a stable identity across renders
-  const showResultsAndPredict = useCallback(() => {
+  const showResultsAndPredict = () => {
     // Base conditions: Has valid experiment ID
     const hasValidExperiment = !!activeExperimentId;
     if (!hasValidExperiment) return false;
@@ -97,21 +96,26 @@ const ModelTrainingContent: React.FC = () => {
     const isCurrentlyTraining = isTraining;
     const isAutoML = lastTrainingType === 'automl';
     
-    return (
+    // Add special logic for AutoML experiments
+    const shouldShow = 
       hasValidExperiment && 
       (hasLoadedResults || 
        (isExperimentDone && !isCurrentlyTraining) ||
        hasResultsObject ||
-       (isAutoML && isExperimentDone))
-    );
-  }, [
-    activeExperimentId,
-    experimentStatus,
-    resultsLoaded,
-    experimentResults,
-    isTraining,
-    lastTrainingType
-  ]);
+       (isAutoML && isExperimentDone)); // Special case for AutoML experiments
+    
+    console.log("ModelTrainingContent - showResultsAndPredict check:", {
+      experimentStatus,
+      hasValidExperiment,
+      notTraining: !isCurrentlyTraining,
+      resultsLoaded: hasLoadedResults,
+      hasExperimentResults: hasResultsObject,
+      isAutoML,
+      shouldShow
+    });
+    
+    return shouldShow;
+  };
 
   // Add status indicator - Using the explicit resultsLoaded state
   const isProcessing = 
