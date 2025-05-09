@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +18,8 @@ export const useExperimentPolling = ({
   setExperimentStatus,
   setIsLoading
 }: UseExperimentPollingProps) => {
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  // Replace state-based interval with ref
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
   const [experimentType, setExperimentType] = useState<TrainingType | null>(null);
   const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
@@ -39,11 +41,11 @@ export const useExperimentPolling = ({
   }, [activeExperimentId]);
 
   const stopPolling = useCallback(() => {
-    if (pollingInterval || isPollingActiveRef.current) {
+    if (pollingIntervalRef.current || isPollingActiveRef.current) {
       console.log('[useExperimentPolling] Stopping polling for experiment:', activeExperimentId);
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        setPollingInterval(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
       isManuallyStoppedRef.current = true;
       isPollingActiveRef.current = false;
@@ -60,7 +62,7 @@ export const useExperimentPolling = ({
       
       console.log('[useExperimentPolling] Polling has been fully stopped');
     }
-  }, [pollingInterval, activeExperimentId]);
+  }, [activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
   const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
@@ -211,7 +213,8 @@ export const useExperimentPolling = ({
       }
     }, POLL_INTERVAL);
 
-    setPollingInterval(poller);
+    // Use ref instead of state for interval
+    pollingIntervalRef.current = poller;
     
     // Return an object containing info about the current polling operation
     return {
@@ -221,22 +224,23 @@ export const useExperimentPolling = ({
     };
   }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
-  // Ensure we clean up on unmount
+  // Ensure we clean up on unmount - updated to use ref
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
+      if (pollingIntervalRef.current) {
         console.log('[useExperimentPolling] Cleaning up polling on unmount');
-        clearInterval(pollingInterval);
-        isPollingActiveRef.current = false;
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
+      isPollingActiveRef.current = false;
     };
-  }, [pollingInterval]);
+  }, []);
 
   return { 
     startPolling, 
     stopPolling, 
     experimentType,
     activeExperimentId,
-    isPolling: !!pollingInterval || isPollingActiveRef.current
+    isPolling: !!pollingIntervalRef.current || isPollingActiveRef.current
   };
 };
