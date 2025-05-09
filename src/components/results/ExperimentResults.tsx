@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,8 +21,7 @@ interface ExperimentResultsProps {
   trainingType?: 'automl' | 'custom' | null; // New prop to explicitly specify training type
 }
 
-// Use React.memo to prevent unnecessary re-renders
-const ExperimentResults: React.FC<ExperimentResultsProps> = memo(({
+const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   experimentId,
   status,
   experimentResults,
@@ -32,23 +31,24 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = memo(({
   onRefresh,
   trainingType
 }) => {
-  // Log when the component renders to help with debugging, but only in development
-  if (process.env.NODE_ENV === 'development') {
-    // Reduced frequency - only log when important props change
-    console.log("[ExperimentResults] Rendering with:", { 
-      experimentId, 
-      status, 
-      trainingType,
-      isLoading, 
-      hasResults: !!experimentResults,
-      hasError: !!error
-    });
-  }
+  // Log when the component renders to help with debugging
+  console.log("[ExperimentResults] Rendering with:", { 
+    experimentId, 
+    status, 
+    trainingType,
+    isLoading, 
+    hasResults: !!experimentResults,
+    hasError: !!error,
+    resultTrainingType: experimentResults?.training_type,
+    resultAutomlEngine: experimentResults?.automl_engine
+  });
   
   // Determine the actual training type to display in UI - improved logic
   const displayedTrainingType = trainingType || 
                                (experimentResults?.training_type as 'automl' | 'custom') || 
                                (experimentResults?.automl_engine ? 'automl' : 'custom');
+                               
+  console.log("[ExperimentResults] Using display training type:", displayedTrainingType);
 
   if (isLoading) {
     return (
@@ -196,9 +196,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = memo(({
       </CardFooter>
     </Card>
   );
-});
-
-// Add displayName for better debugging
-ExperimentResults.displayName = 'ExperimentResults';
+};
 
 export default ExperimentResults;
