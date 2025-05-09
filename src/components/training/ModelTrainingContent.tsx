@@ -53,6 +53,14 @@ const ModelTrainingContent: React.FC = () => {
     });
   }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
 
+  // Stop polling when experiment is done
+  useEffect(() => {
+    if ((experimentStatus === 'completed' || experimentStatus === 'success') && !isTraining) {
+      console.log("ModelTrainingContent - Stopping polling after experiment completion");
+      stopPolling();
+    }
+  }, [experimentStatus, isTraining, stopPolling]);
+
   // Ensure isTraining is set to false when status is completed or success
   useEffect(() => {
     if ((experimentStatus === 'completed' || experimentStatus === 'success') && isTraining) {
