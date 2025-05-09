@@ -58,6 +58,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     if (!data || isLoading) return;
     
     const isAutoML = lastTrainingType === 'automl';
+    // Fix: Use type-safe comparison for status values
     const isStatusCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
     
     debugLog("ExperimentResultsView", "Data update check", { 
@@ -71,8 +72,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       setResultsLoaded(true);
       setIsTraining(false);
       
-      // Only update status if needed
-      if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
+      // Fix: Use type-safe comparison for status values
+      if (experimentStatus !== 'completed' && experimentStatus !== 'success' && experimentStatus !== 'failed') {
         setExperimentStatus('completed');
       }
     }
@@ -195,3 +196,4 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 };
 
 export default ExperimentResultsView;
+
