@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
 import AutoMLTraining from './AutoMLTraining';
@@ -7,7 +6,7 @@ import CustomTraining from './CustomTraining';
 import DatasetSummary from './DatasetSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { CircleSlash, Play, AlertCircle, Loader, Info, RotateCcw } from 'lucide-react';
+import { CircleSlash, AlertCircle, Loader, Info, RotateCcw } from 'lucide-react';
 import ExperimentResultsView from './ExperimentResultsView';
 import DynamicPredictionForm from './DynamicPredictionForm';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -15,6 +14,7 @@ import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
+import debugLog from '@/utils/debugLogger';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -39,30 +39,10 @@ const ModelTrainingContent: React.FC = () => {
   
   // Add a debug state to track tab switching attempts
   const [autoSwitchAttempts, setAutoSwitchAttempts] = useState(0);
+  const [lastStatusLogged, setLastStatusLogged] = useState('');
   
-  // Detailed logging for relevant state changes
-  useEffect(() => {
-    console.log("ModelTrainingContent - State update:", { 
-      experimentStatus, 
-      isTraining, 
-      isLoadingResults, 
-      resultsLoaded,
-      lastTrainingType,
-      showResultsAndPredict: showResultsAndPredict(),
-      activeTab
-    });
-  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
-
-  // Ensure isTraining is set to false when status is completed or success
-  useEffect(() => {
-    if ((experimentStatus === 'completed' || experimentStatus === 'success') && isTraining) {
-      console.log("ModelTrainingContent - Setting isTraining to false because status is", experimentStatus);
-      setIsTraining(false);
-    }
-  }, [experimentStatus, isTraining, setIsTraining]);
-
-  // IMPROVED: More robust function to determine if results and predict tabs should be shown
-  const showResultsAndPredict = () => {
+  // Memoized value to determine if results and predict tabs should be shown
+  const showResultsAndPredict = useMemo(() => {
     // Base conditions: Has valid experiment ID
     const hasValidExperiment = !!activeExperimentId;
     if (!hasValidExperiment) return false;
@@ -84,20 +64,25 @@ const ModelTrainingContent: React.FC = () => {
       (hasLoadedResults || 
        (isExperimentDone && !isCurrentlyTraining) ||
        hasResultsObject ||
-       (isAutoML && isExperimentDone)); // Special case for AutoML experiments
+       (isAutoML && isExperimentDone));
     
-    console.log("ModelTrainingContent - showResultsAndPredict check:", {
-      experimentStatus,
-      hasValidExperiment,
-      notTraining: !isCurrentlyTraining,
-      resultsLoaded: hasLoadedResults,
-      hasExperimentResults: hasResultsObject,
-      isAutoML,
-      shouldShow
-    });
+    // Only log when the value changes
+    const stateSignature = `${hasValidExperiment}-${isExperimentDone}-${hasLoadedResults}-${hasResultsObject}-${isCurrentlyTraining}-${isAutoML}`;
+    if (lastStatusLogged !== stateSignature) {
+      setLastStatusLogged(stateSignature);
+      debugLog("ModelTrainingContent", "showResultsAndPredict calculation", {
+        experimentStatus,
+        hasValidExperiment,
+        notTraining: !isCurrentlyTraining,
+        resultsLoaded: hasLoadedResults,
+        hasExperimentResults: hasResultsObject,
+        isAutoML,
+        shouldShow
+      });
+    }
     
     return shouldShow;
-  };
+  }, [activeExperimentId, experimentStatus, resultsLoaded, experimentResults, isTraining, lastTrainingType, lastStatusLogged]);
 
   // Add status indicator - Using the explicit resultsLoaded state
   const isProcessing = 
@@ -106,9 +91,8 @@ const ModelTrainingContent: React.FC = () => {
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
-    const canShowResultsAndPredict = showResultsAndPredict();
-    if ((activeTab === 'results' || activeTab === 'predict') && !canShowResultsAndPredict) {
-      console.log("ModelTrainingContent - Switching to automl tab because results/predict not available");
+    if ((activeTab === 'results' || activeTab === 'predict') && !showResultsAndPredict) {
+      debugLog("ModelTrainingContent", "Switching to automl tab because results/predict not available");
       setActiveTab('automl');
     }
   }, [activeTab, showResultsAndPredict, setActiveTab]);
@@ -117,19 +101,19 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     if (datasetId && taskType && experimentStatus === 'processing' && !activeExperimentId) {
       // Only reset to idle if we don't have an active experiment
-      console.log("ModelTrainingContent - Resetting experimentStatus from 'processing' to 'idle'");
+      debugLog("ModelTrainingContent", "Resetting experimentStatus from 'processing' to 'idle'");
       setExperimentStatus('idle');
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
-  // Auto-switch to results tab when results are loaded - ENHANCED for AutoML
+  // Auto-switch to results tab when results are loaded - ENHANCED for AutoML with attempt limiting
   useEffect(() => {
     // Track switch attempts for debugging
     if (autoSwitchAttempts > 5) return; // Prevent infinite loop
     
     const isAutoML = lastTrainingType === 'automl';
     const isCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
-    const canShowResults = showResultsAndPredict();
+    const canShowResults = showResultsAndPredict;
     const shouldSwitch = 
       resultsLoaded && 
       activeExperimentId && 
@@ -144,33 +128,30 @@ const ModelTrainingContent: React.FC = () => {
       activeExperimentId && 
       (activeTab === 'automl');
     
-    console.log("ModelTrainingContent - Tab switching check:", {
-      resultsLoaded,
-      isAutoML,
-      isCompleted,
-      activeTab,
-      shouldSwitch,
-      shouldSwitchAutoML,
-      canShowResults,
-      autoSwitchAttempts
-    });
+    const switchNeeded = shouldSwitch || shouldSwitchAutoML;
     
-    if (shouldSwitch || shouldSwitchAutoML) {
-      console.log(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
+    // Only log when actually attempting to switch
+    if (switchNeeded) {
+      debugLog("ModelTrainingContent", `Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`, {
+        attemptCount: autoSwitchAttempts + 1
+      });
       setActiveTab('results');
       // Increment attempt counter
       setAutoSwitchAttempts(prev => prev + 1);
     }
   }, [resultsLoaded, activeExperimentId, experimentStatus, activeTab, setActiveTab, lastTrainingType, autoSwitchAttempts, showResultsAndPredict]);
 
-  // If experiment is completed, but we don't have results, try to fetch them
+  // If experiment is completed, but we don't have results, try to fetch them - with added guard
   useEffect(() => {
-    if (activeExperimentId && 
-        (experimentStatus === 'completed' || experimentStatus === 'success') && 
-        !isLoadingResults && 
-        !experimentResults && 
-        !resultsLoaded) { 
-      console.log("ModelTrainingContent - Fetching experiment results for completed experiment");
+    const shouldFetch = 
+      activeExperimentId && 
+      (experimentStatus === 'completed' || experimentStatus === 'success') && 
+      !isLoadingResults && 
+      !experimentResults && 
+      !resultsLoaded;
+      
+    if (shouldFetch) { 
+      debugLog("ModelTrainingContent", "Fetching experiment results for completed experiment");
       getExperimentResults();
     }
   }, [activeExperimentId, experimentStatus, isLoadingResults, getExperimentResults, experimentResults, resultsLoaded]);
@@ -203,14 +184,14 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
-  // Handle reset button click
-  const handleReset = () => {
-    console.log("Reset button clicked, stopping polling and resetting training state");
+  // Handle reset button click - memoized to prevent recreations
+  const handleReset = useCallback(() => {
+    debugLog("ModelTrainingContent", "Reset button clicked, stopping polling and resetting training state");
     stopPolling(); // First stop any active polling
     resetTrainingState(); // Then reset the training state
     setActiveTab('automl'); // Set the active tab to automl
     setAutoSwitchAttempts(0); // Reset the auto switch counter
-  };
+  }, [stopPolling, resetTrainingState, setActiveTab]);
 
   return (
     <div className="space-y-6">
@@ -230,7 +211,7 @@ const ModelTrainingContent: React.FC = () => {
         )}
       </div>
       
-      {/* Display status bar when experiment is in progress or loading - updated condition */}
+      {/* Display status bar when experiment is in progress or loading */}
       {(isProcessing || (isLoadingResults && !resultsLoaded)) && (
         <Alert className="mb-4 bg-primary-foreground border-primary/30">
           <div className="flex flex-col w-full">
@@ -257,7 +238,7 @@ const ModelTrainingContent: React.FC = () => {
         </Alert>
       )}
 
-      {/* Add info message when viewing existing experiment results - updated condition */}
+      {/* Add info message when viewing existing experiment results */}
       {activeExperimentId && experimentResults && resultsLoaded && !isProcessing && !isLoadingResults && (
         <Alert variant="info" className="mb-4">
           <Info className="h-4 w-4 text-blue-500 mr-2" />
@@ -299,17 +280,17 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger 
               value="results" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict()}
+              disabled={!showResultsAndPredict}
             >
-              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Results
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict()}
+              disabled={!showResultsAndPredict}
             >
-              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {!showResultsAndPredict && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Predict
             </TabsTrigger>
           </TabsList>
@@ -322,7 +303,7 @@ const ModelTrainingContent: React.FC = () => {
           <CustomTraining />
         </TabsContent>
         <TabsContent value="results" className="space-y-4">
-          {showResultsAndPredict() && activeExperimentId ? (
+          {showResultsAndPredict && activeExperimentId ? (
             <ExperimentResultsView experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
@@ -334,7 +315,7 @@ const ModelTrainingContent: React.FC = () => {
           )}
         </TabsContent>
         <TabsContent value="predict" className="space-y-4">
-          {showResultsAndPredict() && activeExperimentId ? (
+          {showResultsAndPredict && activeExperimentId ? (
             <DynamicPredictionForm experimentId={activeExperimentId} />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
