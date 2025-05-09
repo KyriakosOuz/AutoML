@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -37,7 +36,7 @@ const ModelTrainingContent: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
   const isMobile = useIsMobile();
   
-  // Add a debug state to track tab switching attempts
+  // Debug state to track tab switching attempts
   const [autoSwitchAttempts, setAutoSwitchAttempts] = useState(0);
   
   // Detailed logging for relevant state changes
@@ -68,6 +67,17 @@ const ModelTrainingContent: React.FC = () => {
       setIsTraining(false);
     }
   }, [experimentStatus, isTraining, setIsTraining]);
+
+  // Reset auto-switch counter when experiment completes
+  useEffect(() => {
+    if (
+      resultsLoaded &&
+      activeExperimentId &&
+      (experimentStatus === 'completed' || experimentStatus === 'success')
+    ) {
+      setAutoSwitchAttempts(0);
+    }
+  }, [resultsLoaded, activeExperimentId, experimentStatus]);
 
   // IMPROVED: More robust function to determine if results and predict tabs should be shown
   const showResultsAndPredict = () => {
@@ -130,46 +140,34 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
-  // Auto-switch to results tab when results are loaded - ENHANCED for AutoML
+  // Enhanced auto-switching to results tab when results are loaded
   useEffect(() => {
-    // Track switch attempts for debugging
     if (autoSwitchAttempts > 5) return; // Prevent infinite loop
     
-    const isAutoML = lastTrainingType === 'automl';
     const isCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
     const canShowResults = showResultsAndPredict();
-    const shouldSwitch = 
-      resultsLoaded && 
-      activeExperimentId && 
+
+    const shouldSwitchTabs =
+      resultsLoaded &&
+      activeExperimentId &&
       isCompleted &&
       canShowResults &&
-      (activeTab === 'automl' || activeTab === 'custom');
+      activeTab !== 'results';
     
-    // Add special case for AutoML
-    const shouldSwitchAutoML = 
-      isAutoML && 
-      isCompleted && 
-      activeExperimentId && 
-      (activeTab === 'automl');
-    
-    console.log("ModelTrainingContent - Tab switching check:", {
-      resultsLoaded,
-      isAutoML,
-      isCompleted,
-      activeTab,
-      shouldSwitch,
-      shouldSwitchAutoML,
-      canShowResults,
-      autoSwitchAttempts
-    });
-    
-    if (shouldSwitch || shouldSwitchAutoML) {
-      console.log(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
+    if (shouldSwitchTabs) {
+      console.log("ModelTrainingContent - Auto-switching to 'results' tab");
       setActiveTab('results');
-      // Increment attempt counter
       setAutoSwitchAttempts(prev => prev + 1);
     }
-  }, [resultsLoaded, activeExperimentId, experimentStatus, activeTab, setActiveTab, lastTrainingType, autoSwitchAttempts, showResultsAndPredict]);
+  }, [
+    resultsLoaded,
+    activeExperimentId,
+    experimentStatus,
+    activeTab,
+    autoSwitchAttempts,
+    showResultsAndPredict,
+    setActiveTab
+  ]);
 
   // If experiment is completed, but we don't have results, try to fetch them
   useEffect(() => {
@@ -211,6 +209,9 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
+  // Determine when it's safe to hide loading indicators
+  const isSafeToHideLoading = experimentStatus === 'completed' || experimentStatus === 'success' || resultsLoaded;
+
   // Handle reset button click
   const handleReset = () => {
     console.log("Reset button clicked, stopping polling and resetting training state");
@@ -239,7 +240,7 @@ const ModelTrainingContent: React.FC = () => {
       </div>
       
       {/* Display status bar when experiment is in progress or loading - updated condition */}
-      {(isProcessing || (isLoadingResults && !resultsLoaded)) && (
+      {(isProcessing || (isLoadingResults && !isSafeToHideLoading)) && (
         <Alert className="mb-4 bg-primary-foreground border-primary/30">
           <div className="flex flex-col w-full">
             <div className="flex items-center mb-2">
