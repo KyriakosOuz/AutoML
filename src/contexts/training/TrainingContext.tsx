@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
@@ -673,9 +672,15 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const contextValue: TrainingContextValue = {
     ...state,
-    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
+    setIsTraining: (isTraining) => setState(prev => {
+      if (prev.isTraining === isTraining) return prev; // prevent unnecessary re-renders
+      return { ...prev, isTraining };
+    }),
     setLastTrainingType: (type) => {
-      setState(prev => ({ ...prev, lastTrainingType: type }));
+      setState(prev => {
+        if (prev.lastTrainingType === type) return prev; // prevent unnecessary re-renders
+        return { ...prev, lastTrainingType: type };
+      });
       // Update the auto-detection flag for AutoML experiments
       if (type === 'automl') {
         setIsAutoMLExperiment(true);
@@ -683,23 +688,90 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         setIsAutoMLExperiment(false);
       }
     },
-    setAutomlParameters: (params) => setState(prev => ({ ...prev, automlParameters: { ...prev.automlParameters, ...params } })),
-    setCustomParameters: (params) => setState(prev => ({ ...prev, customParameters: { ...prev.customParameters, ...params } })),
-    setAutomlResult: (result) => setState(prev => ({ ...prev, automlResult: result })),
-    setCustomResult: (result) => setState(prev => ({ ...prev, customResult: result })),
-    setError: (error) => setState(prev => ({ ...prev, error })),
-    setActiveExperimentId: (id) => setState(prev => ({ ...prev, activeExperimentId: id })),
-    setExperimentResults: (results) => setState(prev => ({ ...prev, experimentResults: results })),
-    setIsLoadingResults: (isLoading) => setState(prev => ({ ...prev, isLoadingResults: isLoading })),
-    setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
-    setStatusResponse: (response) => setState(prev => ({ ...prev, statusResponse: response })),
-    setAutomlEngine: (engine) => setState(prev => ({ ...prev, automlEngine: engine })),
-    setTestSize: (size) => setState(prev => ({ ...prev, testSize: size })),
-    setStratify: (stratify) => setState(prev => ({ ...prev, stratify })),
-    setRandomSeed: (seed) => setState(prev => ({ ...prev, randomSeed: seed })),
-    setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
-    setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })),
-    setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })),
+    setAutomlParameters: (params) => setState(prev => {
+      // Deep comparison of objects would be better, but for simplicity we'll update
+      const newParams = { ...prev.automlParameters, ...params };
+      // Simple check if any values actually changed
+      const hasChanges = Object.keys(params).some(key => 
+        params[key as keyof typeof params] !== prev.automlParameters[key as keyof typeof prev.automlParameters]
+      );
+      if (!hasChanges) return prev;
+      return { ...prev, automlParameters: newParams };
+    }),
+    setCustomParameters: (params) => setState(prev => {
+      // Simple check if any values actually changed
+      const hasChanges = Object.keys(params).some(key => 
+        params[key as keyof typeof params] !== prev.customParameters[key as keyof typeof prev.customParameters]
+      );
+      if (!hasChanges) return prev;
+      return { ...prev, customParameters: { ...prev.customParameters, ...params } };
+    }),
+    setAutomlResult: (result) => setState(prev => {
+      if (prev.automlResult === result) return prev; // prevent unnecessary re-renders
+      return { ...prev, automlResult: result };
+    }),
+    setCustomResult: (result) => setState(prev => {
+      if (prev.customResult === result) return prev; // prevent unnecessary re-renders
+      return { ...prev, customResult: result };
+    }),
+    setError: (error) => setState(prev => {
+      if (prev.error === error) return prev; // prevent unnecessary re-renders
+      return { ...prev, error };
+    }),
+    setActiveExperimentId: (id) => setState(prev => {
+      if (prev.activeExperimentId === id) return prev; // prevent unnecessary re-renders
+      return { ...prev, activeExperimentId: id };
+    }),
+    setExperimentResults: (results) => setState(prev => {
+      if (prev.experimentResults === results) return prev; // prevent unnecessary re-renders
+      return { ...prev, experimentResults: results };
+    }),
+    setIsLoadingResults: (isLoading) => setState(prev => {
+      if (prev.isLoadingResults === isLoading) return prev; // prevent unnecessary re-renders
+      return { ...prev, isLoadingResults: isLoading };
+    }),
+    setExperimentStatus: (status) => setState(prev => {
+      if (prev.experimentStatus === status) return prev; // prevent unnecessary re-renders
+      return { ...prev, experimentStatus: status };
+    }),
+    setStatusResponse: (response) => setState(prev => {
+      // Simple shallow equality check for statusResponse objects
+      if (prev.statusResponse === response || 
+         (prev.statusResponse && response && 
+          prev.statusResponse.status === response.status && 
+          prev.statusResponse.hasTrainingResults === response.hasTrainingResults)) {
+        return prev;
+      }
+      return { ...prev, statusResponse: response };
+    }),
+    setAutomlEngine: (engine) => setState(prev => {
+      if (prev.automlEngine === engine) return prev; // prevent unnecessary re-renders
+      return { ...prev, automlEngine: engine };
+    }),
+    setTestSize: (size) => setState(prev => {
+      if (prev.testSize === size) return prev; // prevent unnecessary re-renders
+      return { ...prev, testSize: size };
+    }),
+    setStratify: (stratify) => setState(prev => {
+      if (prev.stratify === stratify) return prev; // prevent unnecessary re-renders
+      return { ...prev, stratify };
+    }),
+    setRandomSeed: (seed) => setState(prev => {
+      if (prev.randomSeed === seed) return prev; // prevent unnecessary re-renders
+      return { ...prev, randomSeed: seed };
+    }),
+    setActiveTab: (tab) => setState(prev => {
+      if (prev.activeTab === tab) return prev; // prevent unnecessary re-renders
+      return { ...prev, activeTab: tab };
+    }),
+    setResultsLoaded: (loaded) => setState(prev => {
+      if (prev.resultsLoaded === loaded) return prev; // prevent unnecessary re-renders
+      return { ...prev, resultsLoaded: loaded };
+    }),
+    setExperimentName: (name) => setState(prev => {
+      if (prev.experimentName === name) return prev; // prevent unnecessary re-renders
+      return { ...prev, experimentName: name };
+    }),
     resetTrainingState: () => {
       // Enhanced reset to ensure all polling is stopped
       stopPolling();

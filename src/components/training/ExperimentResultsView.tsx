@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -40,7 +39,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // Log key state changes
+  // Log key state changes - reduced frequency by adding specific dependencies
   useEffect(() => {
     console.log("[ExperimentResultsView] Component mounted or updated:", { 
       experimentId, 
@@ -50,29 +49,33 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       hasData: !!data,
       hasError: !!error
     });
-  }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
+  }, [experimentId, lastTrainingType, experimentStatus, isLoading, !!data, !!error]);
   
-  // Special handling for AutoML results
+  // Special handling for AutoML results - fixed conditional logic to prevent loops
   useEffect(() => {
+    if (!data || isLoading) return; // Early return if data is not loaded yet
+    
     const isAutoML = lastTrainingType === 'automl';
     
     // For AutoML experiments, make extra sure resultsLoaded is set to true when data is available
-    if (isAutoML && data && !isLoading) {
+    if (isAutoML && data) {
       console.log("[ExperimentResultsView] Setting resultsLoaded for AutoML explicitly");
       // Force resultsLoaded to true for AutoML
       setResultsLoaded(true);
       
-      // Also ensure isTraining is set to false
-      setIsTraining(false);
+      // Only set isTraining to false if it's currently true
+      if (isTraining === true) {
+        setIsTraining(false);
+      }
       
-      // Ensure status is set to completed
+      // Fixed condition: Only update status if it's not already completed
       if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
         setExperimentStatus('completed');
       }
     }
   }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
   
-  // Notify parent components when results are loaded or loading, with improved flow
+  // Notify parent components when results are loaded or loading - consolidated logic to prevent loops
   useEffect(() => {
     if (data && !isLoading) {
       console.log("[ExperimentResultsView] Results loaded successfully", {
@@ -81,11 +84,11 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         automl_engine: data.automl_engine
       });
       
-      // Ensure isTraining is set to false and status is set to completed
+      // Ensure isTraining is set to false
       setIsTraining(false);
       
-      // Handle 'success' status from API
-      if (data.status === 'success' || data.status === 'completed') {
+      // Handle 'success' status from API - fixed condition to prevent loops
+      if ((data.status === 'success' || data.status === 'completed') && experimentStatus !== 'completed') {
         console.log("[ExperimentResultsView] Setting status to 'completed'");
         setExperimentStatus('completed');
       }
@@ -104,7 +107,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       console.log("[ExperimentResultsView] Still loading, using local state only");
       setLocalLoadingState(isLoading);
     }
-  }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus]);
+  }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
 
   // Handler for the "Run New Experiment" button
   const handleReset = () => {
