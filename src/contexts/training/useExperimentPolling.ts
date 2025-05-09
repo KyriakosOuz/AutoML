@@ -106,10 +106,9 @@ export const useExperimentPolling = ({
         const data = response.data;
         console.log(`[useExperimentPolling] Status response for ${type} experiment (${experimentId}):`, data);
 
-        // FIX: Properly check for failure status and error message in the response
-        // Use type assertion to allow checking for 'error' status
-        const status = data.status as string;
-        if (status === 'failed' || status === 'error' || !!data.error_message) {
+        // IMPROVED: Better failure detection - check explicitly for 'failed' status
+        // or an error_message in the response
+        if (data.status === 'failed' || data.status === 'error' || !!data.error_message) {
           console.log(`[useExperimentPolling] Experiment ${experimentId} FAILED - stopping poller`);
           setExperimentStatus('failed');
           stopPolling();
