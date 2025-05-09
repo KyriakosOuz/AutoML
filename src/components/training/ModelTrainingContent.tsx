@@ -286,12 +286,14 @@ const ModelTrainingContent: React.FC = () => {
           <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} bg-gray-100`}>
             <TabsTrigger 
               value="automl" 
+              disabled={isTraining && lastTrainingType === 'custom'}
               className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
             >
               AutoML
             </TabsTrigger>
             <TabsTrigger 
               value="custom" 
+              disabled={isTraining && lastTrainingType === 'automl'}
               className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
             >
               Custom
