@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults } from '@/types/training';
@@ -8,9 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import CustomTrainingResults from './CustomTrainingResults';
 import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
+// Fix: Import with a different name directly
 import StandardExperimentResults from '@/components/results/ExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
-import debugLog from '@/utils/debugLogger';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -29,7 +29,6 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   } = useTraining();
   
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
-  const [previousExperimentId, setPreviousExperimentId] = useState<string | null>(null);
   
   // Use React Query with improved configuration
   const { data, isLoading, error } = useQuery({
@@ -41,93 +40,77 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // Log only when experimentId changes to avoid excessive logging
+  // Log key state changes
   useEffect(() => {
-    if (previousExperimentId !== experimentId) {
-      debugLog("ExperimentResultsView", "Experiment ID changed", { 
-        previousId: previousExperimentId,
-        newId: experimentId
-      });
-      setPreviousExperimentId(experimentId);
-    }
-  }, [experimentId, previousExperimentId]);
-  
-  // Special handling for AutoML results - combined into one effect with guards
-  useEffect(() => {
-    // Skip if nothing significant changed
-    if (!data || isLoading) return;
-    
-    const isAutoML = lastTrainingType === 'automl';
-    // Fix: Use type-safe comparison for status values
-    const isStatusCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
-    
-    debugLog("ExperimentResultsView", "Data update check", { 
-      isAutoML, 
-      isStatusCompleted,
-      hasData: !!data
+    console.log("[ExperimentResultsView] Component mounted or updated:", { 
+      experimentId, 
+      lastTrainingType, 
+      experimentStatus,
+      isLoading,
+      hasData: !!data,
+      hasError: !!error
     });
+  }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
+  
+  // Special handling for AutoML results
+  useEffect(() => {
+    const isAutoML = lastTrainingType === 'automl';
     
-    // Only run this logic for completed AutoML experiments with data
-    if (isAutoML && isStatusCompleted && data) {
+    // For AutoML experiments, make extra sure resultsLoaded is set to true when data is available
+    if (isAutoML && data && !isLoading) {
+      console.log("[ExperimentResultsView] Setting resultsLoaded for AutoML explicitly");
+      // Force resultsLoaded to true for AutoML
       setResultsLoaded(true);
+      
+      // Also ensure isTraining is set to false
       setIsTraining(false);
       
-      // Fix: Use type-safe comparison for status values
-      if (experimentStatus !== 'completed' && experimentStatus !== 'success' && experimentStatus !== 'failed') {
+      // Ensure status is set to completed
+      if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
         setExperimentStatus('completed');
       }
     }
   }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus]);
   
-  // Handle primary data loading state changes - with guard conditions
+  // Notify parent components when results are loaded or loading, with improved flow
   useEffect(() => {
-    // Create a single state object to track all changes
-    const newState = {
-      loaded: false,
-      localLoading: true
-    };
-    
     if (data && !isLoading) {
-      newState.loaded = true;
-      newState.localLoading = false;
-      
-      debugLog("ExperimentResultsView", "Results loaded", {
+      console.log("[ExperimentResultsView] Results loaded successfully", {
         status: data.status,
         algorithm: data.algorithm,
         automl_engine: data.automl_engine
       });
       
-      // Only update training state if needed
+      // Ensure isTraining is set to false and status is set to completed
       setIsTraining(false);
       
       // Handle 'success' status from API
       if (data.status === 'success' || data.status === 'completed') {
+        console.log("[ExperimentResultsView] Setting status to 'completed'");
         setExperimentStatus('completed');
       }
       
-    } else if (error) {
-      newState.loaded = false;
-      newState.localLoading = false;
-      debugLog("ExperimentResultsView", "Error loading results", error);
-    } else {
-      // Just update local loading state without changing global state
-      newState.localLoading = isLoading;
-    }
-    
-    // Apply state changes that actually differ from current
-    if (newState.loaded) {
+      // Set resultsLoaded to true when we have data
+      console.log("[ExperimentResultsView] Setting resultsLoaded to TRUE");
       setResultsLoaded(true);
+      setLocalLoadingState(false);
+    } else if (error) {
+      // Only set resultsLoaded to false on actual errors, not during loading
+      console.log("[ExperimentResultsView] Error loading results, setting resultsLoaded to FALSE");
+      setResultsLoaded(false);
+      setLocalLoadingState(false);
+    } else {
+      // Use local loading state instead of modifying global state during initial load
+      console.log("[ExperimentResultsView] Still loading, using local state only");
+      setLocalLoadingState(isLoading);
     }
-    
-    setLocalLoadingState(newState.localLoading);
-    
   }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus]);
 
-  // Handler for the "Run New Experiment" button - memoized to prevent recreations
-  const handleReset = useCallback(() => {
-    debugLog("ExperimentResultsView", "Resetting training state");
+  // Handler for the "Run New Experiment" button
+  const handleReset = () => {
+    console.log("[ExperimentResultsView] Resetting training state");
     resetTrainingState();
-  }, [resetTrainingState]);
+  };
 
   // Use localLoadingState instead of isLoading to prevent UI flickering
   if (localLoadingState) {
@@ -154,6 +137,15 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const isMljarExperiment = data.automl_engine?.toLowerCase() === "mljar";
   const isAutoMLExperiment = !!data.automl_engine;
   const isCustomTrainingExperiment = data.training_type === "custom" || (!data.automl_engine && !data.training_type);
+
+  // Additional logging to help diagnose render issues
+  console.log("[ExperimentResultsView] Rendering results component:", {
+    isMljarExperiment,
+    isAutoMLExperiment,
+    isCustomTrainingExperiment,
+    training_type: data.training_type,
+    automl_engine: data.automl_engine
+  });
 
   // Render the appropriate component based on experiment type
   if (isMljarExperiment) {
@@ -196,4 +188,3 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 };
 
 export default ExperimentResultsView;
-

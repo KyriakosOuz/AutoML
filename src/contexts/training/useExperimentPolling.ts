@@ -1,10 +1,8 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
 import { ExperimentStatus, ExperimentStatusResponse, TrainingType } from '@/types/training';
 import { POLL_INTERVAL, MAX_POLL_ATTEMPTS } from './constants';
-import debugLog from '@/utils/debugLogger';
 
 export interface UseExperimentPollingProps {
   onSuccess: (experimentId: string) => void;
@@ -29,26 +27,20 @@ export const useExperimentPolling = ({
   const isManuallyStoppedRef = useRef<boolean>(false);
   // Track if polling is currently active
   const isPollingActiveRef = useRef<boolean>(false);
-  // Track previous experiment status to avoid duplicate updates
-  const prevStatusRef = useRef<ExperimentStatus | null>(null);
 
-  // Log the state only when experimentType actually changes
+  // Log the state whenever experimentType changes
   useEffect(() => {
-    if (experimentType) {
-      debugLog("useExperimentPolling", "Experiment type changed", experimentType);
-    }
+    console.log('[useExperimentPolling] Experiment type changed:', experimentType);
   }, [experimentType]);
   
-  // Log the state only when activeExperimentId actually changes
+  // Log the state whenever activeExperimentId changes
   useEffect(() => {
-    if (activeExperimentId) {
-      debugLog("useExperimentPolling", "Active experiment ID changed", activeExperimentId);
-    }
+    console.log('[useExperimentPolling] Active experiment ID changed:', activeExperimentId);
   }, [activeExperimentId]);
 
   const stopPolling = useCallback(() => {
     if (pollingInterval || isPollingActiveRef.current) {
-      debugLog("useExperimentPolling", "Stopping polling for experiment", activeExperimentId);
+      console.log('[useExperimentPolling] Stopping polling for experiment:', activeExperimentId);
       if (pollingInterval) {
         clearInterval(pollingInterval);
         setPollingInterval(null);
@@ -56,6 +48,7 @@ export const useExperimentPolling = ({
       isManuallyStoppedRef.current = true;
       isPollingActiveRef.current = false;
       
+      console.log('[useExperimentPolling] Resetting experiment state');
       // Reset active experiment ID when polling is stopped
       setActiveExperimentId(null);
       
@@ -65,10 +58,7 @@ export const useExperimentPolling = ({
       // Reset polling attempts
       setPollingAttempts(0);
       
-      // Reset previous status ref
-      prevStatusRef.current = null;
-      
-      debugLog("useExperimentPolling", "Polling has been fully stopped");
+      console.log('[useExperimentPolling] Polling has been fully stopped');
     }
   }, [pollingInterval, activeExperimentId]);
 
@@ -77,7 +67,7 @@ export const useExperimentPolling = ({
     // Always stop any existing polling first
     stopPolling();
 
-    debugLog("useExperimentPolling", `Starting polling for ${type} experiment`, experimentId);
+    console.log(`[useExperimentPolling] Starting polling for ${type} experiment:`, experimentId);
     setIsLoading(true);
     setPollingAttempts(0);
     setExperimentType(type);
@@ -85,7 +75,6 @@ export const useExperimentPolling = ({
     setActiveExperimentId(experimentId);
     isManuallyStoppedRef.current = false;
     isPollingActiveRef.current = true;
-    prevStatusRef.current = 'processing';
 
     // Show toast notification with information about the background processing
     toast({
@@ -105,42 +94,26 @@ export const useExperimentPolling = ({
       try {
         // Check if polling was manually stopped
         if (isManuallyStoppedRef.current) {
-          debugLog("useExperimentPolling", "Polling manually stopped, skipping interval");
+          console.log('[useExperimentPolling] Polling manually stopped, skipping interval');
           return;
         }
 
-        // Log current polling state only every few attempts to avoid flooding
-        if (pollingAttempts % 3 === 0) {
-          debugLog("useExperimentPolling", `Polling attempt ${pollingAttempts + 1} for ${type} experiment`, experimentId);
-        }
+        // Log current polling state
+        console.log(`[useExperimentPolling] Polling attempt ${pollingAttempts + 1} for ${type} experiment (${experimentId})`);
 
         const response = await checkStatus(experimentId);
         const data = response.data;
-        
-        // Only log full response data periodically
-        if (pollingAttempts % 5 === 0) {
-          debugLog("useExperimentPolling", `Status response for ${type} experiment`, {
-            id: experimentId,
-            status: data.status,
-            errorMessage: data.error_message
-          });
-        }
+        console.log(`[useExperimentPolling] Status response for ${type} experiment (${experimentId}):`, data);
 
-        // Type-safe failure detection - check explicitly for failure conditions
+        // FIXED: Type-safe failure detection - check explicitly for failure conditions
         // using type narrowing and avoiding direct string comparison for 'error'
         if (
           data.status === 'failed' || 
           data.error_message || 
           (data.status as ExperimentStatus) === 'error'
         ) {
-          debugLog("useExperimentPolling", `Experiment ${experimentId} FAILED - stopping poller`);
-          
-          // Only update status if different from current
-          if (prevStatusRef.current !== 'failed') {
-            setExperimentStatus('failed');
-            prevStatusRef.current = 'failed';
-          }
-          
+          console.log(`[useExperimentPolling] Experiment ${experimentId} FAILED - stopping poller`);
+          setExperimentStatus('failed');
           stopPolling();
           
           // Display the error message from the API or a generic one
@@ -157,12 +130,7 @@ export const useExperimentPolling = ({
         
         // Map 'success' status to 'completed' for consistency
         const mappedStatus = data.status === 'success' ? 'completed' : data.status;
-        
-        // Only update status if different from current
-        if (prevStatusRef.current !== mappedStatus) {
-          setExperimentStatus(mappedStatus);
-          prevStatusRef.current = mappedStatus;
-        }
+        setExperimentStatus(mappedStatus);
 
         // Enhanced check for experiment completion
         const isCompleted = data.hasTrainingResults === true || 
@@ -170,7 +138,10 @@ export const useExperimentPolling = ({
                           data.status === 'completed';
 
         if (isCompleted) {
-          debugLog("useExperimentPolling", `${type.toUpperCase()} experiment completed — stopping poller`);
+          console.log(`[useExperimentPolling] ${type.toUpperCase()} experiment completed — stopping poller`);
+          
+          // Call onSuccess first, before stopping polling, to ensure state is available
+          console.log(`[useExperimentPolling] Calling onSuccess for ${type} experiment:`, experimentId);
           
           // Add a small delay to ensure backend is ready - slightly longer for AutoML
           const delay = type === 'automl' ? 1500 : 1000;
@@ -178,7 +149,6 @@ export const useExperimentPolling = ({
           setTimeout(() => {
             // Make sure we're still in a valid state before calling onSuccess
             if (!isManuallyStoppedRef.current) {
-              debugLog("useExperimentPolling", "Calling onSuccess for experiment", experimentId);
               onSuccess(experimentId);
             }
             // Now stop polling after onSuccess has been called
@@ -187,9 +157,9 @@ export const useExperimentPolling = ({
           return;
         }
         
-        // Adjusted to use a lower MAX_POLL_ATTEMPTS for faster timeout in case of issues
+        // FIX: Adjusted to use a lower MAX_POLL_ATTEMPTS for faster timeout in case of issues
         if (pollingAttempts >= MAX_POLL_ATTEMPTS) {
-          debugLog("useExperimentPolling", "Reached maximum polling attempts");
+          console.warn('[useExperimentPolling] Reached maximum polling attempts');
           setExperimentStatus('failed');
           stopPolling();
           onError('Timeout while waiting for training completion. The training job may still be running on our servers - please check back later.');
@@ -202,7 +172,7 @@ export const useExperimentPolling = ({
         }
         setPollingAttempts(prev => prev + 1);
       } catch (error: any) {
-        debugLog("useExperimentPolling", "Polling error", error);
+        console.error('[useExperimentPolling] Polling error:', error);
         
         // Increment retry count
         const newRetryCount = pollingAttempts + 1;
@@ -223,9 +193,9 @@ export const useExperimentPolling = ({
           return;
         }
         
-        // Ensure we set failed status and stop polling after fewer attempts
+        // FIX: Ensure we set failed status and stop polling after fewer attempts
         if (pollingAttempts >= Math.min(5, MAX_POLL_ATTEMPTS)) {
-          debugLog("useExperimentPolling", "Too many errors during polling, stopping");
+          console.log('[useExperimentPolling] Too many errors during polling, stopping');
           setExperimentStatus('failed');
           stopPolling();
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -255,7 +225,7 @@ export const useExperimentPolling = ({
   useEffect(() => {
     return () => {
       if (pollingInterval) {
-        debugLog("useExperimentPolling", "Cleaning up polling on unmount");
+        console.log('[useExperimentPolling] Cleaning up polling on unmount');
         clearInterval(pollingInterval);
         isPollingActiveRef.current = false;
       }
