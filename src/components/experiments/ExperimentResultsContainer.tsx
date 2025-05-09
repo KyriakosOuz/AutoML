@@ -1,9 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
+import H2OExperimentResults from '../results/H2OExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsContainerProps {
@@ -116,8 +118,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     if (onRefresh) onRefresh();
   };
 
-  // Check if this is a MLJAR experiment
+  // Check experiment engine type
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
+  const isH2OExperiment = results?.automl_engine?.toLowerCase() === "h2o";
   
   // Determine the correct training type from results or context
   const determineTrainingType = () => {
@@ -157,6 +160,16 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     <div className="w-full overflow-x-hidden">
       {isMljarExperiment ? (
         <MLJARExperimentResults
+          experimentId={experimentId}
+          status={status}
+          experimentResults={results}
+          isLoading={isLoading}
+          error={error}
+          onReset={handleReset}
+          onRefresh={handleRefresh}
+        />
+      ) : isH2OExperiment ? (
+        <H2OExperimentResults
           experimentId={experimentId}
           status={status}
           experimentResults={results}

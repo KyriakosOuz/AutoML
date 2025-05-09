@@ -10,6 +10,7 @@ import CustomTrainingResults from './CustomTrainingResults';
 import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
 // Fix: Import with a different name directly
 import StandardExperimentResults from '@/components/results/ExperimentResults';
+import H2OExperimentResults from '@/components/results/H2OExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface ExperimentResultsViewProps {
@@ -117,6 +118,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const resultType = useMemo(() => {
     return {
       isMljarExperiment: data?.automl_engine?.toLowerCase() === "mljar",
+      isH2OExperiment: data?.automl_engine?.toLowerCase() === "h2o",
       isAutoMLExperiment: !!data?.automl_engine,
       isCustomTrainingExperiment: data?.training_type === "custom" || (!data?.automl_engine && !data?.training_type)
     };
@@ -146,6 +148,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   // Additional logging to help diagnose render issues
   console.log("[ExperimentResultsView] Rendering results component:", {
     isMljarExperiment: resultType.isMljarExperiment,
+    isH2OExperiment: resultType.isH2OExperiment,
     isAutoMLExperiment: resultType.isAutoMLExperiment,
     isCustomTrainingExperiment: resultType.isCustomTrainingExperiment,
     training_type: data.training_type,
@@ -157,6 +160,19 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     return (
       <div className="w-full">
         <MLJARExperimentResults
+          experimentId={experimentId}
+          status={data.status}
+          experimentResults={data}
+          isLoading={false}
+          error={null}
+          onReset={handleReset}
+        />
+      </div>
+    );
+  } else if (resultType.isH2OExperiment) {
+    return (
+      <div className="w-full">
+        <H2OExperimentResults
           experimentId={experimentId}
           status={data.status}
           experimentResults={data}

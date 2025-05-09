@@ -5,7 +5,13 @@
  * - For times ≥ 60 seconds: Shows as "X min Y sec"
  */
 export const formatTrainingTime = (seconds: number | undefined): string => {
-  if (seconds === undefined) return "N/A";
+  if (seconds === undefined || seconds === null) return "N/A";
+  
+  // Handle non-numeric values
+  if (isNaN(seconds)) return "N/A";
+  
+  // Handle negative values (shouldn't happen but just in case)
+  if (seconds < 0) return "N/A";
   
   // Convert from minutes to seconds if needed based on magnitude
   if (seconds < 1 && seconds > 0) {
