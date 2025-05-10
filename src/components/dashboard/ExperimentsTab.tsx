@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -15,6 +15,8 @@ import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
 import { Input } from '@/components/ui/input';
+import { AutoMLEngineFilter } from '@/types/training';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const formatTaskType = (taskType: string): string => {
   const taskTypeMap: Record<string, string> = {
@@ -102,6 +104,7 @@ const ExperimentsTab: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TrainingTab>('all');
   const [taskType, setTaskType] = useState<TaskType>('all');
+  const [automlEngine, setAutomlEngine] = useState<AutoMLEngineFilter>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -112,6 +115,11 @@ const ExperimentsTab: React.FC = () => {
   const [isSavingComparison, setIsSavingComparison] = useState(false);
   
   const { toast } = useToast();
+
+  // Reset automlEngine when activeTab changes
+  useEffect(() => {
+    setAutomlEngine('all');
+  }, [activeTab]);
 
   useEffect(() => {
     fetchExperiments();
@@ -126,11 +134,11 @@ const ExperimentsTab: React.FC = () => {
     return () => {
       window.removeEventListener('refresh-experiments', handleRefreshExperiments);
     };
-  }, [activeTab, taskType, searchQuery]);
+  }, [activeTab, taskType, searchQuery, automlEngine]);
 
   useEffect(() => {
     setSelectedExperiments([]);
-  }, [activeTab, taskType]);
+  }, [activeTab, taskType, automlEngine]);
 
   const fetchExperiments = async () => {
     try {
@@ -142,7 +150,11 @@ const ExperimentsTab: React.FC = () => {
       
       // Apply experiment type filter (engine parameter)
       if (activeTab === 'automl') {
-        url.searchParams.append("engine", "mljar,h2o");
+        if (automlEngine === 'all') {
+          url.searchParams.append("engine", "mljar,h2o");
+        } else {
+          url.searchParams.append("engine", automlEngine);
+        }
       } else if (activeTab === 'custom') {
         url.searchParams.append("engine", "custom");
       }
@@ -271,6 +283,21 @@ const ExperimentsTab: React.FC = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Verify that all selected AutoML experiments use the same engine
+    if (activeTab === 'automl' && selectedExperiments.length > 1) {
+      const selectedExperimentObjects = experiments.filter(exp => selectedExperiments.includes(exp.id));
+      const engines = new Set(selectedExperimentObjects.map(exp => exp.automl_engine));
+      
+      if (engines.size > 1) {
+        toast({
+          title: "Engine Mismatch",
+          description: "You can only compare experiments using the same AutoML engine (MLJAR or H2O).",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
@@ -415,8 +442,40 @@ const ExperimentsTab: React.FC = () => {
     </div>
   );
 
+  const renderAutoMLEngineFilters = () => {
+    if (activeTab !== 'automl') return null;
+    
+    return (
+      <div className="flex flex-col space-y-4">
+        <h3 className="text-sm font-medium flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          AutoML Engine
+        </h3>
+        <ToggleGroup 
+          type="single" 
+          value={automlEngine}
+          onValueChange={(value: string) => {
+            if (value) setAutomlEngine(value as AutoMLEngineFilter);
+          }}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="all">All Engines</ToggleGroupItem>
+          <ToggleGroupItem value="mljar">MLJAR</ToggleGroupItem>
+          <ToggleGroupItem value="h2o">H2O</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    );
+  };
+
   const renderTaskTypeFilters = () => (
-    <div className="flex gap-2">
+    <div className="flex flex-col space-y-4">
+      <h3 className="text-sm font-medium">Task Type</h3>
+      {renderTaskTypeButtons()}
+    </div>
+  );
+
+  const renderTaskTypeButtons = () => (
+    <div className="flex gap-2 flex-wrap">
       <Button 
         variant={taskType === 'all' ? "default" : "outline"} 
         onClick={() => setTaskType('all')}
@@ -590,10 +649,10 @@ const ExperimentsTab: React.FC = () => {
             {renderTabButtons()}
           </div>
           
-          <div className="flex flex-col space-y-4">
-            <h3 className="text-sm font-medium">Task Type</h3>
-            {renderTaskTypeFilters()}
-          </div>
+          {/* New AutoML engine filters section */}
+          {renderAutoMLEngineFilters()}
+          
+          {renderTaskTypeFilters()}
           
           <div className="flex flex-col space-y-4">
             <h3 className="text-sm font-medium">Search</h3>
@@ -607,11 +666,11 @@ const ExperimentsTab: React.FC = () => {
           <div className="flex gap-2 text-sm text-muted-foreground">
             <Info className="h-5 w-5 flex-shrink-0" />
             <p>
-              Browse and manage your machine learning experiments here. Filter experiments by training method (AutoML or Custom) 
-              and task type, search by name, compare multiple experiments, or view detailed results for each experiment. 
-              To compare experiments, first select either AutoML or Custom Training method (mixing comparison between methods is not allowed). 
-              You can then select multiple experiments to compare by clicking the compare icon. 
-              Click on the view icon to see full metrics, or the delete icon to remove an experiment.
+              Browse and manage your machine learning experiments here. Filter experiments by training method (AutoML or Custom), 
+              AutoML engine (MLJAR or H2O), or task type. Search by name, compare multiple experiments, or view detailed results. 
+              To compare experiments, first select the correct training method and engine (for AutoML), then select multiple 
+              experiments to compare. Only experiments with the same engine can be compared. 
+              Click the view icon for full metrics, or the delete icon to remove an experiment.
             </p>
           </div>
         </CardContent>
@@ -645,10 +704,16 @@ const ExperimentsTab: React.FC = () => {
                       <TableCell>{experiment.experiment_name}</TableCell>
                       <TableCell>{formatDistanceToNow(new Date(experiment.created_at))} ago</TableCell>
                       <TableCell>
-                        {formatTaskType(experiment.task_type)}
+                        <div className="flex flex-col gap-1">
+                          <span>{formatTaskType(experiment.task_type)}</span>
+                          {experiment.training_type === 'automl' && experiment.automl_engine && (
+                            <Badge variant="outline" className="text-xs">
+                              {experiment.automl_engine.toUpperCase()}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {/* Modified to remove the Badge, keeping only the algorithm/engine name */}
                         {experiment.training_type === 'automl' || (!experiment.training_type && experiment.auto_train) ? (
                           <span>{experiment.automl_engine ? experiment.automl_engine.toUpperCase() : 'Unknown Engine'}</span>
                         ) : (
