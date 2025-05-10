@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search, Filter } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search, Filter, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -267,6 +267,26 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
+    // Add validation for engine selection
+    if (activeTab === 'automl' && automlEngine === 'all') {
+      toast({
+        title: "Engine Selection Required",
+        description: "Please select a specific AutoML engine (MLJAR or H2O) before comparing experiments.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Add validation for task type selection
+    if (taskType === 'all') {
+      toast({
+        title: "Task Type Required",
+        description: "Please select a specific task type before comparing experiments.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (activeTab === 'all') {
       toast({
         title: "Filter Required",
@@ -416,7 +436,14 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    return activeTab !== 'all' && selectedExperiments.length >= 2;
+    // Update to check for specific engine and task type when in AutoML mode
+    if (activeTab === 'all') return false;
+    
+    if (activeTab === 'automl' && automlEngine === 'all') return false;
+    
+    if (taskType === 'all') return false;
+    
+    return selectedExperiments.length >= 2;
   };
 
   const renderTabButtons = () => (
@@ -463,6 +490,15 @@ const ExperimentsTab: React.FC = () => {
           <ToggleGroupItem value="mljar">MLJAR</ToggleGroupItem>
           <ToggleGroupItem value="h2o">H2O</ToggleGroupItem>
         </ToggleGroup>
+        
+        {selectedExperiments.length > 0 && automlEngine === 'all' && (
+          <Alert variant="warning" className="bg-amber-50">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Select a specific engine (MLJAR or H2O) to enable comparison.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     );
   };
@@ -471,6 +507,15 @@ const ExperimentsTab: React.FC = () => {
     <div className="flex flex-col space-y-4">
       <h3 className="text-sm font-medium">Task Type</h3>
       {renderTaskTypeButtons()}
+      
+      {selectedExperiments.length > 0 && taskType === 'all' && (
+        <Alert variant="warning" className="bg-amber-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Select a specific task type to enable comparison.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 
@@ -668,8 +713,8 @@ const ExperimentsTab: React.FC = () => {
             <p>
               Browse and manage your machine learning experiments here. Filter experiments by training method (AutoML or Custom), 
               AutoML engine (MLJAR or H2O), or task type. Search by name, compare multiple experiments, or view detailed results. 
-              To compare experiments, first select the correct training method and engine (for AutoML), then select multiple 
-              experiments to compare. Only experiments with the same engine can be compared. 
+              To compare experiments, first select a specific training method, engine (for AutoML), and task type, 
+              then select multiple experiments to compare. Only experiments with the same engine can be compared. 
               Click the view icon for full metrics, or the delete icon to remove an experiment.
             </p>
           </div>
