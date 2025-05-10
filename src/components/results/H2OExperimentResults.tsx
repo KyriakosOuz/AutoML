@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -542,11 +541,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                           className="w-full rounded-md"
                         />
                         <div className="mt-4 flex justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </a>
+                          <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${file.name || 'visualization'}.png`)}>
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
                           </Button>
                         </div>
                       </div>
@@ -577,11 +574,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button className="w-full" asChild>
-                      <a href={leaderboardFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <Database className="h-4 w-4 mr-2" />
-                        Download Leaderboard
-                      </a>
+                    <Button className="w-full" onClick={() => downloadFile(leaderboardFile.file_url, 'h2o_leaderboard.csv')}>
+                      <Database className="h-4 w-4 mr-2" />
+                      Download Leaderboard
                     </Button>
                   </CardContent>
                 </Card>
@@ -596,11 +591,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button className="w-full" asChild>
-                      <a href={predictionsFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <ChartLine className="h-4 w-4 mr-2" />
-                        Download Predictions
-                      </a>
+                    <Button className="w-full" onClick={() => downloadFile(predictionsFile.file_url, 'predictions.csv')}>
+                      <ChartLine className="h-4 w-4 mr-2" />
+                      Download Predictions
                     </Button>
                   </CardContent>
                 </Card>
@@ -615,11 +608,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button className="w-full sm:w-auto" asChild>
-                      <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
+                    <Button className="w-full sm:w-auto" onClick={() => downloadFile(modelFile.file_url, 'h2o_model.zip')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download Model
                     </Button>
                   </CardContent>
                 </Card>

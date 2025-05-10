@@ -21,6 +21,7 @@ import {
   Check,
   Link
 } from 'lucide-react';
+import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
 const POLL_INTERVAL = 2000; // 2 seconds
 const MAX_RETRY_ATTEMPTS = 3;
@@ -421,11 +422,9 @@ const ExperimentResultsPage: React.FC = () => {
                                   {new Date(file.created_at).toLocaleString()}
                                 </p>
                               </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                                  <DownloadCloud className="h-4 w-4 mr-2" />
-                                  Download
-                                </a>
+                              <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${file.file_type.replace('_', '-')}.png`)}>
+                                <DownloadCloud className="h-4 w-4 mr-2" />
+                                Download
                               </Button>
                             </div>
                           </div>
@@ -452,11 +451,9 @@ const ExperimentResultsPage: React.FC = () => {
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-col items-center">
-                          <Button asChild>
-                            <a href={modelFile.file_url} download target="_blank" rel="noopener noreferrer">
-                              <DownloadCloud className="h-4 w-4 mr-2" />
-                              Download Model
-                            </a>
+                          <Button onClick={() => downloadFile(modelFile.file_url, 'trained_model.zip')}>
+                            <DownloadCloud className="h-4 w-4 mr-2" />
+                            Download Model
                           </Button>
                           <p className="mt-2 text-xs text-muted-foreground">
                             Created: {new Date(modelFile.created_at).toLocaleString()}

@@ -25,6 +25,7 @@ import {
   Loader
 } from 'lucide-react';
 import { formatTrainingTime } from '@/utils/formatUtils';
+import { downloadFile } from './prediction/utils/downloadUtils';
 
 export interface TrainingResultsV2Props {
   experimentId: string;
@@ -336,22 +337,18 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                               className="w-full rounded-md"
                             />
                             <div className="mt-4 flex justify-end">
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4 mr-1" />
-                                  Download
-                                </a>
+                              <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
                               </Button>
                             </div>
                           </div>
                         </DialogContent>
                       </Dialog>
                       <div className="mt-2 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
-                          </a>
+                        <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
                         </Button>
                       </div>
                     </CardContent>
@@ -464,11 +461,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     <CardDescription>Download the trained model file</CardDescription>
                   </CardHeader>
                   <CardContent className="flex justify-center pb-6">
-                    <Button asChild>
-                      <a href={model_file_url} download target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
+                    <Button onClick={() => downloadFile(model_file_url, 'trained_model.zip')}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Model
                     </Button>
                   </CardContent>
                 </Card>
@@ -481,11 +476,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     <CardDescription>View the complete analysis report</CardDescription>
                   </CardHeader>
                   <CardContent className="flex justify-center pb-6">
-                    <Button asChild>
-                      <a href={report_file_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        View Full Report
-                      </a>
+                    <Button onClick={() => downloadFile(report_file_url, 'model_report.html')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download Report
                     </Button>
                   </CardContent>
                 </Card>
