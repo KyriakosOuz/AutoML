@@ -22,6 +22,7 @@ import {
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/types/training';
 import { formatTrainingTime } from '@/utils/formatUtils';
+import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
 interface H2OExperimentResultsProps {
   experimentId: string | null;
