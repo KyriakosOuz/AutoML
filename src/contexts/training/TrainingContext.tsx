@@ -105,7 +105,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
               
               // Make sure we're not already polling for this experiment
               if (currentPollingInfo.experimentId !== savedExperimentId) {
-                startPolling(savedExperimentId, savedTrainingType || 'automl');
+                // ✅ FIX: Remove the second argument - only pass experimentId
+                startPolling(savedExperimentId);
               }
             } 
             // If it's completed, fetch results
@@ -222,8 +223,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         // Stop any existing polling before starting new
         stopPolling();
         
-        // Start new polling
-        startPolling(experimentId, trainingType);
+        // ✅ FIX: Only pass experimentId, not trainingType
+        // Start new polling - pass only the experimentId
+        startPolling(experimentId);
         
         // Show toast to inform user
         toast({
@@ -474,7 +476,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, [stopPollingHook]);
 
-  // ✅ UPDATED: Create modified startPolling function that handles both type cases internally
+  // ✅ FIXED: Create modified startPolling function that only takes experimentId
   const startPolling = useCallback((experimentId: string) => {
     // Default to the current lastTrainingType if type is not provided
     const trainingType = state.lastTrainingType || 'automl';

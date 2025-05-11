@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -66,6 +67,7 @@ export const useExperimentPolling = ({
   }, [activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
+  // ✅ FIX: Update the startPolling signature to accept both experimentId and type
   const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
     // Always stop any existing polling first
     stopPolling();
