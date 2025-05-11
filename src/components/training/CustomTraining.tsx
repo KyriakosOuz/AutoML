@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -202,8 +203,8 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // FIX: Remove the second parameter 'custom' since startPolling only accepts one parameter in this context
-        startPolling(result.experiment_id);
+        // ✅ FIXED: Pass 'custom' as the training type to ensure proper state handling
+        startPolling(result.experiment_id, 'custom');
         
         toast({
           title: "Training Submitted",
@@ -417,7 +418,7 @@ const CustomTraining: React.FC = () => {
 
             <Button
               onClick={handleTrainModel}
-              // ✅ Add isLocallyLoading to disabled condition
+              // ✅ Full button logic with all necessary conditions
               disabled={isLocallyLoading || isTraining || isSubmitting || !isFormValid()}
               className="w-full mt-4"
               size="lg"
@@ -457,3 +458,4 @@ const CustomTraining: React.FC = () => {
 };
 
 export default CustomTraining;
+
