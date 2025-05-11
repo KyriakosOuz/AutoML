@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -89,6 +90,7 @@ export interface ExperimentResults {
   automl_engine?: string;
   class_labels?: string[];
   training_type?: TrainingType;
+  model_display_name?: string; // Added this new field
   // New property for structured visualizations
   visualizations_by_type?: VisualizationsByType;
 }
