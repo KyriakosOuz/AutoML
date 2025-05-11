@@ -1,3 +1,4 @@
+
 export const convertToCSV = (data: Record<string, any>[]): string => {
   if (!data.length) return '';
   
@@ -46,49 +47,13 @@ export const downloadJSON = (data: any, filename: string) => {
   document.body.removeChild(link);
 };
 
-// Updated function to download a file from a URL
-export const downloadFile = async (url: string, filename: string) => {
-  try {
-    // Fetch the file content
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'same-origin',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to download file: ${response.statusText}`);
-    }
-    
-    // Convert the response to a blob
-    const blob = await response.blob();
-    
-    // Create object URL from blob
-    const objectUrl = URL.createObjectURL(blob);
-    
-    // Create a temporary link element
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = filename; // This will force download instead of navigation
-    
-    // Append to the document, click, and clean up
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Release the object URL when done
-    setTimeout(() => {
-      URL.revokeObjectURL(objectUrl);
-    }, 100);
-    
-  } catch (error) {
-    console.error('Error downloading file:', error);
-    // Fallback to direct link with download attribute as a last resort
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.target = '_blank'; // Open in new tab if fetch approach fails
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+// New function to download a file from a URL
+export const downloadFile = (url: string, filename: string) => {
+  // Create a hidden anchor element
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
