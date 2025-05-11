@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -202,7 +201,7 @@ const ModelTrainingContent: React.FC = () => {
     
     if (shouldSwitch) {
       console.log(`ModelTrainingContent - Auto-switching to results tab for ${lastTrainingType} training`);
-      setActiveTab('results');
+      setActiveTab('results' as TabValue);
       // Increment attempt counter
       setAutoSwitchAttempts(prev => prev + 1);
     }
@@ -345,7 +344,7 @@ const ModelTrainingContent: React.FC = () => {
       <TrainingInsights />
       <Tabs 
         value={activeTab} 
-        onValueChange={(tab) => {
+        onValueChange={(tab: TabValue) => {
           // Only allow tab switching if not training or if explicitly allowed
           if (!isTraining || 
               // Allow switching to results/predict if they're available
