@@ -345,19 +345,23 @@ const ModelTrainingContent: React.FC = () => {
       <Tabs 
         value={activeTab} 
         onValueChange={(tab: TabValue) => {
-          // Only allow tab switching if not training or if explicitly allowed
-          if (!isTraining || 
-              // Allow switching to results/predict if they're available
-              ((tab === 'results' || tab === 'predict') && showResultsAndPredict()) ||
-              // Allow switching between tabs that match the current training type
-              (isTraining && lastTrainingType === 'automl' && tab === 'automl') ||
-              (isTraining && lastTrainingType === 'custom' && tab === 'custom')
-             ) {
-            console.log(`ModelTrainingContent - Tab change allowed to: ${tab}`);
-            setActiveTab(tab);
-          } else {
-            console.log(`ModelTrainingContent - Tab change to ${tab} prevented during training`);
+          // Disallow switching **entirely** during active training
+          const tryingToSwitchToAutoML = tab === 'automl' && isTraining && lastTrainingType === 'custom';
+          const tryingToSwitchToCustom = tab === 'custom' && isTraining && lastTrainingType === 'automl';
+          
+          if (tryingToSwitchToAutoML || tryingToSwitchToCustom) {
+            console.log(`Blocked tab switch to ${tab} during training of type ${lastTrainingType}`);
+            return;
           }
+
+          // Allow Results and Predict only if valid
+          if ((tab === 'results' || tab === 'predict') && !showResultsAndPredict()) {
+            console.log(`Blocked tab switch to ${tab} – results not ready`);
+            return;
+          }
+
+          // If all checks pass, allow switching
+          setActiveTab(tab);
         }} 
         className="w-full"
       >
