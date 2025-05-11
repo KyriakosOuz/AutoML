@@ -19,6 +19,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [state, setState] = useState<TrainingContextState>({
     isTraining: false,
     isSubmitting: false, // Initialize isSubmitting state
+    isPredicting: false, // Add new isPredicting state
     lastTrainingType: null,
     automlParameters: defaultAutomlParameters,
     customParameters: defaultCustomParameters,
@@ -276,6 +277,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     console.log("[TrainingContext] Current state before status update:", {
       experimentStatus: state.experimentStatus,
       isTraining: state.isTraining,
+      isPredicting: state.isPredicting, // Include isPredicting in the state
       isLoadingResults: state.isLoadingResults,
       hasResults: !!state.experimentResults,
       resultsLoaded: state.resultsLoaded,
@@ -309,6 +311,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       },
       experimentStatus: 'completed',
       isTraining: false,
+      isPredicting: false, // Ensure isPredicting is false when completed
       isLoadingResults: false,
       resultsLoaded: true, // CRITICAL: Set this to true for AutoML
       lastTrainingType: 'automl' // Ensure this is set for AutoML
@@ -338,7 +341,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (error) {
       console.error("[TrainingContext] Error fetching AutoML results:", error);
     }
-  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType, currentPollingInfo]);
+  }, [toast, state.experimentStatus, state.isTraining, state.isPredicting, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType, currentPollingInfo]);
 
   const handlePollingSuccess = React.useCallback(async (experimentId: string) => {
     console.log("[TrainingContext] Polling success handler called for experiment:", experimentId);
@@ -370,6 +373,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     console.log("[TrainingContext] Current state before status update:", {
       experimentStatus: state.experimentStatus,
       isTraining: state.isTraining,
+      isPredicting: state.isPredicting, // Include isPredicting in the state
       isLoadingResults: state.isLoadingResults,
       hasResults: !!state.experimentResults,
       resultsLoaded: state.resultsLoaded,
@@ -391,6 +395,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       },
       experimentStatus: 'completed',
       isTraining: false, // Make sure to set isTraining to false when completed
+      isPredicting: false, // Ensure isPredicting is false when completed
       isLoadingResults: false, // Ensure isLoadingResults is also set to false
       resultsLoaded: true, // Explicitly set resultsLoaded to true when polling completes successfully
     }));
@@ -407,7 +412,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (error) {
       console.error("[TrainingContext] Error fetching results after successful training:", error);
     }
-  }, [toast, state.experimentStatus, state.isTraining, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType, isAutoMLExperiment, handleAutoMLPollingSuccess, currentPollingInfo]);
+  }, [toast, state.experimentStatus, state.isTraining, state.isPredicting, state.isLoadingResults, state.experimentResults, state.resultsLoaded, state.lastTrainingType, isAutoMLExperiment, handleAutoMLPollingSuccess, currentPollingInfo]);
 
   const handlePollingError = useCallback((error: string) => {
     console.log("[TrainingContext] Polling error:", error);
@@ -423,6 +428,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       error,
       isLoadingResults: false,
       isTraining: false,
+      isPredicting: false, // Reset isPredicting on error
       resultsLoaded: false, // Make sure to set resultsLoaded to false on error
       statusResponse: {
         status: 'failed',
@@ -450,7 +456,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     onError: handlePollingError,
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading })),
-    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining }))
+    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
+    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting }))
   });
 
   // ✅ FIX: Define the stopPolling function properly using stopPollingHook
@@ -683,6 +690,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
+    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting })), // Add setter for isPredicting
     setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })),
     setLastTrainingType: (type) => {
       setState(prev => ({ ...prev, lastTrainingType: type }));
@@ -722,7 +730,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       setState({
         isTraining: false,
-        isSubmitting: false, // Reset isSubmitting in resetTrainingState
+        isSubmitting: false,
+        isPredicting: false, // Reset isPredicting in resetTrainingState
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -763,7 +772,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         activeExperimentId: null,
         statusResponse: null,
         resultsLoaded: false,
-        experimentName: null
+        experimentName: null,
+        isPredicting: false // Reset isPredicting when clearing results
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);

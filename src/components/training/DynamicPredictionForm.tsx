@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,14 +21,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { useTraining } from '@/contexts/training/TrainingContext';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +42,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const [error, setError] = useState<string | null>(null);
   const [outOfRangeWarnings, setOutOfRangeWarnings] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { setIsPredicting: setGlobalIsPredicting } = useTraining();
 
   useEffect(() => {
     setIsLoading(true);
@@ -157,6 +151,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPredicting(true);
+    setGlobalIsPredicting(true);
     setError(null);
     setPrediction(null);
 
@@ -223,6 +218,7 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
       });
     } finally {
       setIsPredicting(false);
+      setGlobalIsPredicting(false);
     }
   };
 

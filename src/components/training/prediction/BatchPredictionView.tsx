@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +14,7 @@ import { ProbabilitiesCell } from './table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';
 import { downloadCSV, downloadJSON } from './utils/downloadUtils';
 import MetricsBlock from './metrics/MetricsBlock';
+import { useTraining } from '@/contexts/training/TrainingContext';
 
 interface BatchPredictionViewProps {
   experimentId: string;
@@ -33,6 +33,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
   const [error, setError] = useState<FormattedError | null>(null);
   const [result, setResult] = useState<BatchPredictionResponse | null>(null);
   const { toast } = useToast();
+  const { setIsPredicting: setGlobalIsPredicting } = useTraining();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -118,6 +119,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
     }
 
     setIsLoading(true);
+    setGlobalIsPredicting(true);
     setError(null);
     setResult(null);
 
@@ -170,6 +172,7 @@ const BatchPredictionView: React.FC<BatchPredictionViewProps> = ({ experimentId 
       });
     } finally {
       setIsLoading(false);
+      setGlobalIsPredicting(false);
     }
   };
 

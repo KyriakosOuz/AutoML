@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -26,6 +25,7 @@ const ModelTrainingContent: React.FC = () => {
     setExperimentStatus,
     isTraining,
     setIsTraining,
+    isPredicting,
     isLoadingResults,
     getExperimentResults,
     experimentResults,
@@ -44,14 +44,15 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     console.log("ModelTrainingContent - State update:", { 
       experimentStatus, 
-      isTraining, 
+      isTraining,
+      isPredicting,
       isLoadingResults, 
       resultsLoaded,
       lastTrainingType,
       showResultsAndPredict: showResultsAndPredict(),
       activeTab
     });
-  }, [experimentStatus, isTraining, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
+  }, [experimentStatus, isTraining, isPredicting, isLoadingResults, resultsLoaded, lastTrainingType, activeTab]);
 
   // Ensure isTraining is set to false when status is completed or success
   useEffect(() => {
@@ -104,8 +105,14 @@ const ModelTrainingContent: React.FC = () => {
     (experimentStatus === 'processing' || experimentStatus === 'running' || isTraining) && 
     !resultsLoaded;
   
-  // IMPROVED: Check if tabs should be disabled based on active training
+  // IMPROVED: Check if tabs should be disabled based on active training or prediction
   const isTabDisabled = (tabName: string) => {
+    // If currently predicting, disable all tabs except the predict tab
+    if (isPredicting && tabName !== 'predict') {
+      console.log(`ModelTrainingContent - Disabling ${tabName} tab because prediction is in progress`);
+      return true;
+    }
+    
     // Both AutoML and Custom tabs are mutually exclusive during training
     if (isTraining) {
       // If currently running AutoML training, disable Custom tab
@@ -222,6 +229,7 @@ const ModelTrainingContent: React.FC = () => {
   const getStatusMessage = () => {
     if (isTraining) return 'Training in Progress...';
     if (isLoadingResults) return 'Loading Results...';
+    if (isPredicting) return "Generating prediction...";
     if (experimentStatus === 'processing') return 'Processing...';
     if (experimentStatus === 'running') return 'Running...';
     return 'Working...';
@@ -267,23 +275,26 @@ const ModelTrainingContent: React.FC = () => {
       </div>
       
       {/* Display status bar when experiment is in progress or loading - updated condition */}
-      {(isProcessing || (isLoadingResults && !resultsLoaded)) && (
+      {(isProcessing || (isLoadingResults && !resultsLoaded) || isPredicting) && (
         <Alert className="mb-4 bg-primary-foreground border-primary/30">
           <div className="flex flex-col w-full">
             <div className="flex items-center mb-2">
               <Loader className="h-4 w-4 animate-spin text-primary mr-2" />
               <span className="font-semibold">
-                {getStatusMessage()}
+                {isPredicting ? "Generating prediction..." : getStatusMessage()}
               </span>
-              {lastTrainingType === 'automl' && activeTab !== 'custom' && (
+              {lastTrainingType === 'automl' && activeTab !== 'custom' && !isPredicting && (
                 <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AutoML</span>
               )}
-              {lastTrainingType === 'custom' && (
+              {lastTrainingType === 'custom' && !isPredicting && (
                 <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Custom</span>
+              )}
+              {isPredicting && (
+                <span className="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Prediction</span>
               )}
             </div>
             <Progress 
-              value={isTraining ? 70 : isLoadingResults ? 90 : 50} 
+              value={isTraining ? 70 : isPredicting ? 80 : isLoadingResults ? 90 : 50} 
               className="h-2 w-full" 
             />
             <p className="text-xs text-muted-foreground mt-1">
