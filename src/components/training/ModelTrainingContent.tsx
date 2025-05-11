@@ -370,7 +370,7 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger 
               value="automl" 
               disabled={isTabDisabled('automl')}
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isTabDisabled('automl') ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`${activeTab === 'automl' ? 'bg-black text-white' : ''} text-xs sm:text-sm md:text-base ${isTabDisabled('automl') ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isTabDisabled('automl') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               AutoML
@@ -378,14 +378,14 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger 
               value="custom" 
               disabled={isTabDisabled('custom')}
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isTabDisabled('custom') ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`${activeTab === 'custom' ? 'bg-black text-white' : ''} text-xs sm:text-sm md:text-base ${isTabDisabled('custom') ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isTabDisabled('custom') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Custom
             </TabsTrigger>
             <TabsTrigger 
               value="results" 
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('results') ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`${activeTab === 'results' ? 'bg-black text-white' : ''} text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('results') ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isTabDisabled('results')}
             >
               {isTabDisabled('results') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
@@ -393,7 +393,7 @@ const ModelTrainingContent: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('predict') ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`${activeTab === 'predict' ? 'bg-black text-white' : ''} text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('predict') ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isTabDisabled('predict')}
             >
               {isTabDisabled('predict') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
