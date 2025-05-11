@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -43,6 +42,9 @@ const CustomTraining: React.FC = () => {
     stopPolling,
     activeTab
   } = useTraining();
+  
+  // ✅ Add local loading state to immediately disable button
+  const [isLocallyLoading, setIsLocallyLoading] = useState(false);
   
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
@@ -153,6 +155,9 @@ const CustomTraining: React.FC = () => {
 
   const handleTrainModel = async () => {
     try {
+      // ✅ Set local loading state immediately to disable button
+      setIsLocallyLoading(true);
+      
       setActiveExperimentId(null);
       setIsTraining(true);
       setIsSubmitting(true); // Set isSubmitting to true when starting training
@@ -218,11 +223,15 @@ const CustomTraining: React.FC = () => {
       });
       setIsTraining(false);
       setIsSubmitting(false);
+      // ✅ Also reset local loading state on error
+      setIsLocallyLoading(false);
     } finally {
       // FIXED: Removed setIsTraining(false) from here
       // Only clear the isSubmitting flag, but let the polling mechanism control the isTraining state
       // This ensures the Train Model button remains disabled while training is in progress
       setIsSubmitting(false);
+      // ✅ Reset local loading state in finally block
+      setIsLocallyLoading(false);
     }
   };
 
@@ -408,11 +417,12 @@ const CustomTraining: React.FC = () => {
 
             <Button
               onClick={handleTrainModel}
-              disabled={isTraining || isSubmitting || !isFormValid()}
+              // ✅ Add isLocallyLoading to disabled condition
+              disabled={isLocallyLoading || isTraining || isSubmitting || !isFormValid()}
               className="w-full mt-4"
               size="lg"
             >
-              {isTraining || isSubmitting ? (
+              {isTraining || isSubmitting || isLocallyLoading ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Training in Progress...
