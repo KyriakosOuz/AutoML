@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -202,8 +203,8 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // ✅ FIXED: Pass 'custom' as the training type to ensure proper state handling
-        startPolling(result.experiment_id, 'custom');
+        // ✅ FIXED: Call startPolling with just the experimentId - the context will handle the training type
+        startPolling(result.experiment_id);
         
         toast({
           title: "Training Submitted",

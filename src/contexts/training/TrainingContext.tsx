@@ -448,7 +448,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     onError: handlePollingError,
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading })),
-    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })) // Pass setIsTraining to the hook
+    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining }))
   });
 
   // ✅ FIX: Define the stopPolling function properly using stopPollingHook
@@ -474,10 +474,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, [stopPollingHook]);
 
-  // ✅ UPDATED: Create wrapped startPolling function that accepts two arguments
-  const startPolling = useCallback((experimentId: string, type: 'automl' | 'custom' = 'automl') => {
+  // ✅ UPDATED: Create modified startPolling function that handles both type cases internally
+  const startPolling = useCallback((experimentId: string) => {
     // Default to the current lastTrainingType if type is not provided
-    const trainingType = type || state.lastTrainingType || 'automl';
+    const trainingType = state.lastTrainingType || 'automl';
     
     console.log(`[TrainingContext] Starting polling for ${trainingType} experiment:`, experimentId);
     
@@ -681,7 +681,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
-    setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })), // Add setter for isSubmitting
+    setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })),
     setLastTrainingType: (type) => {
       setState(prev => ({ ...prev, lastTrainingType: type }));
       // Update the auto-detection flag for AutoML experiments
@@ -768,7 +768,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
     },
     getExperimentResults,
-    startPolling, // ✅ Now using our wrapped function that accepts 2 parameters
+    startPolling, 
     stopPolling,
     checkLastExperiment,
   };
