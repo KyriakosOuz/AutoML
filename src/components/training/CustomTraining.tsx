@@ -44,6 +44,9 @@ const CustomTraining: React.FC = () => {
     activeTab
   } = useTraining();
   
+  // ✅ Add local loading state to immediately disable button
+  const [isLocallyLoading, setIsLocallyLoading] = useState(false);
+  
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
   const [algorithms, setAlgorithms] = useState<string[]>([]);
@@ -153,6 +156,9 @@ const CustomTraining: React.FC = () => {
 
   const handleTrainModel = async () => {
     try {
+      // ✅ Set local loading state immediately to disable button
+      setIsLocallyLoading(true);
+      
       setActiveExperimentId(null);
       setIsTraining(true);
       setIsSubmitting(true); // Set isSubmitting to true when starting training
@@ -197,7 +203,7 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // FIX: Remove the second parameter 'custom' since startPolling only accepts one parameter in this context
+        // ✅ FIXED: Call startPolling with just the experimentId - the context will handle the training type
         startPolling(result.experiment_id);
         
         toast({
@@ -218,11 +224,15 @@ const CustomTraining: React.FC = () => {
       });
       setIsTraining(false);
       setIsSubmitting(false);
+      // ✅ Also reset local loading state on error
+      setIsLocallyLoading(false);
     } finally {
       // FIXED: Removed setIsTraining(false) from here
       // Only clear the isSubmitting flag, but let the polling mechanism control the isTraining state
       // This ensures the Train Model button remains disabled while training is in progress
       setIsSubmitting(false);
+      // ✅ Reset local loading state in finally block
+      setIsLocallyLoading(false);
     }
   };
 
@@ -388,15 +398,15 @@ const CustomTraining: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Generate visualizations like confusion matrix, ROC curves, etc.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <p className="text-xs text-muted-foreground">Generate visual insights for model performance</p>
-              </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Generate visualizations like confusion matrix, ROC curves, etc.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <p className="text-xs text-muted-foreground">Generate visual insights for model performance</p>
+            </div>
               <Switch
                 id="enable-visualization"
                 checked={customParameters.enableVisualization}
@@ -408,11 +418,12 @@ const CustomTraining: React.FC = () => {
 
             <Button
               onClick={handleTrainModel}
-              disabled={isTraining || isSubmitting || !isFormValid()}
+              // ✅ Full button logic with all necessary conditions
+              disabled={isLocallyLoading || isTraining || isSubmitting || !isFormValid()}
               className="w-full mt-4"
               size="lg"
             >
-              {isTraining || isSubmitting ? (
+              {isTraining || isSubmitting || isLocallyLoading ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Training in Progress...

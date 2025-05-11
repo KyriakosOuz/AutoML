@@ -105,7 +105,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
               
               // Make sure we're not already polling for this experiment
               if (currentPollingInfo.experimentId !== savedExperimentId) {
-                startPolling(savedExperimentId, savedTrainingType || 'automl');
+                // ✅ FIX: Remove the second argument - only pass experimentId
+                startPolling(savedExperimentId);
               }
             } 
             // If it's completed, fetch results
@@ -222,8 +223,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         // Stop any existing polling before starting new
         stopPolling();
         
-        // Start new polling
-        startPolling(experimentId, trainingType);
+        // ✅ FIX: Only pass experimentId, not trainingType
+        // Start new polling - pass only the experimentId
+        startPolling(experimentId);
         
         // Show toast to inform user
         toast({
@@ -437,14 +439,21 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [toast]);
 
-  const { startPolling: startPollingHook, stopPolling: stopPollingHook, isPolling, activeExperimentId: pollingExperimentId } = useExperimentPolling({
+  // ✅ UPDATED: Get startPolling from the hook but don't expose it directly
+  const { 
+    startPolling: startPollingHook, 
+    stopPolling: stopPollingHook, 
+    isPolling, 
+    activeExperimentId: pollingExperimentId 
+  } = useExperimentPolling({
     onSuccess: handlePollingSuccess,
     onError: handlePollingError,
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
-    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
+    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading })),
+    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining }))
   });
 
-  // Improved stopPolling function that ensures we clean up all state related to polling
+  // ✅ FIX: Define the stopPolling function properly using stopPollingHook
   const stopPolling = useCallback(() => {
     console.log("[TrainingContext] Stopping all polling operations");
     
@@ -467,10 +476,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, [stopPollingHook]);
 
-  // Updated to set isAutoMLExperiment for proper tracking
-  const startPolling = useCallback((experimentId: string, type?: 'automl' | 'custom') => {
+  // ✅ FIXED: Create modified startPolling function that only takes experimentId
+  const startPolling = useCallback((experimentId: string) => {
     // Default to the current lastTrainingType if type is not provided
-    const trainingType = type || state.lastTrainingType || 'automl';
+    const trainingType = state.lastTrainingType || 'automl';
     
     console.log(`[TrainingContext] Starting polling for ${trainingType} experiment:`, experimentId);
     
@@ -498,10 +507,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsAutoMLExperiment(false);
     }
     
-    // Start the actual polling
+    // Start the actual polling, passing both experimentId and trainingType
     startPollingHook(experimentId, trainingType);
   }, [startPollingHook, stopPolling, state.lastTrainingType]);
-  
+
   // Log polling state changes
   useEffect(() => {
     console.log("[TrainingContext] Polling state changed:", { 
@@ -674,7 +683,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
-    setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })), // Add setter for isSubmitting
+    setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })),
     setLastTrainingType: (type) => {
       setState(prev => ({ ...prev, lastTrainingType: type }));
       // Update the auto-detection flag for AutoML experiments
@@ -761,7 +770,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
     },
     getExperimentResults,
-    startPolling,
+    startPolling, 
     stopPolling,
     checkLastExperiment,
   };
