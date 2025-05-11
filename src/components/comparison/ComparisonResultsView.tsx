@@ -24,6 +24,10 @@ interface ComparisonExperiment {
     mse?: number;
     rmse?: number;
     f1?: number; // Add f1 as a possible metric
+    // Additional H2O metrics
+    aucpr?: number;
+    mean_per_class_error?: number;
+    logloss?: number;
   };
   dataset_name: string;
 }
@@ -48,10 +52,10 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   const firstExperiment = experiments[0];
   const isRegression = firstExperiment.task_type.includes('regression');
   
-  // Remove AUC from metrics list
+  // Determine metrics based on task type
   const metrics = isRegression 
     ? ['r2', 'mae', 'mse', 'rmse'] 
-    : ['accuracy', 'precision', 'recall', 'f1_score']; // Kept as f1_score for display purposes
+    : ['accuracy', 'precision', 'recall', 'f1_score', 'auc', 'aucpr', 'mean_per_class_error', 'logloss']; 
   
   // Calculate minimum width based on number of experiments
   // Base width for metric column + each experiment takes approximately 180px
@@ -102,46 +106,65 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
             ))}
           </TableRow>
           
-          {/* Metrics rows - removed AUC */}
-          {metrics.map((metric) => (
-            <TableRow key={metric}>
-              <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize">
-                {metric === 'r2' ? 'R²' : metric.replace('_', ' ')}
-              </TableCell>
-              {experiments.map((exp) => {
-                // For f1_score, use our helper function to get the value from either f1 or f1_score
-                const metricValue = metric === 'f1_score' ? 
-                  getF1Score(exp.metrics) : 
-                  exp.metrics[metric as keyof typeof exp.metrics] as number | undefined;
+          {/* Metrics rows - includes all relevant metrics */}
+          {metrics.map((metric) => {
+            // Skip metrics that don't exist in any experiments
+            const hasMetric = experiments.some(exp => {
+              if (metric === 'f1_score') {
+                return getF1Score(exp.metrics) !== undefined;
+              }
+              return exp.metrics[metric as keyof typeof exp.metrics] !== undefined;
+            });
+            
+            if (!hasMetric) return null;
+            
+            return (
+              <TableRow key={metric}>
+                <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize">
+                  {metric === 'r2' ? 'R²' : 
+                   metric === 'aucpr' ? 'AUC PR' :
+                   metric === 'mean_per_class_error' ? 'Mean Per Class Error' :
+                   metric === 'logloss' ? 'Log Loss' :
+                   metric.replace('_', ' ')}
+                </TableCell>
+                {experiments.map((exp) => {
+                  // For f1_score, use our helper function to get the value from either f1 or f1_score
+                  const metricValue = metric === 'f1_score' ? 
+                    getF1Score(exp.metrics) : 
+                    exp.metrics[metric as keyof typeof exp.metrics] as number | undefined;
+                    
+                  // Find the best value for this metric across all experiments
+                  const metricValues = experiments.map(e => {
+                    if (metric === 'f1_score') {
+                      return getF1Score(e.metrics);
+                    }
+                    return e.metrics[metric as keyof typeof e.metrics] as number | undefined;
+                  });
                   
-                // Find the best value for this metric across all experiments
-                const metricValues = experiments.map(e => {
-                  if (metric === 'f1_score') {
-                    return getF1Score(e.metrics);
-                  }
-                  return e.metrics[metric as keyof typeof e.metrics] as number | undefined;
-                });
-                
-                const bestValue = isRegression 
-                  ? (metric === 'r2' ? Math.max(...metricValues.filter(Boolean) as number[]) : Math.min(...metricValues.filter(Boolean) as number[]))
-                  : Math.max(...metricValues.filter(Boolean) as number[]);
-                
-                const isBest = metricValue !== undefined && 
-                  ((isRegression && metric === 'r2' && metricValue === bestValue) || 
-                   (isRegression && metric !== 'r2' && metricValue === bestValue) ||
-                   (!isRegression && metricValue === bestValue));
-                
-                return (
-                  <TableCell 
-                    key={`${exp.experiment_id}-${metric}`}
-                    className={isBest ? 'font-bold text-primary' : ''}
-                  >
-                    {formatMetricValue(metricValue)}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          ))}
+                  const bestValue = isRegression 
+                    ? (metric === 'r2' ? Math.max(...metricValues.filter(Boolean) as number[]) : Math.min(...metricValues.filter(Boolean) as number[]))
+                    : ['logloss', 'mean_per_class_error'].includes(metric)
+                      ? Math.min(...metricValues.filter(Boolean) as number[])
+                      : Math.max(...metricValues.filter(Boolean) as number[]);
+                  
+                  const isBest = metricValue !== undefined && 
+                    ((isRegression && metric === 'r2' && metricValue === bestValue) || 
+                     (isRegression && metric !== 'r2' && metricValue === bestValue) ||
+                     (!isRegression && ['logloss', 'mean_per_class_error'].includes(metric) && metricValue === bestValue) ||
+                     (!isRegression && !['logloss', 'mean_per_class_error'].includes(metric) && metricValue === bestValue));
+                  
+                  return (
+                    <TableCell 
+                      key={`${exp.experiment_id}-${metric}`}
+                      className={isBest ? 'font-bold text-primary' : ''}
+                    >
+                      {formatMetricValue(metricValue)}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </ResponsiveTable>
       

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DownloadCloud } from 'lucide-react';
 import ClassificationReportTable from '../../ClassificationReportTable';
+import DynamicMetricsDisplay from '@/components/results/DynamicMetricsDisplay';
 
 interface MetricsBlockProps {
   metrics: {
@@ -18,6 +19,12 @@ interface MetricsBlockProps {
     mae?: number;
     rmse?: number;
     r2?: number;
+    // Additional H2O metrics
+    aucpr?: number;
+    mean_per_class_error?: number;
+    best_model_details?: Record<string, any>;
+    confusion_matrix?: number[][];
+    class_labels?: string[];
     report?: Record<string, {
       precision: number;
       recall: number;
@@ -30,158 +37,33 @@ interface MetricsBlockProps {
 }
 
 const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFileUrl }) => {
-  const formatMetric = (value: number) => (value * 100).toFixed(1) + '%';
-  const formatRegressionMetric = (value: number) => value.toFixed(3);
-
-  if (taskType.includes('classification')) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {metrics.accuracy !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Accuracy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.accuracy)}</div>
-              </CardContent>
-            </Card>
-          )}
-          {/* Display f1 from either f1_macro or f1 */}
-          {(metrics.f1_macro !== undefined || metrics.f1 !== undefined) && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">F1 Score</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatMetric(metrics.f1_macro !== undefined ? metrics.f1_macro : metrics.f1!)}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Add AUC if available (common in MLJAR) */}
-          {metrics.auc !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">AUC</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.auc)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Add precision if available */}
-          {metrics.precision !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Precision</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.precision)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Add recall if available */}
-          {metrics.recall !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Recall</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.recall)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Add MCC if available */}
-          {metrics.mcc !== undefined && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Matthews CC</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMetric(metrics.mcc)}</div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Add Download Model button if URL is provided */}
-          {modelFileUrl && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Download Model</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full" asChild>
-                  <a href={modelFileUrl} download target="_blank" rel="noopener noreferrer">
-                    <DownloadCloud className="h-4 w-4 mr-2" />
-                    Download
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-        {metrics.report && <ClassificationReportTable report={metrics.report} />}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {metrics.mae !== undefined && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Mean Absolute Error</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatRegressionMetric(metrics.mae)}</div>
-            </CardContent>
-          </Card>
-        )}
-        {metrics.rmse !== undefined && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Root Mean Squared Error</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatRegressionMetric(metrics.rmse)}</div>
-            </CardContent>
-          </Card>
-        )}
-        {metrics.r2 !== undefined && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">R² Score</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatRegressionMetric(metrics.r2)}</div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Add Download Model button if URL is provided */}
-        {modelFileUrl && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Download Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" asChild>
-                <a href={modelFileUrl} download target="_blank" rel="noopener noreferrer">
-                  <DownloadCloud className="h-4 w-4 mr-2" />
-                  Download
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Use the DynamicMetricsDisplay component for consistent metrics display */}
+      <DynamicMetricsDisplay 
+        metrics={metrics} 
+        taskType={taskType} 
+        bestModelDetails={metrics.best_model_details}
+      />
+      
+      {/* Add Download Model button if URL is provided */}
+      {modelFileUrl && (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Download Model</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" asChild>
+              <a href={modelFileUrl} download target="_blank" rel="noopener noreferrer">
+                <DownloadCloud className="h-4 w-4 mr-2" />
+                Download
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {metrics.report && <ClassificationReportTable report={metrics.report} />}
     </div>
   );
 };
