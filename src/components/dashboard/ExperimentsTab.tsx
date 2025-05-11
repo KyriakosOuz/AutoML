@@ -10,13 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
 import { Input } from '@/components/ui/input';
 import { AutoMLEngineFilter } from '@/types/training';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Badge } from '@/components/ui/badge';
 
 const formatTaskType = (taskType: string): string => {
   const taskTypeMap: Record<string, string> = {
@@ -751,11 +751,6 @@ const ExperimentsTab: React.FC = () => {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span>{formatTaskType(experiment.task_type)}</span>
-                          {experiment.training_type === 'automl' && experiment.automl_engine && (
-                            <Badge variant="outline" className="text-xs">
-                              {experiment.automl_engine.toUpperCase()}
-                            </Badge>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
