@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -398,15 +397,15 @@ const CustomTraining: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Generate visualizations like confusion matrix, ROC curves, etc.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <p className="text-xs text-muted-foreground">Generate visual insights for model performance</p>
-              </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Generate visualizations like confusion matrix, ROC curves, etc.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <p className="text-xs text-muted-foreground">Generate visual insights for model performance</p>
+            </div>
               <Switch
                 id="enable-visualization"
                 checked={customParameters.enableVisualization}
@@ -458,4 +457,3 @@ const CustomTraining: React.FC = () => {
 };
 
 export default CustomTraining;
-

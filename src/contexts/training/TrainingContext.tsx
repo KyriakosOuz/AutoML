@@ -451,7 +451,28 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })) // Pass setIsTraining to the hook
   });
 
-  // ... keep existing code (stopPolling function)
+  // ✅ FIX: Define the stopPolling function properly using stopPollingHook
+  const stopPolling = useCallback(() => {
+    console.log("[TrainingContext] Stopping all polling operations");
+    
+    // Stop the polling in the hook
+    stopPollingHook();
+    
+    // Reset polling-related state
+    setCurrentPollingInfo({
+      experimentId: null,
+      type: null
+    });
+    
+    // Update training context state
+    setState(prev => ({
+      ...prev,
+      isTraining: false,
+      // Only update experimentStatus if it's currently in a "polling" state
+      experimentStatus: ['processing', 'running'].includes(prev.experimentStatus) ? 
+        'idle' : prev.experimentStatus
+    }));
+  }, [stopPollingHook]);
 
   // ✅ UPDATED: Create wrapped startPolling function that accepts two arguments
   const startPolling = useCallback((experimentId: string, type: 'automl' | 'custom' = 'automl') => {
