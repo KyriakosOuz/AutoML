@@ -10,15 +10,13 @@ export interface UseExperimentPollingProps {
   onError: (error: string) => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
   setIsLoading: (loading: boolean) => void;
-  setIsTraining?: (loading: boolean) => void; // Added optional prop for setting training state
 }
 
 export const useExperimentPolling = ({
   onSuccess,
   onError,
   setExperimentStatus,
-  setIsLoading,
-  setIsTraining // Include the prop in destructuring
+  setIsLoading
 }: UseExperimentPollingProps) => {
   // Replace state-based interval with ref
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,7 +65,6 @@ export const useExperimentPolling = ({
   }, [activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
-  // ✅ FIX: Update the startPolling signature to accept both experimentId and type
   const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
     // Always stop any existing polling first
     stopPolling();
@@ -156,12 +153,6 @@ export const useExperimentPolling = ({
             if (!isManuallyStoppedRef.current) {
               onSuccess(experimentId);
             }
-            
-            // ✅ Set isTraining to false when experiment completes successfully
-            if (setIsTraining) {
-              setIsTraining(false);
-            }
-            
             // Now stop polling after onSuccess has been called
             stopPolling();
           }, delay);
@@ -231,7 +222,7 @@ export const useExperimentPolling = ({
       type,
       stop: stopPolling
     };
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, setIsTraining]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
 
   // Ensure we clean up on unmount - updated to use ref
   useEffect(() => {
