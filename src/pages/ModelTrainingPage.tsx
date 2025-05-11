@@ -8,7 +8,15 @@ import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
 import { TrainingProvider } from '@/contexts/training/TrainingContext';
 
 const ModelTrainingPageContent: React.FC = () => {
-  const { checkLastExperiment } = useTraining();
+  const { checkLastExperiment, lastTrainingType, isTraining } = useTraining();
+  
+  // Debug: Log training state on mount and changes
+  useEffect(() => {
+    console.log("[ModelTrainingPage] Training state:", {
+      isTraining,
+      trainingType: lastTrainingType || 'none'
+    });
+  }, [isTraining, lastTrainingType]);
   
   // Check for the most recent experiment when the component mounts
   useEffect(() => {

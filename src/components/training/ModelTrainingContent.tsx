@@ -103,6 +103,31 @@ const ModelTrainingContent: React.FC = () => {
   const isProcessing = 
     (experimentStatus === 'processing' || experimentStatus === 'running' || isTraining) && 
     !resultsLoaded;
+  
+  // IMPROVED: Check if tabs should be disabled based on active training
+  const isTabDisabled = (tabName: string) => {
+    // Both AutoML and Custom tabs are mutually exclusive during training
+    if (isTraining) {
+      // If currently running AutoML training, disable Custom tab
+      if (lastTrainingType === 'automl' && tabName === 'custom') {
+        console.log("ModelTrainingContent - Disabling Custom tab because AutoML is training");
+        return true;
+      }
+      
+      // If currently running Custom training, disable AutoML tab
+      if (lastTrainingType === 'custom' && tabName === 'automl') {
+        console.log("ModelTrainingContent - Disabling AutoML tab because Custom is training");
+        return true;
+      }
+    }
+    
+    // For Results and Predict tabs, use existing logic
+    if ((tabName === 'results' || tabName === 'predict') && !showResultsAndPredict()) {
+      return true;
+    }
+    
+    return false;
+  };
 
   // If current tab is results or predict but experiment is not completed, switch to automl
   useEffect(() => {
@@ -111,7 +136,18 @@ const ModelTrainingContent: React.FC = () => {
       console.log("ModelTrainingContent - Switching to automl tab because results/predict not available");
       setActiveTab('automl');
     }
-  }, [activeTab, showResultsAndPredict, setActiveTab]);
+    
+    // NEW: If we're on a disabled tab, switch to appropriate tab
+    if (isTraining && lastTrainingType) {
+      if (activeTab === 'automl' && lastTrainingType === 'custom') {
+        console.log("ModelTrainingContent - Switching to custom tab because Custom training is active");
+        setActiveTab('custom');
+      } else if (activeTab === 'custom' && lastTrainingType === 'automl') {
+        console.log("ModelTrainingContent - Switching to automl tab because AutoML training is active");
+        setActiveTab('automl');
+      }
+    }
+  }, [activeTab, showResultsAndPredict, setActiveTab, isTraining, lastTrainingType]);
 
   // Reset processing status if we have valid dataset data and status is still 'processing'
   useEffect(() => {
@@ -286,32 +322,34 @@ const ModelTrainingContent: React.FC = () => {
           <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} bg-gray-100`}>
             <TabsTrigger 
               value="automl" 
-              disabled={isTraining && lastTrainingType === 'custom'}
+              disabled={isTabDisabled('automl')}
               className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
             >
+              {isTabDisabled('automl') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               AutoML
             </TabsTrigger>
             <TabsTrigger 
               value="custom" 
-              disabled={isTraining && lastTrainingType === 'automl'}
+              disabled={isTabDisabled('custom')}
               className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
             >
+              {isTabDisabled('custom') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Custom
             </TabsTrigger>
             <TabsTrigger 
               value="results" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict()}
+              disabled={isTabDisabled('results')}
             >
-              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {isTabDisabled('results') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Results
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
               className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
-              disabled={!showResultsAndPredict()}
+              disabled={isTabDisabled('predict')}
             >
-              {!showResultsAndPredict() && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
+              {isTabDisabled('predict') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Predict
             </TabsTrigger>
           </TabsList>

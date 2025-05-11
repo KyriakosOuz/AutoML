@@ -181,13 +181,16 @@ const CustomTraining: React.FC = () => {
       console.log('[CustomTraining] Starting training - setting button disabled:', true);
       
       setActiveExperimentId(null);
+      
+      // IMPROVED: Set training type BEFORE setting isTraining to ensure proper tab disabling
+      console.log('[CustomTraining] Setting lastTrainingType to "custom"');
+      setLastTrainingType('custom');
+      
+      // Set isTraining to true immediately after setting the training type
       setIsTraining(true);
       setIsSubmitting(true); // Set isSubmitting to true when starting training
       setError(null);
       
-      // Explicitly set the training type to 'custom'
-      setLastTrainingType('custom');
-
       const formData = new FormData();
       formData.append('dataset_id', datasetId);
       formData.append('task_type', datasetTaskType);
@@ -231,6 +234,10 @@ const CustomTraining: React.FC = () => {
           title: "Training Submitted",
           description: `Experiment ${result.experiment_name || result.experiment_id} started.`,
         });
+        
+        // IMPORTANT: Ensure isTraining remains true after submission
+        console.log('[CustomTraining] Ensuring isTraining remains true after submission');
+        setIsTraining(true);
       } else {
         throw new Error('No experiment ID returned from the server');
       }
