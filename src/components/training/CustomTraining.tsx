@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -27,8 +28,8 @@ const CustomTraining: React.FC = () => {
   const {
     isTraining,
     setIsTraining,
-    isSubmitting, // Use global isSubmitting state
-    setIsSubmitting, // Use global setIsSubmitting function
+    isSubmitting, 
+    setIsSubmitting, 
     customParameters,
     setCustomParameters,
     setLastTrainingType,
@@ -216,9 +217,12 @@ const CustomTraining: React.FC = () => {
         variant: "destructive"
       });
       setIsTraining(false);
-    } finally {
       setIsSubmitting(false);
-      setIsTraining(false); // Also reset isTraining flag to ensure UI is properly updated
+    } finally {
+      // FIXED: Removed setIsTraining(false) from here
+      // Only clear the isSubmitting flag, but let the polling mechanism control the isTraining state
+      // This ensures the Train Model button remains disabled while training is in progress
+      setIsSubmitting(false);
     }
   };
 
