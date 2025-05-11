@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -14,6 +15,9 @@ import TrainingInsights from '@/components/ai-assistant/TrainingInsights';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
+
+// Define the allowed tab values type to ensure type safety
+type TabValue = 'automl' | 'custom' | 'results' | 'predict';
 
 const ModelTrainingContent: React.FC = () => {
   const { 
@@ -258,8 +262,9 @@ const ModelTrainingContent: React.FC = () => {
     } else {
       // If on results or predict tab, go back to last training type or default to automl
       console.log(`ModelTrainingContent - After reset, switching to ${lastTrainingType || 'automl'} tab`);
-      // Fix: Ensure we only use allowed tab values (not generic string)
-      const newTab = lastTrainingType === 'custom' ? 'custom' : 'automl';
+      
+      // Fix: Explicitly cast the tab value to TabValue type to ensure type safety
+      const newTab: TabValue = lastTrainingType === 'custom' ? 'custom' : 'automl';
       setActiveTab(newTab);
     }
     
