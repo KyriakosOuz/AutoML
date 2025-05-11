@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { checkStatus } from '@/lib/training';
 import { useToast } from '@/hooks/use-toast';
@@ -10,13 +9,15 @@ export interface UseExperimentPollingProps {
   onError: (error: string) => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
   setIsLoading: (loading: boolean) => void;
+  setIsTraining?: (loading: boolean) => void; // Added optional prop for setting training state
 }
 
 export const useExperimentPolling = ({
   onSuccess,
   onError,
   setExperimentStatus,
-  setIsLoading
+  setIsLoading,
+  setIsTraining // Include the prop in destructuring
 }: UseExperimentPollingProps) => {
   // Replace state-based interval with ref
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -153,6 +154,12 @@ export const useExperimentPolling = ({
             if (!isManuallyStoppedRef.current) {
               onSuccess(experimentId);
             }
+            
+            // ✅ Set isTraining to false when experiment completes successfully
+            if (setIsTraining) {
+              setIsTraining(false);
+            }
+            
             // Now stop polling after onSuccess has been called
             stopPolling();
           }, delay);
@@ -222,7 +229,7 @@ export const useExperimentPolling = ({
       type,
       stop: stopPolling
     };
-  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts]);
+  }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, setIsTraining]);
 
   // Ensure we clean up on unmount - updated to use ref
   useEffect(() => {
