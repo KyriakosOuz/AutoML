@@ -44,7 +44,8 @@ const CustomTraining: React.FC = () => {
     activeTab
   } = useTraining();
   
-  // ✅ REMOVED: Local loading state is no longer needed
+  // Add local button disabled state to ensure UI consistency
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   
   const { toast } = useToast();
   const [experimentName, setExperimentName] = useState('');
@@ -54,8 +55,27 @@ const CustomTraining: React.FC = () => {
 
   const navigate = useNavigate();
 
+  // Set button disabled state based on training and submission states
+  useEffect(() => {
+    if (isTraining || isSubmitting) {
+      setIsButtonDisabled(true);
+    } else {
+      // Only enable the button when both training and submission are complete
+      setIsButtonDisabled(false);
+    }
+    
+    // Log states for debugging
+    console.log('[CustomTraining] Button state update:', { 
+      isTraining, 
+      isSubmitting, 
+      isButtonDisabled: isTraining || isSubmitting 
+    });
+  }, [isTraining, isSubmitting]);
+
   useEffect(() => {
     return () => {
+      // Cleanup effect - ensure we don't have lingering state
+      console.log('[CustomTraining] Component unmounting, cleaning up');
     };
   }, []);
 
@@ -155,7 +175,10 @@ const CustomTraining: React.FC = () => {
 
   const handleTrainModel = async () => {
     try {
-      // ✅ REMOVED: No longer setting local loading state
+      // Explicitly disable button at the start
+      setIsButtonDisabled(true);
+      
+      console.log('[CustomTraining] Starting training - setting button disabled:', true);
       
       setActiveExperimentId(null);
       setIsTraining(true);
@@ -222,12 +245,16 @@ const CustomTraining: React.FC = () => {
       });
       setIsTraining(false);
       setIsSubmitting(false);
-      // ✅ REMOVED: No longer resetting local loading state on error
+      setIsButtonDisabled(false); // Make sure to enable the button on error
     } finally {
-      // FIXED: Removed setIsTraining(false) from here
       // Only clear the isSubmitting flag, but let the polling mechanism control the isTraining state
+      // Don't reset isTraining here - let the polling mechanism handle that
       setIsSubmitting(false);
-      // ✅ REMOVED: No longer resetting local loading state in finally block
+      
+      // Important: We do NOT reset isButtonDisabled here because we want it to stay disabled
+      // until polling completes. The useEffect that watches isTraining and isSubmitting will
+      // update the button disabled state when appropriate.
+      console.log('[CustomTraining] Training submission complete - isTraining remains:', true);
     }
   };
 
@@ -264,7 +291,7 @@ const CustomTraining: React.FC = () => {
               <Select
                 value={customParameters.algorithm}
                 onValueChange={(value) => setCustomParameters({ algorithm: value })}
-                disabled={isTraining || isLoadingAlgorithms}
+                disabled={isButtonDisabled || isLoadingAlgorithms}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={isLoadingAlgorithms ? "Loading algorithms..." : "Select algorithm"} />
@@ -311,7 +338,7 @@ const CustomTraining: React.FC = () => {
                 value={experimentName}
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
-                disabled={isTraining}
+                disabled={isButtonDisabled}
               />
             </div>
 
@@ -327,7 +354,7 @@ const CustomTraining: React.FC = () => {
                 step={0.05}
                 value={[customParameters.testSize]}
                 onValueChange={(values) => setCustomParameters({ testSize: values[0] })}
-                disabled={isTraining}
+                disabled={isButtonDisabled}
                 aria-label="Test set size"
               />
             </div>
@@ -353,7 +380,7 @@ const CustomTraining: React.FC = () => {
                 id="stratify"
                 checked={customParameters.stratify}
                 onCheckedChange={(checked) => setCustomParameters({ stratify: checked })}
-                disabled={isTraining}
+                disabled={isButtonDisabled}
                 aria-label="Stratify split"
               />
             </div>
@@ -378,7 +405,7 @@ const CustomTraining: React.FC = () => {
                 min={0}
                 value={customParameters.randomSeed}
                 onChange={(e) => setCustomParameters({ randomSeed: parseInt(e.target.value) || 0 })}
-                disabled={isTraining}
+                disabled={isButtonDisabled}
                 placeholder="Enter random seed (e.g. 42)"
                 aria-label="Random seed for reproducibility"
               />
@@ -406,15 +433,14 @@ const CustomTraining: React.FC = () => {
                 id="enable-visualization"
                 checked={customParameters.enableVisualization}
                 onCheckedChange={(checked) => setCustomParameters({ enableVisualization: checked })}
-                disabled={isTraining}
+                disabled={isButtonDisabled}
                 aria-label="Enable visualizations"
               />
             </div>
 
             <Button
               onClick={handleTrainModel}
-              // ✅ SIMPLIFIED: Button disabled logic now uses just isTraining and isSubmitting
-              disabled={isTraining || isSubmitting || !isFormValid()}
+              disabled={isButtonDisabled || !isFormValid()}
               className="w-full mt-4"
               size="lg"
             >
@@ -453,4 +479,3 @@ const CustomTraining: React.FC = () => {
 };
 
 export default CustomTraining;
-

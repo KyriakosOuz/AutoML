@@ -10,7 +10,7 @@ export interface UseExperimentPollingProps {
   onError: (error: string) => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
   setIsLoading: (loading: boolean) => void;
-  setIsTraining?: (loading: boolean) => void; // Added optional prop for setting training state
+  setIsTraining: (training: boolean) => void; // Make sure this is required, not optional
 }
 
 export const useExperimentPolling = ({
@@ -18,7 +18,7 @@ export const useExperimentPolling = ({
   onError,
   setExperimentStatus,
   setIsLoading,
-  setIsTraining // Include the prop in destructuring
+  setIsTraining
 }: UseExperimentPollingProps) => {
   // Replace state-based interval with ref
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,7 +67,7 @@ export const useExperimentPolling = ({
   }, [activeExperimentId]);
 
   // Use setInterval, but always stop (cancel) as soon as results are reported ready!
-  // ✅ FIX: Update the startPolling signature to accept both experimentId and type
+  // Updated to accept only experimentId, with type as an optional parameter
   const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
     // Always stop any existing polling first
     stopPolling();
@@ -80,6 +80,9 @@ export const useExperimentPolling = ({
     setActiveExperimentId(experimentId);
     isManuallyStoppedRef.current = false;
     isPollingActiveRef.current = true;
+    
+    // Make sure isTraining is true when polling starts
+    setIsTraining(true);
 
     // Show toast notification with information about the background processing
     toast({
@@ -125,6 +128,9 @@ export const useExperimentPolling = ({
           const errorMessage = data.error_message || 'Training failed.';
           onError(errorMessage);
           
+          // Ensure isTraining is set to false when experiment fails
+          setIsTraining(false);
+          
           toast({
             title: "Training Failed",
             description: errorMessage,
@@ -151,15 +157,13 @@ export const useExperimentPolling = ({
           // Add a small delay to ensure backend is ready - slightly longer for AutoML
           const delay = type === 'automl' ? 1500 : 1000;
           
+          // Make sure to set isTraining to false when experiment completes
+          setIsTraining(false);
+          
           setTimeout(() => {
             // Make sure we're still in a valid state before calling onSuccess
             if (!isManuallyStoppedRef.current) {
               onSuccess(experimentId);
-            }
-            
-            // ✅ Set isTraining to false when experiment completes successfully
-            if (setIsTraining) {
-              setIsTraining(false);
             }
             
             // Now stop polling after onSuccess has been called
@@ -173,6 +177,10 @@ export const useExperimentPolling = ({
           console.warn('[useExperimentPolling] Reached maximum polling attempts');
           setExperimentStatus('failed');
           stopPolling();
+          
+          // Ensure isTraining is set to false when polling times out
+          setIsTraining(false);
+          
           onError('Timeout while waiting for training completion. The training job may still be running on our servers - please check back later.');
           toast({
             title: "Training Timeout",
@@ -195,6 +203,10 @@ export const useExperimentPolling = ({
         ) {
           stopPolling();
           setExperimentStatus('failed');
+          
+          // Ensure isTraining is set to false on authentication error
+          setIsTraining(false);
+          
           onError('Your session has expired. Please log in again.');
           toast({
             title: "Session Expired",
@@ -209,6 +221,10 @@ export const useExperimentPolling = ({
           console.log('[useExperimentPolling] Too many errors during polling, stopping');
           setExperimentStatus('failed');
           stopPolling();
+          
+          // Ensure isTraining is set to false when polling has too many errors
+          setIsTraining(false);
+          
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           onError(`Failed to check experiment status: ${errorMessage}`);
           toast({
