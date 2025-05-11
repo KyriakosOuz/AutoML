@@ -457,7 +457,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
     setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading })),
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
-    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting }))
+    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting })) // Add this line
   });
 
   // ✅ FIX: Define the stopPolling function properly using stopPollingHook

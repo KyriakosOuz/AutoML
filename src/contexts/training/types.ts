@@ -1,6 +1,7 @@
+
 import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
 
-export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'success' | 'failed';
+export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'success' | 'failed' | 'error';
 
 export interface AutoMLParameters {
   automlEngine: string;
@@ -11,6 +12,13 @@ export interface AutoMLParameters {
 
 export interface CustomParameters {
   algorithm: string;
+  // Add missing properties that are being used in CustomTraining.tsx
+  useDefaultHyperparameters: boolean;
+  hyperparameters: Record<string, any>;
+  testSize: number;
+  stratify: boolean;
+  randomSeed: number;
+  enableVisualization: boolean;
 }
 
 export interface TrainingContextState {

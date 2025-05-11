@@ -10,7 +10,8 @@ export interface UseExperimentPollingProps {
   onError: (error: string) => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
   setIsLoading: (loading: boolean) => void;
-  setIsTraining: (training: boolean) => void; // Make sure this is required, not optional
+  setIsTraining: (training: boolean) => void; 
+  setIsPredicting: (predicting: boolean) => void; // Add this line to include setIsPredicting
 }
 
 export const useExperimentPolling = ({

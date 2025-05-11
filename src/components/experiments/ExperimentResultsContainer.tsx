@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
@@ -187,7 +186,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
           error={error}
           onReset={handleReset}
           onRefresh={handleRefresh}
-          trainingType={currentTrainingType} // Pass the training type to the component
+          trainingType={currentTrainingType}
         />
       )}
     </div>

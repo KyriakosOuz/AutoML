@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -161,7 +160,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <MLJARExperimentResults
           experimentId={experimentId}
-          status={data.status}
+          status={data.status as ExperimentStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -174,7 +173,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <H2OExperimentResults
           experimentId={experimentId}
-          status={data.status}
+          status={data.status as ExperimentStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -187,7 +186,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <StandardExperimentResults
           experimentId={experimentId}
-          status={data.status}
+          status={data.status as ExperimentStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
