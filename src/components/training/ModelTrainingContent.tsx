@@ -258,7 +258,9 @@ const ModelTrainingContent: React.FC = () => {
     } else {
       // If on results or predict tab, go back to last training type or default to automl
       console.log(`ModelTrainingContent - After reset, switching to ${lastTrainingType || 'automl'} tab`);
-      setActiveTab(lastTrainingType === 'custom' ? 'custom' : 'automl');
+      // Fix: Ensure we only use allowed tab values (not generic string)
+      const newTab = lastTrainingType === 'custom' ? 'custom' : 'automl';
+      setActiveTab(newTab);
     }
     
     setAutoSwitchAttempts(0); // Reset the auto switch counter

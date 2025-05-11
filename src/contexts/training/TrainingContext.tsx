@@ -732,7 +732,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       const currentTab = state.activeTab;
       
       // Create new state object with defaults
-      const newState = {
+      const newState: TrainingContextState = {
         isTraining: false,
         isSubmitting: false,
         isPredicting: false,

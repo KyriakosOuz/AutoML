@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -40,7 +41,8 @@ const CustomTraining: React.FC = () => {
     isLoadingResults,
     startPolling,
     stopPolling,
-    activeTab
+    activeTab,
+    setActiveTab // Add this import from useTraining
   } = useTraining();
   
   // Add local button disabled state to ensure UI consistency
@@ -186,7 +188,7 @@ const CustomTraining: React.FC = () => {
       setLastTrainingType('custom');
       
       // Explicitly set the active tab to custom to ensure it doesn't switch
-      setActiveTab('custom'); // ✅ Added this line to lock the tab to 'custom'
+      setActiveTab('custom'); // Now correctly defined from useTraining
       
       // Set isTraining to true immediately after setting the training type
       setIsTraining(true);
