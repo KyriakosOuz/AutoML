@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -46,6 +47,13 @@ const AutoMLTraining: React.FC = () => {
   const [userEditedName, setUserEditedName] = useState(false);
   
   useEffect(() => {
+    // Initialize userEditedName to false when component first mounts
+    setUserEditedName(false);
+    // Enhanced logging to help debugging
+    console.log("AutoML Training - Component mounted, reset userEditedName");
+  }, []); // Empty dependency array ensures this runs only once on mount
+  
+  useEffect(() => {
     // Enhanced logging to help debugging
     console.log("AutoML Training - Dataset context values:", { 
       datasetId, 
@@ -55,20 +63,32 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
-  // Modified: Only generate experiment name on engine change if user hasn't manually edited it
+  // Handle engine change separately
   useEffect(() => {
-    if (taskType && automlEngine && !userEditedName) {
-      // Generate a new name when engine changes, but only if user hasn't edited it
-      const newName = generateExperimentName(automlEngine.toUpperCase(), '');
-      console.log("AutoMLTraining - Generated experiment name based on engine:", newName);
-      setExperimentName(newName);
+    if (taskType && automlEngine) {
+      // If experiment name is empty, generate a new one regardless of userEditedName flag
+      if (!experimentName || experimentName.trim() === '') {
+        const newName = generateExperimentName(automlEngine.toUpperCase(), '');
+        console.log("AutoMLTraining - Generated experiment name (empty name):", newName);
+        setExperimentName(newName);
+      } 
+      // If name was auto-generated (matches pattern of previous engine), update it
+      else if (!userEditedName) {
+        const newName = generateExperimentName(automlEngine.toUpperCase(), '');
+        console.log("AutoMLTraining - Generated experiment name based on engine change:", newName);
+        setExperimentName(newName);
+      }
+      else {
+        console.log("AutoMLTraining - User edited name detected, keeping current name:", experimentName);
+      }
     }
-  }, [taskType, automlEngine, setExperimentName, userEditedName]);
+  }, [taskType, automlEngine, setExperimentName, experimentName, userEditedName]);
 
   // Reset userEditedName flag when training completes or component unmounts
   useEffect(() => {
     // Reset the flag when training completes
     if (!isTraining && experimentStatus !== 'processing' && experimentStatus !== 'running') {
+      console.log("AutoMLTraining - Training completed, resetting userEditedName flag");
       setUserEditedName(false);
     }
 
@@ -77,6 +97,22 @@ const AutoMLTraining: React.FC = () => {
       setUserEditedName(false);
     };
   }, [isTraining, experimentStatus]);
+
+  // Handler for engine change
+  const handleEngineChange = (value: string) => {
+    setAutomlEngine(value as TrainingEngine);
+    // If the name field is empty, ensure we'll generate a new one
+    if (!experimentName || experimentName.trim() === '') {
+      setUserEditedName(false);
+    }
+  };
+  
+  const handleExperimentNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Mark that user has manually edited the name
+    setUserEditedName(true);
+    setExperimentName(e.target.value);
+    console.log("AutoMLTraining - User edited experiment name:", e.target.value);
+  };
 
   const handleTrainModel = async () => {
     if (!datasetId || !taskType || !automlEngine) {
@@ -313,7 +349,7 @@ const AutoMLTraining: React.FC = () => {
               <Label>AutoML Engine</Label>
               <Select
                 value={automlEngine}
-                onValueChange={(value) => setAutomlEngine(value as TrainingEngine)}
+                onValueChange={handleEngineChange}
                 disabled={isTraining || isSubmitting}
               >
                 <SelectTrigger>
@@ -343,11 +379,7 @@ const AutoMLTraining: React.FC = () => {
               <Input
                 id="experiment-name"
                 value={experimentName || ''}
-                onChange={(e) => {
-                  // Mark that user has manually edited the name
-                  setUserEditedName(true);
-                  setExperimentName(e.target.value);
-                }}
+                onChange={handleExperimentNameChange}
                 placeholder="Enter experiment name"
                 disabled={isTraining || isSubmitting}
               />
