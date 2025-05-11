@@ -42,8 +42,6 @@ const AutoMLTraining: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Add state to track whether the user has manually edited the name
-  const [userEditedName, setUserEditedName] = useState(false);
   
   useEffect(() => {
     // Enhanced logging to help debugging
@@ -55,28 +53,15 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
-  // Modified: Only generate experiment name on engine change if user hasn't manually edited it
+  // UPDATED: Generate experiment name whenever automlEngine changes
   useEffect(() => {
-    if (taskType && automlEngine && !userEditedName) {
-      // Generate a new name when engine changes, but only if user hasn't edited it
+    if (taskType && automlEngine) {
+      // Generate a new name when engine changes, regardless of current name
       const newName = generateExperimentName(automlEngine.toUpperCase(), '');
       console.log("AutoMLTraining - Generated experiment name based on engine:", newName);
       setExperimentName(newName);
     }
-  }, [taskType, automlEngine, setExperimentName, userEditedName]);
-
-  // Reset userEditedName flag when training completes or component unmounts
-  useEffect(() => {
-    // Reset the flag when training completes
-    if (!isTraining && experimentStatus !== 'processing' && experimentStatus !== 'running') {
-      setUserEditedName(false);
-    }
-
-    // Cleanup function to reset flag when component unmounts
-    return () => {
-      setUserEditedName(false);
-    };
-  }, [isTraining, experimentStatus]);
+  }, [taskType, automlEngine, setExperimentName]);
 
   const handleTrainModel = async () => {
     if (!datasetId || !taskType || !automlEngine) {
@@ -184,9 +169,6 @@ const AutoMLTraining: React.FC = () => {
           experimentName: finalExperimentName,
           resultName: result.experiment_name
         });
-        
-        // Reset userEditedName flag after successful training start
-        setUserEditedName(false);
         
         toast({
           title: "Training Submitted",
@@ -343,11 +325,7 @@ const AutoMLTraining: React.FC = () => {
               <Input
                 id="experiment-name"
                 value={experimentName || ''}
-                onChange={(e) => {
-                  // Mark that user has manually edited the name
-                  setUserEditedName(true);
-                  setExperimentName(e.target.value);
-                }}
+                onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
                 disabled={isTraining || isSubmitting}
               />
