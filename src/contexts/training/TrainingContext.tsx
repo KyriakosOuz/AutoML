@@ -437,38 +437,24 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [toast]);
 
-  const { startPolling: startPollingHook, stopPolling: stopPollingHook, isPolling, activeExperimentId: pollingExperimentId } = useExperimentPolling({
+  // ✅ UPDATED: Get startPolling from the hook but don't expose it directly
+  const { 
+    startPolling: startPollingHook, 
+    stopPolling: stopPollingHook, 
+    isPolling, 
+    activeExperimentId: pollingExperimentId 
+  } = useExperimentPolling({
     onSuccess: handlePollingSuccess,
     onError: handlePollingError,
     setExperimentStatus: (status) => setState(prev => ({ ...prev, experimentStatus: status })),
-    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading }))
+    setIsLoading: (loading) => setState(prev => ({ ...prev, isLoadingResults: loading })),
+    setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })) // Pass setIsTraining to the hook
   });
 
-  // Improved stopPolling function that ensures we clean up all state related to polling
-  const stopPolling = useCallback(() => {
-    console.log("[TrainingContext] Stopping all polling operations");
-    
-    // Stop the polling in the hook
-    stopPollingHook();
-    
-    // Reset polling-related state
-    setCurrentPollingInfo({
-      experimentId: null,
-      type: null
-    });
-    
-    // Update training context state
-    setState(prev => ({
-      ...prev,
-      isTraining: false,
-      // Only update experimentStatus if it's currently in a "polling" state
-      experimentStatus: ['processing', 'running'].includes(prev.experimentStatus) ? 
-        'idle' : prev.experimentStatus
-    }));
-  }, [stopPollingHook]);
+  // ... keep existing code (stopPolling function)
 
-  // Updated to set isAutoMLExperiment for proper tracking
-  const startPolling = useCallback((experimentId: string, type?: 'automl' | 'custom') => {
+  // ✅ UPDATED: Create wrapped startPolling function that accepts two arguments
+  const startPolling = useCallback((experimentId: string, type: 'automl' | 'custom' = 'automl') => {
     // Default to the current lastTrainingType if type is not provided
     const trainingType = type || state.lastTrainingType || 'automl';
     
@@ -498,10 +484,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsAutoMLExperiment(false);
     }
     
-    // Start the actual polling
+    // Start the actual polling, passing both experimentId and trainingType
     startPollingHook(experimentId, trainingType);
   }, [startPollingHook, stopPolling, state.lastTrainingType]);
-  
+
   // Log polling state changes
   useEffect(() => {
     console.log("[TrainingContext] Polling state changed:", { 
@@ -761,7 +747,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
     },
     getExperimentResults,
-    startPolling,
+    startPolling, // ✅ Now using our wrapped function that accepts 2 parameters
     stopPolling,
     checkLastExperiment,
   };
