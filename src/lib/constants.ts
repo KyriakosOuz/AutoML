@@ -75,7 +75,13 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${prefix}_${identifier}_${year}_${month}_${day}`;
+  
+  // If identifier is provided, include it, otherwise just use prefix and date
+  if (identifier && identifier.trim() !== '') {
+    return `${prefix}_${identifier}_${year}_${month}_${day}`;
+  } else {
+    return `${prefix}_${year}_${month}_${day}`;
+  }
 };
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";

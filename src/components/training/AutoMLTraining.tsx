@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -38,7 +37,7 @@ const AutoMLTraining: React.FC = () => {
     experimentStatus,
     experimentName,
     setExperimentName,
-    setResultsLoaded // Make sure we're using this
+    setResultsLoaded
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -54,15 +53,15 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
-  // FIXED: Only generate a default name when automlEngine changes AND experimentName is null (not just empty)
-  // This allows users to clear the input field and type their own name
+  // UPDATED: Generate experiment name whenever automlEngine changes
   useEffect(() => {
-    if (taskType && automlEngine && experimentName === null) {
-      const newName = generateExperimentName('AutoML', automlEngine.toUpperCase());
-      console.log("AutoMLTraining - Generated default experiment name:", newName);
+    if (taskType && automlEngine) {
+      // Generate a new name when engine changes, regardless of current name
+      const newName = generateExperimentName(automlEngine.toUpperCase(), '');
+      console.log("AutoMLTraining - Generated experiment name based on engine:", newName);
       setExperimentName(newName);
     }
-  }, [taskType, automlEngine, experimentName, setExperimentName]);
+  }, [taskType, automlEngine, setExperimentName]);
 
   const handleTrainModel = async () => {
     if (!datasetId || !taskType || !automlEngine) {
@@ -95,7 +94,7 @@ const AutoMLTraining: React.FC = () => {
     let finalExperimentName = experimentName;
     if (!experimentName || experimentName.trim() === '') {
       // Generate a default experiment name as fallback
-      finalExperimentName = generateExperimentName('AutoML', automlEngine.toUpperCase());
+      finalExperimentName = generateExperimentName(automlEngine.toUpperCase(), '');
       console.log("[AutoMLTraining] Using generated fallback name:", finalExperimentName);
       
       // Update the experiment name in the context
