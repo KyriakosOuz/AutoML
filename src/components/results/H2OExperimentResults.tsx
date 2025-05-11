@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -72,6 +73,39 @@ interface GroupedVisualizations {
   [key: string]: VisualizationFile[] | undefined;
 }
 
+// Helper function to format metric names for display
+const formatMetricName = (metricKey: string): string => {
+  switch(metricKey.toLowerCase()) {
+    case 'auc':
+      return 'AUC';
+    case 'logloss':
+      return 'Log Loss';
+    case 'aucpr':
+      return 'AUC PR';
+    case 'mean_per_class_error':
+      return 'Mean Per Class Error';
+    case 'rmse':
+      return 'RMSE';
+    case 'mse':
+      return 'MSE';
+    case 'mae':
+      return 'MAE';
+    case 'r2':
+      return 'R²';
+    default:
+      return metricKey
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+  }
+};
+
+// Helper function to determine if metric should be displayed as percentage
+const isPercentageMetric = (metricKey: string): boolean => {
+  return ['auc', 'accuracy', 'precision', 'recall', 'f1', 'mean_per_class_error', 'aucpr'].includes(metricKey.toLowerCase());
+};
+
 const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   experimentId,
   status,
@@ -90,13 +124,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       return `${(value * 100).toFixed(2)}%`;
     }
     return value.toFixed(4);
-  };
-  
-  // Helper function to determine if metric should be shown as percentage
-  const isPercentageMetric = (metricName: string): boolean => {
-    return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
-      metricName.toLowerCase().includes(m)
-    );
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -208,9 +235,26 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     files = [],
     created_at,
     completed_at,
-    // New property to handle structured visualizations
     visualizations_by_type
   } = experimentResults;
+
+  // Extract best model details
+  const bestModelDetails = metrics.best_model_details || {};
+  const bestModelName = bestModelDetails.name || metrics.best_model_label || 'Best Model';
+  const bestModelScore = bestModelDetails.metric_value || metrics.metric_value || '';
+  
+  // Extract H2O AutoML leaderboard metrics
+  const leaderboardMetrics = {
+    auc: bestModelDetails.auc,
+    logloss: bestModelDetails.logloss,
+    aucpr: bestModelDetails.aucpr,
+    mean_per_class_error: bestModelDetails.mean_per_class_error,
+    rmse: bestModelDetails.rmse,
+    mse: bestModelDetails.mse,
+    // Add any additional metrics that might be available
+    mae: bestModelDetails.mae,
+    r2: bestModelDetails.r2
+  };
 
   // Process visualizations - either use the structured format if present, 
   // or fall back to the legacy approach
@@ -324,15 +368,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       f.file_url.includes('model')
     );
   
-  // Find best model details
-  const bestModelName = metrics.best_model_details?.name || 
-                       metrics.best_model_label || 
-                       'Best Model';
-                      
-  const bestModelScore = metrics.best_model_details?.metric_value || 
-                        metrics.metric_value || 
-                        '';
-  
   // Extract confusion matrix if present
   const confusionMatrix = metrics.confusion_matrix;
 
@@ -398,7 +433,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
           
           {/* Metrics Tab */}
           <TabsContent value="metrics" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Best Model</CardTitle>
@@ -429,12 +464,51 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              <Card className="shadow-sm col-span-2">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Model Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Metric</TableHead>
+                          <TableHead>Value</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(leaderboardMetrics).map(([key, value]) => {
+                          // Skip if value is undefined or null
+                          if (value === undefined || value === null) return null;
+                          
+                          return (
+                            <TableRow key={key}>
+                              <TableCell className="font-medium">{formatMetricName(key)}</TableCell>
+                              <TableCell>{formatMetricValue(value, isPercentageMetric(key))}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {Object.keys(leaderboardMetrics).every(key => 
+                          leaderboardMetrics[key as keyof typeof leaderboardMetrics] === undefined) && (
+                          <TableRow>
+                            <TableCell colSpan={2} className="text-center text-muted-foreground py-4">
+                              No detailed metrics available
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm col-span-1 md:col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {Object.entries(metrics).map(([key, value]) => {
                       // Skip nested objects, arrays and special metrics
                       if (
@@ -446,11 +520,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       ) return null;
                       
                       // Enhanced formatting of metric display names
-                      const metricDisplayName = key
-                        .replace(/_/g, ' ')
-                        .split(' ')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ');
+                      const metricDisplayName = formatMetricName(key);
                       
                       const isPercent = isPercentageMetric(key);
                       
