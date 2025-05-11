@@ -1,29 +1,29 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Award, 
   BarChart4, 
+  Clock, 
+  Download, 
   FileText, 
   RefreshCw, 
-  Database,
-  Layers,
-  Download,
-  ChartLine,
-  ChartPie,
+  Table as TableIcon,
+  Info,
   Loader,
-  Check
+  Image,
+  AlertTriangle
 } from 'lucide-react';
-import { ExperimentResults } from '@/types/training';
-import { ExperimentStatus } from '@/types/training';
+import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import { formatTrainingTime } from '@/utils/formatUtils';
-import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import { formatDateForGreece } from '@/lib/dateUtils';
+import CSVPreview from './CSVPreview';
 
 interface H2OExperimentResultsProps {
   experimentId: string | null;
@@ -51,59 +51,28 @@ const formatTaskType = (type: string = '') => {
   }
 };
 
-// Interface for visualization file
-interface VisualizationFile {
-  file_type: string;
-  file_url: string;
-  file_name?: string;
-  created_at?: string;
-  type?: string;
-  name?: string;
-}
-
-// Interface for grouped visualizations
-interface GroupedVisualizations {
-  predictions?: VisualizationFile[];
-  confusion_matrix?: VisualizationFile[];
-  evaluation?: VisualizationFile[];
-  explainability?: VisualizationFile[];
-  feature_importance?: VisualizationFile[];
-  model?: VisualizationFile[];
-  other?: VisualizationFile[];
-  [key: string]: VisualizationFile[] | undefined;
-}
-
-// Helper function to format metric names for display
-const formatMetricName = (metricKey: string): string => {
-  switch(metricKey.toLowerCase()) {
-    case 'auc':
-      return 'AUC';
-    case 'logloss':
-      return 'Log Loss';
-    case 'aucpr':
-      return 'AUC PR';
-    case 'mean_per_class_error':
-      return 'Mean Per Class Error';
-    case 'rmse':
-      return 'RMSE';
-    case 'mse':
-      return 'MSE';
-    case 'mae':
-      return 'MAE';
-    case 'r2':
-      return 'R²';
-    default:
-      return metricKey
-        .replace(/_/g, ' ')
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+// Helper function to format visualization names
+const formatVisualizationName = (fileType: string): string => {
+  if (fileType.includes('confusion_matrix')) {
+    return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
+  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    return 'ROC Curve';
+  } else if (fileType.includes('precision_recall')) {
+    return 'Precision-Recall Curve';
+  } else if (fileType.includes('learning_curve')) {
+    return 'Learning Curve';
+  } else if (fileType.includes('feature_importance')) {
+    return 'Feature Importance';
+  } else if (fileType.includes('variable_importance')) {
+    return 'Variable Importance';
+  } else if (fileType.includes('shap')) {
+    return 'SHAP Values';
+  } else if (fileType.includes('partial_dependence')) {
+    return 'Partial Dependence';
   }
-};
-
-// Helper function to determine if metric should be displayed as percentage
-const isPercentageMetric = (metricKey: string): boolean => {
-  return ['auc', 'accuracy', 'precision', 'recall', 'f1', 'mean_per_class_error', 'aucpr'].includes(metricKey.toLowerCase());
+  
+  // Default formatting: capitalize each word and replace underscores with spaces
+  return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
@@ -115,7 +84,8 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   onReset,
   onRefresh
 }) => {
-  const [activeTab, setActiveTab] = useState<string>('metrics');
+  const [activeTab, setActiveTab] = useState<string>('summary');
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -124,6 +94,13 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       return `${(value * 100).toFixed(2)}%`;
     }
     return value.toFixed(4);
+  };
+  
+  // Helper function to determine if metric should be shown as percentage
+  const isPercentageMetric = (metricName: string): boolean => {
+    return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
+      metricName.toLowerCase().includes(m)
+    );
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -164,7 +141,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive flex items-center">
-            <Alert className="h-5 w-5 mr-2" />
+            <AlertTriangle className="h-5 w-5 mr-2" />
             Error Loading Results
           </CardTitle>
           <CardDescription>
@@ -214,7 +191,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
         </CardHeader>
         <CardContent className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center space-y-4">
-            <Database className="h-12 w-12 text-muted-foreground" />
+            <Image className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               No experiment data available
             </p>
@@ -226,150 +203,72 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
 
   // Extract relevant information from experiment results
   const {
-    experiment_id,
     experiment_name,
     task_type,
     target_column,
-    training_time_sec,
     metrics = {},
     files = [],
     created_at,
     completed_at,
-    visualizations_by_type
+    automl_engine,
+    model_display_name
   } = experimentResults;
 
-  // Extract best model details
-  const bestModelDetails = metrics.best_model_details || {};
-  const bestModelName = bestModelDetails.name || metrics.best_model_label || 'Best Model';
-  const bestModelScore = bestModelDetails.metric_value || metrics.metric_value || '';
+  // Get leaderboard if available
+  const leaderboard = experimentResults.leaderboard || [];
   
-  // Extract H2O AutoML leaderboard metrics
-  const leaderboardMetrics = {
-    auc: bestModelDetails.auc,
-    logloss: bestModelDetails.logloss,
-    aucpr: bestModelDetails.aucpr,
-    mean_per_class_error: bestModelDetails.mean_per_class_error,
-    rmse: bestModelDetails.rmse,
-    mse: bestModelDetails.mse,
-    // Add any additional metrics that might be available
-    mae: bestModelDetails.mae,
-    r2: bestModelDetails.r2
+  // Get best model details
+  const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
+  
+  // Update best model name to prioritize model_display_name
+  const bestModelName = model_display_name || 
+                       bestModelDetails?.name || 
+                       metrics.best_model_label || 
+                       'Best Model';
+
+  // Get primary metric based on task type
+  const getPrimaryMetric = () => {
+    if (task_type?.includes('classification')) {
+      return {
+        name: metrics.metric_used || 'auc',
+        value: metrics.metric_value || metrics.auc || metrics.accuracy || metrics.f1_score
+      };
+    } else {
+      return {
+        name: metrics.metric_used || 'rmse',
+        value: metrics.metric_value || metrics.rmse || metrics.mse || metrics.mae || metrics.r2
+      };
+    }
   };
 
-  // Process visualizations - either use the structured format if present, 
-  // or fall back to the legacy approach
-  let visualizationFiles: VisualizationFile[] = [];
-  let groupedVisualizations: GroupedVisualizations = {};
+  const primaryMetric = getPrimaryMetric();
   
-  // Check if we have the new structured format
-  if (visualizations_by_type) {
-    // Convert the visualization_by_type structure to our visualization files array
-    groupedVisualizations = visualizations_by_type as GroupedVisualizations;
-    
-    // Process each category
-    Object.entries(groupedVisualizations).forEach(([category, categoryFiles]) => {
-      if (Array.isArray(categoryFiles)) {
-        // Add display names based on category
-        const processedFiles = categoryFiles.map(file => {
-          let displayName = file.file_type;
-          
-          switch (category) {
-            case 'confusion_matrix':
-              displayName = 'Confusion Matrix';
-              break;
-            case 'evaluation':
-              displayName = file.file_type.includes('roc') ? 'ROC Curve' : 'Evaluation Curve';
-              break;
-            case 'explainability':
-              displayName = file.file_type.includes('shap') ? 'SHAP Summary' : 'Model Explainability';
-              break;
-            case 'feature_importance':
-              displayName = 'Feature Importance';
-              break;
-            case 'predictions':
-              displayName = 'Predictions Plot';
-              break;
-            default:
-              displayName = file.file_type
-                .replace(/_/g, ' ')
-                .split(' ')
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(' ');
-          }
-          
-          return {
-            ...file,
-            type: category,
-            name: displayName
-          };
-        });
-        
-        // Add to visualization files if not a model file
-        if (category !== 'model') {
-          visualizationFiles = [...visualizationFiles, ...processedFiles];
-        }
-      }
-    });
-  } else {
-    // Legacy approach: Process files array to find visualizations
-    visualizationFiles = files
-      .filter(file => 
-        (file.file_type.includes('png') || 
-         file.file_url.includes('png') ||
-         file.file_name?.includes('png')) &&
-        file.file_type !== 'model' &&
-        !file.file_type.includes('label_encoder')
-      )
-      .map(file => {
-        let type = 'other';
-        let name = file.file_type;
-        
-        if (file.file_type.includes('shap') || file.file_url.includes('shap')) {
-          type = 'explainability';
-          name = 'SHAP Importance';
-        }
-        else if (file.file_type.includes('importance') || file.file_url.includes('importance')) {
-          type = 'feature_importance';
-          name = 'Feature Importance';
-        }
-        else if (file.file_type.includes('roc') || file.file_url.includes('roc')) {
-          type = 'evaluation';
-          name = 'ROC Curve';
-        }
-        else if (file.file_type.includes('confusion') || file.file_url.includes('confusion')) {
-          type = 'confusion_matrix';
-          name = 'Confusion Matrix';
-        }
-        
-        return { ...file, type, name };
-      });
-  }
+  // Filter files by type
+  const getFilesByType = (fileType: string) => {
+    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
+  };
+
+  const visualizationFiles = [
+    ...getFilesByType('confusion_matrix'),
+    ...getFilesByType('roc_curve'),
+    ...getFilesByType('variable_importance'),
+    ...getFilesByType('shap'),
+    ...getFilesByType('partial_dependence')
+  ];
+
+  const modelFile = files.find(file => 
+    file.file_type === 'model' || 
+    file.file_type.includes('model')
+  );
   
-  // Find downloadable files using both new structure and legacy approach
-  const leaderboardFile = 
-    (groupedVisualizations?.model?.find(f => f.file_type.includes('leaderboard'))) ||
-    files.find(f => 
-      f.file_type.includes('leaderboard') || 
-      f.file_url.includes('leaderboard')
-    );
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' ||
+    file.file_type.includes('predictions')
+  );
   
-  const predictionsFile = 
-    (groupedVisualizations?.predictions?.find(f => f.file_type.includes('predictions'))) ||
-    files.find(f => 
-      f.file_type.includes('predictions') || 
-      f.file_url.includes('predictions')
-    );
-  
-  const modelFile = 
-    (groupedVisualizations?.model?.find(f => f.file_type.includes('trained_model') || f.file_type === 'model')) ||
-    files.find(f => 
-      f.file_type === 'model' || 
-      f.file_type === 'trained_model' ||
-      f.file_url.includes('model')
-    );
-  
-  // Extract confusion matrix if present
-  const confusionMatrix = metrics.confusion_matrix;
+  // Format created_at date for display
+  const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
+  const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -377,36 +276,36 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">{experiment_name || 'H2O Experiment Results'}</CardTitle>
+            <CardTitle className="text-xl">
+              {model_display_name || experiment_name || 'H2O Experiment Results'}
+            </CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            Engine: H2O AutoML
+            Engine: {automl_engine?.toUpperCase() || 'H2O'}
           </Badge>
         </div>
         
         <CardDescription className="flex flex-wrap gap-x-4 mt-2">
           <span className="inline-flex items-center">
-            <Layers className="h-3.5 w-3.5 mr-1" />
+            <BarChart4 className="h-3.5 w-3.5 mr-1" />
             Task: <span className="font-semibold ml-1">{formatTaskType(task_type)}</span>
           </span>
           
           {target_column && (
             <span className="inline-flex items-center">
-              <Database className="h-3.5 w-3.5 mr-1" />
+              <TableIcon className="h-3.5 w-3.5 mr-1" />
               Target: <span className="font-semibold ml-1">{target_column}</span>
             </span>
           )}
           
-          {training_time_sec && (
-            <span className="inline-flex items-center">
-              <Loader className="h-3.5 w-3.5 mr-1" />
-              Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
-            </span>
-          )}
+          <span className="inline-flex items-center">
+            <Clock className="h-3.5 w-3.5 mr-1" />
+            Created: <span className="font-semibold ml-1">{formattedCreatedAt}</span>
+          </span>
           
-          {experiment_id && (
+          {experimentId && (
             <span className="inline-flex items-center">
-              <span className="font-mono text-xs text-muted-foreground">ID: {typeof experiment_id === 'string' ? experiment_id.substring(0, 8) : 'N/A'}</span>
+              <span className="font-mono text-xs text-muted-foreground">ID: {experimentId.substring(0, 8)}</span>
             </span>
           )}
         </CardDescription>
@@ -414,171 +313,195 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 rounded-none border-b h-12">
-            <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
-              <ChartPie className="h-4 w-4" />
-              <span>Metrics</span>
+          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+            <TabsTrigger value="summary" className="text-sm flex items-center gap-1">
+              <Award className="h-4 w-4" />
+              <span>Summary</span>
             </TabsTrigger>
             
-            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="leaderboard" className="text-sm flex items-center gap-1">
+              <TableIcon className="h-4 w-4" />
+              <span>Leaderboard</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
-              <span>Visualizations</span>
+              <span>Charts</span>
             </TabsTrigger>
             
-            <TabsTrigger value="downloads" className="text-sm flex items-center gap-1">
-              <Download className="h-4 w-4" />
-              <span>Downloads</span>
+            <TabsTrigger value="predictions" className="text-sm flex items-center gap-1">
+              <Info className="h-4 w-4" />
+              <span>Predictions</span>
             </TabsTrigger>
           </TabsList>
           
-          {/* Metrics Tab */}
-          <TabsContent value="metrics" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Summary Tab */}
+          <TabsContent value="summary" className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Best Model</CardTitle>
+                  <CardTitle className="text-base">Experiment Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-2">
-                      <span className="text-sm text-muted-foreground">Model Name:</span>
-                      <span className="text-sm font-medium">{bestModelName}</span>
-                      
-                      {bestModelScore && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Model Score:</span>
-                          <span className="text-sm font-medium">{
-                            typeof bestModelScore === 'number' ? 
-                              bestModelScore.toFixed(4) : bestModelScore
-                          }</span>
-                        </>
-                      )}
-                      
+                    <div className="grid grid-cols-2 gap-2">
                       <span className="text-sm text-muted-foreground">Task Type:</span>
                       <span className="text-sm font-medium">{formatTaskType(task_type)}</span>
                       
                       <span className="text-sm text-muted-foreground">Target Column:</span>
                       <span className="text-sm font-medium">{target_column}</span>
+                      
+                      <span className="text-sm text-muted-foreground">Best Model:</span>
+                      <span className="text-sm font-medium">{bestModelName}</span>
+                      
+                      <span className="text-sm text-muted-foreground">Created At:</span>
+                      <span className="text-sm font-medium">{formattedCreatedAt}</span>
+                      
+                      {automl_engine && (
+                        <>
+                          <span className="text-sm text-muted-foreground">Engine:</span>
+                          <span className="text-sm font-medium">{automl_engine.toUpperCase()}</span>
+                        </>
+                      )}
+                      
+                      {completed_at && (
+                        <>
+                          <span className="text-sm text-muted-foreground">Completed:</span>
+                          <span className="text-sm font-medium">{formattedCompletedAt}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Model Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Metric</TableHead>
-                          <TableHead>Value</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(leaderboardMetrics).map(([key, value]) => {
-                          // Skip if value is undefined or null
-                          if (value === undefined || value === null) return null;
-                          
-                          return (
-                            <TableRow key={key}>
-                              <TableCell className="font-medium">{formatMetricName(key)}</TableCell>
-                              <TableCell>{formatMetricValue(value, isPercentageMetric(key))}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                        {Object.keys(leaderboardMetrics).every(key => 
-                          leaderboardMetrics[key as keyof typeof leaderboardMetrics] === undefined) && (
-                          <TableRow>
-                            <TableCell colSpan={2} className="text-center text-muted-foreground py-4">
-                              No detailed metrics available
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="shadow-sm col-span-1 md:col-span-2">
+              <Card className="shadow-sm col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {Object.entries(metrics).map(([key, value]) => {
-                      // Skip nested objects, arrays and special metrics
-                      if (
-                        key === 'confusion_matrix' ||
-                        key === 'best_model_details' ||
-                        key === 'classification_report' ||
-                        typeof value === 'object' ||
-                        typeof value !== 'number'
-                      ) return null;
-                      
-                      // Enhanced formatting of metric display names
-                      const metricDisplayName = formatMetricName(key);
-                      
-                      const isPercent = isPercentageMetric(key);
-                      
-                      return (
-                        <div key={key} className="p-3 bg-muted/40 rounded-md">
-                          <span className="block text-sm text-muted-foreground">
-                            {metricDisplayName}
-                          </span>
-                          <span className="text-lg font-medium">
-                            {formatMetricValue(value as number, isPercent)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Confusion Matrix */}
-                  {confusionMatrix && (
-                    <div className="mt-6">
-                      <h3 className="text-base font-semibold mb-2">Confusion Matrix</h3>
-                      <div className="overflow-x-auto">
-                        <Table className="w-full">
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[100px]">Actual ↓ Predicted →</TableHead>
-                              {confusionMatrix.columns?.map((col, index) => (
-                                <TableHead key={index}>{col}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {confusionMatrix.data?.map((row, rowIndex) => (
-                              <TableRow key={rowIndex}>
-                                <TableCell className="font-medium">
-                                  {confusionMatrix.index?.[rowIndex]}
-                                </TableCell>
-                                {row.map((cell, cellIndex) => (
-                                  <TableCell 
-                                    key={cellIndex}
-                                    className={rowIndex === cellIndex ? "bg-primary/10 font-semibold" : ""}
-                                  >
-                                    {cell}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {primaryMetric.name.replace(/_/g, ' ')}
+                      </h3>
+                      <p className="text-3xl font-bold text-primary">
+                        {isPercentageMetric(primaryMetric.name) 
+                          ? formatMetricValue(primaryMetric.value, true)
+                          : formatMetricValue(primaryMetric.value, false)}
+                      </p>
                     </div>
-                  )}
+                    
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      {Object.entries(metrics).map(([key, value]) => {
+                        if (
+                          key === 'best_model_label' ||
+                          key === 'metric_used' ||
+                          key === 'metric_value' ||
+                          key === 'classification_report' ||
+                          key === 'confusion_matrix' ||
+                          key === 'source' ||
+                          typeof value !== 'number'
+                        ) return null;
+                        
+                        // Enhanced formatting of metric display names
+                        const metricDisplayName = key
+                          .replace(/_/g, ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ');
+                        
+                        const isPercent = isPercentageMetric(key);
+                        
+                        return (
+                          <div key={key} className="p-3 bg-muted/40 rounded-md">
+                            <span className="block text-sm text-muted-foreground">
+                              {metricDisplayName}
+                            </span>
+                            <span className="text-lg font-medium">
+                              {formatMetricValue(value as number, isPercent)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
           
-          {/* Visualizations Tab */}
-          <TabsContent value="visualizations" className="p-6">
+          {/* Leaderboard Tab */}
+          <TabsContent value="leaderboard" className="p-6">
+            {leaderboard && leaderboard.length > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Model Leaderboard</CardTitle>
+                  <CardDescription>
+                    Performance comparison of models trained during AutoML
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Rank</TableHead>
+                          <TableHead>Model</TableHead>
+                          {leaderboard[0].metrics && Object.keys(leaderboard[0].metrics).map((metricKey) => (
+                            <TableHead key={metricKey}>{metricKey.replace(/_/g, ' ')}</TableHead>
+                          ))}
+                          <TableHead>Training Time</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {leaderboard.map((model, index) => (
+                          <TableRow 
+                            key={index}
+                            className={selectedModel === model.name ? "bg-primary/10" : ""}
+                            onClick={() => setSelectedModel(model.name)}
+                          >
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell className="font-medium">
+                              {model.name}
+                              {index === 0 && (
+                                <Badge variant="outline" className="ml-2 bg-primary/10 text-primary">
+                                  Best
+                                </Badge>
+                              )}
+                            </TableCell>
+                            {model.metrics && Object.entries(model.metrics).map(([metricKey, metricValue]) => (
+                              <TableCell key={metricKey}>
+                                {isPercentageMetric(metricKey) 
+                                  ? formatMetricValue(metricValue as number, true)
+                                  : formatMetricValue(metricValue as number, false)}
+                              </TableCell>
+                            ))}
+                            <TableCell>
+                              {model.training_time_sec 
+                                ? formatTrainingTime(model.training_time_sec) 
+                                : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="text-center py-12">
+                <TableIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Leaderboard Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Leaderboard information is not available for this experiment.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          
+          {/* Charts Tab */}
+          <TabsContent value="charts" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {visualizationFiles.map((file, index) => (
@@ -587,15 +510,14 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base">
-                            {file.name || 'Visualization'}
+                            {formatVisualizationName(file.file_type)}
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-4">
-                          <div className="aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center">
-                            <img 
-                              src={file.file_url} 
-                              alt={file.name || 'Visualization'} 
-                              className="object-cover w-full h-full"
+                        <CardContent className="p-3">
+                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center"
+                              style={{ backgroundImage: `url(${file.file_url})` }}
                             />
                           </div>
                         </CardContent>
@@ -603,18 +525,20 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl">
                       <DialogHeader>
-                        <DialogTitle>{file.name || 'Visualization'}</DialogTitle>
+                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
                       </DialogHeader>
                       <div className="p-1">
                         <img 
                           src={file.file_url} 
-                          alt={file.name || 'Visualization'} 
+                          alt={file.file_type} 
                           className="w-full rounded-md"
                         />
                         <div className="mt-4 flex justify-end">
-                          <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${file.name || 'visualization'}.png`)}>
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Image
+                            </a>
                           </Button>
                         </div>
                       </div>
@@ -624,93 +548,88 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
               </div>
             ) : (
               <div className="text-center py-12">
-                <BarChart4 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Visualizations Available</h3>
+                <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  Visualizations may not be available for this model or are still being generated.
+                  No visualization files were found for this experiment.
                 </p>
               </div>
             )}
           </TabsContent>
           
-          {/* Downloads Tab */}
-          <TabsContent value="downloads" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {leaderboardFile && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">H2O Leaderboard</CardTitle>
-                    <CardDescription>
-                      Download the model leaderboard with all performance metrics
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full" onClick={() => downloadFile(leaderboardFile.file_url, 'h2o_leaderboard.csv')}>
-                      <Database className="h-4 w-4 mr-2" />
-                      Download Leaderboard
+          {/* Predictions Tab */}
+          <TabsContent value="predictions" className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Model File Card */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-center">Model File</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center pt-2">
+                  {modelFile ? (
+                    <Button asChild>
+                      <a href={modelFile.file_url} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Model
+                      </a>
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {predictionsFile && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Predictions CSV</CardTitle>
-                    <CardDescription>
-                      Download the test set predictions
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full" onClick={() => downloadFile(predictionsFile.file_url, 'predictions.csv')}>
-                      <ChartLine className="h-4 w-4 mr-2" />
-                      Download Predictions
+                  ) : (
+                    <Button disabled variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Not Available
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
               
-              {modelFile && (
-                <Card className="shadow-sm col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Trained Model</CardTitle>
-                    <CardDescription>
-                      Download the trained model file
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full sm:w-auto" onClick={() => downloadFile(modelFile.file_url, 'h2o_model.zip')}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download Model
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {!leaderboardFile && !predictionsFile && !modelFile && (
-                <div className="col-span-2 text-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Downloads Available</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    No downloadable files are available for this experiment.
-                  </p>
-                </div>
-              )}
+              {/* Predictions Card */}
+              <Card className="shadow-sm col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Predictions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {predictionsFile ? (
+                    <CSVPreview
+                      fileUrl={predictionsFile.file_url}
+                      downloadUrl={predictionsFile.file_url}
+                      maxRows={10}
+                      engineName={automl_engine?.toUpperCase()}
+                    />
+                  ) : (
+                    <div className="text-center py-6">
+                      <p className="text-muted-foreground">
+                        No prediction data available for this experiment
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
       </CardContent>
       
       <CardFooter className="flex justify-between border-t p-4">
-        <Button variant="outline" onClick={onReset}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Run New Experiment
-        </Button>
+        <div className="flex gap-2">
+          {onReset && (
+            <Button variant="outline" onClick={onReset}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              New Experiment
+            </Button>
+          )}
+          
+          {onRefresh && (
+            <Button variant="secondary" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
         
         {completed_at && (
           <div className="text-xs text-muted-foreground flex items-center">
-            <Check className="h-3 w-3 mr-1" />
-            Completed: {new Date(completed_at).toLocaleString()}
+            <Clock className="h-3 w-3 mr-1" />
+            {formattedCompletedAt}
           </div>
         )}
       </CardFooter>

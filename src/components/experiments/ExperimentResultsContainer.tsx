@@ -59,7 +59,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       
       if (data) {
         // Only log this when actually receiving new data
-        console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", data);
+        console.log("[ExperimentResultsContainer] Successfully fetched experiment results:", {
+          id: data.experimentId,
+          status: data.status,
+          modelName: data.model_display_name,
+          engine: data.automl_engine
+        });
         
         // Ensure metrics are correctly mapped (handle both f1 and f1_score)
         if (data.metrics && data.metrics.f1 !== undefined && data.metrics.f1_score === undefined) {
@@ -152,7 +157,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     resultType: results?.training_type,
     algorithm: results?.algorithm,
     automlEngine: results?.automl_engine,
-    contextType: lastTrainingType
+    contextType: lastTrainingType,
+    modelName: results?.model_display_name
   });
 
   return (

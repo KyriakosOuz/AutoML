@@ -40,7 +40,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     hasResults: !!experimentResults,
     hasError: !!error,
     resultTrainingType: experimentResults?.training_type,
-    resultAutomlEngine: experimentResults?.automl_engine
+    resultAutomlEngine: experimentResults?.automl_engine,
+    modelDisplayName: experimentResults?.model_display_name
   });
   
   // Determine the actual training type to display in UI - improved logic
@@ -152,11 +153,16 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     );
   }
 
+  // Get the most appropriate title to display
+  const experimentTitle = experimentResults?.model_display_name || 
+                         experimentResults?.experiment_name || 
+                         `Experiment ${experimentId?.substring(0, 8)}`;
+
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {experimentResults?.experiment_name || `Experiment ${experimentId?.substring(0, 8)}`}
+          {experimentTitle}
           <span className="text-xs font-normal bg-gray-100 px-2 py-1 rounded">
             {displayedTrainingType === 'automl' ? 'AutoML' : 'Custom'}
           </span>

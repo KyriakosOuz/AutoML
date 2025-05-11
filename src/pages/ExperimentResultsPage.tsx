@@ -277,14 +277,14 @@ const ExperimentResultsPage: React.FC = () => {
               <div>
                 <CardTitle className="flex items-center">
                   <Award className="h-5 w-5 mr-2 text-primary" />
-                  {results.experiment_name || 'Training Results'}
+                  {results.model_display_name || results.experiment_name || 'Training Results'}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   Experiment completed successfully
                 </CardDescription>
               </div>
               <Badge variant="outline" className="text-primary">
-                {results.algorithm || 'AutoML'}
+                {results.model_display_name || results.algorithm || 'AutoML'}
               </Badge>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">

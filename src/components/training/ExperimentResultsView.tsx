@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -43,7 +42,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // Log key state changes
+  // Log key state changes and include model_display_name
   useEffect(() => {
     console.log("[ExperimentResultsView] Component mounted or updated:", { 
       experimentId, 
@@ -51,7 +50,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       experimentStatus,
       isLoading,
       hasData: !!data,
-      hasError: !!error
+      hasError: !!error,
+      modelName: data?.model_display_name
     });
   }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
   
@@ -145,14 +145,15 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     );
   }
 
-  // Additional logging to help diagnose render issues
+  // Additional logging to help diagnose render issues - include model display name
   console.log("[ExperimentResultsView] Rendering results component:", {
     isMljarExperiment: resultType.isMljarExperiment,
     isH2OExperiment: resultType.isH2OExperiment,
     isAutoMLExperiment: resultType.isAutoMLExperiment,
     isCustomTrainingExperiment: resultType.isCustomTrainingExperiment,
     training_type: data.training_type,
-    automl_engine: data.automl_engine
+    automl_engine: data.automl_engine,
+    model_name: data.model_display_name
   });
 
   // Render the appropriate component based on experiment type

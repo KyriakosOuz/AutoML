@@ -36,7 +36,8 @@ const ModelSummary: React.FC<ModelSummaryProps> = ({ results }) => {
     completed_at,
     training_time_sec,
     metrics,
-    training_type
+    training_type,
+    model_display_name
   } = results;
 
   // Format dates
@@ -84,7 +85,8 @@ const ModelSummary: React.FC<ModelSummaryProps> = ({ results }) => {
     return topMetrics;
   };
 
-  const displayedAlgorithm = algorithm || algorithm_choice || 'Not specified';
+  // Use model_display_name as the primary label, fall back to other fields if not available
+  const displayedAlgorithm = model_display_name || algorithm || algorithm_choice || 'Not specified';
   const displayedTrainingType = training_type || (automl_engine ? 'automl' : 'custom');
 
   return (
@@ -112,7 +114,7 @@ const ModelSummary: React.FC<ModelSummaryProps> = ({ results }) => {
                     </Badge>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground">Algorithm:</div>
+                  <div className="text-sm text-muted-foreground">Model:</div>
                   <div className="text-sm font-medium">
                     {displayedAlgorithm}
                   </div>

@@ -208,12 +208,14 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     created_at,
     completed_at,
     hyperparameters = {},
-    automl_engine
+    automl_engine,
+    model_display_name
   } = experimentResults;
 
-  // Find best model label if available
-  const bestModelLabel = metrics.best_model_label || 
-    (hyperparameters.best_model ? hyperparameters.best_model : 'Not specified');
+  // Use model_display_name as the primary source for best model label
+  const bestModelLabel = model_display_name || 
+                        metrics.best_model_label || 
+                        (hyperparameters.best_model ? hyperparameters.best_model : 'Not specified');
 
   // Get primary metric based on task type
   const getPrimaryMetric = () => {
@@ -292,7 +294,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">{experiment_name || 'MLJAR Experiment Results'}</CardTitle>
+            <CardTitle className="text-xl">
+              {model_display_name || experiment_name || 'MLJAR Experiment Results'}
+            </CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
             Engine: {automl_engine?.toUpperCase() || 'AutoML'}

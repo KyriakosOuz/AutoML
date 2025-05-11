@@ -190,7 +190,8 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     hyperparameters = {},
     model_file_url,
     report_file_url,
-    automl_engine
+    automl_engine,
+    model_display_name
   } = results;
   
   // Get unique downloadable files (model and report)
@@ -210,7 +211,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
   const isClassification = task_type?.includes('classification');
   
   // Display algorithm or engine based on what's available
-  const displayAlgorithm = algorithm || (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
+  const displayAlgorithm = model_display_name || 
+                          algorithm || 
+                          (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -218,13 +221,11 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">{experiment_name || 'Model Training Results'}</CardTitle>
+            <CardTitle className="text-xl">{model_display_name || experiment_name || 'Model Training Results'}</CardTitle>
           </div>
           
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            {automl_engine ? `Engine: ${automl_engine.toUpperCase()}` : 
-             algorithm ? `Algorithm: ${algorithm}` : 
-             formatTaskType(task_type)}
+            {displayAlgorithm}
           </Badge>
         </div>
         
