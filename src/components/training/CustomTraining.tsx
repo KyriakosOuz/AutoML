@@ -41,8 +41,7 @@ const CustomTraining: React.FC = () => {
     isLoadingResults,
     startPolling,
     stopPolling,
-    activeTab,
-    setActiveTab // Add this import from useTraining
+    activeTab
   } = useTraining();
   
   // Add local button disabled state to ensure UI consistency
@@ -187,9 +186,6 @@ const CustomTraining: React.FC = () => {
       console.log('[CustomTraining] Setting lastTrainingType to "custom"');
       setLastTrainingType('custom');
       
-      // Explicitly set the active tab to custom to ensure it doesn't switch
-      setActiveTab('custom'); // Now correctly defined from useTraining
-      
       // Set isTraining to true immediately after setting the training type
       setIsTraining(true);
       setIsSubmitting(true); // Set isSubmitting to true when starting training
@@ -231,7 +227,7 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // Call startPolling with just the experimentId - our modified version will use lastTrainingType
+        // Call startPolling with just the experimentId
         startPolling(result.experiment_id);
         
         toast({

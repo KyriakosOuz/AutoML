@@ -11,7 +11,7 @@ export interface UseExperimentPollingProps {
   setExperimentStatus: (status: ExperimentStatus) => void;
   setIsLoading: (loading: boolean) => void;
   setIsTraining: (training: boolean) => void; 
-  setIsPredicting: (predicting: boolean) => void; 
+  setIsPredicting: (predicting: boolean) => void; // Add this line to include setIsPredicting
 }
 
 export const useExperimentPolling = ({
@@ -19,8 +19,7 @@ export const useExperimentPolling = ({
   onError,
   setExperimentStatus,
   setIsLoading,
-  setIsTraining,
-  setIsPredicting
+  setIsTraining
 }: UseExperimentPollingProps) => {
   // Replace state-based interval with ref
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,7 +67,8 @@ export const useExperimentPolling = ({
     }
   }, [activeExperimentId]);
 
-  // Modified startPolling to ensure type is correctly used
+  // Use setInterval, but always stop (cancel) as soon as results are reported ready!
+  // Updated to accept only experimentId, with type as an optional parameter
   const startPolling = useCallback(async (experimentId: string, type: TrainingType = 'automl') => {
     // Always stop any existing polling first
     stopPolling();
@@ -76,7 +76,7 @@ export const useExperimentPolling = ({
     console.log(`[useExperimentPolling] Starting polling for ${type} experiment:`, experimentId);
     setIsLoading(true);
     setPollingAttempts(0);
-    setExperimentType(type); // Ensure type is set here
+    setExperimentType(type);
     setExperimentStatus('processing');
     setActiveExperimentId(experimentId);
     isManuallyStoppedRef.current = false;
@@ -245,7 +245,7 @@ export const useExperimentPolling = ({
     // Return an object containing info about the current polling operation
     return {
       experimentId,
-      type, // Make sure to include the type here
+      type,
       stop: stopPolling
     };
   }, [onSuccess, onError, setExperimentStatus, setIsLoading, stopPolling, toast, pollingAttempts, setIsTraining]);

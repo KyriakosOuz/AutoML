@@ -483,7 +483,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, [stopPollingHook]);
 
-  // ✅ FIXED: Create modified startPolling function that uses lastTrainingType
+  // ✅ FIXED: Create modified startPolling function that only takes experimentId
   const startPolling = useCallback((experimentId: string) => {
     // Default to the current lastTrainingType if type is not provided
     const trainingType = state.lastTrainingType || 'automl';
@@ -728,14 +728,10 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRecentlyCompletedPolling(false);
       setIsAutoMLExperiment(false);
       
-      // Get the current active tab before reset
-      const currentTab = state.activeTab;
-      
-      // Create new state object with defaults
-      const newState: TrainingContextState = {
+      setState({
         isTraining: false,
         isSubmitting: false,
-        isPredicting: false,
+        isPredicting: false, // Reset isPredicting in resetTrainingState
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -751,14 +747,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
+        activeTab: 'automl',
         isCheckingLastExperiment: false,
         resultsLoaded: false,
         experimentName: null,
-        // Preserve the current tab unless it's results or predict (which require an experiment)
-        activeTab: (currentTab === 'results' || currentTab === 'predict') ? 'automl' : currentTab
-      };
-      
-      setState(newState);
+      });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
