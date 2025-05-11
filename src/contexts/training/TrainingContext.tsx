@@ -483,7 +483,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, [stopPollingHook]);
 
-  // ✅ FIXED: Create modified startPolling function that only takes experimentId
+  // ✅ FIXED: Create modified startPolling function that uses lastTrainingType
   const startPolling = useCallback((experimentId: string) => {
     // Default to the current lastTrainingType if type is not provided
     const trainingType = state.lastTrainingType || 'automl';

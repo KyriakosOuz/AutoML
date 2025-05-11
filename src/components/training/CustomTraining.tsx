@@ -227,7 +227,7 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // Call startPolling with just the experimentId
+        // Call startPolling with just the experimentId - our modified version will use lastTrainingType
         startPolling(result.experiment_id);
         
         toast({
