@@ -41,8 +41,7 @@ const CustomTraining: React.FC = () => {
     isLoadingResults,
     startPolling,
     stopPolling,
-    activeTab,
-    experimentStatus
+    activeTab
   } = useTraining();
   
   const { toast } = useToast();
@@ -50,7 +49,6 @@ const CustomTraining: React.FC = () => {
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
   const [hasFetchedParams, setHasFetchedParams] = useState(false);
-  const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Local state for extra safety
 
   const navigate = useNavigate();
 
@@ -158,7 +156,6 @@ const CustomTraining: React.FC = () => {
       setActiveExperimentId(null);
       setIsTraining(true);
       setIsSubmitting(true); // Set isSubmitting to true when starting training
-      setLocalIsSubmitting(true); // Set local state too for extra safety
       setError(null);
       
       // Explicitly set the training type to 'custom'
@@ -200,8 +197,8 @@ const CustomTraining: React.FC = () => {
         // Log the training type explicitly before starting polling
         console.log('[CustomTraining] Starting polling for CUSTOM experiment:', result.experiment_id);
         
-        // FIX: Pass 'custom' as the second parameter to ensure proper tracking
-        startPolling(result.experiment_id, 'custom');
+        // FIX: Remove the second parameter 'custom' since startPolling only accepts one parameter in this context
+        startPolling(result.experiment_id);
         
         toast({
           title: "Training Submitted",
@@ -221,13 +218,11 @@ const CustomTraining: React.FC = () => {
       });
       setIsTraining(false);
       setIsSubmitting(false);
-      setLocalIsSubmitting(false); // Reset local state on error
     } finally {
       // FIXED: Removed setIsTraining(false) from here
       // Only clear the isSubmitting flag, but let the polling mechanism control the isTraining state
       // This ensures the Train Model button remains disabled while training is in progress
       setIsSubmitting(false);
-      setLocalIsSubmitting(false); // Reset local state
     }
   };
 
@@ -243,16 +238,6 @@ const CustomTraining: React.FC = () => {
       customParameters.testSize >= 0.1 &&
       customParameters.testSize <= 0.5
     );
-  };
-
-  // Enhanced button disabled logic to ensure button stays disabled during training
-  const isButtonDisabled = () => {
-    return isTraining || 
-           isSubmitting || 
-           localIsSubmitting || 
-           !isFormValid() || 
-           experimentStatus === 'processing' || 
-           experimentStatus === 'running';
   };
 
   return (
@@ -274,7 +259,7 @@ const CustomTraining: React.FC = () => {
               <Select
                 value={customParameters.algorithm}
                 onValueChange={(value) => setCustomParameters({ algorithm: value })}
-                disabled={isButtonDisabled()}
+                disabled={isTraining || isLoadingAlgorithms}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={isLoadingAlgorithms ? "Loading algorithms..." : "Select algorithm"} />
@@ -321,7 +306,7 @@ const CustomTraining: React.FC = () => {
                 value={experimentName}
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="Enter experiment name"
-                disabled={isButtonDisabled()}
+                disabled={isTraining}
               />
             </div>
 
@@ -337,7 +322,7 @@ const CustomTraining: React.FC = () => {
                 step={0.05}
                 value={[customParameters.testSize]}
                 onValueChange={(values) => setCustomParameters({ testSize: values[0] })}
-                disabled={isButtonDisabled()}
+                disabled={isTraining}
                 aria-label="Test set size"
               />
             </div>
@@ -363,7 +348,7 @@ const CustomTraining: React.FC = () => {
                 id="stratify"
                 checked={customParameters.stratify}
                 onCheckedChange={(checked) => setCustomParameters({ stratify: checked })}
-                disabled={isButtonDisabled()}
+                disabled={isTraining}
                 aria-label="Stratify split"
               />
             </div>
@@ -388,7 +373,7 @@ const CustomTraining: React.FC = () => {
                 min={0}
                 value={customParameters.randomSeed}
                 onChange={(e) => setCustomParameters({ randomSeed: parseInt(e.target.value) || 0 })}
-                disabled={isButtonDisabled()}
+                disabled={isTraining}
                 placeholder="Enter random seed (e.g. 42)"
                 aria-label="Random seed for reproducibility"
               />
@@ -416,18 +401,18 @@ const CustomTraining: React.FC = () => {
                 id="enable-visualization"
                 checked={customParameters.enableVisualization}
                 onCheckedChange={(checked) => setCustomParameters({ enableVisualization: checked })}
-                disabled={isButtonDisabled()}
+                disabled={isTraining}
                 aria-label="Enable visualizations"
               />
             </div>
 
             <Button
               onClick={handleTrainModel}
-              disabled={isButtonDisabled()}
+              disabled={isTraining || isSubmitting || !isFormValid()}
               className="w-full mt-4"
               size="lg"
             >
-              {isTraining || isSubmitting || localIsSubmitting ? (
+              {isTraining || isSubmitting ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Training in Progress...
