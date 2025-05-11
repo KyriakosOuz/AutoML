@@ -209,7 +209,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     completed_at,
     hyperparameters = {},
     automl_engine,
-    model_display_name
+    model_display_name,
+    model_file_url
   } = experimentResults;
 
   // Use model_display_name as the primary source for best model label
@@ -263,12 +264,27 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type.includes('predictions')
   );
   
-  // Find the model file (if available)
-  const modelFile = files.find(file => 
-    file.file_type === 'model' || 
-    file.file_type.includes('model') ||
-    file.file_name?.includes('.pkl')
-  );
+  // Updated to prioritize model_file_url from experimentResults
+  // If not available, fall back to the existing method of searching through files
+  const getModelFileUrl = () => {
+    if (model_file_url) {
+      console.log('[MLJARExperimentResults] Using model_file_url:', model_file_url);
+      return model_file_url;
+    }
+    
+    // Fallback: find the model file in the files array
+    const modelFile = files.find(file => 
+      file.file_type === 'model' || 
+      file.file_type.includes('model') ||
+      file.file_name?.includes('.pkl')
+    );
+    
+    console.log('[MLJARExperimentResults] Using fallback model file:', modelFile);
+    return modelFile?.file_url;
+  };
+  
+  // Get the model download URL
+  const modelDownloadUrl = getModelFileUrl();
   
   // Format metric for display
   const formatMetric = (value: number | undefined) => {
@@ -539,15 +555,15 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           {/* Model Details Tab - Simplified clean UI */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Model File Card */}
+              {/* Model File Card - Updated to use modelDownloadUrl */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Model File</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center pt-2">
-                  {modelFile ? (
+                  {modelDownloadUrl ? (
                     <Button asChild>
-                      <a href={modelFile.file_url} download>
+                      <a href={modelDownloadUrl} download>
                         <Download className="h-4 w-4 mr-2" />
                         Download Model
                       </a>
