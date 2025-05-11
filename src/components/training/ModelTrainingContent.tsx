@@ -136,20 +136,26 @@ const ModelTrainingContent: React.FC = () => {
     return false;
   };
 
-  // If current tab is results or predict but experiment is not completed, switch to automl
+  // FIXED: Modified the tab switching logic to not force the user to automl tab when custom training is active
   useEffect(() => {
     const canShowResultsAndPredict = showResultsAndPredict();
-    if ((activeTab === 'results' || activeTab === 'predict') && !canShowResultsAndPredict) {
-      console.log("ModelTrainingContent - Switching to automl tab because results/predict not available");
-      setActiveTab('automl');
-    }
     
-    // NEW: If we're on a disabled tab, switch to appropriate tab
-    if (isTraining && lastTrainingType) {
-      if (activeTab === 'automl' && lastTrainingType === 'custom') {
+    if ((activeTab === 'results' || activeTab === 'predict') && !canShowResultsAndPredict) {
+      // Only switch to default training tab if results/predict tabs aren't available
+      console.log("ModelTrainingContent - Results/predict not available, switching to appropriate training tab");
+      
+      // Choose tab based on last training type, defaulting to automl if unknown
+      if (lastTrainingType === 'custom') {
+        setActiveTab('custom');
+      } else {
+        setActiveTab('automl');
+      }
+    } else if (isTraining) {
+      // IMPORTANT FIX: Make sure we're on the correct tab that matches the current training type
+      if (lastTrainingType === 'custom' && activeTab !== 'custom') {
         console.log("ModelTrainingContent - Switching to custom tab because Custom training is active");
         setActiveTab('custom');
-      } else if (activeTab === 'custom' && lastTrainingType === 'automl') {
+      } else if (lastTrainingType === 'automl' && activeTab !== 'automl' && activeTab !== 'results' && activeTab !== 'predict') {
         console.log("ModelTrainingContent - Switching to automl tab because AutoML training is active");
         setActiveTab('automl');
       }
@@ -165,14 +171,15 @@ const ModelTrainingContent: React.FC = () => {
     }
   }, [datasetId, taskType, experimentStatus, activeExperimentId, setExperimentStatus]);
 
-  // Auto-switch to results tab when results are loaded - ENHANCED for AutoML
+  // FIXED: Modified auto-switch to results tab to work for both AutoML and Custom training
   useEffect(() => {
     // Track switch attempts for debugging
     if (autoSwitchAttempts > 5) return; // Prevent infinite loop
     
-    const isAutoML = lastTrainingType === 'automl';
     const isCompleted = experimentStatus === 'completed' || experimentStatus === 'success';
     const canShowResults = showResultsAndPredict();
+    
+    // Common conditions for switching to results tab for both AutoML and Custom training
     const shouldSwitch = 
       resultsLoaded && 
       activeExperimentId && 
@@ -180,26 +187,18 @@ const ModelTrainingContent: React.FC = () => {
       canShowResults &&
       (activeTab === 'automl' || activeTab === 'custom');
     
-    // Add special case for AutoML
-    const shouldSwitchAutoML = 
-      isAutoML && 
-      isCompleted && 
-      activeExperimentId && 
-      (activeTab === 'automl');
-    
     console.log("ModelTrainingContent - Tab switching check:", {
       resultsLoaded,
-      isAutoML,
       isCompleted,
       activeTab,
       shouldSwitch,
-      shouldSwitchAutoML,
       canShowResults,
+      trainingType: lastTrainingType,
       autoSwitchAttempts
     });
     
-    if (shouldSwitch || shouldSwitchAutoML) {
-      console.log(`ModelTrainingContent - Auto-switching to results tab (${isAutoML ? 'AutoML' : 'general'})`);
+    if (shouldSwitch) {
+      console.log(`ModelTrainingContent - Auto-switching to results tab for ${lastTrainingType} training`);
       setActiveTab('results');
       // Increment attempt counter
       setAutoSwitchAttempts(prev => prev + 1);
@@ -247,12 +246,22 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
-  // Handle reset button click
+  // FIXED: Modified reset handler to preserve the active tab when possible
   const handleReset = () => {
     console.log("Reset button clicked, stopping polling and resetting training state");
     stopPolling(); // First stop any active polling
     resetTrainingState(); // Then reset the training state
-    setActiveTab('automl'); // Set the active tab to automl
+    
+    // Choose appropriate tab based on current active tab
+    if (activeTab === 'automl' || activeTab === 'custom') {
+      // If already on a training tab, stay there
+      console.log(`ModelTrainingContent - After reset, staying on ${activeTab} tab`);
+    } else {
+      // If on results or predict tab, go back to last training type or default to automl
+      console.log(`ModelTrainingContent - After reset, switching to ${lastTrainingType || 'automl'} tab`);
+      setActiveTab(lastTrainingType === 'custom' ? 'custom' : 'automl');
+    }
+    
     setAutoSwitchAttempts(0); // Reset the auto switch counter
   };
 
