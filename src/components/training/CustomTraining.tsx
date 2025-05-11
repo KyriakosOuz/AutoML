@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -185,6 +184,9 @@ const CustomTraining: React.FC = () => {
       // IMPROVED: Set training type BEFORE setting isTraining to ensure proper tab disabling
       console.log('[CustomTraining] Setting lastTrainingType to "custom"');
       setLastTrainingType('custom');
+      
+      // Explicitly set the active tab to custom to ensure it doesn't switch
+      setActiveTab('custom'); // ✅ Added this line to lock the tab to 'custom'
       
       // Set isTraining to true immediately after setting the training type
       setIsTraining(true);

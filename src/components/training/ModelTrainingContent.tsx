@@ -126,6 +126,12 @@ const ModelTrainingContent: React.FC = () => {
         console.log("ModelTrainingContent - Disabling AutoML tab because Custom is training");
         return true;
       }
+      
+      // ENHANCED: Also prevent switching to results/predict during training until they're ready
+      if ((tabName === 'results' || tabName === 'predict') && !showResultsAndPredict()) {
+        console.log(`ModelTrainingContent - Disabling ${tabName} tab during training because results aren't available yet`);
+        return true;
+      }
     }
     
     // For Results and Predict tabs, use existing logic
@@ -136,7 +142,7 @@ const ModelTrainingContent: React.FC = () => {
     return false;
   };
 
-  // FIXED: Modified the tab switching logic to not force the user to automl tab when custom training is active
+  // UPDATED: Modified tab switching logic to respect active training type
   useEffect(() => {
     const canShowResultsAndPredict = showResultsAndPredict();
     
@@ -150,17 +156,10 @@ const ModelTrainingContent: React.FC = () => {
       } else {
         setActiveTab('automl');
       }
-    } else if (isTraining) {
-      // IMPORTANT FIX: Make sure we're on the correct tab that matches the current training type
-      if (lastTrainingType === 'custom' && activeTab !== 'custom') {
-        console.log("ModelTrainingContent - Switching to custom tab because Custom training is active");
-        setActiveTab('custom');
-      } else if (lastTrainingType === 'automl' && activeTab !== 'automl' && activeTab !== 'results' && activeTab !== 'predict') {
-        console.log("ModelTrainingContent - Switching to automl tab because AutoML training is active");
-        setActiveTab('automl');
-      }
     }
-  }, [activeTab, showResultsAndPredict, setActiveTab, isTraining, lastTrainingType]);
+    // DO NOT auto-switch tabs during active training - respect the current tab
+    // This allows the user to stay on the custom tab when running custom training
+  }, [activeTab, showResultsAndPredict, setActiveTab, lastTrainingType]);
 
   // Reset processing status if we have valid dataset data and status is still 'processing'
   useEffect(() => {
@@ -337,13 +336,31 @@ const ModelTrainingContent: React.FC = () => {
         </Alert>
       )}
       <TrainingInsights />
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(tab) => {
+          // Only allow tab switching if not training or if explicitly allowed
+          if (!isTraining || 
+              // Allow switching to results/predict if they're available
+              ((tab === 'results' || tab === 'predict') && showResultsAndPredict()) ||
+              // Allow switching between tabs that match the current training type
+              (isTraining && lastTrainingType === 'automl' && tab === 'automl') ||
+              (isTraining && lastTrainingType === 'custom' && tab === 'custom')
+             ) {
+            console.log(`ModelTrainingContent - Tab change allowed to: ${tab}`);
+            setActiveTab(tab);
+          } else {
+            console.log(`ModelTrainingContent - Tab change to ${tab} prevented during training`);
+          }
+        }} 
+        className="w-full"
+      >
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
           <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4'} bg-gray-100`}>
             <TabsTrigger 
               value="automl" 
               disabled={isTabDisabled('automl')}
-              className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isTabDisabled('automl') ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isTabDisabled('automl') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               AutoML
@@ -351,14 +368,14 @@ const ModelTrainingContent: React.FC = () => {
             <TabsTrigger 
               value="custom" 
               disabled={isTabDisabled('custom')}
-              className="data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base"
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isTabDisabled('custom') ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isTabDisabled('custom') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
               Custom
             </TabsTrigger>
             <TabsTrigger 
               value="results" 
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('results') ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isTabDisabled('results')}
             >
               {isTabDisabled('results') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}
@@ -366,7 +383,7 @@ const ModelTrainingContent: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger 
               value="predict" 
-              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''}`}
+              className={`data-[state=active]:bg-black data-[state=active]:text-white text-xs sm:text-sm md:text-base ${isMobile ? 'mt-2' : ''} ${isTabDisabled('predict') ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isTabDisabled('predict')}
             >
               {isTabDisabled('predict') && <CircleSlash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />}

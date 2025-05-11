@@ -728,10 +728,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRecentlyCompletedPolling(false);
       setIsAutoMLExperiment(false);
       
-      setState({
+      // Get the current active tab before reset
+      const currentTab = state.activeTab;
+      
+      // Create new state object with defaults
+      const newState = {
         isTraining: false,
         isSubmitting: false,
-        isPredicting: false, // Reset isPredicting in resetTrainingState
+        isPredicting: false,
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -747,11 +751,14 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
-        activeTab: 'automl',
         isCheckingLastExperiment: false,
         resultsLoaded: false,
         experimentName: null,
-      });
+        // Preserve the current tab unless it's results or predict (which require an experiment)
+        activeTab: (currentTab === 'results' || currentTab === 'predict') ? 'automl' : currentTab
+      };
+      
+      setState(newState);
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
