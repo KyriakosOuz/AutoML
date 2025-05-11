@@ -143,6 +143,7 @@ export const getExperimentResults = async (
       automl_engine: result.automl_engine,
       class_labels: result.class_labels,
       training_type: result.training_type || (result.automl_engine ? 'automl' : 'custom'),
+      model_display_name: result.model_display_name, // Added this field to the mapping
       training_results: {
         metrics: result.metrics,
         classification_report: result.metrics?.classification_report,
