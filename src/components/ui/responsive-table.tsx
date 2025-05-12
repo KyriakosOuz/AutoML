@@ -13,8 +13,8 @@ const ResponsiveTable = React.forwardRef<HTMLTableElement, ResponsiveTableProps>
   ({ className, children, minWidth = "650px", ...props }, ref) => (
     <div className="relative w-full overflow-hidden">
       <ScrollArea className="w-full" type="always">
-        <div className={cn("min-w-full", minWidth && `min-w-[${minWidth}]`)}>
-          <Table ref={ref} className={cn("min-w-full", className)} {...props}>
+        <div style={{ minWidth }} className="w-full">
+          <Table ref={ref} className={cn("w-full", className)} {...props}>
             {children}
           </Table>
         </div>

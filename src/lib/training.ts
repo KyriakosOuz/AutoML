@@ -119,6 +119,12 @@ export const getExperimentResults = async (
       return null;
     }
 
+    // Check for leaderboard CSV data
+    const leaderboardFile = result.files?.find((file: any) => 
+      file.file_type === 'leaderboard_csv' || 
+      file.file_url?.includes('leaderboard')
+    );
+
     // Map the API response to our ExperimentResults type
     const experimentResults: ExperimentResults = {
       experimentId: result.experimentId || result.experiment_id,
@@ -143,7 +149,8 @@ export const getExperimentResults = async (
       automl_engine: result.automl_engine,
       class_labels: result.class_labels,
       training_type: result.training_type || (result.automl_engine ? 'automl' : 'custom'),
-      model_display_name: result.model_display_name, // Added this field to the mapping
+      model_display_name: result.model_display_name,
+      leaderboard_csv: result.leaderboard_csv || (leaderboardFile ? leaderboardFile.file_content : null),
       training_results: {
         metrics: result.metrics,
         classification_report: result.metrics?.classification_report,

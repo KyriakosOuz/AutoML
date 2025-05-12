@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
+import H2OLeaderboardTable from './H2OLeaderboardTable';
 
 interface H2OExperimentResultsProps {
   experimentId: string | null;
@@ -104,6 +105,35 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       metricName.toLowerCase().includes(m)
     );
   };
+  
+  // Process leaderboard data for the H2OLeaderboardTable component
+  const leaderboardData = useMemo(() => {
+    if (!experimentResults) return [];
+    
+    // Check if leaderboard is already an array
+    if (Array.isArray(experimentResults.leaderboard) && experimentResults.leaderboard.length > 0) {
+      // Format the existing leaderboard data for the table
+      return experimentResults.leaderboard.map(model => ({
+        model_id: model.name || '',
+        name: model.name?.split('_')[0] || '',
+        ...model.metrics,
+        training_time_sec: model.training_time_sec
+      }));
+    }
+    
+    // Check if there's a CSV file with leaderboard data
+    const leaderboardFile = experimentResults.files?.find(file => 
+      file.file_type === 'leaderboard_csv' || 
+      file.file_url?.includes('leaderboard')
+    );
+    
+    // If we have leaderboard CSV data in the experimentResults, return it
+    if (experimentResults.leaderboard_csv) {
+      return experimentResults.leaderboard_csv;
+    }
+    
+    return [];
+  }, [experimentResults]);
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -273,6 +303,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
+
+  // Check if we have leaderboard data to show the tab
+  const hasLeaderboardData = leaderboardData.length > 0 || leaderboard.length > 0;
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -465,9 +498,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Leaderboard Tab */}
+          {/* Leaderboard Tab - Enhanced with our new component */}
           <TabsContent value="leaderboard" className="p-6">
-            {leaderboard && leaderboard.length > 0 ? (
+            {hasLeaderboardData ? (
               <Card>
                 <CardHeader>
                   <CardTitle>Model Leaderboard</CardTitle>
@@ -477,49 +510,13 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Rank</TableHead>
-                          <TableHead>Model</TableHead>
-                          {leaderboard[0].metrics && Object.keys(leaderboard[0].metrics).map((metricKey) => (
-                            <TableHead key={metricKey}>{metricKey.replace(/_/g, ' ')}</TableHead>
-                          ))}
-                          <TableHead>Training Time</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {leaderboard.map((model, index) => (
-                          <TableRow 
-                            key={index}
-                            className={selectedModel === model.name ? "bg-primary/10" : ""}
-                            onClick={() => setSelectedModel(model.name)}
-                          >
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell className="font-medium">
-                              {model.name}
-                              {index === 0 && (
-                                <Badge variant="outline" className="ml-2 bg-primary/10 text-primary">
-                                  Best
-                                </Badge>
-                              )}
-                            </TableCell>
-                            {model.metrics && Object.entries(model.metrics).map(([metricKey, metricValue]) => (
-                              <TableCell key={metricKey}>
-                                {isPercentageMetric(metricKey) 
-                                  ? formatMetricValue(metricValue as number, true)
-                                  : formatMetricValue(metricValue as number, false)}
-                              </TableCell>
-                            ))}
-                            <TableCell>
-                              {model.training_time_sec 
-                                ? formatTrainingTime(model.training_time_sec) 
-                                : 'N/A'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    {/* Use our new H2OLeaderboardTable component */}
+                    <H2OLeaderboardTable 
+                      data={leaderboardData.length > 0 ? leaderboardData : leaderboard}
+                      defaultSortMetric={primaryMetric?.name || 'auc'}
+                      selectedModelId={selectedModel}
+                      onModelSelect={setSelectedModel}
+                    />
                   </div>
                 </CardContent>
               </Card>
