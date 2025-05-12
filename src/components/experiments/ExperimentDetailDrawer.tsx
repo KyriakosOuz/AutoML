@@ -138,7 +138,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       !file.file_type.includes('report') &&
       !file.file_type.includes('label_encoder') &&
       !file.file_type.includes('readme') &&
-      !file.file_type.includes('predictions')
+      !file.file_type.includes('predictions') &&
+      // Filter out leaderboard CSV files from visualizations for H2O experiments
+      !(results.automl_engine?.toLowerCase() === 'h2o' && file.file_type.includes('leaderboard'))
     );
   };
   
@@ -166,6 +168,14 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     return results.files.find(file => 
       file.file_type === 'predictions_csv' ||
       file.file_type.includes('predictions')
+    );
+  };
+
+  const getLeaderboardFile = () => {
+    if (!results?.files || results.automl_engine?.toLowerCase() !== 'h2o') return null;
+    
+    return results.files.find(file => 
+      file.file_type.includes('leaderboard')
     );
   };
 
@@ -799,6 +809,38 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </div>
                       )}
                       
+                      {/* Add Leaderboard CSV download for H2O experiments */}
+                      {getLeaderboardFile() && (
+                        <Card className="bg-muted/40">
+                          <CardContent className="pt-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                              <div>
+                                <h3 className="font-medium">Leaderboard CSV</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Models comparison from H2O AutoML run
+                                </p>
+                              </div>
+                              <Button 
+                                onClick={() => {
+                                  const file = getLeaderboardFile();
+                                  if (file) {
+                                    handleFileDownload(
+                                      file.file_url, 
+                                      `${results.automl_engine}_leaderboard.csv`
+                                    );
+                                  }
+                                }}
+                                className="w-full sm:w-auto"
+                                variant="outline"
+                              >
+                                <TableIcon className="h-4 w-4 mr-2" />
+                                Download Leaderboard
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
                       {results.report_file_url && (
                         <Card className="bg-muted/40">
                           <CardContent className="pt-6">
@@ -895,7 +937,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Card>
                       )}
                       
-                      {(!getModelFile() && !results.report_file_url && !getReadmeFile() && !getPredictionsFile()) && (
+                      {(!getModelFile() && !results.report_file_url && !getReadmeFile() && !getPredictionsFile() && !getLeaderboardFile()) && (
                         <div className="text-center py-12 text-muted-foreground">
                           <DownloadIcon className="h-12 w-12 mx-auto mb-4" />
                           <p>No downloadable files available for this experiment</p>
