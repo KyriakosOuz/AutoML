@@ -275,27 +275,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Get best model details
   const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
   
-  // Update best model name to prioritize model_display_name and trim the model name from leaderboard
-  const getBestModelName = () => {
-    // First check if there's a model_display_name
-    if (model_display_name) return model_display_name;
-    
-    // Next, check if we have a model name from the leaderboard
-    if (bestModelDetails?.name) {
-      // Parse the model name - format is usually like "DRF_1_AutoML_1_20250512_135503"
-      // Extract just the first two parts (e.g., "DRF_1")
-      const parts = bestModelDetails.name.split('_');
-      if (parts.length >= 2) {
-        return `${parts[0]}_${parts[1]}`;
-      }
-      return bestModelDetails.name;
-    }
-    
-    // Fall back to metrics.best_model_label or default
-    return metrics.best_model_label || 'Best Model';
-  };
-  
-  const bestModelName = getBestModelName();
+  // Update best model name to prioritize model_display_name
+  const bestModelName = model_display_name || 
+                       bestModelDetails?.name || 
+                       metrics.best_model_label || 
+                       'Best Model';
 
   // Get primary metric based on task type
   const getPrimaryMetric = () => {
