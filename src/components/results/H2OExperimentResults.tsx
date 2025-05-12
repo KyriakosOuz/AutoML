@@ -275,11 +275,28 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Get best model details
   const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
   
-  // Update best model name to prioritize model_display_name
+  // Get the model name and trim it to the first two parts (e.g., "DRF_1")
+  // Takes the first model from leaderboard and extracts just "DRF_1" part
+  const getShortModelName = () => {
+    if (model_display_name) return model_display_name;
+    
+    if (bestModelDetails?.name) {
+      const parts = bestModelDetails.name.split('_');
+      if (parts.length >= 2) {
+        return `${parts[0]}_${parts[1]}`;
+      }
+      return parts[0]; // If only one part exists
+    }
+    
+    return metrics.best_model_label || 'Best Model';
+  };
+  
   const bestModelName = model_display_name || 
                        bestModelDetails?.name || 
                        metrics.best_model_label || 
                        'Best Model';
+                       
+  const shortModelName = getShortModelName();
 
   // Get primary metric based on task type
   const getPrimaryMetric = () => {
@@ -337,7 +354,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
             <CardTitle className="text-xl">
-              {model_display_name || experiment_name || 'H2O Experiment Results'}
+              {experiment_name || 'H2O Experiment Results'}
             </CardTitle>
           </div>
           <Badge variant="outline" className="bg-primary/10 text-primary">
@@ -412,7 +429,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       <span className="text-sm font-medium">{target_column}</span>
                       
                       <span className="text-sm text-muted-foreground">Best Model:</span>
-                      <span className="text-sm font-medium">{bestModelName}</span>
+                      <span className="text-sm font-medium">{shortModelName}</span>
                       
                       <span className="text-sm text-muted-foreground">Created At:</span>
                       <span className="text-sm font-medium">{formattedCreatedAt}</span>
