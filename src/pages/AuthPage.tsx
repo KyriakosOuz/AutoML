@@ -24,8 +24,9 @@ const AuthPage = () => {
     return null;
   }
 
-  // Load hCaptcha script
+  // Load hCaptcha script - commented out for now
   useEffect(() => {
+    /*
     if (typeof window !== 'undefined' && !window.hcaptcha) {
       const script = document.createElement('script');
       script.src = 'https://js.hcaptcha.com/1/api.js';
@@ -40,6 +41,9 @@ const AuthPage = () => {
     } else {
       setCaptchaLoaded(true);
     }
+    */
+    // Just set captchaLoaded to true since we're bypassing it
+    setCaptchaLoaded(true);
   }, []);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
@@ -138,7 +142,8 @@ const AuthPage = () => {
                     </div>
                   </div>
                   
-                  {/* hCaptcha Container */}
+                  {/* hCaptcha Container - Commented out for development */}
+                  {/*
                   <div className="flex justify-center my-4">
                     <div className="h-captcha" data-sitekey="YOUR_HCAPTCHA_SITE_KEY" data-theme="light"></div>
                   </div>
@@ -149,6 +154,7 @@ const AuthPage = () => {
                       This site is protected by hCaptcha to ensure you're not a robot.
                     </AlertDescription>
                   </Alert>
+                  */}
                   
                   <Button type="submit" className="w-full">
                     Sign In with Email
@@ -223,7 +229,8 @@ const AuthPage = () => {
                     </div>
                   </div>
                   
-                  {/* hCaptcha Container */}
+                  {/* hCaptcha Container - Commented out for development */}
+                  {/*
                   <div className="flex justify-center my-4">
                     <div className="h-captcha" data-sitekey="YOUR_HCAPTCHA_SITE_KEY" data-theme="light"></div>
                   </div>
@@ -234,6 +241,7 @@ const AuthPage = () => {
                       This site is protected by hCaptcha to ensure you're not a robot.
                     </AlertDescription>
                   </Alert>
+                  */}
                   
                   <Button type="submit" className="w-full">
                     Create Account

@@ -28,6 +28,8 @@ export const getAuthToken = (): string => {
 
 // Helper function to get captcha token (supports both reCAPTCHA and hCaptcha)
 const getCaptchaToken = (): string | undefined => {
+  /* 
+  // Commented out CAPTCHA validation for development - will be re-enabled in production
   if (typeof window !== 'undefined') {
     try {
       // Try to get hCaptcha token first
@@ -52,7 +54,9 @@ const getCaptchaToken = (): string | undefined => {
       console.error('Error getting CAPTCHA token:', error);
     }
   }
-  return undefined;
+  */
+  // During development, return a dummy token to bypass CAPTCHA
+  return "development-mode-captcha-bypassed";
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -103,7 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Get CAPTCHA token (for email sign-ins)
         const captchaToken = getCaptchaToken();
-        if (!captchaToken) return;
+        // Commenting out the CAPTCHA validation check
+        // if (!captchaToken) return;
         
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -139,7 +144,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Get CAPTCHA token
       const captchaToken = getCaptchaToken();
-      if (!captchaToken) return;
+      // Commenting out the CAPTCHA validation check
+      // if (!captchaToken) return;
       
       const { error } = await supabase.auth.signUp({
         email,
