@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -69,6 +70,8 @@ const formatVisualizationName = (fileType: string): string => {
     return 'SHAP Values';
   } else if (fileType.includes('partial_dependence')) {
     return 'Partial Dependence';
+  } else if (fileType.includes('importance')) {
+    return 'Feature Importance';
   }
   
   // Default formatting: capitalize each word and replace underscores with spaces
@@ -243,7 +246,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type
+  // Filter files by type - updated to include importance and evaluation_curve
   const getFilesByType = (fileType: string) => {
     return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
@@ -253,7 +256,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     ...getFilesByType('roc_curve'),
     ...getFilesByType('variable_importance'),
     ...getFilesByType('shap'),
-    ...getFilesByType('partial_dependence')
+    ...getFilesByType('partial_dependence'),
+    ...getFilesByType('importance'),
+    ...getFilesByType('evaluation_curve')
   ];
 
   const modelFile = files.find(file => 
@@ -401,6 +406,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                           key === 'classification_report' ||
                           key === 'confusion_matrix' ||
                           key === 'source' ||
+                          key === 'mean_per_class_error' ||  // Skip it here, we'll handle it separately
                           typeof value !== 'number'
                         ) return null;
                         
@@ -424,6 +430,30 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                           </div>
                         );
                       })}
+                      
+                      {/* Add special handling for mean_per_class_error */}
+                      {metrics.mean_per_class_error && Array.isArray(metrics.mean_per_class_error) && 
+                       metrics.mean_per_class_error.length > 0 && 
+                       Array.isArray(metrics.mean_per_class_error[0]) && (
+                        <>
+                          <div className="p-3 bg-muted/40 rounded-md">
+                            <span className="block text-sm text-muted-foreground">
+                              Class 0 Error Rate
+                            </span>
+                            <span className="text-lg font-medium">
+                              {formatMetricValue(metrics.mean_per_class_error[0][0], true)}
+                            </span>
+                          </div>
+                          <div className="p-3 bg-muted/40 rounded-md">
+                            <span className="block text-sm text-muted-foreground">
+                              Class 1 Error Rate
+                            </span>
+                            <span className="text-lg font-medium">
+                              {formatMetricValue(metrics.mean_per_class_error[0][1], true)}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>

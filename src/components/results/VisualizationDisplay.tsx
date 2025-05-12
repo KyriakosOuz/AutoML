@@ -13,20 +13,22 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Filter files to only include visualizations
+  // Filter files to only include visualizations - updated to include importance and evaluation_curve
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
       'shap', 
       'confusion_matrix', 
       'importance', 
+      'evaluation_curve',
       'plot', 
       'chart', 
       'graph', 
       'visualization',
       'roc_curve',
       'precision_recall_curve',
-      'class_distribution'
+      'class_distribution',
+      'variable_importance'
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
