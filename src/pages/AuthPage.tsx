@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Cpu, Mail, Lock } from "lucide-react";
+import { Cpu, Mail, Lock, Github, Chrome } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
@@ -29,6 +30,10 @@ const AuthPage = () => {
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     await signUp(email, password);
+  };
+
+  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+    await signIn(provider);
   };
 
   return (
@@ -53,10 +58,35 @@ const AuthPage = () => {
               <CardHeader>
                 <CardTitle>Sign In</CardTitle>
                 <CardDescription>
-                  Sign in to your account using your email and password.
+                  Sign in to your account using your preferred method.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* OAuth Providers */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center gap-2 h-10"
+                    onClick={() => handleOAuthSignIn("google")}
+                  >
+                    <Chrome className="h-4 w-4" />
+                    <span>Google</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center gap-2 h-10"
+                    onClick={() => handleOAuthSignIn("github")}
+                  >
+                    <Github className="h-4 w-4" />
+                    <span>GitHub</span>
+                  </Button>
+                </div>
+
+                <div className="relative flex items-center justify-center my-6">
+                  <Separator className="w-full" />
+                  <span className="absolute bg-gray-50 text-gray-500 text-xs px-2">OR</span>
+                </div>
+
                 <form onSubmit={handleEmailSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -104,6 +134,31 @@ const AuthPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* OAuth Providers */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center gap-2 h-10"
+                    onClick={() => handleOAuthSignIn("google")}
+                  >
+                    <Chrome className="h-4 w-4" />
+                    <span>Google</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center gap-2 h-10"
+                    onClick={() => handleOAuthSignIn("github")}
+                  >
+                    <Github className="h-4 w-4" />
+                    <span>GitHub</span>
+                  </Button>
+                </div>
+
+                <div className="relative flex items-center justify-center my-6">
+                  <Separator className="w-full" />
+                  <span className="absolute bg-gray-50 text-gray-500 text-xs px-2">OR</span>
+                </div>
+
                 <form onSubmit={handleEmailSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
