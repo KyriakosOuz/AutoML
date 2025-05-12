@@ -413,13 +413,17 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               
               <Card className="shadow-sm col-span-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Performance Metrics</CardTitle>
+                  <CardTitle className="text-base text-center">Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold">
-                        {primaryMetric.name.replace(/_/g, ' ')}
+                        {primaryMetric.name
+                          .replace(/_/g, ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ')}
                       </h3>
                       <p className="text-3xl font-bold text-primary">
                         {formatMetric(primaryMetric.value)}
