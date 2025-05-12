@@ -539,10 +539,10 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </TabsTrigger>
           </TabsList>
           
-          {/* Summary Tab - MODIFIED to include the Model File directly in Experiment Overview */}
+          {/* Summary Tab - MODIFIED grid columns ratio to 30/70 split */}
           <TabsContent value="summary" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Card className="shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-6">
+              <Card className="shadow-sm sm:col-span-4">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Experiment Overview</CardTitle>
                 </CardHeader>
@@ -594,7 +594,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              <Card className="shadow-sm">
+              <Card className="shadow-sm sm:col-span-8">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
