@@ -212,7 +212,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
                   <div className="font-medium">
                     {row[column]}
                     {index === 0 && (
-                      <Badge className="ml-2 bg-primary" variant="secondary">
+                      <Badge className="ml-2 text-foreground bg-secondary" variant="outline">
                         Best
                       </Badge>
                     )}
