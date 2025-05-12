@@ -539,9 +539,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </TabsTrigger>
           </TabsList>
           
-          {/* Summary Tab - MODIFIED to include the Model File card */}
+          {/* Summary Tab - MODIFIED to include the Model File directly in Experiment Overview */}
           <TabsContent value="summary" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Experiment Overview</CardTitle>
@@ -574,34 +574,27 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                           <span className="text-sm font-medium">{formattedCompletedAt}</span>
                         </>
                       )}
+                      
+                      {/* Added Model File section directly under Completed */}
+                      <span className="text-sm text-muted-foreground">Model File:</span>
+                      <span className="text-sm">
+                        {modelFile ? (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={modelFile.file_url} download>
+                              <Download className="h-3 w-3 mr-1" />
+                              Download
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Not available</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               
-              {/* NEW: Model File Card moved here from the Predictions tab */}
               <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Model File</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center pt-2">
-                  {modelFile ? (
-                    <Button asChild>
-                      <a href={modelFile.file_url} download>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
-                    </Button>
-                  ) : (
-                    <Button disabled variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Not Available
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card className="shadow-sm col-span-3 sm:col-span-1">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
