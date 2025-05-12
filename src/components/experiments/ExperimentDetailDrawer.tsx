@@ -200,6 +200,31 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
+  // Function to extract filename from URL or create appropriate one
+  const getModelFileName = (fileUrl: string) => {
+    try {
+      // Try to extract filename from URL
+      const urlParts = fileUrl.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      
+      // If the URL has a filename with extension
+      if (lastPart.includes('.')) {
+        return lastPart;
+      }
+      
+      // Otherwise create a name based on experiment details
+      const enginePart = results?.automl_engine?.toLowerCase() || 'model';
+      const algoPart = results?.algorithm || results?.algorithm_choice || 'trained';
+      const extension = fileUrl.endsWith('.zip') ? '.zip' : 
+                        fileUrl.endsWith('.pkl') ? '.pkl' : '.model';
+      
+      return `${enginePart}_${algoPart}${extension}`;
+    } catch (err) {
+      // Fallback if anything goes wrong
+      return `model_${Date.now()}.model`;
+    }
+  };
+
   // Function to handle file downloads
   const handleFileDownload = async (url: string, filename: string) => {
     try {
@@ -788,10 +813,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 onClick={() => {
                                   const file = getModelFile();
                                   if (file) {
-                                    handleFileDownload(
-                                      file.file_url, 
-                                      `${results.automl_engine || 'model'}_${results.algorithm || 'trained'}.pkl`
-                                    );
+                                    const fileName = getModelFileName(file.file_url);
+                                    handleFileDownload(file.file_url, fileName);
                                   }
                                 }}
                                 className="w-full sm:w-auto"
