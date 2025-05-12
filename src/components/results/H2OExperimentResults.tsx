@@ -275,11 +275,13 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Get best model details
   const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
   
-  // Get the model name and trim it to the first two parts (e.g., "DRF_1")
-  // Takes the first model from leaderboard and extracts just "DRF_1" part
+  // Enhanced: Get the model name and trim it to the first two parts (e.g., "DRF_1")
+  // Now handles CSV data and provides more robust parsing
   const getShortModelName = () => {
+    // First priority: Use model_display_name if available
     if (model_display_name) return model_display_name;
     
+    // Second priority: Use the first model from leaderboard array
     if (bestModelDetails?.name) {
       const parts = bestModelDetails.name.split('_');
       if (parts.length >= 2) {
@@ -288,7 +290,67 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       return parts[0]; // If only one part exists
     }
     
-    return metrics.best_model_label || 'Best Model';
+    // Third priority: Check if we have CSV data as a string and parse it
+    if (typeof experimentResults.leaderboard_csv === 'string' && experimentResults.leaderboard_csv.trim()) {
+      try {
+        // Parse first line of CSV data
+        const lines = experimentResults.leaderboard_csv.trim().split('\n');
+        if (lines.length >= 2) { // Need at least header and one data row
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const values = lines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+          
+          // Find the column index for model_id or name
+          const modelIdIndex = headers.findIndex(h => 
+            h === 'model_id' || h === 'name' || h === 'algorithm' || h.includes('model')
+          );
+          
+          if (modelIdIndex !== -1 && values[modelIdIndex]) {
+            const modelId = values[modelIdIndex];
+            const parts = modelId.split('_');
+            if (parts.length >= 2) {
+              return `${parts[0]}_${parts[1]}`;
+            }
+            return parts[0];
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing leaderboard CSV for model name:', e);
+      }
+    }
+    
+    // Fourth priority: Check if there's a leaderboard file with a URL to fetch
+    const leaderboardFile = experimentResults.files?.find(file => 
+      file.file_type === 'leaderboard_csv' || 
+      file.file_url?.includes('leaderboard')
+    );
+    
+    if (leaderboardFile?.file_content) {
+      try {
+        const lines = leaderboardFile.file_content.trim().split('\n');
+        if (lines.length >= 2) {
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const values = lines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+          
+          const modelIdIndex = headers.findIndex(h => 
+            h === 'model_id' || h === 'name' || h === 'algorithm' || h.includes('model')
+          );
+          
+          if (modelIdIndex !== -1 && values[modelIdIndex]) {
+            const modelId = values[modelIdIndex];
+            const parts = modelId.split('_');
+            if (parts.length >= 2) {
+              return `${parts[0]}_${parts[1]}`;
+            }
+            return parts[0];
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing leaderboard file content for model name:', e);
+      }
+    }
+    
+    // Final fallback: Use any available metrics info or default name
+    return metrics.best_model_label || metrics.model_name || 'Best Model';
   };
   
   const bestModelName = model_display_name || 
