@@ -533,12 +533,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    {/* FIXED: Updated to directly use leaderboardData without additional condition */}
+                    {/* UPDATED: Removed onModelSelect prop */}
                     <H2OLeaderboardTable 
                       data={leaderboardData}
                       defaultSortMetric={primaryMetric?.name || 'auc'}
                       selectedModelId={selectedModel}
-                      onModelSelect={setSelectedModel}
                     />
                   </div>
                 </CardContent>
