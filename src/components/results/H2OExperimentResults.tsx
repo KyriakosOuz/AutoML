@@ -539,7 +539,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </TabsTrigger>
           </TabsList>
           
-          {/* Summary Tab */}
+          {/* Summary Tab - MODIFIED to include the Model File card */}
           <TabsContent value="summary" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="shadow-sm">
@@ -579,7 +579,29 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              <Card className="shadow-sm col-span-2">
+              {/* NEW: Model File Card moved here from the Predictions tab */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-center">Model File</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center pt-2">
+                  {modelFile ? (
+                    <Button asChild>
+                      <a href={modelFile.file_url} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Model
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button disabled variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Not Available
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm col-span-3 sm:col-span-1">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
@@ -596,7 +618,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                       {Object.entries(metrics).map(([key, value]) => {
                         if (
                           key === 'best_model_label' ||
@@ -755,33 +777,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Predictions Tab */}
+          {/* Predictions Tab - MODIFIED to remove the Model File card */}
           <TabsContent value="predictions" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Model File Card */}
+            <div className="grid grid-cols-1 gap-6">
+              {/* Predictions Card - Now full width */}
               <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Model File</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center pt-2">
-                  {modelFile ? (
-                    <Button asChild>
-                      <a href={modelFile.file_url} download>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
-                    </Button>
-                  ) : (
-                    <Button disabled variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Not Available
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Predictions Card */}
-              <Card className="shadow-sm col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Predictions</CardTitle>
                 </CardHeader>
