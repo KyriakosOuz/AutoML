@@ -129,7 +129,8 @@ const Index = () => {
         </div>
       </div>
       
-      {/* Subtle GitHub Footer */}
+      {/* Subtle GitHub Footer - commented out as requested */}
+      {/*
       <footer className="py-6 border-t border-gray-100">
         <div className="container max-w-6xl mx-auto px-4 flex justify-center">
           <a 
@@ -143,6 +144,7 @@ const Index = () => {
           </a>
         </div>
       </footer>
+      */}
     </div>
   );
 };
