@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -159,10 +159,78 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     );
   }, [experimentResults, leaderboardData]);
   
-  // NEW: Handle the best model found from the leaderboard
+  // NEW: Parse best model name from leaderboard data immediately
+  const parseBestModelFromLeaderboardData = () => {
+    console.log('Parsing best model from leaderboard data on mount');
+    
+    if (!experimentResults) return;
+    
+    // Check for leaderboard_csv as string first (most common case)
+    if (typeof experimentResults.leaderboard_csv === 'string' && experimentResults.leaderboard_csv.trim()) {
+      try {
+        // Parse just the first two lines of CSV data (header + first model)
+        const lines = experimentResults.leaderboard_csv.trim().split('\n');
+        if (lines.length >= 2) { // Need at least header and one data row
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const values = lines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+          
+          // Find the column index for model_id or name
+          const modelIdIndex = headers.findIndex(h => 
+            h === 'model_id' || h === 'name' || h === 'algorithm' || h.includes('model')
+          );
+          
+          if (modelIdIndex !== -1 && values[modelIdIndex]) {
+            const modelId = values[modelIdIndex];
+            const parts = modelId.split('_');
+            if (parts.length >= 2) {
+              const bestModel = `${parts[0]}_${parts[1]}`;
+              console.log('Found best model from CSV:', bestModel);
+              setBestModelFromLeaderboard(bestModel);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing leaderboard CSV for best model:', e);
+      }
+    }
+    
+    // If CSV parsing failed, try array data
+    if (Array.isArray(experimentResults.leaderboard) && experimentResults.leaderboard.length > 0) {
+      const bestModel = experimentResults.leaderboard[0];
+      if (bestModel && bestModel.name) {
+        const parts = bestModel.name.split('_');
+        if (parts.length >= 2) {
+          const modelName = `${parts[0]}_${parts[1]}`;
+          console.log('Found best model from leaderboard array:', modelName);
+          setBestModelFromLeaderboard(modelName);
+          return;
+        }
+      }
+    }
+    
+    // If still no best model, try to use model_display_name
+    if (experimentResults.model_display_name) {
+      console.log('Using model_display_name as best model:', experimentResults.model_display_name);
+      setBestModelFromLeaderboard(experimentResults.model_display_name);
+      return;
+    }
+    
+    console.log('Could not find best model from initial data');
+  };
+  
+  // Call the parser on component mount
+  useEffect(() => {
+    parseBestModelFromLeaderboardData();
+  }, [experimentResults]);
+  
+  // NEW: Handle the best model found from the leaderboard component
   const handleBestModelFound = (modelName: string) => {
-    console.log("Best model found in leaderboard:", modelName);
-    setBestModelFromLeaderboard(modelName);
+    console.log("Best model found in leaderboard component:", modelName);
+    // Only update if different to avoid unnecessary re-renders
+    if (modelName !== bestModelFromLeaderboard) {
+      setBestModelFromLeaderboard(modelName);
+    }
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -283,11 +351,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
   
   // Enhanced: Get the model name and trim it to the first two parts (e.g., "DRF_1")
-  // Now handles CSV data and provides more robust parsing
+  // Modified to prioritize the pre-parsed bestModelFromLeaderboard
   const getShortModelName = () => {
-    // NEW: First priority - Use bestModelFromLeaderboard which gets the best model from the leaderboard
+    // First priority - Use pre-parsed bestModelFromLeaderboard
     if (bestModelFromLeaderboard) {
-      console.log("Using best model from leaderboard callback:", bestModelFromLeaderboard);
+      console.log("Using pre-parsed best model name:", bestModelFromLeaderboard);
       return bestModelFromLeaderboard;
     }
     
@@ -338,8 +406,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     );
     
     if (leaderboardFile?.file_url) {
-      // Instead of directly accessing file_content, we now just return information based on the file URL
-      // We could fetch this content if needed, but for now we'll use other fallbacks
+      // Just use filename-based detection
       const modelName = leaderboardFile.file_name || leaderboardFile.file_type;
       if (modelName && modelName.includes('_')) {
         const parts = modelName.split('_');
@@ -598,7 +665,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Leaderboard Tab - Enhanced with our new component */}
+          {/* Leaderboard Tab */}
           <TabsContent value="leaderboard" className="p-6">
             {hasLeaderboardData ? (
               <Card>
@@ -610,7 +677,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    {/* UPDATED: Added onBestModelFound prop */}
+                    {/* Pass onBestModelFound callback to H2OLeaderboardTable */}
                     <H2OLeaderboardTable 
                       data={leaderboardData}
                       defaultSortMetric={primaryMetric?.name || 'auc'}
