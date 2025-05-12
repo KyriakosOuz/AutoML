@@ -15,6 +15,7 @@ import MainLayout from "./components/layout/MainLayout";
 import DashboardPage from "./pages/DashboardPage";
 import ExperimentDetailPage from "./pages/ExperimentDetailPage";
 import FeedbackPage from "./pages/FeedbackPage";
+import SettingsPage from "./pages/SettingsPage";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import FloatingChatButton from "./components/ai-assistant/FloatingChatButton";
 import { AssistantInsightsProvider } from "./contexts/AssistantInsightsContext";
@@ -79,9 +80,7 @@ const App = () => (
                   } />
                   <Route path="/settings" element={
                     <ProtectedRoute>
-                      <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
-                        <h1 className="text-xl sm:text-2xl font-bold mb-4">Settings Page (Coming Soon)</h1>
-                      </div>
+                      <SettingsPage />
                     </ProtectedRoute>
                   } />
                 </Route>
