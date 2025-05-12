@@ -106,12 +106,21 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     );
   };
   
-  // Process leaderboard data for the H2OLeaderboardTable component
+  // Updated: Process leaderboard data for the H2OLeaderboardTable component
   const leaderboardData = useMemo(() => {
     if (!experimentResults) return [];
     
-    // Check if leaderboard is already an array
+    console.log('Processing leaderboard data for H2O experiment:', experimentResults.experiment_id);
+    
+    // FIXED: First check if there's CSV data available
+    if (experimentResults.leaderboard_csv) {
+      console.log('Using leaderboard_csv data');
+      return experimentResults.leaderboard_csv;
+    }
+    
+    // Check if leaderboard is an array with data
     if (Array.isArray(experimentResults.leaderboard) && experimentResults.leaderboard.length > 0) {
+      console.log('Using leaderboard array data, length:', experimentResults.leaderboard.length);
       // Format the existing leaderboard data for the table
       return experimentResults.leaderboard.map(model => ({
         model_id: model.name || '',
@@ -127,13 +136,27 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       file.file_url?.includes('leaderboard')
     );
     
-    // If we have leaderboard CSV data in the experimentResults, return it
-    if (experimentResults.leaderboard_csv) {
-      return experimentResults.leaderboard_csv;
+    if (leaderboardFile?.file_url) {
+      console.log('Found leaderboard file URL:', leaderboardFile.file_url);
+      // Return the URL so the component can fetch it
+      return leaderboardFile.file_url;
     }
     
+    console.log('No leaderboard data found');
     return [];
   }, [experimentResults]);
+  
+  // FIXED: Updated check to properly detect if we have leaderboard data
+  const hasLeaderboardData = useMemo(() => {
+    if (!experimentResults) return false;
+    
+    // Check all possible sources of leaderboard data
+    return (
+      (typeof leaderboardData === 'string' && leaderboardData.length > 0) || // CSV string or URL
+      (Array.isArray(leaderboardData) && leaderboardData.length > 0) || // Array data
+      (Array.isArray(experimentResults.leaderboard) && experimentResults.leaderboard.length > 0) // Direct leaderboard
+    );
+  }, [experimentResults, leaderboardData]);
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -510,9 +533,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    {/* Use our new H2OLeaderboardTable component */}
+                    {/* FIXED: Updated to directly use leaderboardData without additional condition */}
                     <H2OLeaderboardTable 
-                      data={leaderboardData.length > 0 ? leaderboardData : leaderboard}
+                      data={leaderboardData}
                       defaultSortMetric={primaryMetric?.name || 'auc'}
                       selectedModelId={selectedModel}
                       onModelSelect={setSelectedModel}
