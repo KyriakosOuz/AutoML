@@ -41,7 +41,7 @@ const MobileNav = () => {
           </Link>
           <Link to="/training" className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-100">
             <img 
-              src="/lovable-uploads/c890852f-d464-4c4b-a08f-594ff2298a66.png" 
+              src="/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
               alt="KyrO Logo" 
               className={`h-5 w-5 ${isActive('/training') ? 'opacity-100' : 'opacity-70'}`} 
             />
