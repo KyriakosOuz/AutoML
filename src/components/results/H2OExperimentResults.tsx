@@ -89,6 +89,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [bestModelFromLeaderboard, setBestModelFromLeaderboard] = useState<string | null>(null);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -157,6 +158,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       (Array.isArray(experimentResults.leaderboard) && experimentResults.leaderboard.length > 0) // Direct leaderboard
     );
   }, [experimentResults, leaderboardData]);
+  
+  // NEW: Handle the best model found from the leaderboard
+  const handleBestModelFound = (modelName: string) => {
+    console.log("Best model found in leaderboard:", modelName);
+    setBestModelFromLeaderboard(modelName);
+  };
   
   if (isLoading || status === 'processing' || status === 'running') {
     return (
@@ -278,10 +285,16 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Enhanced: Get the model name and trim it to the first two parts (e.g., "DRF_1")
   // Now handles CSV data and provides more robust parsing
   const getShortModelName = () => {
-    // First priority: Use model_display_name if available
+    // NEW: First priority - Use bestModelFromLeaderboard which gets the best model from the leaderboard
+    if (bestModelFromLeaderboard) {
+      console.log("Using best model from leaderboard callback:", bestModelFromLeaderboard);
+      return bestModelFromLeaderboard;
+    }
+    
+    // Second priority: Use model_display_name if available
     if (model_display_name) return model_display_name;
     
-    // Second priority: Use the first model from leaderboard array
+    // Third priority: Use the first model from leaderboard array
     if (bestModelDetails?.name) {
       const parts = bestModelDetails.name.split('_');
       if (parts.length >= 2) {
@@ -290,7 +303,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       return parts[0]; // If only one part exists
     }
     
-    // Third priority: Check if we have CSV data as a string and parse it
+    // Fourth priority: Check if we have CSV data as a string and parse it
     if (typeof experimentResults.leaderboard_csv === 'string' && experimentResults.leaderboard_csv.trim()) {
       try {
         // Parse first line of CSV data
@@ -318,7 +331,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       }
     }
     
-    // Fourth priority: Check if there's a leaderboard file with a URL to fetch
+    // Fifth priority: Check if there's a leaderboard file with a URL to fetch
     const leaderboardFile = experimentResults.files?.find(file => 
       file.file_type === 'leaderboard_csv' || 
       file.file_url?.includes('leaderboard')
@@ -393,9 +406,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
-
-  // REMOVED: Second declaration of hasLeaderboardData (removed line 331)
-  // Now using only the memoized version defined above
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -600,11 +610,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    {/* UPDATED: Removed onModelSelect prop */}
+                    {/* UPDATED: Added onBestModelFound prop */}
                     <H2OLeaderboardTable 
                       data={leaderboardData}
                       defaultSortMetric={primaryMetric?.name || 'auc'}
                       selectedModelId={selectedModel}
+                      onBestModelFound={handleBestModelFound}
                     />
                   </div>
                 </CardContent>

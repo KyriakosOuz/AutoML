@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -10,12 +9,14 @@ interface H2OLeaderboardTableProps {
   data: any[] | string; // Accept either array or CSV string
   defaultSortMetric?: string;
   selectedModelId?: string | null;
+  onBestModelFound?: (modelName: string) => void; // New callback prop
 }
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
   defaultSortMetric = 'auc',
-  selectedModelId
+  selectedModelId,
+  onBestModelFound // New prop
 }) => {
   const [sortField, setSortField] = useState<string>(defaultSortMetric);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -100,6 +101,26 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
         : bValue - aValue;
     });
   }, [parsedData, sortField, sortDirection]);
+
+  // NEW: Notify parent component about the best model when data is sorted
+  useEffect(() => {
+    if (sortedData.length > 0 && onBestModelFound) {
+      // Get the model_id from the first (best) model in the sorted data
+      const bestModel = sortedData[0];
+      const modelId = bestModel.model_id || bestModel.name || '';
+      
+      if (modelId) {
+        // Format the model name (e.g., "DRF_1")
+        const parts = modelId.split('_');
+        const formattedModelName = parts.length >= 2 
+          ? `${parts[0]}_${parts[1]}`
+          : modelId;
+        
+        console.log('Found best model:', formattedModelName);
+        onBestModelFound(formattedModelName);
+      }
+    }
+  }, [sortedData, onBestModelFound]);
 
   // Handle sorting
   const handleSort = (field: string) => {
