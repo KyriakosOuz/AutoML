@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Upload, BarChart2, LineChart } from "lucide-react";
+import { ArrowRight, Upload, BarChart2, LineChart, Github } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -128,6 +128,21 @@ const Index = () => {
           </div>
         </div>
       </div>
+      
+      {/* Subtle GitHub Footer */}
+      <footer className="py-6 border-t border-gray-100">
+        <div className="container max-w-6xl mx-auto px-4 flex justify-center">
+          <a 
+            href="https://github.com/kyroai/kyro-automl" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors"
+          >
+            <Github className="h-3 w-3" />
+            <span>View source on GitHub</span>
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };
