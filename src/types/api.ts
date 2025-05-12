@@ -23,6 +23,10 @@ interface ExperimentListResponse {
       mae?: number;
       mse?: number;
       rmse?: number;
+      auc?: number; // Added for H2O models
+      aucpr?: number; // Added for H2O models
+      logloss?: number; // Added for H2O models
+      mean_per_class_error?: number[][]; // Added for H2O models
     };
     target_column: string;
     auto_train: boolean; 
@@ -67,6 +71,9 @@ interface ExperimentDetailResponse {
     mae?: number;
     mse?: number;
     rmse?: number;
+    aucpr?: number; // Added for H2O models
+    logloss?: number; // Added for H2O models
+    mean_per_class_error?: number[][]; // Added for H2O models
     classification_report?: any;
     confusion_matrix?: number[][];
     [key: string]: any;
