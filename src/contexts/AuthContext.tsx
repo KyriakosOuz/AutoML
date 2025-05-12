@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,26 @@ export const getAuthToken = (): string => {
   }
   
   return '';
+};
+
+// Helper function to get reCAPTCHA token
+const getRecaptchaToken = (): string | undefined => {
+  if (typeof window !== 'undefined' && window.grecaptcha) {
+    try {
+      const token = window.grecaptcha.getResponse();
+      if (!token) {
+        toast({
+          title: 'ReCAPTCHA Required',
+          description: 'Please complete the reCAPTCHA verification.',
+          variant: 'destructive',
+        });
+      }
+      return token;
+    } catch (error) {
+      console.error('Error getting reCAPTCHA token:', error);
+    }
+  }
+  return undefined;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,9 +92,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('Email and password are required');
         }
         
+        // Get reCAPTCHA token (for email sign-ins)
+        const captchaToken = getRecaptchaToken();
+        if (!captchaToken) return;
+        
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
+          options: {
+            captchaToken
+          }
         });
         
         if (error) throw error;
@@ -100,11 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Get reCAPTCHA token
+      const captchaToken = getRecaptchaToken();
+      if (!captchaToken) return;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: window.location.origin,
+          captchaToken
         },
       });
       

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Cpu, Mail, Lock, Github, Chrome } from "lucide-react";
+import { Cpu, Mail, Lock, Github, Chrome, ShieldCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -21,6 +23,24 @@ const AuthPage = () => {
     navigate("/dataset");
     return null;
   }
+
+  // Load ReCAPTCHA script
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.grecaptcha) {
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setRecaptchaLoaded(true);
+      document.head.appendChild(script);
+
+      return () => {
+        document.head.removeChild(script);
+      };
+    } else {
+      setRecaptchaLoaded(true);
+    }
+  }, []);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +137,19 @@ const AuthPage = () => {
                       />
                     </div>
                   </div>
+                  
+                  {/* ReCAPTCHA Container */}
+                  <div className="flex justify-center my-4">
+                    <div className="g-recaptcha" data-sitekey="6LdxmI0pAAAAADSRdK5QRgpzfCOMnEB7K193RxKG"></div>
+                  </div>
+                  
+                  <Alert variant="info" className="flex items-center gap-2 py-2 bg-blue-50">
+                    <ShieldCheck className="h-4 w-4 text-blue-800" />
+                    <AlertDescription className="text-xs">
+                      This site is protected by reCAPTCHA to ensure you're not a robot.
+                    </AlertDescription>
+                  </Alert>
+                  
                   <Button type="submit" className="w-full">
                     Sign In with Email
                   </Button>
@@ -189,6 +222,19 @@ const AuthPage = () => {
                       />
                     </div>
                   </div>
+                  
+                  {/* ReCAPTCHA Container */}
+                  <div className="flex justify-center my-4">
+                    <div className="g-recaptcha" data-sitekey="6LdxmI0pAAAAADSRdK5QRgpzfCOMnEB7K193RxKG"></div>
+                  </div>
+                  
+                  <Alert variant="info" className="flex items-center gap-2 py-2 bg-blue-50">
+                    <ShieldCheck className="h-4 w-4 text-blue-800" />
+                    <AlertDescription className="text-xs">
+                      This site is protected by reCAPTCHA to ensure you're not a robot.
+                    </AlertDescription>
+                  </Alert>
+                  
                   <Button type="submit" className="w-full">
                     Create Account
                   </Button>
