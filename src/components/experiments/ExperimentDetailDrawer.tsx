@@ -39,6 +39,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import TuneModelModal from './TuneModelModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
 interface ExperimentDetailDrawerProps {
   experimentId: string | null;
@@ -207,7 +208,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       const urlParts = fileUrl.split('/');
       const lastPart = urlParts[urlParts.length - 1];
       
-      // If the URL has a filename with extension
+      // If the URL has a filename with extension, use it directly
       if (lastPart.includes('.')) {
         return lastPart;
       }
@@ -814,8 +815,15 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 onClick={() => {
                                   const file = getModelFile();
                                   if (file) {
-                                    const fileName = getModelFileName(file.file_url);
-                                    handleFileDownload(file.file_url, fileName);
+                                    // For MLJAR experiments, use the direct file URL and preserve the original filename
+                                    if (isMLJARExperiment) {
+                                      const fileName = file.file_url.split('/').pop() || 'mljar_model.pkl';
+                                      handleFileDownload(file.file_url, fileName);
+                                    } else {
+                                      // For other experiments, use the existing logic
+                                      const fileName = getModelFileName(file.file_url);
+                                      handleFileDownload(file.file_url, fileName);
+                                    }
                                   }
                                 }}
                                 className="w-full sm:w-auto"
