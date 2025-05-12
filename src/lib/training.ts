@@ -150,6 +150,7 @@ export const getExperimentResults = async (
       class_labels: result.class_labels,
       training_type: result.training_type || (result.automl_engine ? 'automl' : 'custom'),
       model_display_name: result.model_display_name,
+      leaderboard: result.leaderboard,
       leaderboard_csv: result.leaderboard_csv || (leaderboardFile ? leaderboardFile.file_content : null),
       training_results: {
         metrics: result.metrics,

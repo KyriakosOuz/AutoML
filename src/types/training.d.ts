@@ -1,4 +1,5 @@
 
+
 // Add this to your existing training.d.ts file
 // If the file doesn't exist, create it
 
@@ -46,6 +47,7 @@ export interface ExperimentResults {
     y_probs?: any[];
   };
   leaderboard?: ModelLeaderboardEntry[];
-  leaderboard_csv?: string;
+  leaderboard_csv?: string; // Added this property to resolve the type error
   columns_to_keep?: string[];
 }
+
