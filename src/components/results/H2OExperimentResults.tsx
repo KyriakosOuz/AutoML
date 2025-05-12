@@ -602,7 +602,10 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold">
-                        {primaryMetric.name.replace(/_/g, ' ')}
+                        {primaryMetric.name.replace(/_/g, ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ')}
                       </h3>
                       <p className="text-3xl font-bold text-primary">
                         {isPercentageMetric(primaryMetric.name) 
