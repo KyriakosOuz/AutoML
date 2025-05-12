@@ -1,7 +1,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, User, Settings, Lock } from "lucide-react";
+import { LogIn, LogOut, User, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   DropdownMenu,
@@ -41,12 +41,6 @@ const AuthHeader = () => {
               <Link to="/settings" className="cursor-pointer flex gap-2 items-center">
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings/password" className="cursor-pointer flex gap-2 items-center">
-                <Lock className="h-4 w-4" />
-                <span>Change Password</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
