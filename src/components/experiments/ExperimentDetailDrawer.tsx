@@ -145,9 +145,33 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     );
   };
   
+  // Function to specifically find the MLJAR model file
+  const getMLJARModelFile = () => {
+    if (!results?.files) return null;
+    
+    // First try to find a file specifically with "model" file_type
+    const modelFile = results.files.find(file => 
+      file.file_type === 'model'
+    );
+    
+    if (modelFile) return modelFile;
+    
+    // Fallback: look for any file that might contain "model" in the URL and ends with .pkl
+    return results.files.find(file => 
+      file.file_url.includes('model') && 
+      file.file_url.toLowerCase().endsWith('.pkl')
+    );
+  };
+  
   const getModelFile = () => {
     if (!results?.files) return null;
     
+    // For MLJAR experiments, use the specialized function
+    if (results.automl_engine?.toLowerCase() === 'mljar') {
+      return getMLJARModelFile();
+    }
+    
+    // For other experiments, keep the existing logic
     return results.files.find(file => 
       file.file_type === 'model' || 
       file.file_type.includes('model')
@@ -226,7 +250,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
-  // Function to handle file downloads
+  // Improved function to handle file downloads
   const handleFileDownload = async (url: string, filename: string) => {
     try {
       const response = await fetch(url);
@@ -247,6 +271,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       
       // Clean up the blob URL
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+      
+      toast({
+        title: "Download Started",
+        description: `Downloading ${filename}`,
+      });
     } catch (err) {
       console.error("Error downloading file:", err);
       toast({
@@ -815,9 +844,12 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 onClick={() => {
                                   const file = getModelFile();
                                   if (file) {
-                                    // For MLJAR experiments, use the direct file URL and preserve the original filename
+                                    // For MLJAR experiments, ensure we're using the correct file
                                     if (isMLJARExperiment) {
+                                      console.log("Downloading MLJAR model file:", file);
+                                      // Extract filename from the URL - should be something like mljar_model_Ensemble_9cfabb8f.pkl
                                       const fileName = file.file_url.split('/').pop() || 'mljar_model.pkl';
+                                      // Use the direct download method for MLJAR models
                                       handleFileDownload(file.file_url, fileName);
                                     } else {
                                       // For other experiments, use the existing logic
