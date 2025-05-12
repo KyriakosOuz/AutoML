@@ -50,4 +50,3 @@ export interface ExperimentResults {
   leaderboard_csv?: string; // Added this property to resolve the type error
   columns_to_keep?: string[];
 }
-

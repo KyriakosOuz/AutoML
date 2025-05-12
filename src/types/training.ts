@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -85,6 +86,7 @@ export interface ExperimentResults {
   model_file_url?: string;
   report_file_url?: string;
   leaderboard?: any[];
+  leaderboard_csv?: string; // Added this property to fix type errors
   selected_algorithm?: string;
   columns_to_keep?: string[];
   hyperparameters?: Record<string, any>;
@@ -92,7 +94,7 @@ export interface ExperimentResults {
   automl_engine?: string;
   class_labels?: string[];
   training_type?: TrainingType;
-  model_display_name?: string; // Added this new field
+  model_display_name?: string;
   // New property for structured visualizations
   visualizations_by_type?: VisualizationsByType;
 }
