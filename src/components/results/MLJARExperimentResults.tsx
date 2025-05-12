@@ -24,6 +24,7 @@ import { ExperimentStatus } from '@/contexts/training/types';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
+import { downloadFile } from '../training/prediction/utils/downloadUtils';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -581,18 +582,19 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card */}
+              {/* Model Metadata Card - Updated to use downloadFile */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Metadata</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center pt-2">
                   {modelMetadataFile ? (
-                    <Button variant="outline" asChild>
-                      <a href={modelMetadataFile.file_url} download>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Download JSON
-                      </a>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => downloadFile(modelMetadataFile.file_url, 'model_metadata.json')}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download JSON
                     </Button>
                   ) : (
                     <Button disabled variant="outline">
