@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -60,6 +59,9 @@ export interface TrainingResults {
   precision?: number[];
   recall?: number[];
   f1_score?: number[];
+  aucpr?: number;
+  logloss?: number;
+  mean_per_class_error?: number[][];
 }
 
 export interface ExperimentResults {

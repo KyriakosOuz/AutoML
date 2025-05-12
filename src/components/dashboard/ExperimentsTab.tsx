@@ -49,6 +49,11 @@ interface ExperimentMetrics {
   mae?: number;
   mse?: number;
   rmse?: number;
+  // Add H2O specific metrics
+  auc?: number;
+  logloss?: number;
+  aucpr?: number;
+  mean_per_class_error?: number[][];
 }
 
 interface Experiment {
