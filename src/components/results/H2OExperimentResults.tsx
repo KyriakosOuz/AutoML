@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
@@ -431,28 +430,33 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                         );
                       })}
                       
-                      {/* Add special handling for mean_per_class_error */}
+                      {/* Replace individual boxes with a table for mean_per_class_error */}
                       {metrics.mean_per_class_error && Array.isArray(metrics.mean_per_class_error) && 
                        metrics.mean_per_class_error.length > 0 && 
                        Array.isArray(metrics.mean_per_class_error[0]) && (
-                        <>
-                          <div className="p-3 bg-muted/40 rounded-md">
-                            <span className="block text-sm text-muted-foreground">
-                              Class 0 Error Rate
-                            </span>
-                            <span className="text-lg font-medium">
-                              {formatMetricValue(metrics.mean_per_class_error[0][0], true)}
-                            </span>
-                          </div>
-                          <div className="p-3 bg-muted/40 rounded-md">
-                            <span className="block text-sm text-muted-foreground">
-                              Class 1 Error Rate
-                            </span>
-                            <span className="text-lg font-medium">
-                              {formatMetricValue(metrics.mean_per_class_error[0][1], true)}
-                            </span>
-                          </div>
-                        </>
+                        <div className="col-span-3 p-3 bg-muted/40 rounded-md">
+                          <span className="block text-sm text-muted-foreground mb-2">
+                            Per Class Error Rates
+                          </span>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Class</TableHead>
+                                <TableHead>Error Rate</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>0</TableCell>
+                                <TableCell>{formatMetricValue(metrics.mean_per_class_error[0][0], true)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>1</TableCell>
+                                <TableCell>{formatMetricValue(metrics.mean_per_class_error[0][1], true)}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
                       )}
                     </div>
                   </div>
