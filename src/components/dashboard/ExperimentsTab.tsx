@@ -743,6 +743,7 @@ const ExperimentsTab: React.FC = () => {
               <TableBody>
                 {experiments.map((experiment) => {
                   const isRegression = experiment.task_type === 'regression';
+                  const isH2OExperiment = experiment.automl_engine?.toLowerCase() === 'h2o';
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -769,7 +770,16 @@ const ExperimentsTab: React.FC = () => {
                               <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
                               <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
+                          ) : isH2OExperiment ? (
+                            // Special metrics display for H2O experiments
+                            <>
+                              <div>AUC: {renderMetricValue(experiment.metrics?.auc)}</div>
+                              <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
+                              <div>LogLoss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
+                              <div>AUCPR: {renderMetricValue(experiment.metrics?.aucpr)}</div>
+                            </>
                           ) : (
+                            // Default classification metrics for non-H2O experiments
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>

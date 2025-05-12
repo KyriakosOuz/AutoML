@@ -38,6 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import TuneModelModal from './TuneModelModal';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface ExperimentDetailDrawerProps {
   experimentId: string | null;
@@ -251,6 +252,14 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const isExperimentRunning = results?.status === 'running';
   
   const isRegression = results?.task_type === 'regression';
+  
+  // Helper to determine if metric should be displayed as percentage
+  const isPercentageMetric = (name: string): boolean => {
+    const percentageMetrics = ['accuracy', 'auc', 'aucpr', 'f1', 'precision', 'recall'];
+    return percentageMetrics.some(metric => name.toLowerCase().includes(metric));
+  };
+  
+  const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
   
   return (
     <>
@@ -477,6 +486,122 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                           </Card>
                         )}
                       </div>
+                    ) : isH2OExperiment ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {results.metrics?.accuracy !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Accuracy</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.accuracy)}`}>
+                                {formatMetric(results.metrics.accuracy)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Overall prediction accuracy</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.auc !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">AUC</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.auc)}`}>
+                                {formatMetric(results.metrics.auc)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Area Under ROC Curve</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.aucpr !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">AUCPR</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.aucpr)}`}>
+                                {formatMetric(results.metrics.aucpr)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Area Under Precision-Recall Curve</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.logloss !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">LogLoss</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {results.metrics.logloss.toFixed(4)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Logarithmic Loss</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.mean_per_class_error && Array.isArray(results.metrics.mean_per_class_error) && 
+                        results.metrics.mean_per_class_error.length > 0 && 
+                        Array.isArray(results.metrics.mean_per_class_error[0]) && (
+                          <Card className="bg-muted/40 col-span-2">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Per Class Error Rates</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Class</TableHead>
+                                    <TableHead>Error Rate</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell>0</TableCell>
+                                    <TableCell>{formatMetric(results.metrics.mean_per_class_error[0][0])}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell>1</TableCell>
+                                    <TableCell>{formatMetric(results.metrics.mean_per_class_error[0][1])}</TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.mse !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">MSE</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {results.metrics.mse.toFixed(4)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Mean Squared Error</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {results.metrics?.rmse !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">RMSE</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {results.metrics.rmse.toFixed(4)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Root Mean Squared Error</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {results.metrics?.accuracy !== undefined && (
@@ -554,7 +679,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
-                          const skipKeys = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse'];
+                          // Skip metrics that are already displayed in cards
+                          const skipKeys = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error'];
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
                           return (
