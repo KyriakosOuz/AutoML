@@ -26,21 +26,30 @@ export const getAuthToken = (): string => {
   return '';
 };
 
-// Helper function to get reCAPTCHA token
-const getRecaptchaToken = (): string | undefined => {
-  if (typeof window !== 'undefined' && window.grecaptcha) {
+// Helper function to get captcha token (supports both reCAPTCHA and hCaptcha)
+const getCaptchaToken = (): string | undefined => {
+  if (typeof window !== 'undefined') {
     try {
-      const token = window.grecaptcha.getResponse();
-      if (!token) {
-        toast({
-          title: 'ReCAPTCHA Required',
-          description: 'Please complete the reCAPTCHA verification.',
-          variant: 'destructive',
-        });
+      // Try to get hCaptcha token first
+      if (window.hcaptcha) {
+        const token = window.hcaptcha.getResponse();
+        if (token) return token;
       }
-      return token;
+      
+      // Fall back to reCAPTCHA if hCaptcha is not available or token is empty
+      if (window.grecaptcha) {
+        const token = window.grecaptcha.getResponse();
+        if (token) return token;
+      }
+      
+      // If we reach here, no valid token was found
+      toast({
+        title: 'CAPTCHA Required',
+        description: 'Please complete the CAPTCHA verification.',
+        variant: 'destructive',
+      });
     } catch (error) {
-      console.error('Error getting reCAPTCHA token:', error);
+      console.error('Error getting CAPTCHA token:', error);
     }
   }
   return undefined;
@@ -92,8 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('Email and password are required');
         }
         
-        // Get reCAPTCHA token (for email sign-ins)
-        const captchaToken = getRecaptchaToken();
+        // Get CAPTCHA token (for email sign-ins)
+        const captchaToken = getCaptchaToken();
         if (!captchaToken) return;
         
         const { error } = await supabase.auth.signInWithPassword({
@@ -128,8 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Get reCAPTCHA token
-      const captchaToken = getRecaptchaToken();
+      // Get CAPTCHA token
+      const captchaToken = getCaptchaToken();
       if (!captchaToken) return;
       
       const { error } = await supabase.auth.signUp({

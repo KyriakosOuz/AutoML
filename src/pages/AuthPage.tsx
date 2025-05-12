@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+  const [captchaLoaded, setCaptchaLoaded] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -24,21 +24,21 @@ const AuthPage = () => {
     return null;
   }
 
-  // Load ReCAPTCHA script
+  // Load hCaptcha script
   useEffect(() => {
-    if (typeof window !== 'undefined' && !window.grecaptcha) {
+    if (typeof window !== 'undefined' && !window.hcaptcha) {
       const script = document.createElement('script');
-      script.src = 'https://www.google.com/recaptcha/api.js';
+      script.src = 'https://js.hcaptcha.com/1/api.js';
       script.async = true;
       script.defer = true;
-      script.onload = () => setRecaptchaLoaded(true);
+      script.onload = () => setCaptchaLoaded(true);
       document.head.appendChild(script);
 
       return () => {
         document.head.removeChild(script);
       };
     } else {
-      setRecaptchaLoaded(true);
+      setCaptchaLoaded(true);
     }
   }, []);
 
@@ -138,15 +138,15 @@ const AuthPage = () => {
                     </div>
                   </div>
                   
-                  {/* ReCAPTCHA Container */}
+                  {/* hCaptcha Container */}
                   <div className="flex justify-center my-4">
-                    <div className="g-recaptcha" data-sitekey="6LdxmI0pAAAAADSRdK5QRgpzfCOMnEB7K193RxKG"></div>
+                    <div className="h-captcha" data-sitekey="YOUR_HCAPTCHA_SITE_KEY" data-theme="light"></div>
                   </div>
                   
                   <Alert variant="info" className="flex items-center gap-2 py-2 bg-blue-50">
                     <ShieldCheck className="h-4 w-4 text-blue-800" />
                     <AlertDescription className="text-xs">
-                      This site is protected by reCAPTCHA to ensure you're not a robot.
+                      This site is protected by hCaptcha to ensure you're not a robot.
                     </AlertDescription>
                   </Alert>
                   
@@ -223,15 +223,15 @@ const AuthPage = () => {
                     </div>
                   </div>
                   
-                  {/* ReCAPTCHA Container */}
+                  {/* hCaptcha Container */}
                   <div className="flex justify-center my-4">
-                    <div className="g-recaptcha" data-sitekey="6LdxmI0pAAAAADSRdK5QRgpzfCOMnEB7K193RxKG"></div>
+                    <div className="h-captcha" data-sitekey="YOUR_HCAPTCHA_SITE_KEY" data-theme="light"></div>
                   </div>
                   
                   <Alert variant="info" className="flex items-center gap-2 py-2 bg-blue-50">
                     <ShieldCheck className="h-4 w-4 text-blue-800" />
                     <AlertDescription className="text-xs">
-                      This site is protected by reCAPTCHA to ensure you're not a robot.
+                      This site is protected by hCaptcha to ensure you're not a robot.
                     </AlertDescription>
                   </Alert>
                   
