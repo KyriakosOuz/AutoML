@@ -327,8 +327,8 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
 
-  // Check if we have leaderboard data to show the tab
-  const hasLeaderboardData = leaderboardData.length > 0 || leaderboard.length > 0;
+  // REMOVED: Second declaration of hasLeaderboardData (removed line 331)
+  // Now using only the memoized version defined above
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
