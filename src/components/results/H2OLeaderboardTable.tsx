@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, CheckCircle2 } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 
@@ -10,14 +10,12 @@ interface H2OLeaderboardTableProps {
   data: any[] | string; // Accept either array or CSV string
   defaultSortMetric?: string;
   selectedModelId?: string | null;
-  onModelSelect?: (modelId: string) => void;
 }
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
   defaultSortMetric = 'auc',
-  selectedModelId,
-  onModelSelect
+  selectedModelId
 }) => {
   const [sortField, setSortField] = useState<string>(defaultSortMetric);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -196,9 +194,6 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
               </Button>
             </TableHead>
           ))}
-          {onModelSelect && (
-            <TableHead className="w-[80px]">Select</TableHead>
-          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -226,25 +221,6 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
                 )}
               </TableCell>
             ))}
-            {onModelSelect && (
-              <TableCell>
-                <Button
-                  variant={row.model_id === selectedModelId ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onModelSelect(row.model_id)}
-                  className="w-full"
-                >
-                  {row.model_id === selectedModelId ? (
-                    <>
-                      <CheckCircle2 className="mr-1 h-4 w-4" />
-                      Selected
-                    </>
-                  ) : (
-                    "Select"
-                  )}
-                </Button>
-              </TableCell>
-            )}
           </TableRow>
         ))}
       </TableBody>
