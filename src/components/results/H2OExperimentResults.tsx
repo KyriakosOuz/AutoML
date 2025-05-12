@@ -324,28 +324,16 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       file.file_url?.includes('leaderboard')
     );
     
-    if (leaderboardFile?.file_content) {
-      try {
-        const lines = leaderboardFile.file_content.trim().split('\n');
-        if (lines.length >= 2) {
-          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-          const values = lines[1].split(',').map(v => v.trim().replace(/"/g, ''));
-          
-          const modelIdIndex = headers.findIndex(h => 
-            h === 'model_id' || h === 'name' || h === 'algorithm' || h.includes('model')
-          );
-          
-          if (modelIdIndex !== -1 && values[modelIdIndex]) {
-            const modelId = values[modelIdIndex];
-            const parts = modelId.split('_');
-            if (parts.length >= 2) {
-              return `${parts[0]}_${parts[1]}`;
-            }
-            return parts[0];
-          }
+    if (leaderboardFile?.file_url) {
+      // Instead of directly accessing file_content, we now just return information based on the file URL
+      // We could fetch this content if needed, but for now we'll use other fallbacks
+      const modelName = leaderboardFile.file_name || leaderboardFile.file_type;
+      if (modelName && modelName.includes('_')) {
+        const parts = modelName.split('_');
+        if (parts.length >= 2) {
+          return `${parts[0]}_${parts[1]}`;
         }
-      } catch (e) {
-        console.error('Error parsing leaderboard file content for model name:', e);
+        return parts[0];
       }
     }
     
