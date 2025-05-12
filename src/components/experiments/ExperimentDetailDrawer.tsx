@@ -295,6 +295,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   };
   
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
+  const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
   
   return (
     <>
