@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +38,7 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://automl.iee.ihu.gr';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Updated getAuthHeaders function that returns a regular object, not a Promise
 const getAuthHeaders = () => {
@@ -530,8 +531,8 @@ export const trainingApi = {
 
   getAvailableHyperparameters: async (algorithm: string) => {
     try {
-      // Use the API_URL constant instead of a hardcoded URL
-      const response = await fetch(`${API_URL}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+      // Use a fixed localhost URL for hyperparameters
+      const response = await fetch(`http://localhost:8000/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         headers: getAuthHeaders(),
       });
       
