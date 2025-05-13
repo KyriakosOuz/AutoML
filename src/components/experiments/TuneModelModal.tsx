@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/utils';
 import { trainingApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface TuneModelModalProps {
   experimentId: string;
@@ -156,7 +157,7 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch(`http://localhost:8000/experiments/tune-model/`, {
+      const response = await fetch(`${API_BASE_URL}/experiments/tune-model/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

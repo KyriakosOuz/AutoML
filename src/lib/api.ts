@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +37,7 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://automl.iee.ihu.gr';
 
 // Updated getAuthHeaders function that returns a regular object, not a Promise
 const getAuthHeaders = () => {
