@@ -833,7 +833,13 @@ const ExperimentsTab: React.FC = () => {
       )}
 
       <ExperimentDetailDrawer
-        selectedExperiment={experiments.find(exp => exp.id === selectedExperimentId)}
+        selectedExperiment={experiments.find(exp => exp.id === selectedExperimentId) 
+          ? {
+              ...experiments.find(exp => exp.id === selectedExperimentId)!,
+              experimentId: experiments.find(exp => exp.id === selectedExperimentId)!.id, // Map id to experimentId
+              experiment_id: experiments.find(exp => exp.id === selectedExperimentId)!.id // Also provide experiment_id as fallback
+            }
+          : null}
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
         onDelete={handleDelete}
