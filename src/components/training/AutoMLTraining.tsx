@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -16,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import { useAuth } from '@/contexts/AuthContext';
-import * as trainingLib from '@/lib/training';  // Import from training.ts explicitly
+import * as trainingLib from '@/lib/training';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 
@@ -52,7 +51,7 @@ const AutoMLTraining: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
-  // NEW: Track submitted values
+  // NEW: Track submitted values - fixed the type for engine to be TrainingEngine | null
   const [submittedValues, setSubmittedValues] = useState<{
     engine: TrainingEngine | null;
     preset: string | null;
@@ -223,9 +222,9 @@ const AutoMLTraining: React.FC = () => {
       setResultsLoaded(false);
       setActiveExperimentId(null);
 
-      // NEW: Save submitted values before training starts
+      // NEW: Save submitted values before training starts - Fix the type casting here
       setSubmittedValues({
-        engine: automlEngine,
+        engine: automlEngine as TrainingEngine, // Explicit cast to TrainingEngine
         preset: selectedPreset,
         experimentName: finalExperimentName,
         testSize,
@@ -384,7 +383,7 @@ const AutoMLTraining: React.FC = () => {
       return submittedValues;
     } else {
       return {
-        engine: automlEngine,
+        engine: automlEngine as TrainingEngine, // Fixed the type here as well
         preset: selectedPreset,
         experimentName,
         testSize,
