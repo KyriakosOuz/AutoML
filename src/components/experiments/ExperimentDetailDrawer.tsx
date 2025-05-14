@@ -352,7 +352,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
           <CardDescription>Performance metrics for each class</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveTable minWidth="550px">
+          <ResponsiveTable minWidth="550px" maxHeight="400px">
             <TableHeader>
               <TableRow>
                 <TableHead>Class</TableHead>
@@ -810,7 +810,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
                           // Skip metrics that are already displayed in cards and the per_class object
-                          const skipKeys = ['accuracy', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error', 'per_class', 'source'];
+                          const skipKeys = ['accuracy', 'f1_score', 'f1-score', 'f1', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error', 'per_class', 'source'];
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
                           return (

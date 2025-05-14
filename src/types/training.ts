@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -88,6 +87,7 @@ export interface ExperimentResults {
   training_results?: TrainingResults;
   training_time_sec?: number;
   metrics?: Record<string, any> & {
+    'f1-score'?: number; // Add support for hyphenated format
     per_class?: Record<string, PerClassMetric>; // Add the nested per_class property
   };
   files?: TrainingFile[];
@@ -97,7 +97,7 @@ export interface ExperimentResults {
   model_file_url?: string;
   report_file_url?: string;
   leaderboard?: any[];
-  leaderboard_csv?: string; // Added this property to fix type errors
+  leaderboard_csv?: string; 
   selected_algorithm?: string;
   columns_to_keep?: string[];
   hyperparameters?: Record<string, any>;
