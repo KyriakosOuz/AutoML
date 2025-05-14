@@ -40,7 +40,8 @@ interface ClassificationReport {
 interface ExperimentMetrics {
   accuracy?: number;
   f1_score?: number;
-  f1?: number; // Added this field for AutoML engines
+  f1?: number;
+  'f1-score'?: number; // Add support for hyphenated format
   precision?: number;
   recall?: number;
   confusion_matrix?: number[][];
@@ -430,9 +431,17 @@ const ExperimentsTab: React.FC = () => {
     setSearchQuery('');
   };
 
-  // Helper function to get F1 score from either f1 or f1_score fields
+  // Helper function to get F1 score from either f1, f1_score, or f1-score fields
   const getF1Score = (metrics: ExperimentMetrics): number | undefined => {
-    return metrics.f1_score !== undefined ? metrics.f1_score : metrics.f1;
+    // Check all possible F1 score field names
+    if (metrics.f1_score !== undefined) {
+      return metrics.f1_score;
+    } else if (metrics.f1 !== undefined) {
+      return metrics.f1;
+    } else if (metrics['f1-score'] !== undefined) {
+      return metrics['f1-score'];
+    }
+    return undefined;
   };
 
   const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
