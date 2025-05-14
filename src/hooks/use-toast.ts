@@ -1,15 +1,21 @@
 
 import * as React from "react";
-import { Toast as ToastPrimitive, ToastActionElement, ToastProps } from "@/components/ui/toast";
+import { Toast, ToastActionElement } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 5;
 const TOAST_REMOVE_DELAY = 1000000;
 
-type ToasterToast = ToastProps & {
-  id: string;
+interface ToastProps {
+  variant?: "default" | "destructive";
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+type ToasterToast = ToastProps & {
+  id: string;
 };
 
 const actionTypes = {
@@ -132,9 +138,9 @@ function dispatch(action: Action) {
   });
 }
 
-type ToastProps = Omit<ToasterToast, "id">;
+type ToastInput = Omit<ToastProps, "id">;
 
-function toast({ ...props }: ToastProps) {
+function toast({ ...props }: ToastInput) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
