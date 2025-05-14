@@ -68,6 +68,10 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance')) {
     return 'Feature Importance';
+  } else if (fileType.includes('true_vs_predicted')) {
+    return 'True vs Predicted';
+  } else if (fileType.includes('predicted_vs_residuals')) {
+    return 'Predicted vs Residuals';
   }
   
   // Default formatting: capitalize each word and replace underscores with spaces
@@ -270,7 +274,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type - expanded to include all visualization types
+  // Filter files by type - expanded to include all visualization types including new regression charts
   const getFilesByType = (fileType: string) => {
     return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
@@ -281,7 +285,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     ...getFilesByType('evaluation_curve'),
     ...getFilesByType('precision_recall_curve'),
     ...getFilesByType('learning_curve'),
-    ...getFilesByType('feature_importance')
+    ...getFilesByType('feature_importance'),
+    ...getFilesByType('true_vs_predicted'),
+    ...getFilesByType('predicted_vs_residuals')
   ];
 
   const modelMetadataFile = files.find(file => 
