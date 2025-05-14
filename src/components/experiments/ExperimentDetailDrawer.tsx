@@ -38,6 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import TuneModelModal from './TuneModelModal';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
@@ -317,6 +318,10 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const isExperimentRunning = results?.status === 'running';
   
   const isRegression = results?.task_type === 'regression';
+  const isMulticlassClassification = results?.task_type === 'multiclass_classification';
+  const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
+  const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
+  const hasPerClassMetrics = results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0;
   
   // Helper to determine if metric should be displayed as percentage
   const isPercentageMetric = (name: string): boolean => {
@@ -324,8 +329,67 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     return percentageMetrics.some(metric => name.toLowerCase().includes(metric));
   };
   
-  const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
-  const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
+  // New function to render per-class metrics table
+  const renderPerClassMetricsTable = () => {
+    if (!results?.metrics?.per_class) return null;
+    
+    const perClassData = results.metrics.per_class;
+    const classLabels = Object.keys(perClassData).sort((a, b) => {
+      // Try to sort numerically if possible
+      const numA = Number(a);
+      const numB = Number(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      // Fallback to string comparison
+      return a.localeCompare(b);
+    });
+
+    return (
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Per-Class Metrics</CardTitle>
+          <CardDescription>Performance metrics for each class</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveTable minWidth="550px">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class</TableHead>
+                <TableHead>Precision</TableHead>
+                <TableHead>Recall</TableHead>
+                <TableHead>F1 Score</TableHead>
+                <TableHead>Support</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {classLabels.map(classLabel => {
+                const classData = perClassData[classLabel];
+                // Handle the different naming conventions (f1-score vs f1_score)
+                const f1Score = classData["f1-score"] !== undefined ? classData["f1-score"] : classData.f1_score;
+                
+                return (
+                  <TableRow key={classLabel}>
+                    <TableCell className="font-medium">{classLabel}</TableCell>
+                    <TableCell className={getMetricColor(classData.precision)}>
+                      {formatMetric(classData.precision)}
+                    </TableCell>
+                    <TableCell className={getMetricColor(classData.recall)}>
+                      {formatMetric(classData.recall)}
+                    </TableCell>
+                    <TableCell className={getMetricColor(f1Score)}>
+                      {formatMetric(f1Score)}
+                    </TableCell>
+                    <TableCell>{classData.support}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </ResponsiveTable>
+        </CardContent>
+      </Card>
+    );
+  };
   
   return (
     <>
@@ -745,8 +809,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
-                          // Skip metrics that are already displayed in cards
-                          const skipKeys = ['accuracy', 'f1_score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error'];
+                          // Skip metrics that are already displayed in cards and the per_class object
+                          const skipKeys = ['accuracy', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error', 'per_class', 'source'];
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
                           return (
@@ -758,6 +822,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         })}
                       </div>
                     )}
+                    
+                    {/* Render per-class metrics table if available */}
+                    {hasPerClassMetrics && isMulticlassClassification && renderPerClassMetricsTable()}
                     
                     {(!results.metrics || Object.keys(results.metrics).length === 0) && (
                       <div className="text-center py-8 text-muted-foreground">
