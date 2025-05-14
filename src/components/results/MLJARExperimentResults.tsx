@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { 
   Award, 
   BarChart4, 
@@ -21,7 +22,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { ExperimentResults } from '@/types/training';
+import { ExperimentResults, PerClassMetric } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
@@ -101,6 +102,35 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
       metricName.toLowerCase().includes(m)
     );
+  };
+  
+  // Helper to get per-class metrics from either legacy or new format
+  const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
+    if (!experimentResults) return undefined;
+    
+    // Check for the new format (metrics.per_class)
+    if (experimentResults.metrics?.per_class && 
+        Object.keys(experimentResults.metrics.per_class).length > 0) {
+      return experimentResults.metrics.per_class;
+    }
+    
+    // Fallback to legacy format
+    if (experimentResults.per_class_metrics && 
+        Object.keys(experimentResults.per_class_metrics).length > 0) {
+      return experimentResults.per_class_metrics;
+    }
+    
+    return undefined;
+  };
+  
+  // Helper to get F1-score regardless of format ('f1-score' or 'f1_score')
+  const getF1Score = (metrics: any): number | undefined => {
+    if (metrics && typeof metrics === 'object') {
+      return metrics['f1-score'] !== undefined ? 
+        metrics['f1-score'] : 
+        metrics.f1_score;
+    }
+    return undefined;
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -215,8 +245,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     hyperparameters = {},
     automl_engine,
     model_display_name,
-    model_file_url,
-    per_class_metrics
+    model_file_url
   } = experimentResults;
 
   // Use model_display_name as the primary source for best model label
@@ -310,9 +339,11 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
 
-  // Helper to render per-class metrics if present
+  // Helper to render per-class metrics if present - Updated to handle both formats
   const renderPerClassMetrics = () => {
-    if (!per_class_metrics || Object.keys(per_class_metrics).length === 0) {
+    const perClassMetrics = getPerClassMetrics();
+    
+    if (!perClassMetrics || Object.keys(perClassMetrics).length === 0) {
       return null;
     }
 
@@ -332,7 +363,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-4">
-            <Table>
+            <ResponsiveTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Class</TableHead>
@@ -343,7 +374,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(per_class_metrics).map(([classLabel, metrics]) => (
+                {Object.entries(perClassMetrics).map(([classLabel, metrics]) => (
                   <TableRow key={classLabel}>
                     <TableCell>{classLabel}</TableCell>
                     <TableCell>
@@ -357,8 +388,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {metrics['f1-score'] !== undefined 
-                        ? formatMetricValue(metrics['f1-score'], true) 
+                      {getF1Score(metrics) !== undefined 
+                        ? formatMetricValue(getF1Score(metrics), true) 
                         : 'N/A'}
                     </TableCell>
                     <TableCell>
@@ -369,7 +400,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ResponsiveTable>
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -511,7 +542,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           key === 'classification_report' ||
                           key === 'confusion_matrix' ||
                           key === 'source' ||
-                          key === 'per_class_metrics' ||
+                          key === 'per_class' || // Skip the per_class object here
                           typeof value !== 'number'
                         ) return null;
                         
@@ -632,7 +663,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Add per-class metrics if available */}
+          {/* Model Details Tab - Updated to use the new getPerClassMetrics helper */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Model File Card - Updated to use modelDownloadUrl */}
@@ -701,8 +732,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               </Card>
             </div>
             
-            {/* Add Per-Class Metrics section to the metadata tab as well */}
-            {per_class_metrics && Object.keys(per_class_metrics).length > 0 && (
+            {/* Update Per-Class Metrics section in the metadata tab as well */}
+            {getPerClassMetrics() && Object.keys(getPerClassMetrics() || {}).length > 0 && (
               <Card className="shadow-sm mt-6">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Per-Class Metrics</CardTitle>
@@ -711,7 +742,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                  <ResponsiveTable>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Class</TableHead>
@@ -722,7 +753,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(per_class_metrics).map(([classLabel, metrics]) => (
+                      {Object.entries(getPerClassMetrics() || {}).map(([classLabel, metrics]) => (
                         <TableRow key={classLabel}>
                           <TableCell>{classLabel}</TableCell>
                           <TableCell>
@@ -736,8 +767,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                               : 'N/A'}
                           </TableCell>
                           <TableCell>
-                            {metrics['f1-score'] !== undefined 
-                              ? formatMetricValue(metrics['f1-score'], true) 
+                            {getF1Score(metrics) !== undefined 
+                              ? formatMetricValue(getF1Score(metrics), true) 
                               : 'N/A'}
                           </TableCell>
                           <TableCell>
@@ -748,7 +779,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </ResponsiveTable>
                 </CardContent>
               </Card>
             )}

@@ -69,7 +69,8 @@ export interface TrainingResults {
 export interface PerClassMetric {
   precision: number;
   recall: number;
-  'f1-score': number;
+  'f1-score'?: number; // Using optional since some might use f1_score instead
+  f1_score?: number;   // Support both naming conventions
   support: number;
 }
 
@@ -86,7 +87,9 @@ export interface ExperimentResults {
   error_message?: string;
   training_results?: TrainingResults;
   training_time_sec?: number;
-  metrics?: Record<string, any>;
+  metrics?: Record<string, any> & {
+    per_class?: Record<string, PerClassMetric>; // Add the nested per_class property
+  };
   files?: TrainingFile[];
   algorithm?: string;
   algorithm_choice?: string;
