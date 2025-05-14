@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -48,7 +49,11 @@ const AutoMLTraining: React.FC = () => {
   const [userEditedName, setUserEditedName] = useState(false);
   // Add state for MLJAR presets
   const [mljarPresets, setMljarPresets] = useState<trainingLib.MLJARPreset[]>([]);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  
+  // Changed: Separate preset states for each engine type
+  const [mljarSelectedPreset, setMljarSelectedPreset] = useState<string | null>(null);
+  const [h2oSelectedPreset, setH2OSelectedPreset] = useState<string | null>(null);
+  
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
   // NEW: Add state for H2O presets
@@ -72,6 +77,16 @@ const AutoMLTraining: React.FC = () => {
     randomSeed: 42
   });
   
+  // Helper function to get the currently selected preset based on engine
+  const getSelectedPreset = (): string | null => {
+    if (automlEngine === 'mljar') {
+      return mljarSelectedPreset;
+    } else if (automlEngine === 'h2o') {
+      return h2oSelectedPreset;
+    }
+    return null;
+  };
+  
   useEffect(() => {
     // Initialize userEditedName to false when component first mounts
     setUserEditedName(false);
@@ -88,12 +103,14 @@ const AutoMLTraining: React.FC = () => {
           const presets = await trainingLib.getMljarPresets();
           console.log("AutoML Training - Fetched MLJAR presets:", presets);
           setMljarPresets(presets);
-          // Default to "balanced" preset if available
+          // Default to "balanced" preset if available and no preset is already selected
           const balancedPreset = presets.find(preset => preset.name === 'balanced');
-          if (balancedPreset && !selectedPreset) {
-            setSelectedPreset(balancedPreset.name);
-          } else if (presets.length > 0 && !selectedPreset) {
-            setSelectedPreset(presets[0].name);
+          if (balancedPreset && !mljarSelectedPreset) {
+            console.log("AutoML Training - Setting default MLJAR preset to:", balancedPreset.name);
+            setMljarSelectedPreset(balancedPreset.name);
+          } else if (presets.length > 0 && !mljarSelectedPreset) {
+            console.log("AutoML Training - Setting default MLJAR preset to first preset:", presets[0].name);
+            setMljarSelectedPreset(presets[0].name);
           }
         } catch (error) {
           console.error("Failed to fetch MLJAR presets:", error);
@@ -123,12 +140,14 @@ const AutoMLTraining: React.FC = () => {
           // Ensure presets is always an array (defensive programming)
           if (Array.isArray(presets) && presets.length > 0) {
             setH2OPresets(presets);
-            // Default to "balanced" preset if available
+            // Default to "balanced" preset if available and no preset is already selected
             const balancedPreset = presets.find(preset => preset.name === 'balanced');
-            if (balancedPreset && !selectedPreset) {
-              setSelectedPreset(balancedPreset.name);
-            } else if (!selectedPreset) {
-              setSelectedPreset(presets[0].name);
+            if (balancedPreset && !h2oSelectedPreset) {
+              console.log("AutoML Training - Setting default H2O preset to:", balancedPreset.name);
+              setH2OSelectedPreset(balancedPreset.name);
+            } else if (!h2oSelectedPreset) {
+              console.log("AutoML Training - Setting default H2O preset to first preset:", presets[0].name);
+              setH2OSelectedPreset(presets[0].name);
             }
           } else {
             // Handle empty presets array
@@ -164,7 +183,7 @@ const AutoMLTraining: React.FC = () => {
     });
   }, [datasetId, taskType, processingStage, experimentStatus]);
 
-  // Handle engine change separately
+  // Handle engine change separately - Modified to not reset presets
   useEffect(() => {
     if (taskType && automlEngine) {
       // If experiment name is empty, generate a new one regardless of userEditedName flag
@@ -183,8 +202,9 @@ const AutoMLTraining: React.FC = () => {
         console.log("AutoMLTraining - User edited name detected, keeping current name:", experimentName);
       }
       
-      // Reset preset selection when changing engine
-      setSelectedPreset(null);
+      // We no longer reset preset selection when changing engine
+      // Each engine type now has its own preset state
+      console.log("AutoMLTraining - Engine changed to:", automlEngine, "- keeping separate preset selections");
     }
   }, [taskType, automlEngine, setExperimentName, experimentName, userEditedName]);
 
@@ -205,8 +225,9 @@ const AutoMLTraining: React.FC = () => {
   // Handler for engine change
   const handleEngineChange = (value: string) => {
     setAutomlEngine(value as TrainingEngine);
-    // Reset preset selection when changing engine
-    setSelectedPreset(null);
+    // Do not reset preset selection when changing engine anymore
+    console.log("AutoMLTraining - Engine changed to:", value, "- preset selections preserved");
+    
     // If the name field is empty, ensure we'll generate a new one
     if (!experimentName || experimentName.trim() === '') {
       setUserEditedName(false);
@@ -218,6 +239,18 @@ const AutoMLTraining: React.FC = () => {
     setUserEditedName(true);
     setExperimentName(e.target.value);
     console.log("AutoMLTraining - User edited experiment name:", e.target.value);
+  };
+
+  // Handler for MLJAR preset selection
+  const handleMljarPresetChange = (value: string) => {
+    console.log("AutoMLTraining - MLJAR preset changed to:", value);
+    setMljarSelectedPreset(value);
+  };
+
+  // Handler for H2O preset selection
+  const handleH2OPresetChange = (value: string) => {
+    console.log("AutoMLTraining - H2O preset changed to:", value);
+    setH2OSelectedPreset(value);
   };
 
   const handleTrainModel = async () => {
@@ -263,6 +296,10 @@ const AutoMLTraining: React.FC = () => {
         description: `No name provided, using '${finalExperimentName}'`,
       });
     }
+
+    // Use the correct preset based on the current engine
+    const selectedPreset = getSelectedPreset();
+    console.log("[AutoMLTraining] Using selected preset for current engine:", selectedPreset);
 
     try {
       setIsSubmitting(true);
@@ -366,6 +403,9 @@ const AutoMLTraining: React.FC = () => {
   };
 
   const isFormValid = () => {
+    // Use the helper function to get the currently selected preset based on engine
+    const currentSelectedPreset = getSelectedPreset();
+    
     // Enhanced logging for form validation
     console.log("AutoML - Checking if form is valid:", {
       datasetId,
@@ -374,7 +414,7 @@ const AutoMLTraining: React.FC = () => {
       testSize,
       processingStage,
       experimentName,
-      selectedPreset: automlEngine === 'mljar' ? selectedPreset : automlEngine === 'h2o' ? selectedPreset : 'n/a'
+      selectedPreset: currentSelectedPreset
     });
     
     // Check if we have the required data and if dataset is properly processed
@@ -394,12 +434,13 @@ const AutoMLTraining: React.FC = () => {
     
     // If using MLJAR or H2O, also require a preset
     if (result && (automlEngine === 'mljar' || automlEngine === 'h2o')) {
-      result = !!selectedPreset;
+      result = !!currentSelectedPreset;
     }
     
     console.log("AutoML - Form validation result:", { 
       result, 
-      isValidProcessingStage
+      isValidProcessingStage,
+      currentSelectedPreset
     });
     
     return result;
@@ -434,7 +475,7 @@ const AutoMLTraining: React.FC = () => {
     } else {
       return {
         engine: automlEngine as TrainingEngine, // Fixed the type here as well
-        preset: selectedPreset,
+        preset: getSelectedPreset(),
         experimentName,
         testSize,
         stratify,
@@ -564,8 +605,8 @@ const AutoMLTraining: React.FC = () => {
                   </div>
                 ) : mljarPresets.length > 0 ? (
                   <RadioGroup 
-                    value={selectedPreset || ''} 
-                    onValueChange={setSelectedPreset}
+                    value={mljarSelectedPreset || ''} 
+                    onValueChange={handleMljarPresetChange}
                     className="space-y-3 pt-2"
                     disabled={isTraining || isSubmitting}
                   >
@@ -619,8 +660,8 @@ const AutoMLTraining: React.FC = () => {
                   </div>
                 ) : h2oPresets.length > 0 ? (
                   <RadioGroup 
-                    value={selectedPreset || ''} 
-                    onValueChange={setSelectedPreset}
+                    value={h2oSelectedPreset || ''} 
+                    onValueChange={handleH2OPresetChange}
                     className="space-y-3 pt-2"
                     disabled={isTraining || isSubmitting}
                   >
