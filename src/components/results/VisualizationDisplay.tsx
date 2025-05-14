@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Filter files to only include visualizations - updated to include importance and evaluation_curve
+  // Filter files to only include visualizations - updated to include regression visualizations
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -28,7 +28,10 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'roc_curve',
       'precision_recall_curve',
       'class_distribution',
-      'variable_importance'
+      'variable_importance',
+      'learning_curve',
+      'true_vs_predicted',
+      'predicted_vs_residuals'
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
@@ -61,7 +64,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
                 </div>
                 <div className="mt-2 text-center">
                   <p className="text-sm font-medium capitalize">
-                    {file.file_type.replace(/_/g, ' ')}
+                    {formatVisualizationName(file.file_type)}
                   </p>
                 </div>
               </CardContent>
@@ -76,7 +79,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
               />
               <div className="mt-2 flex justify-between items-center">
                 <h3 className="font-medium capitalize">
-                  {file.file_type.replace(/_/g, ' ')}
+                  {formatVisualizationName(file.file_type)}
                 </h3>
                 <Button variant="outline" size="sm" asChild>
                   <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
@@ -91,6 +94,27 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       ))}
     </div>
   );
+};
+
+// Helper function to format visualization names in a user-friendly way
+const formatVisualizationName = (fileType: string): string => {
+  if (fileType.includes('confusion_matrix')) {
+    return 'Confusion Matrix';
+  } else if (fileType.includes('roc_curve')) {
+    return 'ROC Curve';
+  } else if (fileType.includes('precision_recall')) {
+    return 'Precision-Recall';
+  } else if (fileType.includes('learning_curve')) {
+    return 'Learning Curve';
+  } else if (fileType.includes('feature_importance') || fileType.includes('importance')) {
+    return 'Feature Importance';
+  } else if (fileType.includes('true_vs_predicted')) {
+    return 'True vs Predicted';
+  } else if (fileType.includes('predicted_vs_residuals')) {
+    return 'Residual Analysis';
+  }
+  
+  return fileType.replace(/_/g, ' ');
 };
 
 export default VisualizationDisplay;
