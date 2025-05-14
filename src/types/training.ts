@@ -65,6 +65,14 @@ export interface TrainingResults {
   mean_per_class_error?: number[][];
 }
 
+// Define the interface for per-class metrics
+export interface PerClassMetric {
+  precision: number;
+  recall: number;
+  'f1-score': number;
+  support: number;
+}
+
 export interface ExperimentResults {
   id?: string;
   experimentId: string;
@@ -95,6 +103,8 @@ export interface ExperimentResults {
   class_labels?: string[];
   training_type?: TrainingType;
   model_display_name?: string;
+  // Add per_class_metrics to the ExperimentResults interface
+  per_class_metrics?: Record<string, PerClassMetric>;
   // New property for structured visualizations
   visualizations_by_type?: VisualizationsByType;
 }
