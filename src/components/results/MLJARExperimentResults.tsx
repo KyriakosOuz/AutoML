@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -69,6 +68,10 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance')) {
     return 'Feature Importance';
+  } else if (fileType.includes('true_vs_predicted')) {
+    return 'True vs Predicted';
+  } else if (fileType.includes('predicted_vs_residuals')) {
+    return 'Predicted vs Residuals';
   }
   
   // Default formatting: capitalize each word and replace underscores with spaces
@@ -88,7 +91,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
   const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
-  const [regressionMetricsOpen, setRegressionMetricsOpen] = useState(false);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -106,9 +108,11 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     );
   };
   
-  // Helper to determine if the experiment is regression
-  const isRegressionTask = (taskType?: string): boolean => {
-    return taskType === 'regression';
+  // New helper function to determine if a metric is a regression metric
+  const isRegressionMetric = (metricName: string): boolean => {
+    return ['mse', 'rmse', 'mae', 'r2', 'mape'].some(m => 
+      metricName.toLowerCase() === m
+    );
   };
   
   // Helper to get per-class metrics from either legacy or new format
@@ -260,18 +264,17 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         metrics.best_model_label || 
                         (hyperparameters.best_model ? hyperparameters.best_model : 'Not specified');
 
-  // Get primary metric based on task type
+  // Get primary metric based on task type - updated to support regression metrics
   const getPrimaryMetric = () => {
-    if (task_type === 'regression') {
-      // For regression, prioritize r2, then rmse
-      return {
-        name: metrics.metric_used || 'r2',
-        value: metrics.metric_value || (metrics.r2 || metrics.rmse || metrics.mae || metrics.mse)
-      };
-    } else if (task_type?.includes('classification')) {
+    if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
         value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics.f1)
+      };
+    } else if (task_type?.includes('regression')) {
+      return {
+        name: metrics.metric_used || 'r2',
+        value: metrics.metric_value || metrics.r2 || metrics.rmse || metrics.mse || metrics.mae
       };
     } else {
       return {
@@ -282,9 +285,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   };
 
   const primaryMetric = getPrimaryMetric();
-  const isRegression = isRegressionTask(task_type);
   
-  // Filter files by type - expanded to include all visualization types
+  // Filter files by type - expanded to include all visualization types including new regression charts
   const getFilesByType = (fileType: string) => {
     return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
@@ -295,7 +297,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     ...getFilesByType('evaluation_curve'),
     ...getFilesByType('precision_recall_curve'),
     ...getFilesByType('learning_curve'),
-    ...getFilesByType('feature_importance')
+    ...getFilesByType('feature_importance'),
+    ...getFilesByType('true_vs_predicted'),
+    ...getFilesByType('predicted_vs_residuals')
   ];
 
   const modelMetadataFile = files.find(file => 
@@ -335,7 +339,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   // Get the model download URL
   const modelDownloadUrl = getModelFileUrl();
   
-  // Format metric for display
+  // Format metric for display - updated to handle regression metrics better
   const formatMetric = (value: number | undefined) => {
     if (value === undefined) return 'N/A';
     if (typeof value !== 'number') return String(value);
@@ -343,10 +347,16 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     const isPercentage = ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(
       m => primaryMetric.name.toLowerCase().includes(m)
     );
+
+    const isR2 = primaryMetric.name.toLowerCase() === 'r2';
     
-    return isPercentage 
-      ? `${(value * 100).toFixed(2)}%` 
-      : value.toFixed(4);
+    if (isPercentage) {
+      return `${(value * 100).toFixed(2)}%`;
+    } else if (isR2) {
+      return value.toFixed(4);
+    } else {
+      return value.toFixed(4);
+    }
   };
   
   // Format created_at date for display
@@ -415,75 +425,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 ))}
               </TableBody>
             </ResponsiveTable>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    );
-  };
-  
-  // Helper to render regression metrics if present
-  const renderRegressionMetrics = () => {
-    if (!isRegression || 
-        !(metrics.mae !== undefined || 
-          metrics.mse !== undefined || 
-          metrics.rmse !== undefined || 
-          metrics.r2 !== undefined || 
-          metrics.mape !== undefined)) {
-      return null;
-    }
-    
-    return (
-      <Collapsible 
-        open={regressionMetricsOpen} 
-        onOpenChange={setRegressionMetricsOpen}
-        className="mt-6 border rounded-md overflow-hidden"
-      >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 text-left">
-          <span className="font-medium">Regression Metrics</span>
-          {regressionMetricsOpen ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {metrics.mae !== undefined && (
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <span className="block text-sm text-muted-foreground">Mean Absolute Error</span>
-                  <span className="text-lg font-medium">{formatMetricValue(metrics.mae, false)}</span>
-                </div>
-              )}
-              
-              {metrics.mse !== undefined && (
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <span className="block text-sm text-muted-foreground">Mean Squared Error</span>
-                  <span className="text-lg font-medium">{formatMetricValue(metrics.mse, false)}</span>
-                </div>
-              )}
-              
-              {metrics.rmse !== undefined && (
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <span className="block text-sm text-muted-foreground">Root Mean Squared Error</span>
-                  <span className="text-lg font-medium">{formatMetricValue(metrics.rmse, false)}</span>
-                </div>
-              )}
-              
-              {metrics.r2 !== undefined && (
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <span className="block text-sm text-muted-foreground">R² Score</span>
-                  <span className="text-lg font-medium">{formatMetricValue(metrics.r2, false)}</span>
-                </div>
-              )}
-              
-              {metrics.mape !== undefined && (
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <span className="block text-sm text-muted-foreground">Mean Absolute Percentage Error</span>
-                  <span className="text-lg font-medium">{formatMetricValue(metrics.mape, false)}</span>
-                </div>
-              )}
-            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -610,6 +551,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           .split(' ')
                           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                           .join(' ')}
+                        {primaryMetric.name.toLowerCase() === 'r2' ? ' (R²)' : ''}
                       </h3>
                       <p className="text-3xl font-bold text-primary">
                         {formatMetric(primaryMetric.value)}
@@ -629,14 +571,22 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           typeof value !== 'number'
                         ) return null;
                         
-                        // Enhanced formatting of metric display names
-                        const metricDisplayName = key
+                        // Enhanced formatting of metric display names with special handling for regression metrics
+                        let metricDisplayName = key
                           .replace(/_/g, ' ')
                           .split(' ')
                           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                           .join(' ');
                         
+                        // Special formatting for common regression metrics
+                        if (key.toLowerCase() === 'r2') metricDisplayName = 'R²';
+                        if (key.toLowerCase() === 'mse') metricDisplayName = 'MSE';
+                        if (key.toLowerCase() === 'rmse') metricDisplayName = 'RMSE';
+                        if (key.toLowerCase() === 'mae') metricDisplayName = 'MAE';
+                        if (key.toLowerCase() === 'mape') metricDisplayName = 'MAPE';
+                        
                         const isPercent = isPercentageMetric(key);
+                        const isRegression = isRegressionMetric(key.toLowerCase());
                         
                         return (
                           <div key={key} className="p-3 bg-muted/40 rounded-md">
@@ -644,7 +594,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                               {metricDisplayName}
                             </span>
                             <span className="text-lg font-medium">
-                              {formatMetricValue(value as number, isPercent)}
+                              {formatMetricValue(value as number, isPercent && !isRegression)}
                             </span>
                           </div>
                         );
@@ -653,9 +603,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     
                     {/* Add the Per-Class Metrics collapsible section */}
                     {renderPerClassMetrics()}
-                    
-                    {/* Add the Regression Metrics collapsible section */}
-                    {renderRegressionMetrics()}
                   </div>
                 </CardContent>
               </Card>
@@ -818,56 +765,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               </Card>
             </div>
             
-            {/* Add Regression Metrics section in metadata tab too */}
-            {isRegression && (
-              <Card className="shadow-sm mt-6">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Regression Metrics</CardTitle>
-                  <CardDescription>
-                    Detailed regression performance metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {metrics.mae !== undefined && (
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        <span className="block text-sm text-muted-foreground">Mean Absolute Error</span>
-                        <span className="text-lg font-medium">{formatMetricValue(metrics.mae, false)}</span>
-                      </div>
-                    )}
-                    
-                    {metrics.mse !== undefined && (
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        <span className="block text-sm text-muted-foreground">Mean Squared Error</span>
-                        <span className="text-lg font-medium">{formatMetricValue(metrics.mse, false)}</span>
-                      </div>
-                    )}
-                    
-                    {metrics.rmse !== undefined && (
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        <span className="block text-sm text-muted-foreground">Root Mean Squared Error</span>
-                        <span className="text-lg font-medium">{formatMetricValue(metrics.rmse, false)}</span>
-                      </div>
-                    )}
-                    
-                    {metrics.r2 !== undefined && (
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        <span className="block text-sm text-muted-foreground">R² Score</span>
-                        <span className="text-lg font-medium">{formatMetricValue(metrics.r2, false)}</span>
-                      </div>
-                    )}
-                    
-                    {metrics.mape !== undefined && (
-                      <div className="bg-muted/30 p-3 rounded-md">
-                        <span className="block text-sm text-muted-foreground">Mean Absolute Percentage Error</span>
-                        <span className="text-lg font-medium">{formatMetricValue(metrics.mape, false)}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
             {/* Update Per-Class Metrics section in the metadata tab as well */}
             {getPerClassMetrics() && Object.keys(getPerClassMetrics() || {}).length > 0 && (
               <Card className="shadow-sm mt-6">
@@ -916,6 +813,62 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                       ))}
                     </TableBody>
                   </ResponsiveTable>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Add regression metrics in a specific card for regression tasks */}
+            {task_type?.includes('regression') && (
+              <Card className="shadow-sm mt-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Regression Metrics</CardTitle>
+                  <CardDescription>
+                    Detailed regression metrics breakdown
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+                    {metrics.r2 !== undefined && (
+                      <div className="p-3 bg-muted/40 rounded-md text-center">
+                        <span className="block text-sm text-muted-foreground mb-1">R²</span>
+                        <span className="text-lg font-medium">
+                          {formatMetricValue(metrics.r2, false)}
+                        </span>
+                      </div>
+                    )}
+                    {metrics.rmse !== undefined && (
+                      <div className="p-3 bg-muted/40 rounded-md text-center">
+                        <span className="block text-sm text-muted-foreground mb-1">RMSE</span>
+                        <span className="text-lg font-medium">
+                          {formatMetricValue(metrics.rmse, false)}
+                        </span>
+                      </div>
+                    )}
+                    {metrics.mse !== undefined && (
+                      <div className="p-3 bg-muted/40 rounded-md text-center">
+                        <span className="block text-sm text-muted-foreground mb-1">MSE</span>
+                        <span className="text-lg font-medium">
+                          {formatMetricValue(metrics.mse, false)}
+                        </span>
+                      </div>
+                    )}
+                    {metrics.mae !== undefined && (
+                      <div className="p-3 bg-muted/40 rounded-md text-center">
+                        <span className="block text-sm text-muted-foreground mb-1">MAE</span>
+                        <span className="text-lg font-medium">
+                          {formatMetricValue(metrics.mae, false)}
+                        </span>
+                      </div>
+                    )}
+                    {metrics.mape !== undefined && (
+                      <div className="p-3 bg-muted/40 rounded-md text-center">
+                        <span className="block text-sm text-muted-foreground mb-1">MAPE</span>
+                        <span className="text-lg font-medium">
+                          {formatMetricValue(metrics.mape, false)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
