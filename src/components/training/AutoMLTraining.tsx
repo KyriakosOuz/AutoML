@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -120,13 +119,24 @@ const AutoMLTraining: React.FC = () => {
         try {
           const presets = await trainingLib.getH2OPresets();
           console.log("AutoML Training - Fetched H2O presets:", presets);
-          setH2OPresets(presets);
-          // Default to "balanced" preset if available
-          const balancedPreset = presets.find(preset => preset.name === 'balanced');
-          if (balancedPreset && !selectedPreset) {
-            setSelectedPreset(balancedPreset.name);
-          } else if (presets.length > 0 && !selectedPreset) {
-            setSelectedPreset(presets[0].name);
+          
+          // Ensure presets is always an array (defensive programming)
+          if (Array.isArray(presets) && presets.length > 0) {
+            setH2OPresets(presets);
+            // Default to "balanced" preset if available
+            const balancedPreset = presets.find(preset => preset.name === 'balanced');
+            if (balancedPreset && !selectedPreset) {
+              setSelectedPreset(balancedPreset.name);
+            } else if (!selectedPreset) {
+              setSelectedPreset(presets[0].name);
+            }
+          } else {
+            // Handle empty presets array
+            console.warn("AutoML Training - Empty H2O presets received, using defaults");
+            toast({
+              title: "Using default H2O presets",
+              description: "Could not fetch custom training presets. Using default settings.",
+            });
           }
         } catch (error) {
           console.error("Failed to fetch H2O presets:", error);
@@ -614,7 +624,7 @@ const AutoMLTraining: React.FC = () => {
                     className="space-y-3 pt-2"
                     disabled={isTraining || isSubmitting}
                   >
-                    {h2oPresets.map(preset => (
+                    {h2oPresets.map((preset) => (
                       <div key={preset.name} className="flex items-start space-x-2">
                         <RadioGroupItem value={preset.name} id={`h2o-preset-${preset.name}`} className="mt-1" />
                         <div className="space-y-1">
@@ -624,13 +634,13 @@ const AutoMLTraining: React.FC = () => {
                           >
                             {preset.name} 
                             <span className="text-xs ml-2 text-muted-foreground">
-                              (~{formatTimeLimit(preset.max_runtime_secs)})
+                              (~{preset.max_runtime_secs ? formatTimeLimit(preset.max_runtime_secs) : 'unknown time'})
                             </span>
                           </Label>
                           <p className="text-sm text-muted-foreground">{preset.description}</p>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
                             <span className="bg-slate-100 px-1.5 py-0.5 rounded">{preset.nfolds}-fold CV</span>
-                            {preset.exclude_algos.length > 0 && (
+                            {preset.exclude_algos && Array.isArray(preset.exclude_algos) && preset.exclude_algos.length > 0 && (
                               <span className="bg-slate-100 px-1.5 py-0.5 rounded">
                                 Excludes: {preset.exclude_algos.join(', ')}
                               </span>

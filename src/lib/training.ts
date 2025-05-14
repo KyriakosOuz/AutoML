@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -328,25 +329,74 @@ export interface H2OPreset {
   sort_metric: string;
 }
 
-// New function to fetch H2O presets
+// Modified H2O presets function with improved error handling
 export const getH2OPresets = async (): Promise<H2OPreset[]> => {
   try {
     console.log('[API] Fetching H2O presets');
     const headers = await getAuthHeaders();
+    
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(`${API_BASE_URL}/training/automl/get-h2o-presets/`, { 
-      headers 
-    });
+      headers,
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
 
     if (!response.ok) {
       console.error('[API] Error fetching H2O presets:', response.status, response.statusText);
-      return []; // Return empty array on error
+      // Return default presets on error
+      return getDefaultH2OPresets();
     }
 
     const data = await response.json();
     console.log('[API] H2O presets received:', data);
-    return data.presets || [];
+    
+    // Ensure presets is an array and not empty
+    if (!data.presets || !Array.isArray(data.presets) || data.presets.length === 0) {
+      console.warn('[API] H2O presets missing or empty in response, using defaults');
+      return getDefaultH2OPresets();
+    }
+    
+    return data.presets;
   } catch (error) {
     console.error('[API] Error fetching H2O presets:', error);
-    return []; // Return empty array on error
+    // Return default presets on any error
+    return getDefaultH2OPresets();
   }
 };
+
+// Helper function to provide default H2O presets when API fails
+function getDefaultH2OPresets(): H2OPreset[] {
+  console.log('[API] Using default H2O presets');
+  return [
+    {
+      name: "balanced",
+      description: "Balanced runtime and accuracy with default settings.",
+      max_runtime_secs: 1200,
+      nfolds: 5,
+      balance_classes: true,
+      exclude_algos: [],
+      sort_metric: "AUTO"
+    },
+    {
+      name: "fast",
+      description: "Quick training using fewer folds and excluding Deep Learning.",
+      max_runtime_secs: 600,
+      nfolds: 3,
+      balance_classes: false,
+      exclude_algos: ["DeepLearning", "StackedEnsemble"],
+      sort_metric: "AUTO"
+    },
+    {
+      name: "accurate",
+      description: "Max accuracy with 10-fold CV and full algorithm set.",
+      max_runtime_secs: 2400,
+      nfolds: 10,
+      balance_classes: true,
+      exclude_algos: [],
+      sort_metric: "AUTO"
+    }
+  ];
+}
