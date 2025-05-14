@@ -843,7 +843,7 @@ const ExperimentsTab: React.FC = () => {
 
       <ExperimentDetailDrawer
         experimentId={selectedExperimentId}
-        isOpen={isDetailDrawerOpen}
+        open={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
       />
 

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   Drawer,
@@ -271,5 +272,3 @@ export const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     </Drawer>
   );
 };
-
-export { ExperimentDetailDrawer };
