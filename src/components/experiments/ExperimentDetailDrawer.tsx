@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Drawer,
@@ -159,12 +158,32 @@ export const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                 <CardDescription>Performance metrics from the experiment</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
-                {Object.entries(results.metrics || {}).map(([key, value]) => (
-                  <div className="flex justify-between" key={key}>
-                    <span>{key}:</span>
-                    <span>{typeof value === 'number' ? value.toFixed(4) : String(value)}</span>
-                  </div>
-                ))}
+                {Object.entries(results.metrics || {}).map(([key, value]) => {
+                  // Skip source and other non-display metrics
+                  if (key === 'source' || typeof value === 'object') {
+                    return null;
+                  }
+                  
+                  // Format the key for display
+                  const formattedKey = key.toUpperCase() === 'R2' 
+                    ? 'R²' 
+                    : key.toUpperCase() === 'MSE'
+                    ? 'MSE'
+                    : key.toUpperCase() === 'RMSE'
+                    ? 'RMSE'
+                    : key.toUpperCase() === 'MAE'
+                    ? 'MAE'
+                    : key.toUpperCase() === 'MAPE'
+                    ? 'MAPE'
+                    : key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                  
+                  return (
+                    <div className="flex justify-between" key={key}>
+                      <span>{formattedKey}:</span>
+                      <span>{typeof value === 'number' ? value.toFixed(4) : String(value)}</span>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
             
