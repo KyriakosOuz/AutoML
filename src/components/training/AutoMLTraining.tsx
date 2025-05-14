@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -17,6 +16,7 @@ import { generateExperimentName } from '@/lib/constants';
 import { TrainingEngine } from '@/types/training';
 import { useAuth } from '@/contexts/AuthContext';
 import * as trainingLib from '@/lib/training';  // Import from training.ts explicitly
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
@@ -45,6 +45,10 @@ const AutoMLTraining: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Add state to track whether the user has manually edited the name
   const [userEditedName, setUserEditedName] = useState(false);
+  // Add state for MLJAR presets
+  const [mljarPresets, setMljarPresets] = useState<trainingLib.MLJARPreset[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
   useEffect(() => {
     // Initialize userEditedName to false when component first mounts
@@ -52,6 +56,38 @@ const AutoMLTraining: React.FC = () => {
     // Enhanced logging to help debugging
     console.log("AutoML Training - Component mounted, reset userEditedName");
   }, []); // Empty dependency array ensures this runs only once on mount
+  
+  // Fetch MLJAR presets when automl engine is selected and it's "mljar"
+  useEffect(() => {
+    const fetchMljarPresets = async () => {
+      if (automlEngine === 'mljar') {
+        setIsLoadingPresets(true);
+        try {
+          const presets = await trainingLib.getMljarPresets();
+          console.log("AutoML Training - Fetched MLJAR presets:", presets);
+          setMljarPresets(presets);
+          // Default to "balanced" preset if available
+          const balancedPreset = presets.find(preset => preset.name === 'balanced');
+          if (balancedPreset && !selectedPreset) {
+            setSelectedPreset(balancedPreset.name);
+          } else if (presets.length > 0 && !selectedPreset) {
+            setSelectedPreset(presets[0].name);
+          }
+        } catch (error) {
+          console.error("Failed to fetch MLJAR presets:", error);
+          toast({
+            title: "Failed to load MLJAR presets",
+            description: "Could not fetch training presets. Using default settings.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoadingPresets(false);
+        }
+      }
+    };
+    
+    fetchMljarPresets();
+  }, [automlEngine, toast]);
   
   useEffect(() => {
     // Enhanced logging to help debugging
@@ -101,6 +137,8 @@ const AutoMLTraining: React.FC = () => {
   // Handler for engine change
   const handleEngineChange = (value: string) => {
     setAutomlEngine(value as TrainingEngine);
+    // Reset preset selection when changing engine
+    setSelectedPreset(null);
     // If the name field is empty, ensure we'll generate a new one
     if (!experimentName || experimentName.trim() === '') {
       setUserEditedName(false);
@@ -181,7 +219,8 @@ const AutoMLTraining: React.FC = () => {
         testSize,
         stratify,
         randomSeed,
-        experimentName: finalExperimentName
+        experimentName: finalExperimentName,
+        presetProfile: selectedPreset
       });
 
       // Use the function from training.ts instead of api.ts
@@ -192,7 +231,8 @@ const AutoMLTraining: React.FC = () => {
         testSize,
         stratify,
         randomSeed,
-        finalExperimentName // Pass the final experiment name (either user-defined or generated)
+        finalExperimentName, // Pass the final experiment name (either user-defined or generated)
+        selectedPreset // Pass the selected preset if available
       );
 
       if (result && result.experiment_id) {
@@ -255,7 +295,8 @@ const AutoMLTraining: React.FC = () => {
       automlEngine,
       testSize,
       processingStage,
-      experimentName
+      experimentName,
+      selectedPreset: automlEngine === 'mljar' ? selectedPreset : 'n/a'
     });
     
     // Check if we have the required data and if dataset is properly processed
@@ -263,7 +304,8 @@ const AutoMLTraining: React.FC = () => {
     const isValidProcessingStage = processingStage === 'final' || processingStage === 'processed';
     
     // MODIFIED: Removed the experimentName check since we'll generate a default one if needed
-    const result = !!(
+    // Add check for selected preset when using MLJAR
+    let result = !!(
       datasetId &&
       taskType &&
       automlEngine &&
@@ -271,6 +313,11 @@ const AutoMLTraining: React.FC = () => {
       testSize <= 0.5 &&
       isValidProcessingStage
     );
+    
+    // If using MLJAR, also require a preset
+    if (result && automlEngine === 'mljar') {
+      result = !!selectedPreset;
+    }
     
     console.log("AutoML - Form validation result:", { 
       result, 
@@ -294,6 +341,12 @@ const AutoMLTraining: React.FC = () => {
     });
     
     return formNotValid || isProcessing || isSubmittingNow;
+  };
+
+  // Format time limit for display
+  const formatTimeLimit = (timeLimit: number) => {
+    if (timeLimit < 60) return `${timeLimit} seconds`;
+    return `${Math.floor(timeLimit / 60)} minutes`;
   };
 
   return (
@@ -361,6 +414,61 @@ const AutoMLTraining: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* MLJAR Preset Selection - show only when MLJAR is selected */}
+            {automlEngine === 'mljar' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Training Preset
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Select a training profile that balances speed vs accuracy</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                
+                {isLoadingPresets ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Loading presets...
+                  </div>
+                ) : mljarPresets.length > 0 ? (
+                  <RadioGroup 
+                    value={selectedPreset || ''} 
+                    onValueChange={setSelectedPreset}
+                    className="space-y-3 pt-2"
+                    disabled={isTraining || isSubmitting}
+                  >
+                    {mljarPresets.map(preset => (
+                      <div key={preset.name} className="flex items-start space-x-2">
+                        <RadioGroupItem value={preset.name} id={`preset-${preset.name}`} className="mt-1" />
+                        <div className="space-y-1">
+                          <Label 
+                            htmlFor={`preset-${preset.name}`} 
+                            className="text-base font-medium capitalize cursor-pointer"
+                          >
+                            {preset.name} 
+                            <span className="text-xs ml-2 text-muted-foreground">
+                              (~{formatTimeLimit(preset.time_limit)})
+                            </span>
+                          </Label>
+                          <p className="text-sm text-muted-foreground">{preset.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <div className="text-sm text-muted-foreground pt-1">
+                    Could not load presets. Will use default settings.
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="experiment-name" className="flex items-center gap-2">

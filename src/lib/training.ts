@@ -27,7 +27,8 @@ export const automlTrain = async (
   testSize: number,
   stratify: boolean,
   randomSeed: number,
-  experimentName?: string | null
+  experimentName?: string | null,
+  presetProfile?: string | null
 ) => {
   try {
     console.log('[API] Starting AutoML training with custom name:', experimentName);
@@ -45,6 +46,12 @@ export const automlTrain = async (
     if (experimentName) {
       console.log('[API] Setting experiment name in request:', experimentName);
       formData.append('experiment_name', experimentName);
+    }
+    
+    // Add preset profile if provided
+    if (presetProfile) {
+      console.log('[API] Setting preset profile in request:', presetProfile);
+      formData.append('preset_profile', presetProfile);
     }
     
     // FIXED: When sending FormData, don't set Content-Type header
@@ -279,3 +286,33 @@ export async function predictManual(experimentId: string, inputs: Record<string,
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// New function to fetch MLJAR presets
+export interface MLJARPreset {
+  name: string;
+  description: string;
+  mode: string;
+  time_limit: number;
+}
+
+export const getMljarPresets = async (): Promise<MLJARPreset[]> => {
+  try {
+    console.log('[API] Fetching MLJAR presets');
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/training/automl/get-mljar-presets/`, { 
+      headers 
+    });
+
+    if (!response.ok) {
+      console.error('[API] Error fetching MLJAR presets:', response.status, response.statusText);
+      return []; // Return empty array on error
+    }
+
+    const data = await response.json();
+    console.log('[API] MLJAR presets received:', data);
+    return data.presets || [];
+  } catch (error) {
+    console.error('[API] Error fetching MLJAR presets:', error);
+    return []; // Return empty array on error
+  }
+};
