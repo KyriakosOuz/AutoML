@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -60,6 +61,8 @@ const AutoMLTraining: React.FC = () => {
   
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
+  // State to track if H2O presets have been fetched
+  const [h2oPresetsFetched, setH2OPresetsFetched] = useState(false);
   // NEW: Add state for H2O presets
   const [h2oPresets, setH2OPresets] = useState<trainingLib.H2OPreset[]>([]);
   const [isLoadingH2OPresets, setIsLoadingH2OPresets] = useState(false);
@@ -173,12 +176,15 @@ const AutoMLTraining: React.FC = () => {
     fetchMljarPresets();
   }, [automlEngine, toast, mljarSelectedPreset]);
   
-  // NEW: Fetch H2O presets when automl engine is selected and it's "h2o"
+  // FIXED: Fetch H2O presets when automl engine is selected and it's "h2o"
+  // Added h2oPresetsFetched flag to prevent infinite API calls
   useEffect(() => {
     const fetchH2OPresets = async () => {
-      if (automlEngine === 'h2o') {
+      // Only fetch if engine is h2o, presets haven't been fetched yet, and we're not already loading
+      if (automlEngine === 'h2o' && !h2oPresetsFetched && !isLoadingH2OPresets) {
         setIsLoadingH2OPresets(true);
         try {
+          console.log("AutoML Training - Fetching H2O presets (once)");
           const presets = await trainingLib.getH2OPresets();
           console.log("AutoML Training - Fetched H2O presets:", presets);
           
@@ -202,6 +208,8 @@ const AutoMLTraining: React.FC = () => {
               description: "Could not fetch custom training presets. Using default settings.",
             });
           }
+          // Mark that we've successfully fetched presets
+          setH2OPresetsFetched(true);
         } catch (error) {
           console.error("Failed to fetch H2O presets:", error);
           toast({
@@ -209,6 +217,8 @@ const AutoMLTraining: React.FC = () => {
             description: "Could not fetch training presets. Using default settings.",
             variant: "destructive"
           });
+          // Even on error, mark as fetched to prevent continuous retries
+          setH2OPresetsFetched(true);
         } finally {
           setIsLoadingH2OPresets(false);
         }
@@ -216,7 +226,14 @@ const AutoMLTraining: React.FC = () => {
     };
     
     fetchH2OPresets();
-  }, [automlEngine, toast, h2oSelectedPreset]);
+  }, [automlEngine, toast, h2oSelectedPreset, h2oPresetsFetched, isLoadingH2OPresets]);
+  
+  // Reset h2oPresetsFetched flag when switching away from h2o
+  useEffect(() => {
+    if (automlEngine !== 'h2o') {
+      setH2OPresetsFetched(false);
+    }
+  }, [automlEngine]);
   
   useEffect(() => {
     // Enhanced logging to help debugging

@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -329,9 +328,19 @@ export interface H2OPreset {
   sort_metric: string;
 }
 
-// Modified H2O presets function with improved error handling
+// Modified H2O presets function with improved error handling and added caching
+const h2oPresetsCache: { presets: H2OPreset[] | null, timestamp: number } = { presets: null, timestamp: 0 };
+const CACHE_VALIDITY_MS = 60 * 60 * 1000; // 1 hour cache validity
+
 export const getH2OPresets = async (): Promise<H2OPreset[]> => {
   try {
+    // Check if we have a valid cached response
+    const now = Date.now();
+    if (h2oPresetsCache.presets && (now - h2oPresetsCache.timestamp < CACHE_VALIDITY_MS)) {
+      console.log('[API] Using cached H2O presets');
+      return h2oPresetsCache.presets;
+    }
+    
     console.log('[API] Fetching H2O presets');
     const headers = await getAuthHeaders();
     
@@ -358,6 +367,10 @@ export const getH2OPresets = async (): Promise<H2OPreset[]> => {
       console.warn('[API] H2O presets missing or empty in response, using defaults');
       return getDefaultH2OPresets();
     }
+    
+    // Update cache
+    h2oPresetsCache.presets = data.presets;
+    h2oPresetsCache.timestamp = now;
     
     return data.presets;
   } catch (error) {
