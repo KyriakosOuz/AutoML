@@ -8,7 +8,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { ExperimentResults } from '@/types/training';
-import { getExperimentResults } from '@/lib/api';
+import { getExperimentResults } from '@/lib/training';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -271,3 +271,5 @@ export const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     </Drawer>
   );
 };
+
+export { ExperimentDetailDrawer };
