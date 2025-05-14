@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
 import { Input } from '@/components/ui/input';
-import { AutoMLEngineFilter } from '@/types/training';
+import { AutoMLEngineFilter, ExperimentStatus } from '@/types/training'; // Added ExperimentStatus import
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 
