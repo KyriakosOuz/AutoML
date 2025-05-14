@@ -9,8 +9,14 @@ import { checkStatus } from '@/lib/training';
 
 const TrainingContext = createContext<TrainingContextValue | undefined>(undefined);
 
-// New constant for experiment name storage
+// Storage keys for experiment configuration
 const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
+const EXPERIMENT_ENGINE_STORAGE_KEY = 'experiment_engine';
+const EXPERIMENT_PRESET_STORAGE_KEY = 'experiment_preset';
+const EXPERIMENT_TEST_SIZE_STORAGE_KEY = 'experiment_test_size';
+const EXPERIMENT_STRATIFY_STORAGE_KEY = 'experiment_stratify';
+const EXPERIMENT_RANDOM_SEED_STORAGE_KEY = 'experiment_random_seed';
+
 // New flag to prevent resultsLoaded from being reset during loading
 const RESULTS_LOADED_DELAY_MS = 1500; // Extended delay before potentially setting resultsLoaded back to false
 
@@ -62,8 +68,24 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
         const savedExperimentName = localStorage.getItem(EXPERIMENT_NAME_STORAGE_KEY);
         
+        // Retrieve additional configuration parameters
+        const savedEngine = localStorage.getItem(EXPERIMENT_ENGINE_STORAGE_KEY);
+        const savedPreset = localStorage.getItem(EXPERIMENT_PRESET_STORAGE_KEY);
+        const savedTestSize = localStorage.getItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY);
+        const savedStratify = localStorage.getItem(EXPERIMENT_STRATIFY_STORAGE_KEY);
+        const savedRandomSeed = localStorage.getItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY);
+        
         if (savedExperimentId) {
           console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
+          console.log("[TrainingContext] Restored configuration:", {
+            type: savedTrainingType,
+            name: savedExperimentName,
+            engine: savedEngine,
+            preset: savedPreset,
+            testSize: savedTestSize,
+            stratify: savedStratify,
+            randomSeed: savedRandomSeed
+          });
           
           // First update state with basic info we have from storage
           setState(prev => ({
@@ -72,7 +94,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             lastTrainingType: savedTrainingType,
             experimentStatus: 'processing', // Start with processing status until we know more
             isLoadingResults: true,
-            experimentName: savedExperimentName // Restore saved experiment name
+            experimentName: savedExperimentName, // Restore saved experiment name
+            // Restore configuration parameters if available
+            automlEngine: savedEngine || prev.automlEngine,
+            testSize: savedTestSize ? parseFloat(savedTestSize) : prev.testSize,
+            stratify: savedStratify ? savedStratify === 'true' : prev.stratify,
+            randomSeed: savedRandomSeed ? parseInt(savedRandomSeed) : prev.randomSeed
           }));
           
           // Then check the actual experiment status from the API
@@ -106,7 +133,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
               
               // Make sure we're not already polling for this experiment
               if (currentPollingInfo.experimentId !== savedExperimentId) {
-                // ✅ FIX: Remove the second argument - only pass experimentId
+                // Only pass experimentId
                 startPolling(savedExperimentId);
               }
             } 
@@ -170,6 +197,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Update state with the latest experiment
       const experimentId = latestExperiment.id;
       
+      // Get additional configuration from the experiment if available
+      const engine = latestExperiment.automl_engine || null;
+      const preset = latestExperiment.preset_profile || null;
+      const testSize = latestExperiment.test_size !== undefined ? latestExperiment.test_size : state.testSize;
+      const stratify = latestExperiment.stratify !== undefined ? latestExperiment.stratify : state.stratify;
+      const randomSeed = latestExperiment.random_seed !== undefined ? latestExperiment.random_seed : state.randomSeed;
+      
       // First update with basic info
       setState(prev => ({
         ...prev,
@@ -177,7 +211,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         experimentStatus: 'processing',
         lastTrainingType: latestExperiment.automl_engine ? 'automl' : 'custom',
         isLoadingResults: true,
-        experimentName: latestExperiment.experiment_name || null // Get experiment name from response
+        experimentName: latestExperiment.experiment_name || null, // Get experiment name from response
+        // Update configuration parameters
+        automlEngine: engine || prev.automlEngine,
+        testSize: testSize,
+        stratify: stratify,
+        randomSeed: randomSeed
       }));
       
       // Save to localStorage for persistence between page refreshes
@@ -186,6 +225,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       if (latestExperiment.experiment_name) {
         localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, latestExperiment.experiment_name);
       }
+      
+      // Save additional configuration to localStorage
+      if (engine) localStorage.setItem(EXPERIMENT_ENGINE_STORAGE_KEY, engine);
+      if (preset) localStorage.setItem(EXPERIMENT_PRESET_STORAGE_KEY, preset);
+      if (testSize !== undefined) localStorage.setItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY, testSize.toString());
+      if (stratify !== undefined) localStorage.setItem(EXPERIMENT_STRATIFY_STORAGE_KEY, stratify.toString());
+      if (randomSeed !== undefined) localStorage.setItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY, randomSeed.toString());
       
       // Then check the actual status
       const statusResponse = await checkStatus(experimentId);
@@ -224,8 +270,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         // Stop any existing polling before starting new
         stopPolling();
         
-        // ✅ FIX: Only pass experimentId, not trainingType
-        // Start new polling - pass only the experimentId
+        // Only pass experimentId
         startPolling(experimentId);
         
         // Show toast to inform user
@@ -240,25 +285,52 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
+  // Update localStorage whenever active experiment details change
   useEffect(() => {
     try {
       if (state.activeExperimentId) {
         localStorage.setItem(EXPERIMENT_STORAGE_KEY, state.activeExperimentId);
+        
         if (state.lastTrainingType) {
           localStorage.setItem(EXPERIMENT_TYPE_STORAGE_KEY, state.lastTrainingType);
         }
+        
         if (state.experimentName) {
           localStorage.setItem(EXPERIMENT_NAME_STORAGE_KEY, state.experimentName);
         }
+        
+        // Save configuration parameters
+        if (state.automlEngine) {
+          localStorage.setItem(EXPERIMENT_ENGINE_STORAGE_KEY, state.automlEngine);
+        }
+        
+        // Save numeric and boolean values as strings
+        localStorage.setItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY, state.testSize.toString());
+        localStorage.setItem(EXPERIMENT_STRATIFY_STORAGE_KEY, state.stratify.toString());
+        localStorage.setItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY, state.randomSeed.toString());
       } else {
+        // Clear all experiment data from localStorage
         localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
         localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
         localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_ENGINE_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_PRESET_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_STRATIFY_STORAGE_KEY);
+        localStorage.removeItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY);
       }
     } catch (error) {
       console.error("Error saving experiment data to localStorage:", error);
     }
-  }, [state.activeExperimentId, state.lastTrainingType, state.experimentName]);
+  }, [
+    state.activeExperimentId, 
+    state.lastTrainingType, 
+    state.experimentName,
+    state.automlEngine,
+    state.testSize,
+    state.stratify,
+    state.randomSeed
+  ]);
 
   // Effect to fetch results when status indicates they're ready
   useEffect(() => {
@@ -598,6 +670,20 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           final: trainingType
         });
         
+        // Extract configuration parameters from results
+        const engine = results.automl_engine || null;
+        const preset = results.preset_profile || null;
+        const testSize = results.test_size !== undefined ? results.test_size : state.testSize;
+        const stratify = results.stratify !== undefined ? results.stratify : state.stratify; 
+        const randomSeed = results.random_seed !== undefined ? results.random_seed : state.randomSeed;
+        
+        // Save configuration to localStorage
+        if (engine) localStorage.setItem(EXPERIMENT_ENGINE_STORAGE_KEY, engine);
+        if (preset) localStorage.setItem(EXPERIMENT_PRESET_STORAGE_KEY, preset);
+        if (testSize !== undefined) localStorage.setItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY, testSize.toString());
+        if (stratify !== undefined) localStorage.setItem(EXPERIMENT_STRATIFY_STORAGE_KEY, stratify.toString());
+        if (randomSeed !== undefined) localStorage.setItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY, randomSeed.toString());
+        
         // Update all related state values to ensure consistency - ALWAYS set resultsLoaded to true
         setState(prev => ({ 
           ...prev, 
@@ -610,6 +696,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
           resultsLoaded: trainingType === 'automl' ? true : (prev.resultsLoaded || true),
           experimentName: updatedExperimentName,
           lastTrainingType: trainingType as 'automl' | 'custom' | null,
+          // Update configuration parameters
+          automlEngine: engine || prev.automlEngine,
+          testSize: testSize,
+          stratify: stratify,
+          randomSeed: randomSeed,
           // Ensure statusResponse is updated to be consistent
           statusResponse: {
             status: resultStatus as ExperimentStatus,
@@ -685,7 +776,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         variant: "destructive"
       });
     }
-  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, state.lastTrainingType, recentlyCompletedPolling, toast, currentPollingInfo, isAutoMLExperiment]);
+  }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, state.lastTrainingType, recentlyCompletedPolling, toast, currentPollingInfo, isAutoMLExperiment, state.testSize, state.stratify, state.randomSeed, state.automlEngine]);
 
   const contextValue: TrainingContextValue = {
     ...state,
@@ -731,7 +822,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setState({
         isTraining: false,
         isSubmitting: false,
-        isPredicting: false, // Reset isPredicting in resetTrainingState
+        isPredicting: false,
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -752,9 +843,16 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         resultsLoaded: false,
         experimentName: null,
       });
+      
+      // Clear all experiment data from localStorage
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_ENGINE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_PRESET_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_STRATIFY_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY);
     },
     clearExperimentResults: () => {
       // Enhanced clear to ensure all polling is stopped
@@ -773,11 +871,18 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         statusResponse: null,
         resultsLoaded: false,
         experimentName: null,
-        isPredicting: false // Reset isPredicting when clearing results
+        isPredicting: false
       }));
+      
+      // Clear all experiment data from localStorage
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_ENGINE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_PRESET_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_TEST_SIZE_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_STRATIFY_STORAGE_KEY);
+      localStorage.removeItem(EXPERIMENT_RANDOM_SEED_STORAGE_KEY);
     },
     getExperimentResults,
     startPolling, 
