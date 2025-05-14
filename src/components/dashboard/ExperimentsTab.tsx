@@ -833,9 +833,10 @@ const ExperimentsTab: React.FC = () => {
       )}
 
       <ExperimentDetailDrawer
-        experimentId={selectedExperimentId}
+        selectedExperiment={experiments.find(exp => exp.id === selectedExperimentId)}
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
+        onDelete={handleDelete}
       />
 
       <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
