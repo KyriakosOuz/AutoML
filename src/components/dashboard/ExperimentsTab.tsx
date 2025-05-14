@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { ApiResponse, ExperimentListResponse } from '@/types/api';
-import { ExperimentDetailDrawer } from '../experiments/ExperimentDetailDrawer';
+import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
 import { Input } from '@/components/ui/input';
 import { AutoMLEngineFilter } from '@/types/training';
@@ -843,7 +843,7 @@ const ExperimentsTab: React.FC = () => {
 
       <ExperimentDetailDrawer
         experimentId={selectedExperimentId}
-        open={isDetailDrawerOpen}
+        isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
       />
 
