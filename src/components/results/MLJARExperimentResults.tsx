@@ -17,7 +17,9 @@ import {
   Table as TableIcon,
   Info,
   Loader,
-  Image
+  Image,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { ExperimentResults } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
@@ -25,6 +27,7 @@ import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 import { downloadFile } from '../training/prediction/utils/downloadUtils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -82,6 +85,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
+  const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -211,7 +215,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     hyperparameters = {},
     automl_engine,
     model_display_name,
-    model_file_url
+    model_file_url,
+    per_class_metrics
   } = experimentResults;
 
   // Use model_display_name as the primary source for best model label
@@ -304,6 +309,72 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
+
+  // Helper to render per-class metrics if present
+  const renderPerClassMetrics = () => {
+    if (!per_class_metrics || Object.keys(per_class_metrics).length === 0) {
+      return null;
+    }
+
+    return (
+      <Collapsible 
+        open={perClassMetricsOpen} 
+        onOpenChange={setPerClassMetricsOpen}
+        className="mt-6 border rounded-md overflow-hidden"
+      >
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 text-left">
+          <span className="font-medium">Per-Class Metrics</span>
+          {perClassMetricsOpen ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Precision</TableHead>
+                  <TableHead>Recall</TableHead>
+                  <TableHead>F1-Score</TableHead>
+                  <TableHead>Support</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(per_class_metrics).map(([classLabel, metrics]) => (
+                  <TableRow key={classLabel}>
+                    <TableCell>{classLabel}</TableCell>
+                    <TableCell>
+                      {metrics.precision !== undefined 
+                        ? formatMetricValue(metrics.precision, true) 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {metrics.recall !== undefined 
+                        ? formatMetricValue(metrics.recall, true) 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {metrics['f1-score'] !== undefined 
+                        ? formatMetricValue(metrics['f1-score'], true) 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {metrics.support !== undefined 
+                        ? metrics.support 
+                        : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -440,6 +511,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           key === 'classification_report' ||
                           key === 'confusion_matrix' ||
                           key === 'source' ||
+                          key === 'per_class_metrics' ||
                           typeof value !== 'number'
                         ) return null;
                         
@@ -464,6 +536,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                         );
                       })}
                     </div>
+                    
+                    {/* Add the Per-Class Metrics collapsible section */}
+                    {renderPerClassMetrics()}
                   </div>
                 </CardContent>
               </Card>
@@ -557,7 +632,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Simplified clean UI */}
+          {/* Model Details Tab - Add per-class metrics if available */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Model File Card - Updated to use modelDownloadUrl */}
@@ -625,6 +700,58 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Add Per-Class Metrics section to the metadata tab as well */}
+            {per_class_metrics && Object.keys(per_class_metrics).length > 0 && (
+              <Card className="shadow-sm mt-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Per-Class Metrics</CardTitle>
+                  <CardDescription>
+                    Detailed metrics breakdown by class
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Precision</TableHead>
+                        <TableHead>Recall</TableHead>
+                        <TableHead>F1-Score</TableHead>
+                        <TableHead>Support</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(per_class_metrics).map(([classLabel, metrics]) => (
+                        <TableRow key={classLabel}>
+                          <TableCell>{classLabel}</TableCell>
+                          <TableCell>
+                            {metrics.precision !== undefined 
+                              ? formatMetricValue(metrics.precision, true) 
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {metrics.recall !== undefined 
+                              ? formatMetricValue(metrics.recall, true) 
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {metrics['f1-score'] !== undefined 
+                              ? formatMetricValue(metrics['f1-score'], true) 
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {metrics.support !== undefined 
+                              ? metrics.support 
+                              : 'N/A'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Documentation Dialog - Keep this part */}
             <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
