@@ -2,7 +2,7 @@
 import { toast as sonnerToast, type ToastT } from "sonner";
 import { type ReactNode } from "react";
 
-// Define the toast options type to match what sonner expects
+// Define the toast options type to match our supported variants
 export type ToastOptions = {
   title?: ReactNode;
   description?: ReactNode;
@@ -75,6 +75,24 @@ const useToast = () => {
 const toast = (options: ToastOptions): string => {
   const { toast: addToast } = useToast();
   return addToast(options);
+};
+
+// Add helper methods to the toast function to match sonner's API
+toast.success = (message: string, options?: Partial<ToastOptions>) => 
+  toast({ title: message, variant: "success", ...options });
+
+toast.error = (message: string, options?: Partial<ToastOptions>) => 
+  toast({ title: message, variant: "destructive", ...options });
+
+toast.warning = (message: string, options?: Partial<ToastOptions>) => 
+  toast({ title: message, variant: "warning", ...options });
+
+toast.info = (message: string, options?: Partial<ToastOptions>) => 
+  toast({ title: message, ...options });
+
+toast.dismiss = (id: ToastIDType) => {
+  toasts = toasts.filter((toast) => toast.id !== id.toString());
+  return sonnerToast.dismiss(id);
 };
 
 export {
