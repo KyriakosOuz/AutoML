@@ -12,6 +12,7 @@ interface ToastProps {
   action?: ToastActionElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  duration?: number; // Add the duration property
 }
 
 type ToasterToast = ToastProps & {
