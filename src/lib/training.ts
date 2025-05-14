@@ -316,3 +316,37 @@ export const getMljarPresets = async (): Promise<MLJARPreset[]> => {
     return []; // Return empty array on error
   }
 };
+
+// New interface for H2O presets
+export interface H2OPreset {
+  name: string;
+  description: string;
+  max_runtime_secs: number;
+  nfolds: number;
+  balance_classes: boolean;
+  exclude_algos: string[];
+  sort_metric: string;
+}
+
+// New function to fetch H2O presets
+export const getH2OPresets = async (): Promise<H2OPreset[]> => {
+  try {
+    console.log('[API] Fetching H2O presets');
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/training/automl/get-h2o-presets/`, { 
+      headers 
+    });
+
+    if (!response.ok) {
+      console.error('[API] Error fetching H2O presets:', response.status, response.statusText);
+      return []; // Return empty array on error
+    }
+
+    const data = await response.json();
+    console.log('[API] H2O presets received:', data);
+    return data.presets || [];
+  } catch (error) {
+    console.error('[API] Error fetching H2O presets:', error);
+    return []; // Return empty array on error
+  }
+};

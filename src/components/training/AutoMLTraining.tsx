@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -51,7 +52,11 @@ const AutoMLTraining: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
-  // NEW: Track submitted values - fixed the type for engine to be TrainingEngine | null
+  // NEW: Add state for H2O presets
+  const [h2oPresets, setH2OPresets] = useState<trainingLib.H2OPreset[]>([]);
+  const [isLoadingH2OPresets, setIsLoadingH2OPresets] = useState(false);
+  
+  // Track submitted values - fixed the type for engine to be TrainingEngine | null
   const [submittedValues, setSubmittedValues] = useState<{
     engine: TrainingEngine | null;
     preset: string | null;
@@ -107,6 +112,38 @@ const AutoMLTraining: React.FC = () => {
     fetchMljarPresets();
   }, [automlEngine, toast]);
   
+  // NEW: Fetch H2O presets when automl engine is selected and it's "h2o"
+  useEffect(() => {
+    const fetchH2OPresets = async () => {
+      if (automlEngine === 'h2o') {
+        setIsLoadingH2OPresets(true);
+        try {
+          const presets = await trainingLib.getH2OPresets();
+          console.log("AutoML Training - Fetched H2O presets:", presets);
+          setH2OPresets(presets);
+          // Default to "balanced" preset if available
+          const balancedPreset = presets.find(preset => preset.name === 'balanced');
+          if (balancedPreset && !selectedPreset) {
+            setSelectedPreset(balancedPreset.name);
+          } else if (presets.length > 0 && !selectedPreset) {
+            setSelectedPreset(presets[0].name);
+          }
+        } catch (error) {
+          console.error("Failed to fetch H2O presets:", error);
+          toast({
+            title: "Failed to load H2O presets",
+            description: "Could not fetch training presets. Using default settings.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoadingH2OPresets(false);
+        }
+      }
+    };
+    
+    fetchH2OPresets();
+  }, [automlEngine, toast]);
+  
   useEffect(() => {
     // Enhanced logging to help debugging
     console.log("AutoML Training - Dataset context values:", { 
@@ -135,6 +172,9 @@ const AutoMLTraining: React.FC = () => {
       else {
         console.log("AutoMLTraining - User edited name detected, keeping current name:", experimentName);
       }
+      
+      // Reset preset selection when changing engine
+      setSelectedPreset(null);
     }
   }, [taskType, automlEngine, setExperimentName, experimentName, userEditedName]);
 
@@ -324,7 +364,7 @@ const AutoMLTraining: React.FC = () => {
       testSize,
       processingStage,
       experimentName,
-      selectedPreset: automlEngine === 'mljar' ? selectedPreset : 'n/a'
+      selectedPreset: automlEngine === 'mljar' ? selectedPreset : automlEngine === 'h2o' ? selectedPreset : 'n/a'
     });
     
     // Check if we have the required data and if dataset is properly processed
@@ -332,7 +372,7 @@ const AutoMLTraining: React.FC = () => {
     const isValidProcessingStage = processingStage === 'final' || processingStage === 'processed';
     
     // MODIFIED: Removed the experimentName check since we'll generate a default one if needed
-    // Add check for selected preset when using MLJAR
+    // Add check for selected preset when using MLJAR or H2O
     let result = !!(
       datasetId &&
       taskType &&
@@ -342,8 +382,8 @@ const AutoMLTraining: React.FC = () => {
       isValidProcessingStage
     );
     
-    // If using MLJAR, also require a preset
-    if (result && automlEngine === 'mljar') {
+    // If using MLJAR or H2O, also require a preset
+    if (result && (automlEngine === 'mljar' || automlEngine === 'h2o')) {
       result = !!selectedPreset;
     }
     
@@ -432,16 +472,6 @@ const AutoMLTraining: React.FC = () => {
             )}
             
             {isTraining && (
-              <Alert className="mb-4 bg-primary/10 border-primary/20">
-                <Loader className="h-4 w-4 animate-spin text-primary mr-2" />
-                <AlertDescription>
-                  Training is in progress. Please wait while your model is being trained.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* If training is in progress, show the active settings summary card */}
-            {isTraining && (
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
                 <h3 className="text-sm font-medium mb-2">Training Configuration</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -449,7 +479,7 @@ const AutoMLTraining: React.FC = () => {
                     <span className="text-slate-500">Engine:</span>{' '}
                     <span className="font-medium">{submittedValues.engine?.toUpperCase()}</span>
                   </div>
-                  {submittedValues.engine === 'mljar' && (
+                  {(submittedValues.engine === 'mljar' || submittedValues.engine === 'h2o') && (
                     <div>
                       <span className="text-slate-500">Preset:</span>{' '}
                       <span className="font-medium capitalize">{submittedValues.preset || 'Default'}</span>
@@ -543,6 +573,72 @@ const AutoMLTraining: React.FC = () => {
                             </span>
                           </Label>
                           <p className="text-sm text-muted-foreground">{preset.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <div className="text-sm text-muted-foreground pt-1">
+                    Could not load presets. Will use default settings.
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* NEW: H2O Preset Selection - show only when H2O is selected */}
+            {automlEngine === 'h2o' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Training Preset
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Select a training profile that balances speed vs accuracy</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                
+                {isLoadingH2OPresets ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Loading presets...
+                  </div>
+                ) : h2oPresets.length > 0 ? (
+                  <RadioGroup 
+                    value={selectedPreset || ''} 
+                    onValueChange={setSelectedPreset}
+                    className="space-y-3 pt-2"
+                    disabled={isTraining || isSubmitting}
+                  >
+                    {h2oPresets.map(preset => (
+                      <div key={preset.name} className="flex items-start space-x-2">
+                        <RadioGroupItem value={preset.name} id={`h2o-preset-${preset.name}`} className="mt-1" />
+                        <div className="space-y-1">
+                          <Label 
+                            htmlFor={`h2o-preset-${preset.name}`} 
+                            className="text-base font-medium capitalize cursor-pointer"
+                          >
+                            {preset.name} 
+                            <span className="text-xs ml-2 text-muted-foreground">
+                              (~{formatTimeLimit(preset.max_runtime_secs)})
+                            </span>
+                          </Label>
+                          <p className="text-sm text-muted-foreground">{preset.description}</p>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                            <span className="bg-slate-100 px-1.5 py-0.5 rounded">{preset.nfolds}-fold CV</span>
+                            {preset.exclude_algos.length > 0 && (
+                              <span className="bg-slate-100 px-1.5 py-0.5 rounded">
+                                Excludes: {preset.exclude_algos.join(', ')}
+                              </span>
+                            )}
+                            {preset.balance_classes && (
+                              <span className="bg-slate-100 px-1.5 py-0.5 rounded">Balance Classes</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
