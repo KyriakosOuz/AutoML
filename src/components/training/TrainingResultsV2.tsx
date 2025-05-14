@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -113,6 +114,11 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     return 'text-red-600';
   };
   
+  // Helper function to determine if task is regression
+  const isRegressionTask = (taskType: string | undefined) => {
+    return taskType === 'regression';
+  };
+  
   if (isLoadingResults || !experimentResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -209,6 +215,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
   const visualizationFiles = categorizeVisualizations(files);
   
   const isClassification = task_type?.includes('classification');
+  const isRegression = isRegressionTask(task_type);
   
   // Display algorithm or engine based on what's available
   const displayAlgorithm = model_display_name || 
@@ -295,7 +302,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
               </div>
             )}
             
-            {metrics.classification_report && (
+            {metrics.classification_report && isClassification && (
               <div className="mt-6">
                 <h3 className="text-base font-semibold mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
@@ -304,6 +311,51 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                       ? metrics.classification_report 
                       : JSON.stringify(metrics.classification_report, null, 2)}
                   </pre>
+                </div>
+              </div>
+            )}
+            
+            {/* Display regression metrics if it's a regression task */}
+            {isRegression && (
+              <div className="mt-6">
+                <h3 className="text-base font-semibold mb-2">Regression Metrics Detail</h3>
+                <div className="bg-muted/40 p-4 rounded-md">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {metrics.mae !== undefined && (
+                      <div className="p-3 bg-white rounded-md shadow-sm">
+                        <span className="block text-sm text-muted-foreground">Mean Absolute Error</span>
+                        <span className="text-lg font-medium">{formatRegressionMetric(metrics.mae)}</span>
+                      </div>
+                    )}
+                    
+                    {metrics.mse !== undefined && (
+                      <div className="p-3 bg-white rounded-md shadow-sm">
+                        <span className="block text-sm text-muted-foreground">Mean Squared Error</span>
+                        <span className="text-lg font-medium">{formatRegressionMetric(metrics.mse)}</span>
+                      </div>
+                    )}
+                    
+                    {metrics.rmse !== undefined && (
+                      <div className="p-3 bg-white rounded-md shadow-sm">
+                        <span className="block text-sm text-muted-foreground">Root Mean Squared Error</span>
+                        <span className="text-lg font-medium">{formatRegressionMetric(metrics.rmse)}</span>
+                      </div>
+                    )}
+                    
+                    {metrics.r2 !== undefined && (
+                      <div className="p-3 bg-white rounded-md shadow-sm">
+                        <span className="block text-sm text-muted-foreground">R² Score</span>
+                        <span className="text-lg font-medium">{formatRegressionMetric(metrics.r2)}</span>
+                      </div>
+                    )}
+                    
+                    {metrics.mape !== undefined && (
+                      <div className="p-3 bg-white rounded-md shadow-sm">
+                        <span className="block text-sm text-muted-foreground">Mean Absolute Percentage Error</span>
+                        <span className="text-lg font-medium">{formatRegressionMetric(metrics.mape)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
