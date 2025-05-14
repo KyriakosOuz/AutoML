@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +18,7 @@ import {
   Trash2,
   ArrowUpDown
 } from 'lucide-react';
-import { ExperimentResults, ExperimentStatus, PerClassMetric } from '@/types/training';
+import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
@@ -29,7 +28,7 @@ import { trainingApi } from '@/lib/api';
 const getF1Score = (metrics: any): number | undefined => {
   if (!metrics) return undefined;
   return metrics.f1_score !== undefined ? metrics.f1_score : 
-         metrics['f1-score'] !== undefined ? metrics['f1-score'] : metrics.f1;
+         metrics['f1-score'] !== undefined ? metrics['f1-score'] : undefined;
 };
 
 interface ExperimentDetailDrawerProps {
@@ -38,15 +37,12 @@ interface ExperimentDetailDrawerProps {
   selectedExperiment: ExperimentResults | null;
   onDelete?: (experimentId: string) => void;
   onRefresh?: (experimentId: string) => void;
-  // Add experimentId as an alternative to selectedExperiment for backward compatibility
-  experimentId?: string;
 }
 
 const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   isOpen,
   onClose,
   selectedExperiment,
-  experimentId, // Add this prop to handle legacy usages
   onDelete,
   onRefresh
 }) => {
@@ -140,7 +136,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     switch (status) {
       case 'completed':
       case 'success':
-        return { label: 'Completed', variant: 'default' as const }; // Changed from 'success' to 'default'
+        return { label: 'Completed', variant: 'success' as const };
       case 'running':
       case 'processing':
         return { label: 'Running', variant: 'default' as const };
@@ -332,9 +328,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                 </TableHeader>
                 <TableBody>
                   {Object.entries(metrics.per_class).map(([className, classMetrics]) => {
-                    // Fix TypeScript error by properly casting to an acceptable type
-                    const classMetricsObj = classMetrics as unknown as Record<string, number>;
-                    
+                    const classMetricsObj = classMetrics as Record<string, number>;
                     // Access metrics with proper type safety
                     const precision = classMetricsObj.precision;
                     const recall = classMetricsObj.recall;

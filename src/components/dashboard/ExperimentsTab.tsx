@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import { ApiResponse, ExperimentListResponse } from '@/types/api';
 import ExperimentDetailDrawer from '../experiments/ExperimentDetailDrawer';
 import ComparisonResultsView from '../comparison/ComparisonResultsView';
 import { Input } from '@/components/ui/input';
-import { AutoMLEngineFilter, ExperimentStatus } from '@/types/training'; // Added ExperimentStatus import
+import { AutoMLEngineFilter } from '@/types/training';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 
@@ -834,16 +833,9 @@ const ExperimentsTab: React.FC = () => {
       )}
 
       <ExperimentDetailDrawer
-        selectedExperiment={experiments.find(exp => exp.id === selectedExperimentId) 
-          ? {
-              ...experiments.find(exp => exp.id === selectedExperimentId)!,
-              experimentId: experiments.find(exp => exp.id === selectedExperimentId)!.id, // Map id to experimentId
-              experiment_id: experiments.find(exp => exp.id === selectedExperimentId)!.id // Also provide experiment_id as fallback
-            }
-          : null}
+        experimentId={selectedExperimentId}
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
-        onDelete={handleDelete}
       />
 
       <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
