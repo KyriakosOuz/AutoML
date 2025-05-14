@@ -1,83 +1,83 @@
-import { Toast, toast as sonnerToast, ToastT } from "sonner";
+
+import { toast as sonnerToast, type ToastT } from "sonner";
+import { type ReactNode } from "react";
 
 // Define the toast options type to match what sonner expects
-type ToastProps = React.ComponentProps<typeof Toast>;
-type ToastOptions = Omit<ToastT, "id" | "title" | "description" | "icon"> & {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
+export type ToastOptions = {
+  title?: ReactNode;
+  description?: ReactNode;
   variant?: "default" | "destructive" | "success" | "warning";
+  duration?: number;
+  action?: React.ReactNode;
+  [key: string]: unknown;
 };
+
+export type ToastProps = ToastOptions;
 
 // Define the ID type for dismiss function
 type ToastIDType = number | string;
 
+// Create a simulated toast object for UI consumption
+type Toast = ToastOptions & {
+  id: string;
+};
+
+// Create a store for tracking active toasts
+const TOAST_LIMIT = 20;
+let toasts: Toast[] = [];
+
 const useToast = () => {
-  // Create a wrapped version of toast that handles our custom options
-  const toast = (options: ToastOptions) => {
+  // Function to add a toast to our list
+  const addToast = (options: ToastOptions): string => {
+    const id = Math.random().toString(36).substring(2, 9);
+    const newToast = { ...options, id };
+    
+    toasts = [newToast, ...toasts].slice(0, TOAST_LIMIT);
+    
     const { title, description, variant, ...restOptions } = options;
     
     // Convert our variant to sonner's style if needed
-    let toastFn = sonnerToast;
     if (variant === "destructive") {
-      toastFn = sonnerToast.error;
+      sonnerToast.error(title as string || description as string || "", restOptions);
     } else if (variant === "success") {
-      toastFn = sonnerToast.success;
+      sonnerToast.success(title as string || description as string || "", restOptions);
     } else if (variant === "warning") {
-      toastFn = sonnerToast.warning;
+      sonnerToast.warning(title as string || description as string || "", restOptions);
+    } else {
+      sonnerToast(title as string || description as string || "", restOptions);
     }
     
-    // If title and description are both provided, use the rich format
-    if (title && description) {
-      return toastFn(title, {
-        description,
-        ...restOptions
-      });
-    }
-    
-    // Otherwise just use the simple format with title only
-    return toastFn(title || description || "", restOptions);
+    return id;
+  };
+  
+  // Function to remove a toast from our list
+  const removeToast = (id: string) => {
+    toasts = toasts.filter((toast) => toast.id !== id);
+    return sonnerToast.dismiss(id);
   };
   
   return {
-    toast,
-    dismiss: (id: ToastIDType) => sonnerToast.dismiss(id),
+    toasts,
+    toast: addToast,
+    dismiss: removeToast,
     success: (message: string, options?: Partial<ToastOptions>) => 
-      sonnerToast.success(message, options),
+      addToast({ title: message, variant: "success", ...options }),
     error: (message: string, options?: Partial<ToastOptions>) => 
-      sonnerToast.error(message, options),
+      addToast({ title: message, variant: "destructive", ...options }),
     warning: (message: string, options?: Partial<ToastOptions>) => 
-      sonnerToast.warning(message, options),
+      addToast({ title: message, variant: "warning", ...options }),
     info: (message: string, options?: Partial<ToastOptions>) => 
-      sonnerToast.info(message, options),
+      addToast({ title: message, ...options }),
   };
 };
 
 // Export the toast function directly
-const toast = (options: ToastOptions) => {
-  const { title, description, variant, ...restOptions } = options;
-  
-  let toastFn = sonnerToast;
-  if (variant === "destructive") {
-    toastFn = sonnerToast.error;
-  } else if (variant === "success") {
-    toastFn = sonnerToast.success;
-  } else if (variant === "warning") {
-    toastFn = sonnerToast.warning;
-  }
-  
-  if (title && description) {
-    return toastFn(title, {
-      description,
-      ...restOptions
-    });
-  }
-  
-  return toastFn(title || description || "", restOptions);
+const toast = (options: ToastOptions): string => {
+  const { toast: addToast } = useToast();
+  return addToast(options);
 };
 
 export {
   useToast,
   toast
 };
-
-export type { ToastProps, ToastOptions };
