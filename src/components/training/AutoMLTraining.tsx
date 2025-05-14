@@ -20,10 +20,6 @@ import * as trainingLib from '@/lib/training';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 
-// Storage keys for preset selection
-const MLJAR_PRESET_STORAGE_KEY = 'mljar_preset';
-const H2O_PRESET_STORAGE_KEY = 'h2o_preset';
-
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
   const {
@@ -44,8 +40,7 @@ const AutoMLTraining: React.FC = () => {
     experimentStatus,
     experimentName,
     setExperimentName,
-    setResultsLoaded,
-    activeExperimentId
+    setResultsLoaded
   } = useTraining();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -61,8 +56,6 @@ const AutoMLTraining: React.FC = () => {
   
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
   
-  // State to track if H2O presets have been fetched
-  const [h2oPresetsFetched, setH2OPresetsFetched] = useState(false);
   // NEW: Add state for H2O presets
   const [h2oPresets, setH2OPresets] = useState<trainingLib.H2OPreset[]>([]);
   const [isLoadingH2OPresets, setIsLoadingH2OPresets] = useState(false);
@@ -94,53 +87,12 @@ const AutoMLTraining: React.FC = () => {
     return null;
   };
   
-  // New effect to restore user selections from localStorage
   useEffect(() => {
-    // Attempt to restore preset selections from localStorage
-    const savedMljarPreset = localStorage.getItem(MLJAR_PRESET_STORAGE_KEY);
-    const savedH2OPreset = localStorage.getItem(H2O_PRESET_STORAGE_KEY);
-    
-    if (savedMljarPreset) {
-      console.log("AutoMLTraining - Restored MLJAR preset from localStorage:", savedMljarPreset);
-      setMljarSelectedPreset(savedMljarPreset);
-    }
-    
-    if (savedH2OPreset) {
-      console.log("AutoMLTraining - Restored H2O preset from localStorage:", savedH2OPreset);
-      setH2OSelectedPreset(savedH2OPreset);
-    }
-    
-    // Check if there's an active experiment and use its values to update submittedValues
-    if (activeExperimentId && automlEngine) {
-      console.log("AutoMLTraining - Active experiment detected, updating submitted values");
-      
-      // Update submitted values with current context values
-      setSubmittedValues({
-        engine: automlEngine as TrainingEngine,
-        preset: getSelectedPreset(),
-        experimentName: experimentName || '',
-        testSize,
-        stratify,
-        randomSeed
-      });
-    }
-    
     // Initialize userEditedName to false when component first mounts
     setUserEditedName(false);
     // Enhanced logging to help debugging
     console.log("AutoML Training - Component mounted, reset userEditedName");
-  }, [activeExperimentId, automlEngine, experimentName, testSize, stratify, randomSeed]); 
-  
-  // Save preset selections to localStorage when they change
-  useEffect(() => {
-    if (mljarSelectedPreset) {
-      localStorage.setItem(MLJAR_PRESET_STORAGE_KEY, mljarSelectedPreset);
-    }
-    
-    if (h2oSelectedPreset) {
-      localStorage.setItem(H2O_PRESET_STORAGE_KEY, h2oSelectedPreset);
-    }
-  }, [mljarSelectedPreset, h2oSelectedPreset]);
+  }, []); // Empty dependency array ensures this runs only once on mount
   
   // Fetch MLJAR presets when automl engine is selected and it's "mljar"
   useEffect(() => {
@@ -174,17 +126,14 @@ const AutoMLTraining: React.FC = () => {
     };
     
     fetchMljarPresets();
-  }, [automlEngine, toast, mljarSelectedPreset]);
+  }, [automlEngine, toast]);
   
-  // FIXED: Fetch H2O presets when automl engine is selected and it's "h2o"
-  // Added h2oPresetsFetched flag to prevent infinite API calls
+  // NEW: Fetch H2O presets when automl engine is selected and it's "h2o"
   useEffect(() => {
     const fetchH2OPresets = async () => {
-      // Only fetch if engine is h2o, presets haven't been fetched yet, and we're not already loading
-      if (automlEngine === 'h2o' && !h2oPresetsFetched && !isLoadingH2OPresets) {
+      if (automlEngine === 'h2o') {
         setIsLoadingH2OPresets(true);
         try {
-          console.log("AutoML Training - Fetching H2O presets (once)");
           const presets = await trainingLib.getH2OPresets();
           console.log("AutoML Training - Fetched H2O presets:", presets);
           
@@ -208,8 +157,6 @@ const AutoMLTraining: React.FC = () => {
               description: "Could not fetch custom training presets. Using default settings.",
             });
           }
-          // Mark that we've successfully fetched presets
-          setH2OPresetsFetched(true);
         } catch (error) {
           console.error("Failed to fetch H2O presets:", error);
           toast({
@@ -217,8 +164,6 @@ const AutoMLTraining: React.FC = () => {
             description: "Could not fetch training presets. Using default settings.",
             variant: "destructive"
           });
-          // Even on error, mark as fetched to prevent continuous retries
-          setH2OPresetsFetched(true);
         } finally {
           setIsLoadingH2OPresets(false);
         }
@@ -226,14 +171,7 @@ const AutoMLTraining: React.FC = () => {
     };
     
     fetchH2OPresets();
-  }, [automlEngine, toast, h2oSelectedPreset, h2oPresetsFetched, isLoadingH2OPresets]);
-  
-  // Reset h2oPresetsFetched flag when switching away from h2o
-  useEffect(() => {
-    if (automlEngine !== 'h2o') {
-      setH2OPresetsFetched(false);
-    }
-  }, [automlEngine]);
+  }, [automlEngine, toast]);
   
   useEffect(() => {
     // Enhanced logging to help debugging
@@ -307,14 +245,12 @@ const AutoMLTraining: React.FC = () => {
   const handleMljarPresetChange = (value: string) => {
     console.log("AutoMLTraining - MLJAR preset changed to:", value);
     setMljarSelectedPreset(value);
-    localStorage.setItem(MLJAR_PRESET_STORAGE_KEY, value);
   };
 
   // Handler for H2O preset selection
   const handleH2OPresetChange = (value: string) => {
     console.log("AutoMLTraining - H2O preset changed to:", value);
     setH2OSelectedPreset(value);
-    localStorage.setItem(H2O_PRESET_STORAGE_KEY, value);
   };
 
   const handleTrainModel = async () => {
@@ -374,16 +310,14 @@ const AutoMLTraining: React.FC = () => {
       setActiveExperimentId(null);
 
       // NEW: Save submitted values before training starts - Fix the type casting here
-      const newSubmittedValues = {
+      setSubmittedValues({
         engine: automlEngine as TrainingEngine, // Explicit cast to TrainingEngine
         preset: selectedPreset,
         experimentName: finalExperimentName,
         testSize,
         stratify,
         randomSeed
-      };
-      
-      setSubmittedValues(newSubmittedValues);
+      });
 
       toast({
         title: "Training Started",
@@ -444,15 +378,6 @@ const AutoMLTraining: React.FC = () => {
         
         // Reset userEditedName flag after successful training start
         setUserEditedName(false);
-        
-        // Store the selected preset for the current engine type
-        if (selectedPreset) {
-          if (automlEngine === 'mljar') {
-            localStorage.setItem(MLJAR_PRESET_STORAGE_KEY, selectedPreset);
-          } else if (automlEngine === 'h2o') {
-            localStorage.setItem(H2O_PRESET_STORAGE_KEY, selectedPreset);
-          }
-        }
         
         toast({
           title: "Training Submitted",
