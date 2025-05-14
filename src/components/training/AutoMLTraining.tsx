@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -17,6 +18,7 @@ import { TrainingEngine } from '@/types/training';
 import { useAuth } from '@/contexts/AuthContext';
 import * as trainingLib from '@/lib/training';  // Import from training.ts explicitly
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
@@ -49,6 +51,23 @@ const AutoMLTraining: React.FC = () => {
   const [mljarPresets, setMljarPresets] = useState<trainingLib.MLJARPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
+  
+  // NEW: Track submitted values
+  const [submittedValues, setSubmittedValues] = useState<{
+    engine: TrainingEngine | null;
+    preset: string | null;
+    experimentName: string;
+    testSize: number;
+    stratify: boolean;
+    randomSeed: number;
+  }>({
+    engine: null,
+    preset: null,
+    experimentName: '',
+    testSize: 0.2,
+    stratify: true,
+    randomSeed: 42
+  });
   
   useEffect(() => {
     // Initialize userEditedName to false when component first mounts
@@ -204,6 +223,16 @@ const AutoMLTraining: React.FC = () => {
       setResultsLoaded(false);
       setActiveExperimentId(null);
 
+      // NEW: Save submitted values before training starts
+      setSubmittedValues({
+        engine: automlEngine,
+        preset: selectedPreset,
+        experimentName: finalExperimentName,
+        testSize,
+        stratify,
+        randomSeed
+      });
+
       toast({
         title: "Training Started",
         description: `Starting AutoML training with ${automlEngine}...`,
@@ -349,6 +378,25 @@ const AutoMLTraining: React.FC = () => {
     return `${Math.floor(timeLimit / 60)} minutes`;
   };
 
+  // NEW: Function to get the active settings for display during training
+  const getActiveSettings = () => {
+    if (isTraining || isSubmitting) {
+      return submittedValues;
+    } else {
+      return {
+        engine: automlEngine,
+        preset: selectedPreset,
+        experimentName,
+        testSize,
+        stratify,
+        randomSeed
+      };
+    }
+  };
+  
+  // Get the current active settings (either form values or submitted values)
+  const activeSettings = getActiveSettings();
+
   return (
     <div className="space-y-8">
       <Card>
@@ -356,6 +404,9 @@ const AutoMLTraining: React.FC = () => {
           <CardTitle className="flex items-center gap-2 text-xl text-primary">
             <Rocket className="h-5 w-5" />
             AutoML Training
+            {isTraining && (
+              <Badge className="ml-2 bg-amber-500">Training in Progress</Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Automatically train models with different algorithms and hyperparameters
@@ -388,6 +439,41 @@ const AutoMLTraining: React.FC = () => {
                   Training is in progress. Please wait while your model is being trained.
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* If training is in progress, show the active settings summary card */}
+            {isTraining && (
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                <h3 className="text-sm font-medium mb-2">Training Configuration</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-slate-500">Engine:</span>{' '}
+                    <span className="font-medium">{submittedValues.engine?.toUpperCase()}</span>
+                  </div>
+                  {submittedValues.engine === 'mljar' && (
+                    <div>
+                      <span className="text-slate-500">Preset:</span>{' '}
+                      <span className="font-medium capitalize">{submittedValues.preset || 'Default'}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-slate-500">Experiment:</span>{' '}
+                    <span className="font-medium">{submittedValues.experimentName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Test Size:</span>{' '}
+                    <span className="font-medium">{(submittedValues.testSize * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Stratify:</span>{' '}
+                    <span className="font-medium">{submittedValues.stratify ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Random Seed:</span>{' '}
+                    <span className="font-medium">{submittedValues.randomSeed}</span>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* New persistent information alert about background processing */}
