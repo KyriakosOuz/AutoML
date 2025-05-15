@@ -84,5 +84,4 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Ensure that API_BASE_URL doesn't include '/app' since that's part of the frontend route only
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
