@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
-import H2OLeaderboardTable from './H2OLeaderboardTable';
+import MLJARLeaderboardTable from './MLJARLeaderboardTable';
 import { 
   Award, 
   BarChart4, 
@@ -755,7 +755,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <H2OLeaderboardTable 
+                  <MLJARLeaderboardTable 
                     data={leaderboardFile.file_url} 
                     defaultSortMetric={primaryMetric.name}
                     maxRows={10}
