@@ -31,7 +31,8 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'variable_importance',
       'learning_curve',
       'true_vs_predicted',
-      'predicted_vs_residuals'
+      'predicted_vs_residuals',
+      'residual_analysis'  // Added new regression visualization type
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
@@ -110,7 +111,7 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Feature Importance';
   } else if (fileType.includes('true_vs_predicted')) {
     return 'True vs Predicted';
-  } else if (fileType.includes('predicted_vs_residuals')) {
+  } else if (fileType.includes('predicted_vs_residuals') || fileType.includes('residual_analysis')) {
     return 'Residual Analysis';
   }
   
