@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
-import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
+import { ExperimentResults } from '@/types/training';
 import { TrainingContextValue, TrainingContextState, ExperimentStatus, SubmittedTrainingParameters } from './types';
 import { 
   EXPERIMENT_STORAGE_KEY, 
@@ -106,7 +106,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             
             // If backend returns 'success', map it to our 'completed' status
             if (mappedStatus === 'success' || mappedStatus === 'completed') {
-              mappedStatus = 'completed';
+              mappedStatus = 'completed' as ExperimentStatus;
             }
             
             // Update with the actual status
@@ -215,7 +215,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       // If backend returns 'success', map it to our 'completed' status
       if (mappedStatus === 'success' || mappedStatus === 'completed') {
-        mappedStatus = 'completed';
+        mappedStatus = 'completed' as ExperimentStatus;
       }
       
       // Update with the actual status
@@ -328,7 +328,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         status: 'completed',
         hasTrainingResults: true
       },
-      experimentStatus: 'completed',
+      experimentStatus: 'completed' as ExperimentStatus,
       isTraining: false,
       isPredicting: false, // Ensure isPredicting is false when completed
       isLoadingResults: false,
@@ -412,7 +412,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         status: 'completed',
         hasTrainingResults: true
       },
-      experimentStatus: 'completed',
+      experimentStatus: 'completed' as ExperimentStatus,
       isTraining: false, // Make sure to set isTraining to false when completed
       isPredicting: false, // Ensure isPredicting is false when completed
       isLoadingResults: false, // Ensure isLoadingResults is also set to false

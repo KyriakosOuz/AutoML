@@ -1,9 +1,8 @@
-
-import { ExperimentResults, Metric } from '@/types/training';
+import { ExperimentResults } from '@/types/training';
 import { TrainingEngine } from '@/types/training';
 
-// Export ExperimentStatus to fix import errors elsewhere
-export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'failed';
+// Update ExperimentStatus to match /types/training.ts
+export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'failed' | 'success' | 'error';
 
 export interface AutoMLParameters {
   automlEngine: TrainingEngine;

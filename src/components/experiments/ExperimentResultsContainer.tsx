@@ -1,18 +1,20 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
+import { ExperimentResults as ExperimentResultsType } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
 import H2OExperimentResults from '../results/H2OExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
+import { ExperimentStatus } from '@/contexts/training/types';
 
 interface ExperimentResultsContainerProps {
   experimentId: string | null;
   status: ExperimentStatus;
-  results?: ExperimentResultsType | null; // Make results optional
-  isLoading?: boolean; // Make isLoading optional
-  onReset?: () => void; // Make onReset optional but will be overridden
+  results?: ExperimentResultsType | null;
+  isLoading?: boolean;
+  onReset?: () => void;
   onRefresh?: () => void;
 }
 
@@ -21,7 +23,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   status,
   results: providedResults,
   isLoading: providedIsLoading,
-  onReset, // We'll use this only if we don't have access to the training context
+  onReset,
   onRefresh
 }) => {
   const [results, setResults] = useState<ExperimentResultsType | null>(providedResults || null);

@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -14,14 +15,18 @@ const ModelTrainingContent: React.FC = () => {
     setActiveTab, 
     experimentResults,
     experimentStatus,
-    resultsLoaded
+    resultsLoaded,
+    activeExperimentId
   } = useTraining();
 
-  const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
+  // Fix: Define proper tab type
+  type TrainingTab = 'automl' | 'custom' | 'results' | 'predict';
+
+  const handleTabChange = useCallback((tab: TrainingTab) => {
+    setActiveTab(tab as 'automl' | 'custom');
   }, [setActiveTab]);
 
-  const isActiveTab = (tabName: string): boolean => {
+  const isActiveTab = (tabName: TrainingTab): boolean => {
     return activeTab === tabName;
   };
 
@@ -53,7 +58,6 @@ const ModelTrainingContent: React.FC = () => {
                 >
                   Custom Training
                 </button>
-                {/* Fix this button to use isActiveTab instead of direct comparison */}
                 <button
                   onClick={() => handleTabChange('results')}
                   className={`px-3 py-2 text-sm font-medium ${
@@ -65,7 +69,6 @@ const ModelTrainingContent: React.FC = () => {
                 >
                   Results {experimentStatus === 'running' && <Loader className="inline-block ml-1 h-4 w-4 animate-spin" />}
                 </button>
-                {/* Fix this button to use isActiveTab instead of direct comparison */}
                 <button
                   onClick={() => handleTabChange('predict')}
                   className={`px-3 py-2 text-sm font-medium ${
@@ -83,9 +86,11 @@ const ModelTrainingContent: React.FC = () => {
             {/* Tab content */}
             {isActiveTab('automl') && <AutoMLTraining />}
             {isActiveTab('custom') && <CustomTraining />}
-            {isActiveTab('results') && experimentResults && <ExperimentResultsView />}
-            {isActiveTab('predict') && experimentResults && experimentStatus === 'completed' && (
-              <DynamicPredictionForm />
+            {isActiveTab('results') && experimentResults && activeExperimentId && (
+              <ExperimentResultsView experimentId={activeExperimentId} />
+            )}
+            {isActiveTab('predict') && experimentResults && experimentStatus === 'completed' && activeExperimentId && (
+              <DynamicPredictionForm experimentId={activeExperimentId} />
             )}
           </>
         ) : (

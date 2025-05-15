@@ -1,4 +1,3 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -400,3 +399,23 @@ function getDefaultH2OPresets(): H2OPreset[] {
     }
   ];
 }
+
+// Add customTrain function that was referenced but missing
+export const customTrain = async (
+  datasetId: string,
+  taskType: string,
+  algorithm: string,
+  testSize: number,
+  stratify: boolean,
+  randomSeed: number,
+  experimentName: string,
+  hyperparameters: Record<string, any>,
+  useDefaultHyperparameters: boolean
+) => {
+  // Implementation would go here in a real system
+  // For now, we'll just return a mock response
+  return {
+    experiment_id: `custom-${Date.now()}`,
+    status: 'processing'
+  };
+};

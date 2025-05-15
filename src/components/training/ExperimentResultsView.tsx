@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults, ExperimentStatus } from '@/types/training';
+import { ExperimentResults } from '@/types/training';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import CustomTrainingResults from './CustomTrainingResults';
 import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
-// Fix: Import with a different name directly
 import StandardExperimentResults from '@/components/results/ExperimentResults';
 import H2OExperimentResults from '@/components/results/H2OExperimentResults';
 import { useTraining } from '@/contexts/training/TrainingContext';
+import { ExperimentStatus } from '@/contexts/training/types';
 
 interface ExperimentResultsViewProps {
   experimentId: string;
@@ -30,7 +30,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     isTraining
   } = useTraining();
   
-  const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
+  const [localLoadingState, setLocalLoadingState] = useState(true);
   
   // Use React Query with improved configuration
   const { data, isLoading, error } = useQuery({
@@ -124,6 +124,11 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     };
   }, [data]);
 
+  // Map status from API to our internal ExperimentStatus type
+  const mappedStatus: ExperimentStatus = 
+    data.status === 'success' ? 'completed' as ExperimentStatus : 
+    data.status as ExperimentStatus;
+
   // Use localLoadingState instead of isLoading to prevent UI flickering
   if (localLoadingState) {
     return (
@@ -162,7 +167,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <MLJARExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={mappedStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -175,7 +180,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <H2OExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={mappedStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -188,7 +193,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <StandardExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={mappedStatus}
           experimentResults={data}
           isLoading={false}
           error={null}
