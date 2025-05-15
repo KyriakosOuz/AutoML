@@ -1,26 +1,18 @@
 
-import { useTheme } from "next-themes"
-import { Toaster as Sonner } from "sonner"
+"use client";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>
+import { Toaster as Sonner } from "sonner";
+
+type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      position="bottom-right"
-      expand={false}
-      closeButton
-      richColors
-      duration={3000}
-      visibleToasts={3}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+            "group toast group-[.toaster]:bg-white group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
@@ -28,11 +20,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
       }}
+      position="bottom-right"
+      expand={false}
+      richColors
+      closeButton
+      duration={5000}
+      theme="light"
       {...props}
     />
-  )
-}
+  );
+};
 
-// Export toast directly from sonner for a cleaner API
-export { Toaster }
-export { toast } from "sonner"
+export { Toaster };
