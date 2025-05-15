@@ -13,11 +13,11 @@ const Index = () => {
         <Link to="/" className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <img 
             src="/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
-            alt="KyrO Logo" 
+            alt="IEE Logo" 
             className="h-6 w-6" 
           />
-          <span className="hidden sm:inline">KyrO AutoML</span>
-          <span className="sm:hidden">KyrO</span>
+          <span className="hidden sm:inline">IEE AutoML</span>
+          <span className="sm:hidden">IEE</span>
         </Link>
         <div>
           {user ? (
