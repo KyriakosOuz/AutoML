@@ -116,6 +116,7 @@ const MainHeader = () => {
         )}
         
         <div className="flex items-center gap-2">
+          {/* Rate App button hidden for now
           <a 
             href="https://docs.google.com/forms/d/e/1FAIpQLSeqZhZw6E08GzSNGTCZnVwGoJJktNCJRZSwaFdtDF4o2rFX-g/viewform?usp=dialog" 
             target="_blank" 
@@ -126,6 +127,7 @@ const MainHeader = () => {
               <span className="hidden md:inline">Rate App</span>
             </Button>
           </a>
+          */}
           
           <Link to="/feedback">
             <Button variant="outline" size="sm" className="flex items-center gap-1 mr-2">
