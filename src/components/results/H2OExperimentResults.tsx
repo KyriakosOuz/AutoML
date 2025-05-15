@@ -72,6 +72,8 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Partial Dependence';
   } else if (fileType.includes('importance')) {
     return 'Feature Importance';
+  } else if (fileType.includes('residual_analysis')) {
+    return 'Residual Analysis';
   }
   
   // Default formatting: capitalize each word and replace underscores with spaces
@@ -445,9 +447,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type - updated to include importance and evaluation_curve
+  // Filter files by type - updated to include residual_analysis and learning_curve
   const getFilesByType = (fileType: string) => {
-    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
+    return files.filter(file => 
+      file.file_type === fileType || 
+      file.file_type.includes(fileType)
+    );
   };
 
   const visualizationFiles = [
@@ -457,7 +462,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     ...getFilesByType('shap'),
     ...getFilesByType('partial_dependence'),
     ...getFilesByType('importance'),
-    ...getFilesByType('evaluation_curve')
+    ...getFilesByType('evaluation_curve'),
+    ...getFilesByType('learning_curve'),
+    ...getFilesByType('residual_analysis')
   ];
 
   const modelFile = files.find(file => 
