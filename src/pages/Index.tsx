@@ -12,7 +12,7 @@ const Index = () => {
       <header className="container max-w-6xl mx-auto px-4 py-6 flex justify-between items-center border-b border-gray-200">
         <Link to="/" className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <img 
-            src="/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
+            src="/app/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
             alt="KyrO Logo" 
             className="h-6 w-6" 
           />
