@@ -690,7 +690,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
-    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting })), // Add setter for isPredicting
+    setIsPredicting: (isPredicting) => setState(prev => ({ ...prev, isPredicting })),
     setIsSubmitting: (isSubmitting) => setState(prev => ({ ...prev, isSubmitting })),
     setLastTrainingType: (type) => {
       setState(prev => ({ ...prev, lastTrainingType: type }));
@@ -728,10 +728,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRecentlyCompletedPolling(false);
       setIsAutoMLExperiment(false);
       
+      // Clear saved AutoML training configuration when resetting training state
+      localStorage.removeItem("automlTrainingConfig");
+      
       setState({
         isTraining: false,
         isSubmitting: false,
-        isPredicting: false, // Reset isPredicting in resetTrainingState
+        isPredicting: false,
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -766,6 +769,9 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRecentlyCompletedPolling(false);
       setIsAutoMLExperiment(false);
       
+      // Clear saved AutoML training configuration when clearing experiment results
+      localStorage.removeItem("automlTrainingConfig");
+      
       setState(prev => ({
         ...prev,
         experimentResults: null,
@@ -773,7 +779,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         statusResponse: null,
         resultsLoaded: false,
         experimentName: null,
-        isPredicting: false // Reset isPredicting when clearing results
+        isPredicting: false
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
