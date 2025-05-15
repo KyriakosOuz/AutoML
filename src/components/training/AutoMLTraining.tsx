@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -86,6 +85,34 @@ const AutoMLTraining: React.FC = () => {
     }
     return null;
   };
+  
+  // New effect to load saved configuration from localStorage on component mount
+  useEffect(() => {
+    const saved = localStorage.getItem("automlTrainingConfig");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSubmittedValues(parsed);
+        setExperimentName(parsed.experimentName);
+        setTestSize(parsed.testSize);
+        setStratify(parsed.stratify);
+        setRandomSeed(parsed.randomSeed);
+        
+        // Set the automl engine if it's valid
+        if (parsed.engine && (parsed.engine === "mljar" || parsed.engine === "h2o")) {
+          setAutomlEngine(parsed.engine);
+        }
+        
+        // Set engine-specific presets if available
+        if (parsed.engine === "mljar") setMljarSelectedPreset(parsed.preset);
+        if (parsed.engine === "h2o") setH2OSelectedPreset(parsed.preset);
+        
+        console.log("Restored AutoML config from localStorage:", parsed);
+      } catch (e) {
+        console.warn("Failed to restore AutoML config:", e);
+      }
+    }
+  }, [setExperimentName, setTestSize, setStratify, setRandomSeed, setAutomlEngine]);
   
   useEffect(() => {
     // Initialize userEditedName to false when component first mounts
@@ -309,15 +336,22 @@ const AutoMLTraining: React.FC = () => {
       setResultsLoaded(false);
       setActiveExperimentId(null);
 
-      // NEW: Save submitted values before training starts - Fix the type casting here
-      setSubmittedValues({
-        engine: automlEngine as TrainingEngine, // Explicit cast to TrainingEngine
+      // Save submitted values before training starts and persist to localStorage
+      const configToSave = {
+        engine: automlEngine as TrainingEngine,
         preset: selectedPreset,
         experimentName: finalExperimentName,
         testSize,
         stratify,
         randomSeed
-      });
+      };
+      
+      // Save to state
+      setSubmittedValues(configToSave);
+      
+      // Persist to localStorage
+      localStorage.setItem("automlTrainingConfig", JSON.stringify(configToSave));
+      console.log("[AutoMLTraining] Saved training config to localStorage:", configToSave);
 
       toast({
         title: "Training Started",
