@@ -1,4 +1,3 @@
-import { API_BASE_URL } from './api-constants';
 
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
@@ -85,5 +84,4 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// This will be used for API calls, so we'll keep it connected to API_BASE_URL
-export { API_BASE_URL };
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";

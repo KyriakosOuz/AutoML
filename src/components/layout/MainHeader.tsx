@@ -54,7 +54,7 @@ const MainHeader = () => {
           {isMobile && <MobileNav />}
           <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
             <img 
-              src="/app/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
+              src="/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
               alt="KyrO Logo" 
               className="h-5 w-5 sm:h-6 sm:w-6" 
             />

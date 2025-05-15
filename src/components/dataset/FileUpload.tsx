@@ -94,14 +94,10 @@ const FileUpload: React.FC = () => {
       
       console.log('Uploading file:', selectedFile.name);
       
-      // Create FormData and append the file and optional missing symbol
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      if (customMissingSymbol) {
-        formData.append('missing_symbol', customMissingSymbol);
-      }
-      
-      const response = await datasetApi.uploadDataset(formData);
+      const response = await datasetApi.uploadDataset(
+        selectedFile, 
+        customMissingSymbol || undefined
+      );
       
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -109,19 +105,19 @@ const FileUpload: React.FC = () => {
       console.log('Upload response:', response);
       
       // Extract the dataset data from the response, handling both formats
-      let datasetData: any;
+      let datasetData: Dataset;
       let overviewData: any = {};
       
       // If response has a data property with dataset_id, it's the ApiResponse format
       if (response && response.data && typeof response.data === 'object' && 'dataset_id' in response.data) {
         console.log('Processing ApiResponse format');
-        datasetData = response.data as any;
+        datasetData = response.data as Dataset;
         overviewData = datasetData.overview || {};
       } 
       // If response has dataset_id directly, it's the Dataset format
       else if (response && 'dataset_id' in response) {
         console.log('Processing direct Dataset format');
-        datasetData = response as any;
+        datasetData = response as Dataset;
         overviewData = datasetData.overview || {};
       } else {
         throw new Error('Invalid response format from server');
