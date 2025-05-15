@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import * as trainingLib from '@/lib/training';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SubmittedTrainingParameters } from '@/contexts/training/types';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 
 interface Hyperparameter {
   type: 'number' | 'boolean' | 'string';
@@ -411,8 +413,9 @@ const CustomTraining: React.FC = () => {
                     <TooltipContent>
                       <p>Name to identify this training experiment</p>
                     </TooltipContent>
-                  </TooltipProvider>
-                </Label>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
               <Input
                 id="experiment-name"
                 value={experimentName || ''}
@@ -476,120 +479,121 @@ const CustomTraining: React.FC = () => {
                     <TooltipContent>
                       <p>Set for reproducible results. Using the same seed ensures consistent train/test splits.</p>
                     </TooltipContent>
-                  </TooltipProvider>
-                </Label>
-                <Input
-                  id="random-seed"
-                  type="number"
-                  min={0}
-                  value={randomSeed}
-                  onChange={(e) => setRandomSeed(parseInt(e.target.value) || 0)}
-                  disabled={isTraining || isSubmitting}
-                  placeholder="Enter random seed (e.g. 42)"
-                  aria-label="Random seed for reproducibility"
-                />
-                <p className="text-xs text-muted-foreground">For reproducible results</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="use-default-hyperparameters" className="flex items-center gap-2">
-                  Use Default Hyperparameters
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Use the default hyperparameters for the selected algorithm</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <Switch
-                  id="use-default-hyperparameters"
-                  checked={useDefaultHyperparameters}
-                  onCheckedChange={handleUseDefaultHyperparametersChange}
-                  disabled={isTraining || isSubmitting || !algorithm}
-                  aria-label="Use default hyperparameters"
-                />
-              </div>
-
-              {!useDefaultHyperparameters && algorithm && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Hyperparameter Tuning</h4>
-                  {selectedHyperparameters &&
-                    Object.entries(selectedHyperparameters).map(([name, param]) => (
-                      <div key={name} className="space-y-2">
-                        <Label htmlFor={`hyperparameter-${name}`}>{name}</Label>
-                        {param.type === 'number' ? (
-                          <Input
-                            id={`hyperparameter-${name}`}
-                            type="number"
-                            value={param.value as number}
-                            onChange={(e) =>
-                              handleHyperparameterChange(name, parseFloat(e.target.value))
-                            }
-                            disabled={isTraining || isSubmitting}
-                          />
-                        ) : param.type === 'boolean' ? (
-                          <Checkbox
-                            id={`hyperparameter-${name}`}
-                            checked={param.value as boolean}
-                            onCheckedChange={(checked) =>
-                              handleHyperparameterChange(name, checked)
-                            }
-                            disabled={isTraining || isSubmitting}
-                          />
-                        ) : (
-                          <Input
-                            id={`hyperparameter-${name}`}
-                            type="text"
-                            value={param.value as string}
-                            onChange={(e) =>
-                              handleHyperparameterChange(name, e.target.value)
-                            }
-                            disabled={isTraining || isSubmitting}
-                          />
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              <Button
-                onClick={handleTrainModel}
-                disabled={isButtonDisabled()}
-                className="w-full mt-4"
-                size="lg"
-              >
-                {isTraining || isSubmitting ? (
-                  <>
-                    <Loader className="mr-2 h-5 w-5 animate-spin" />
-                    {experimentStatus === 'processing'
-                      ? 'Processing...'
-                      : experimentStatus === 'running'
-                        ? 'Training in Progress...'
-                        : 'Starting Training...'}
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-5 w-5" />
-                    Train Model with {algorithm}
-                  </>
-                )}
-              </Button>
-
-              <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md mt-4">
-                <p className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span>Training might take several minutes depending on dataset size and complexity.</span>
-                </p>
-              </div>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <Input
+                id="random-seed"
+                type="number"
+                min={0}
+                value={randomSeed}
+                onChange={(e) => setRandomSeed(parseInt(e.target.value) || 0)}
+                disabled={isTraining || isSubmitting}
+                placeholder="Enter random seed (e.g. 42)"
+                aria-label="Random seed for reproducibility"
+              />
+              <p className="text-xs text-muted-foreground">For reproducible results</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="use-default-hyperparameters" className="flex items-center gap-2">
+                Use Default Hyperparameters
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Use the default hyperparameters for the selected algorithm</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <Switch
+                id="use-default-hyperparameters"
+                checked={useDefaultHyperparameters}
+                onCheckedChange={handleUseDefaultHyperparametersChange}
+                disabled={isTraining || isSubmitting || !algorithm}
+                aria-label="Use default hyperparameters"
+              />
+            </div>
+
+            {!useDefaultHyperparameters && algorithm && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Hyperparameter Tuning</h4>
+                {selectedHyperparameters &&
+                  Object.entries(selectedHyperparameters).map(([name, param]) => (
+                    <div key={name} className="space-y-2">
+                      <Label htmlFor={`hyperparameter-${name}`}>{name}</Label>
+                      {param.type === 'number' ? (
+                        <Input
+                          id={`hyperparameter-${name}`}
+                          type="number"
+                          value={param.value as number}
+                          onChange={(e) =>
+                            handleHyperparameterChange(name, parseFloat(e.target.value))
+                          }
+                          disabled={isTraining || isSubmitting}
+                        />
+                      ) : param.type === 'boolean' ? (
+                        <Checkbox
+                          id={`hyperparameter-${name}`}
+                          checked={param.value as boolean}
+                          onCheckedChange={(checked) =>
+                            handleHyperparameterChange(name, checked as boolean)
+                          }
+                          disabled={isTraining || isSubmitting}
+                        />
+                      ) : (
+                        <Input
+                          id={`hyperparameter-${name}`}
+                          type="text"
+                          value={param.value as string}
+                          onChange={(e) =>
+                            handleHyperparameterChange(name, e.target.value)
+                          }
+                          disabled={isTraining || isSubmitting}
+                        />
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            <Button
+              onClick={handleTrainModel}
+              disabled={isButtonDisabled()}
+              className="w-full mt-4"
+              size="lg"
+            >
+              {isTraining || isSubmitting ? (
+                <>
+                  <Loader className="mr-2 h-5 w-5 animate-spin" />
+                  {experimentStatus === 'processing'
+                    ? 'Processing...'
+                    : experimentStatus === 'running'
+                      ? 'Training in Progress...'
+                      : 'Starting Training...'}
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-5 w-5" />
+                  Train Model with {algorithm}
+                </>
+              )}
+            </Button>
+
+            <div className="text-sm text-muted-foreground bg-primary-foreground p-3 rounded-md mt-4">
+              <p className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span>Training might take several minutes depending on dataset size and complexity.</span>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 export default CustomTraining;
