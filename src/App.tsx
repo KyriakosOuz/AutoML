@@ -27,7 +27,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <div className="min-h-screen overflow-x-hidden">
-          <BrowserRouter>
+          <BrowserRouter basename="/app">
             <AIAssistantProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
