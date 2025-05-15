@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getAuthHeaders } from '@/lib/utils';
-import { trainingApi } from '@/lib/api';
+import { SlidersHorizontal, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { trainingApi } from '@/lib/training';
 import { useNavigate } from 'react-router-dom';
 
 interface TuneModelModalProps {
@@ -216,9 +212,6 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
       <DialogContent className="sm:max-w-md overflow-auto">
         <DialogHeader>
           <DialogTitle>Tune Model Hyperparameters</DialogTitle>
-          <DialogDescription>
-            Adjust hyperparameters to fine-tune this model
-          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">

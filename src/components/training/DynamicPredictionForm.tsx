@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ColumnSchema, getPredictionSchema } from '@/lib/training';
+import { ColumnSchema, getPredictionSchema, PredictionSchemaResponse } from '@/lib/training';
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders } from '@/lib/utils';
 import BatchPredictionView from './prediction/BatchPredictionView';
@@ -92,6 +93,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             .map(feat => ({
               name: feat,
               type: 'categorical' as const, // Default to categorical if no type info
+              required: true,
+              values: undefined,
+              range: undefined
             }));
             
           setColumnSchemas(legacyColumns);

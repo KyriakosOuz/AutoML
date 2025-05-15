@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { API_BASE_URL, DATASET_API } from './api-constants';
 
-// Define interface for the Dataset type
+// Define enhanced interface for the Dataset type
 export interface Dataset {
   id: string;
   name: string;
@@ -10,6 +10,9 @@ export interface Dataset {
   size: number;
   rows: number;
   columns: number;
+  dataset_id: string;  // Added this property
+  file_url: string;    // Added this property
+  overview?: any;      // Added this property
 }
 
 // Group all dataset API functions under a single datasetApi object
@@ -118,10 +121,79 @@ export const datasetApi = {
       console.error('Error deleting dataset:', error);
       throw error;
     }
+  },
+
+  // Adding missing methods that are used in components
+  featureImportancePreview: async function(datasetId: string, targetColumn: string) {
+    try {
+      const data = {
+        dataset_id: datasetId,
+        target_column: targetColumn
+      };
+      const response = await axios.post(`${API_BASE_URL}/feature-importance-preview/`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error previewing feature importance:', error);
+      throw error;
+    }
+  },
+
+  handleMissingValues: async function(datasetId: string, strategy: string) {
+    try {
+      const data = {
+        dataset_id: datasetId,
+        strategy: strategy
+      };
+      const response = await axios.post(`${API_BASE_URL}/handle-missing-values/`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error handling missing values:', error);
+      throw error;
+    }
+  },
+
+  checkClassImbalance: async function(datasetId: string) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/check-class-imbalance/?dataset_id=${datasetId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking class imbalance:', error);
+      throw error;
+    }
+  },
+
+  preprocessDataset: async function(datasetId: string, normalizationMethod: string, balanceStrategy: string, balanceMethod?: string) {
+    try {
+      const data = {
+        dataset_id: datasetId,
+        normalization_method: normalizationMethod,
+        balance_strategy: balanceStrategy
+      };
+      
+      if (balanceMethod) {
+        Object.assign(data, { balance_method: balanceMethod });
+      }
+      
+      const response = await axios.post(`${API_BASE_URL}/preprocess-dataset/`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error preprocessing dataset:', error);
+      throw error;
+    }
+  },
+
+  detectTaskType: async function(datasetId: string, targetColumn: string) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/detect-task-type/?dataset_id=${datasetId}&target_column=${targetColumn}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error detecting task type:', error);
+      throw error;
+    }
   }
 };
 
-// For backward compatibility, also export individual functions
+// Export individual functions for backward compatibility
 export const {
   uploadDataset,
   getDatasetOverview,
@@ -132,3 +204,6 @@ export const {
   listDatasets,
   deleteDataset
 } = datasetApi;
+
+// Export training API from the training module
+export { trainingApi } from './training';

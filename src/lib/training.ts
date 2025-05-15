@@ -21,14 +21,27 @@ export interface H2OPreset {
   exclude_algos?: string[];
 }
 
-// Define ColumnSchema interface
+// Enhanced ColumnSchema interface
 export interface ColumnSchema {
   name: string;
   type: string;
   categorical_values?: string[];
+  values?: string[] | 'too_many'; // Added for compatibility
   min_value?: number;
   max_value?: number;
   required: boolean;
+  range?: [number, number]; // Added for compatibility
+}
+
+// Define a schema response interface to handle the various formats returned by the API
+export interface PredictionSchemaResponse {
+  schema?: ColumnSchema[];
+  columns?: ColumnSchema[];
+  target?: string;
+  target_column?: string;
+  example?: Record<string, any>;
+  sample_row?: Record<string, any>;
+  features?: string[];
 }
 
 // Function to check experiment status
@@ -71,13 +84,13 @@ export async function getH2OPresets(): Promise<H2OPreset[]> {
   }
 }
 
-export async function getPredictionSchema(experimentId: string): Promise<ColumnSchema[]> {
+export async function getPredictionSchema(experimentId: string): Promise<PredictionSchemaResponse> {
   try {
     const response = await axios.get(`${API_BASE_URL}/prediction-schema/?experiment_id=${experimentId}`);
-    return response.data.schema || [];
+    return response.data || {};
   } catch (error) {
     console.error('Error fetching prediction schema:', error);
-    return [];
+    return {};
   }
 }
 
