@@ -91,7 +91,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
-  const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {

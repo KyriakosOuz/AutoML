@@ -50,16 +50,40 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
             csvContent = data;
           }
           
-          // Simple CSV parsing (handles basic CSV format)
+          // Enhanced CSV parsing for MLJAR format
           const lines = csvContent.trim().split('\n');
           const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
           
           const rows = lines.slice(1).map(line => {
-            const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+            // Handle quoted values correctly (they might contain commas)
+            const values: string[] = [];
+            let inQuotes = false;
+            let currentValue = '';
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                values.push(currentValue.replace(/"/g, '').trim());
+                currentValue = '';
+              } else {
+                currentValue += char;
+              }
+            }
+            
+            // Don't forget to add the last value
+            values.push(currentValue.replace(/"/g, '').trim());
+            
+            // Create object from headers and values
             return headers.reduce((obj, header, i) => {
-              obj[header] = values[i];
+              // Convert numeric strings to numbers
+              const value = values[i] || '';
+              const numValue = parseFloat(value);
+              obj[header] = !isNaN(numValue) && value !== '' ? numValue : value;
               return obj;
-            }, {} as Record<string, string>);
+            }, {} as Record<string, any>);
           });
           
           setParsedData(rows);
@@ -112,7 +136,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     if (sortedData.length > 0 && onBestModelFound) {
       // Get the model_id from the first (best) model in the sorted data
       const bestModel = sortedData[0];
-      const modelId = bestModel.model_id || bestModel.name || '';
+      const modelId = bestModel.model_id || bestModel.name || bestModel.model_name || '';
       
       if (modelId) {
         // Format the model name (e.g., "DRF_1")
@@ -171,24 +195,60 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     return numValue.toFixed(4);
   };
 
-  // Select important columns to display
+  // Improved display columns logic to handle MLJAR format
   const displayColumns = useMemo(() => {
-    const priorityColumns = [
-      'model_id', 'name', 'algorithm', 'auc', 'logloss', 
-      'rmse', 'mse', 'mae', 'rmsle', 'r2',
-      'accuracy', 'f1', 'precision', 'recall',
-      'training_time_sec', 'mean_per_class_error'
+    if (columns.length === 0) return [];
+    
+    // Important model identifier columns that should be shown first
+    const identifierColumns = ['model_id', 'name', 'model_name', 'algorithm', 'model_type'];
+    
+    // Important metric columns (more comprehensive list)
+    const metricColumns = [
+      'auc', 'logloss', 'rmse', 'mse', 'mae', 'rmsle', 'r2',
+      'accuracy', 'f1', 'precision', 'recall', 'mean_per_class_error',
+      'training_time_sec', 'training_time', 'train_time', 
+      'score', 'aucpr', 'f1_score', 'r2_score', 'cv_score', 'metric_value'
     ];
     
-    // Filter columns based on priority and availability
-    return columns.filter(col => 
-      priorityColumns.includes(col) || 
-      col.includes('auc') || 
-      col.includes('loss') || 
-      col.includes('error') ||
-      col.includes('accuracy') ||
-      col.includes('score')
-    );
+    // First, include identifier columns in the order they appear
+    const orderedColumns: string[] = [];
+    
+    // Add identifier columns first if they exist
+    identifierColumns.forEach(idCol => {
+      if (columns.includes(idCol)) {
+        orderedColumns.push(idCol);
+      }
+    });
+    
+    // Then add metric columns if they exist
+    metricColumns.forEach(metricCol => {
+      if (columns.includes(metricCol)) {
+        orderedColumns.push(metricCol);
+      }
+    });
+    
+    // Finally, add any remaining columns that might be metrics
+    columns.forEach(col => {
+      if (!orderedColumns.includes(col) && (
+        col.includes('score') || 
+        col.includes('metric') || 
+        col.includes('error') || 
+        col.includes('loss') || 
+        col.includes('accuracy') || 
+        col.includes('auc') || 
+        col.includes('time') ||
+        col.includes('val_')
+      )) {
+        orderedColumns.push(col);
+      }
+    });
+    
+    // If we have less than 3 columns, include all columns
+    if (orderedColumns.length < 3) {
+      return columns;
+    }
+    
+    return orderedColumns;
   }, [columns]);
 
   // NEW: Handle download of the leaderboard CSV
@@ -304,12 +364,14 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
         </TableHeader>
         <TableBody>
           {displayedData.map((row, index) => (
-            <TableRow key={row.model_id || `model-${index}`} className={
-              row.model_id === selectedModelId ? "bg-primary/10" : ""
+            <TableRow key={row.model_id || row.name || row.model_name || `model-${index}`} className={
+              (row.model_id === selectedModelId || row.name === selectedModelId || row.model_name === selectedModelId) 
+                ? "bg-primary/10" 
+                : ""
             }>
               {displayColumns.map((column) => (
                 <TableCell key={column}>
-                  {column === 'model_id' || column === 'name' || column === 'algorithm' ? (
+                  {column === 'model_id' || column === 'name' || column === 'model_name' || column === 'algorithm' || column === 'model_type' ? (
                     <div className="font-medium">
                       {row[column]}
                       {index === 0 && (
