@@ -2,8 +2,15 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { useToast } from '@/hooks/use-toast';
 import { trainingApi } from '@/lib/api';
 import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
-import { TrainingContextValue, TrainingContextState, ExperimentStatus } from './types';
-import { EXPERIMENT_STORAGE_KEY, EXPERIMENT_TYPE_STORAGE_KEY, defaultAutomlParameters, defaultCustomParameters } from './constants';
+import { TrainingContextValue, TrainingContextState, ExperimentStatus, SubmittedTrainingParameters } from './types';
+import { 
+  EXPERIMENT_STORAGE_KEY, 
+  EXPERIMENT_TYPE_STORAGE_KEY, 
+  defaultAutomlParameters, 
+  defaultCustomParameters,
+  EXPERIMENT_NAME_STORAGE_KEY,
+  TRAINING_PARAMS_STORAGE_KEY
+} from './constants';
 import { useExperimentPolling } from './useExperimentPolling';
 import { checkStatus } from '@/lib/training';
 
@@ -39,6 +46,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     isCheckingLastExperiment: false,
     resultsLoaded: false, // Initialize resultsLoaded state explicitly
     experimentName: null, // Initialize experiment name as null
+    submittedParameters: null, // Initialize submitted parameters as null
   });
 
   // Track if we just completed polling - extend timeout for more reliability
@@ -54,13 +62,25 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     type: null
   });
 
-  // Enhanced experiment restoration with improved logging and error handling
+  // Enhanced experiment restoration with improved logging and error handling - Update to also restore submittedParameters
   useEffect(() => {
     const restoreExperiment = async () => {
       try {
         const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
         const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
         const savedExperimentName = localStorage.getItem(EXPERIMENT_NAME_STORAGE_KEY);
+        
+        // Restore submitted parameters from localStorage if available
+        let savedParameters: SubmittedTrainingParameters | null = null;
+        try {
+          const savedParamsString = localStorage.getItem(TRAINING_PARAMS_STORAGE_KEY);
+          if (savedParamsString) {
+            savedParameters = JSON.parse(savedParamsString);
+            console.log("[TrainingContext] Restored training parameters from storage:", savedParameters);
+          }
+        } catch (e) {
+          console.error("[TrainingContext] Error parsing saved training parameters:", e);
+        }
         
         if (savedExperimentId) {
           console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
@@ -72,7 +92,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             lastTrainingType: savedTrainingType,
             experimentStatus: 'processing', // Start with processing status until we know more
             isLoadingResults: true,
-            experimentName: savedExperimentName // Restore saved experiment name
+            experimentName: savedExperimentName,
+            submittedParameters: savedParameters // Restore submitted parameters
           }));
           
           // Then check the actual experiment status from the API
@@ -718,6 +739,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
     setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })),
     setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })),
+    setSubmittedParameters: (params) => setState(prev => ({ ...prev, submittedParameters: params })),
     resetTrainingState: () => {
       // Enhanced reset to ensure all polling is stopped
       stopPolling();
@@ -731,7 +753,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       setState({
         isTraining: false,
         isSubmitting: false,
-        isPredicting: false, // Reset isPredicting in resetTrainingState
+        isPredicting: false,
         lastTrainingType: null,
         automlParameters: defaultAutomlParameters,
         customParameters: defaultCustomParameters,
@@ -751,10 +773,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         isCheckingLastExperiment: false,
         resultsLoaded: false,
         experimentName: null,
+        submittedParameters: null, // Clear submitted parameters
       });
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      localStorage.removeItem(TRAINING_PARAMS_STORAGE_KEY); // Also remove training parameters
     },
     clearExperimentResults: () => {
       // Enhanced clear to ensure all polling is stopped
@@ -773,11 +797,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         statusResponse: null,
         resultsLoaded: false,
         experimentName: null,
-        isPredicting: false // Reset isPredicting when clearing results
+        isPredicting: false,
+        submittedParameters: null // Also clear submitted parameters
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+      localStorage.removeItem(TRAINING_PARAMS_STORAGE_KEY); // Also remove training parameters
     },
     getExperimentResults,
     startPolling, 

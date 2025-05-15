@@ -7,6 +7,8 @@ export const MAX_POLL_ATTEMPTS = 120; // 10 minutes max polling time
 
 export const EXPERIMENT_STORAGE_KEY = 'active_experiment_id';
 export const EXPERIMENT_TYPE_STORAGE_KEY = 'experiment_type';
+export const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
+export const TRAINING_PARAMS_STORAGE_KEY = 'training_parameters'; // New constant for storage
 
 export const defaultAutomlParameters: AutoMLParameters = {
   automlEngine: 'h2o', // Default AutoML engine

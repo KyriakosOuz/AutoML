@@ -1,30 +1,36 @@
+import { ExperimentResults, ExperimentStatusResponse, TrainingEngine, ExperimentStatus } from '@/types/training';
 
-import { ExperimentResults, ExperimentStatusResponse } from '@/types/training';
-
-export type ExperimentStatus = 'idle' | 'processing' | 'running' | 'completed' | 'success' | 'failed' | 'error';
-
-export interface AutoMLParameters {
-  automlEngine: string;
+export type AutoMLParameters = {
+  automlEngine: TrainingEngine;
   testSize: number;
   stratify: boolean;
   randomSeed: number;
-}
+};
 
-export interface CustomParameters {
+export type CustomParameters = {
   algorithm: string;
-  // Add missing properties that are being used in CustomTraining.tsx
   useDefaultHyperparameters: boolean;
-  hyperparameters: Record<string, any>;
+  hyperparameters: Record<string, unknown>;
   testSize: number;
   stratify: boolean;
   randomSeed: number;
   enableVisualization: boolean;
+};
+
+// Add new type for submitted training parameters
+export interface SubmittedTrainingParameters {
+  engine: TrainingEngine | null;
+  preset: string | null;
+  experimentName: string;
+  testSize: number;
+  stratify: boolean;
+  randomSeed: number;
 }
 
 export interface TrainingContextState {
   isTraining: boolean;
   isSubmitting: boolean;
-  isPredicting: boolean; // Add isPredicting state
+  isPredicting: boolean;
   lastTrainingType: 'automl' | 'custom' | null;
   automlParameters: AutoMLParameters;
   customParameters: CustomParameters;
@@ -36,20 +42,21 @@ export interface TrainingContextState {
   isLoadingResults: boolean;
   experimentStatus: ExperimentStatus;
   statusResponse: ExperimentStatusResponse | null;
-  automlEngine: string;
+  automlEngine: TrainingEngine;
   testSize: number;
   stratify: boolean;
   randomSeed: number;
-  activeTab: 'automl' | 'custom' | 'results' | 'predict';
+  activeTab: 'automl' | 'custom';
   isCheckingLastExperiment: boolean;
   resultsLoaded: boolean;
   experimentName: string | null;
+  submittedParameters: SubmittedTrainingParameters | null; // New state for submitted parameters
 }
 
 export interface TrainingContextValue extends TrainingContextState {
   setIsTraining: (isTraining: boolean) => void;
+  setIsPredicting: (isPredicting: boolean) => void;
   setIsSubmitting: (isSubmitting: boolean) => void;
-  setIsPredicting: (isPredicting: boolean) => void; // Add setter for isPredicting
   setLastTrainingType: (type: 'automl' | 'custom' | null) => void;
   setAutomlParameters: (params: Partial<AutoMLParameters>) => void;
   setCustomParameters: (params: Partial<CustomParameters>) => void;
@@ -61,15 +68,16 @@ export interface TrainingContextValue extends TrainingContextState {
   setIsLoadingResults: (isLoading: boolean) => void;
   setExperimentStatus: (status: ExperimentStatus) => void;
   setStatusResponse: (response: ExperimentStatusResponse | null) => void;
-  setAutomlEngine: (engine: string) => void;
+  setAutomlEngine: (engine: TrainingEngine) => void;
   setTestSize: (size: number) => void;
   setStratify: (stratify: boolean) => void;
   setRandomSeed: (seed: number) => void;
-  setActiveTab: (tab: 'automl' | 'custom' | 'results' | 'predict') => void;
-  resetTrainingState: () => void;
-  clearExperimentResults: () => void;
+  setActiveTab: (tab: 'automl' | 'custom') => void;
   setResultsLoaded: (loaded: boolean) => void;
   setExperimentName: (name: string | null) => void;
+  setSubmittedParameters: (params: SubmittedTrainingParameters | null) => void; // New setter
+  resetTrainingState: () => void;
+  clearExperimentResults: () => void;
   getExperimentResults: () => Promise<void>;
   startPolling: (experimentId: string) => void;
   stopPolling: () => void;

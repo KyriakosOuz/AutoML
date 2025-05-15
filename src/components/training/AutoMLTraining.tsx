@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -19,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import * as trainingLib from '@/lib/training';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
+import { SubmittedTrainingParameters } from '@/contexts/training/types';
 
 const AutoMLTraining: React.FC = () => {
   const { datasetId, taskType, processingStage } = useDataset();
@@ -40,8 +40,11 @@ const AutoMLTraining: React.FC = () => {
     experimentStatus,
     experimentName,
     setExperimentName,
-    setResultsLoaded
+    setResultsLoaded,
+    submittedParameters, // Get the global submitted parameters
+    setSubmittedParameters // Get the setter for submitted parameters
   } = useTraining();
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,24 +62,7 @@ const AutoMLTraining: React.FC = () => {
   // NEW: Add state for H2O presets
   const [h2oPresets, setH2OPresets] = useState<trainingLib.H2OPreset[]>([]);
   const [isLoadingH2OPresets, setIsLoadingH2OPresets] = useState(false);
-  
-  // Track submitted values - fixed the type for engine to be TrainingEngine | null
-  const [submittedValues, setSubmittedValues] = useState<{
-    engine: TrainingEngine | null;
-    preset: string | null;
-    experimentName: string;
-    testSize: number;
-    stratify: boolean;
-    randomSeed: number;
-  }>({
-    engine: null,
-    preset: null,
-    experimentName: '',
-    testSize: 0.2,
-    stratify: true,
-    randomSeed: 42
-  });
-  
+
   // Helper function to get the currently selected preset based on engine
   const getSelectedPreset = (): string | null => {
     if (automlEngine === 'mljar') {
@@ -309,15 +295,18 @@ const AutoMLTraining: React.FC = () => {
       setResultsLoaded(false);
       setActiveExperimentId(null);
 
-      // NEW: Save submitted values before training starts - Fix the type casting here
-      setSubmittedValues({
-        engine: automlEngine as TrainingEngine, // Explicit cast to TrainingEngine
+      // Create submitted parameters object
+      const newSubmittedParameters: SubmittedTrainingParameters = {
+        engine: automlEngine as TrainingEngine,
         preset: selectedPreset,
         experimentName: finalExperimentName,
         testSize,
         stratify,
         randomSeed
-      });
+      };
+
+      // Store in the global context
+      setSubmittedParameters(newSubmittedParameters);
 
       toast({
         title: "Training Started",
@@ -470,13 +459,16 @@ const AutoMLTraining: React.FC = () => {
 
   // NEW: Function to get the active settings for display during training
   const getActiveSettings = () => {
-    if (isTraining || isSubmitting) {
-      return submittedValues;
-    } else {
+    // If we have submittedParameters in the global context, use those
+    if (isTraining && submittedParameters) {
+      return submittedParameters;
+    } 
+    // Otherwise, use the current form values
+    else {
       return {
-        engine: automlEngine as TrainingEngine, // Fixed the type here as well
+        engine: automlEngine as TrainingEngine,
         preset: getSelectedPreset(),
-        experimentName,
+        experimentName: experimentName || '',
         testSize,
         stratify,
         randomSeed
@@ -484,7 +476,7 @@ const AutoMLTraining: React.FC = () => {
     }
   };
   
-  // Get the current active settings (either form values or submitted values)
+  // Get the current active settings (either from global state or current form values)
   const activeSettings = getActiveSettings();
 
   return (
@@ -528,29 +520,29 @@ const AutoMLTraining: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-slate-500">Engine:</span>{' '}
-                    <span className="font-medium">{submittedValues.engine?.toUpperCase()}</span>
+                    <span className="font-medium">{activeSettings.engine?.toUpperCase()}</span>
                   </div>
-                  {(submittedValues.engine === 'mljar' || submittedValues.engine === 'h2o') && (
+                  {(activeSettings.engine === 'mljar' || activeSettings.engine === 'h2o') && (
                     <div>
                       <span className="text-slate-500">Preset:</span>{' '}
-                      <span className="font-medium capitalize">{submittedValues.preset || 'Default'}</span>
+                      <span className="font-medium capitalize">{activeSettings.preset || 'Default'}</span>
                     </div>
                   )}
                   <div>
                     <span className="text-slate-500">Experiment:</span>{' '}
-                    <span className="font-medium">{submittedValues.experimentName}</span>
+                    <span className="font-medium">{activeSettings.experimentName}</span>
                   </div>
                   <div>
                     <span className="text-slate-500">Test Size:</span>{' '}
-                    <span className="font-medium">{(submittedValues.testSize * 100).toFixed(0)}%</span>
+                    <span className="font-medium">{(activeSettings.testSize * 100).toFixed(0)}%</span>
                   </div>
                   <div>
                     <span className="text-slate-500">Stratify:</span>{' '}
-                    <span className="font-medium">{submittedValues.stratify ? 'Yes' : 'No'}</span>
+                    <span className="font-medium">{activeSettings.stratify ? 'Yes' : 'No'}</span>
                   </div>
                   <div>
                     <span className="text-slate-500">Random Seed:</span>{' '}
-                    <span className="font-medium">{submittedValues.randomSeed}</span>
+                    <span className="font-medium">{activeSettings.randomSeed}</span>
                   </div>
                 </div>
               </div>
