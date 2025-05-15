@@ -1,28 +1,33 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
 
 interface H2OLeaderboardTableProps {
   data: any[] | string; // Accept either array or CSV string
   defaultSortMetric?: string;
   selectedModelId?: string | null;
   onBestModelFound?: (modelName: string) => void; // New callback prop
+  maxRows?: number; // New prop to control how many rows to display by default
 }
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
   defaultSortMetric = 'auc',
   selectedModelId,
-  onBestModelFound // New prop
+  onBestModelFound, // New prop
+  maxRows = 10 // Default to showing 10 rows
 }) => {
   const [sortField, setSortField] = useState<string>(defaultSortMetric);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showAll, setShowAll] = useState<boolean>(false);
 
   // Parse CSV data if provided as string
   useEffect(() => {
@@ -186,6 +191,73 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     );
   }, [columns]);
 
+  // NEW: Handle download of the leaderboard CSV
+  const handleDownloadLeaderboard = async () => {
+    try {
+      // If we have a URL, fetch the CSV file
+      if (typeof data === 'string' && data.startsWith('http')) {
+        const response = await fetch(data);
+        if (!response.ok) throw new Error('Failed to fetch leaderboard data');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'h2o_leaderboard.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } 
+      // If we have CSV string data
+      else if (typeof data === 'string' && !data.startsWith('http')) {
+        const blob = new Blob([data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'h2o_leaderboard.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+      // If we have array data, convert to CSV
+      else if (Array.isArray(data) && data.length > 0) {
+        const headers = Object.keys(data[0]).join(',');
+        const csvRows = data.map(row => Object.values(row).join(','));
+        const csvContent = [headers, ...csvRows].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'h2o_leaderboard.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error('No valid data to download');
+      }
+      
+      toast({
+        title: 'Download started',
+        description: 'The leaderboard CSV is downloading.',
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Download failed',
+        description: 'Failed to download leaderboard data.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // NEW: Get displayed data based on showAll setting
+  const displayedData = useMemo(() => {
+    return showAll ? sortedData : sortedData.slice(0, maxRows);
+  }, [sortedData, showAll, maxRows]);
+
   if (loading) {
     return <div className="text-center p-4">Loading leaderboard data...</div>;
   }
@@ -195,57 +267,92 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   }
 
   return (
-    <ResponsiveTable minWidth="800px">
-      <TableHeader>
-        <TableRow>
-          {displayColumns.map((column) => (
-            <TableHead key={column} className="whitespace-nowrap">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-xs font-medium"
-                onClick={() => handleSort(column)}
-              >
-                {column
-                  .replace(/_/g, ' ')
-                  .split(' ')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ')}
-                <ArrowUpDown className="ml-1 h-3 w-3" />
-              </Button>
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedData.map((row, index) => (
-          <TableRow key={row.model_id || `model-${index}`} className={
-            row.model_id === selectedModelId ? "bg-primary/10" : ""
-          }>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Model Leaderboard</h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleDownloadLeaderboard}
+          className="flex items-center gap-1"
+        >
+          <Download className="h-4 w-4" /> Download Full Leaderboard
+        </Button>
+      </div>
+      
+      <ResponsiveTable minWidth="800px">
+        <TableHeader>
+          <TableRow>
             {displayColumns.map((column) => (
-              <TableCell key={column}>
-                {column === 'model_id' || column === 'name' || column === 'algorithm' ? (
-                  <div className="font-medium">
-                    {row[column]}
-                    {index === 0 && (
-                      <Badge className="ml-2 text-foreground bg-secondary" variant="outline">
-                        Best
-                      </Badge>
-                    )}
-                  </div>
-                ) : (
-                  <div className={
-                    column === sortField ? "font-medium" : ""
-                  }>
-                    {formatValue(row[column], column)}
-                  </div>
-                )}
-              </TableCell>
+              <TableHead key={column} className="whitespace-nowrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs font-medium"
+                  onClick={() => handleSort(column)}
+                >
+                  {column
+                    .replace(/_/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')}
+                  <ArrowUpDown className="ml-1 h-3 w-3" />
+                </Button>
+              </TableHead>
             ))}
           </TableRow>
-        ))}
-      </TableBody>
-    </ResponsiveTable>
+        </TableHeader>
+        <TableBody>
+          {displayedData.map((row, index) => (
+            <TableRow key={row.model_id || `model-${index}`} className={
+              row.model_id === selectedModelId ? "bg-primary/10" : ""
+            }>
+              {displayColumns.map((column) => (
+                <TableCell key={column}>
+                  {column === 'model_id' || column === 'name' || column === 'algorithm' ? (
+                    <div className="font-medium">
+                      {row[column]}
+                      {index === 0 && (
+                        <Badge className="ml-2 text-foreground bg-secondary" variant="outline">
+                          Best
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={
+                      column === sortField ? "font-medium" : ""
+                    }>
+                      {formatValue(row[column], column)}
+                    </div>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </ResponsiveTable>
+      
+      {sortedData.length > maxRows && (
+        <div className="flex justify-center mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAll(!showAll)}
+            className="flex items-center gap-1"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp className="h-4 w-4" /> Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" /> Show All ({sortedData.length} models)
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
