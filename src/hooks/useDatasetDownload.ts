@@ -1,7 +1,7 @@
 
 import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { ApiResponse } from '@/types/api';
 
 interface DownloadResponse {
@@ -9,8 +9,6 @@ interface DownloadResponse {
 }
 
 export const useDatasetDownload = () => {
-  const { toast } = useToast();
-
   const downloadDataset = async (datasetId: string, stage: string, fileName?: string) => {
     try {
       const headers = await getAuthHeaders();
@@ -41,16 +39,13 @@ export const useDatasetDownload = () => {
       // Clean up the blob URL
       window.URL.revokeObjectURL(blobUrl);
 
-      toast({
-        title: "Download Started",
-        description: `Your ${stage} dataset download has started.`,
+      toast.success("Download Started", {
+        description: `Your ${stage} dataset download has started.`
       });
     } catch (error) {
       console.error('Download error:', error);
-      toast({
-        title: "Download Failed",
-        description: error instanceof Error ? error.message : "Failed to start download",
-        variant: "destructive"
+      toast.error("Download Failed", {
+        description: error instanceof Error ? error.message : "Failed to start download"
       });
     }
   };

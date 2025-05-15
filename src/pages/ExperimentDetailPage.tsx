@@ -5,12 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { ExperimentResults } from '@/types/training';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
 import { getExperimentResults } from '@/lib/training';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
-  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery<ExperimentResults>({
     queryKey: ['experiment', experimentId],
@@ -21,13 +20,11 @@ const ExperimentDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      toast({
-        title: 'Failed to load experiment',
-        description: 'Could not fetch experiment results. Please try again.',
-        variant: 'destructive',
+      toast.error("Failed to load experiment", {
+        description: 'Could not fetch experiment results. Please try again.'
       });
     }
-  }, [error, toast]);
+  }, [error]);
   
   // Determine the status to pass to ExperimentResultsContainer
   const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
