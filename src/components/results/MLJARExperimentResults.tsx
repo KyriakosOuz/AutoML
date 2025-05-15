@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
+import H2OLeaderboardTable from './H2OLeaderboardTable';
 import { 
   Award, 
   BarChart4, 
@@ -303,6 +304,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const predictionsFile = files.find(file => 
     file.file_type === 'predictions_csv' ||
     file.file_type.includes('predictions')
+  );
+  
+  // Add leaderboard file detection
+  const leaderboardFile = files.find(file => 
+    file.file_type === 'leaderboard_csv' || 
+    file.file_type.includes('leaderboard')
   );
   
   // Updated to prioritize model_file_url from experimentResults
@@ -669,10 +676,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Updated to use the new getPerClassMetrics helper */}
+          {/* Model Details Tab - Updated to replace the Per-Class Metrics card with the Leaderboard Table */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Model File Card - Updated to use modelDownloadUrl */}
+              {/* Model File Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Model File</CardTitle>
@@ -694,7 +701,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card - Updated to use downloadFile */}
+              {/* Model Metadata Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Metadata</CardTitle>
@@ -738,59 +745,26 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               </Card>
             </div>
             
-            {/* Update Per-Class Metrics section in the metadata tab as well */}
-            {getPerClassMetrics() && Object.keys(getPerClassMetrics() || {}).length > 0 && (
+            {/* Replace Per-Class Metrics with Leaderboard Table */}
+            {leaderboardFile && (
               <Card className="shadow-sm mt-6">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Per-Class Metrics</CardTitle>
+                  <CardTitle className="text-base">Models Leaderboard</CardTitle>
                   <CardDescription>
-                    Detailed metrics breakdown by class
+                    Comparison of all models trained during the experiment
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Class</TableHead>
-                        <TableHead>Precision</TableHead>
-                        <TableHead>Recall</TableHead>
-                        <TableHead>F1-Score</TableHead>
-                        <TableHead>Support</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(getPerClassMetrics() || {}).map(([classLabel, metrics]) => (
-                        <TableRow key={classLabel}>
-                          <TableCell>{classLabel}</TableCell>
-                          <TableCell>
-                            {metrics.precision !== undefined 
-                              ? formatMetricValue(metrics.precision, true) 
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {metrics.recall !== undefined 
-                              ? formatMetricValue(metrics.recall, true) 
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {getF1Score(metrics) !== undefined 
-                              ? formatMetricValue(getF1Score(metrics), true) 
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {metrics.support !== undefined 
-                              ? metrics.support 
-                              : 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </ResponsiveTable>
+                  <H2OLeaderboardTable 
+                    data={leaderboardFile.file_url} 
+                    defaultSortMetric={primaryMetric.name}
+                    maxRows={10}
+                  />
                 </CardContent>
               </Card>
             )}
             
-            {/* Documentation Dialog - Keep this part */}
+            {/* Documentation Dialog */}
             <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
