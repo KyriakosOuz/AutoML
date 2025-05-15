@@ -16,8 +16,6 @@ import { checkStatus } from '@/lib/training';
 
 const TrainingContext = createContext<TrainingContextValue | undefined>(undefined);
 
-// New constant for experiment name storage
-const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
 // New flag to prevent resultsLoaded from being reset during loading
 const RESULTS_LOADED_DELAY_MS = 1500; // Extended delay before potentially setting resultsLoaded back to false
 
