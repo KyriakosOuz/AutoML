@@ -9,7 +9,7 @@ export const EXPERIMENT_STORAGE_KEY = 'active_experiment_id';
 export const EXPERIMENT_TYPE_STORAGE_KEY = 'experiment_type';
 
 export const defaultAutomlParameters: AutoMLParameters = {
-  automlEngine: 'h2o', // Default AutoML engine
+  automlEngine: 'mljar', // Changed from 'h2o' to 'mljar'
   testSize: 0.2, // 20% test size
   stratify: true, // Stratify by default
   randomSeed: 42 // Default random seed
