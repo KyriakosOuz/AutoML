@@ -1,12 +1,13 @@
 
 // Re-export the toast implementation from Sonner
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast, type ExternalToast } from "sonner";
+import { ReactNode } from "react";
 
 // Define types that match both old and new toast APIs
-type ToastProps = {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: React.ReactNode;
+export type ToastProps = {
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
   variant?: "default" | "destructive" | "success" | "warning";
   duration?: number;
 };
@@ -21,29 +22,12 @@ const toast = (props: ToastProps | string) => {
   // Extract properties
   const { title, description, variant, duration, action } = props;
 
-  // Map variant to Sonner's types
-  let type: "success" | "error" | "warning" | "info" | undefined;
-  switch (variant) {
-    case "destructive":
-      type = "error";
-      break;
-    case "success":
-      type = "success";
-      break;
-    case "warning":
-      type = "warning";
-      break;
-    default:
-      type = "info";
-  }
-
   // If there's both title and description, format accordingly
   if (title && description) {
     return sonnerToast(title, {
       description,
       action,
       duration,
-      type,
     });
   }
   
@@ -51,12 +35,36 @@ const toast = (props: ToastProps | string) => {
   return sonnerToast(title || description || "", {
     action,
     duration,
-    type,
   });
 };
 
+// Add success, error, info, warning methods to the toast function
+toast.success = (message: string, options?: Omit<ExternalToast, "id">) => {
+  return sonnerToast.success(message, options);
+};
+
+toast.error = (message: string, options?: Omit<ExternalToast, "id">) => {
+  return sonnerToast.error(message, options);
+};
+
+toast.info = (message: string, options?: Omit<ExternalToast, "id">) => {
+  return sonnerToast(message, { ...options });
+};
+
+toast.warning = (message: string, options?: Omit<ExternalToast, "id">) => {
+  return sonnerToast.warning(message, options);
+};
+
+toast.success.toString = () => 'toast.success';
+toast.error.toString = () => 'toast.error';
+toast.info.toString = () => 'toast.info';
+toast.warning.toString = () => 'toast.warning';
+
 // Export our compatible toast API
 export { toast };
+
+// Dummy toasts array for compatibility
+const toasts: any[] = [];
 
 // Export a useToast hook for compatibility with existing code
 export const useToast = () => {
@@ -69,6 +77,8 @@ export const useToast = () => {
       } else {
         sonnerToast.dismiss();
       }
-    }
+    },
+    // Add empty toasts array for compatibility with old code
+    toasts
   };
 };
