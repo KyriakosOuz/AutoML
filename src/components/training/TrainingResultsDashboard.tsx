@@ -86,7 +86,7 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
         // now uses the training context directly
       />
       
-      {(experimentStatus === 'completed' || experimentStatus === 'success') && (
+      {experimentStatus === 'success' && (
         <div className="flex justify-end mt-4">
           <Button 
             asChild
