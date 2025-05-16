@@ -1,35 +1,19 @@
+
 import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ResponsiveTable } from '@/components/ui/responsive-table';
-import { 
-  Award, 
-  BarChart4, 
-  Clock, 
-  Download, 
-  FileText, 
-  RefreshCw, 
-  Table as TableIcon,
-  Info,
-  Loader,
-  Image,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import { ExperimentResults, PerClassMetric } from '@/types/training';
-import { ExperimentStatus } from '@/contexts/training/types';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ExperimentResults, ExperimentStatus } from '@/types/training';
+import { Award, BarChart4, Clock, Download, FileText, RefreshCw, Settings, Activity, Loader, ChevronRight, Info } from 'lucide-react';
 import { formatTrainingTime } from '@/utils/formatUtils';
-import { formatDateForGreece } from '@/lib/dateUtils';
-import CSVPreview from './CSVPreview';
-import { downloadFile } from '../training/prediction/utils/downloadUtils';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import H2OLeaderboardTable from './H2OLeaderboardTable';
+import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import MetricsGrid from '@/components/training/charts/MetricsGrid';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -37,12 +21,11 @@ interface MLJARExperimentResultsProps {
   experimentResults: ExperimentResults | null;
   isLoading: boolean;
   error: string | null;
-  onReset?: () => void;
+  onReset: () => void;
   onRefresh?: () => void;
 }
 
-// Helper function to format task type
-const formatTaskType = (type: string = '') => {
+const formatTaskType = (type: string) => {
   if (!type) return "Unknown";
   
   switch (type) {
@@ -57,11 +40,10 @@ const formatTaskType = (type: string = '') => {
   }
 };
 
-// Enhanced helper function to format visualization names for MLJAR
 const formatVisualizationName = (fileType: string): string => {
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
-  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+  } else if (fileType.includes('roc_curve')) {
     return 'ROC Curve';
   } else if (fileType.includes('precision_recall')) {
     return 'Precision-Recall Curve';
@@ -69,14 +51,22 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance')) {
     return 'Feature Importance';
-  } else if (fileType.includes('true_vs_predicted')) {
-    return 'True vs Predicted';
-  } else if (fileType.includes('predicted_vs_residuals')) {
-    return 'Predicted vs Residuals';
   }
   
-  // Default formatting: capitalize each word and replace underscores with spaces
   return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+const categorizeVisualizations = (files: {file_type: string, file_url: string}[]) => {
+  return files.filter(file => 
+    file.file_type !== 'model' && 
+    !file.file_type.includes('label_encoder') &&
+    (file.file_type.includes('confusion_matrix') ||
+     file.file_type.includes('evaluation_curve') ||
+     file.file_type.includes('learning_curve') ||
+     file.file_type.includes('feature_importance') ||
+     file.file_type.includes('roc_curve') ||
+     file.file_type.includes('precision_recall'))
+  );
 };
 
 const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
@@ -88,66 +78,18 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   onReset,
   onRefresh
 }) => {
-  const [activeTab, setActiveTab] = useState<string>('summary');
-  const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
-  const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
-  const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
-  
-  // Format metric for display
-  const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
-    if (value === undefined) return 'N/A';
-    if (isPercentage) {
-      return `${(value * 100).toFixed(2)}%`;
-    }
-    return value.toFixed(4);
-  };
-  
-  // Helper function to determine if metric should be shown as percentage
-  const isPercentageMetric = (metricName: string): boolean => {
-    return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
-      metricName.toLowerCase().includes(m)
-    );
-  };
-  
-  // Helper to get per-class metrics from either legacy or new format
-  const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
-    if (!experimentResults) return undefined;
-    
-    // Check for the new format (metrics.per_class)
-    if (experimentResults.metrics?.per_class && 
-        Object.keys(experimentResults.metrics.per_class).length > 0) {
-      return experimentResults.metrics.per_class;
-    }
-    
-    // Fallback to legacy format
-    if (experimentResults.per_class_metrics && 
-        Object.keys(experimentResults.per_class_metrics).length > 0) {
-      return experimentResults.per_class_metrics;
-    }
-    
-    return undefined;
-  };
-  
-  // Helper to get F1-score regardless of format ('f1-score' or 'f1_score')
-  const getF1Score = (metrics: any): number | undefined => {
-    if (metrics && typeof metrics === 'object') {
-      return metrics['f1-score'] !== undefined ? 
-        metrics['f1-score'] : 
-        metrics.f1_score;
-    }
-    return undefined;
-  };
-  
-  if (isLoading || status === 'processing' || status === 'running') {
+  const [activeTab, setActiveTab] = useState<string>('metrics');
+
+  if (isLoading || !experimentResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <Award className="h-5 w-5 mr-2 text-primary" />
-            Loading MLJAR Results
+            MLJAR AutoML Training
           </CardTitle>
           <CardDescription>
-            Fetching your experiment results...
+            Loading experiment results...
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-12">
@@ -156,663 +98,315 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               <Loader className="h-12 w-12 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Loading MLJAR experiment data...
+              Processing your model training experiment...
             </p>
-            {experimentId && (
-              <p className="text-xs font-mono text-muted-foreground">
-                Experiment ID: {experimentId}
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
     );
   }
-
-  if (error || status === 'failed') {
-    const errorMessage = experimentResults?.error_message || error;
-    
+  
+  if (error) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive flex items-center">
-            <Alert className="h-5 w-5 mr-2" />
-            Error Loading Results
+            <Award className="h-5 w-5 mr-2" />
+            Training Error
           </CardTitle>
           <CardDescription>
-            There was a problem with your MLJAR experiment
+            There was a problem with your experiment
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <div className="flex space-x-2 mt-4">
-            {onReset && (
-              <Button 
-                variant="outline" 
-                onClick={onReset}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            )}
-            {onRefresh && (
-              <Button 
-                variant="secondary" 
-                onClick={onRefresh}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
-              </Button>
-            )}
-          </div>
+          <Button 
+            variant="outline" 
+            className="mt-4" 
+            onClick={onReset}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );
   }
-
-  if (!experimentResults) {
-    return (
-      <Card className="w-full mt-6 rounded-lg shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <Award className="h-5 w-5 mr-2 text-primary" />
-            No MLJAR Results Available
-          </CardTitle>
-          <CardDescription>
-            Select or run an experiment to view results
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center py-12">
-          <div className="flex flex-col items-center space-y-4">
-            <Image className="h-12 w-12 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No experiment data available
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Extract relevant information from experiment results
+  
+  const results = experimentResults;
   const {
-    experiment_id,
-    experiment_name,
+    model_display_name,
     task_type,
     target_column,
-    training_time_sec,
     metrics = {},
     files = [],
-    created_at,
+    algorithm,
+    training_time_sec,
     completed_at,
-    hyperparameters = {},
+    model_file_url,
+    report_file_url,
     automl_engine,
-    model_display_name,
-    model_file_url
-  } = experimentResults;
-
-  // Use model_display_name as the primary source for best model label
-  const bestModelLabel = model_display_name || 
-                        metrics.best_model_label || 
-                        (hyperparameters.best_model ? hyperparameters.best_model : 'Not specified');
-
-  // Get primary metric based on task type
-  const getPrimaryMetric = () => {
-    if (task_type?.includes('classification')) {
-      return {
-        name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics.f1)
-      };
-    } else {
-      return {
-        name: metrics.metric_used || 'rmse',
-        value: metrics.metric_value || (metrics.rmse || metrics.mse || metrics.mae || metrics.r2_score)
-      };
-    }
-  };
-
-  const primaryMetric = getPrimaryMetric();
+  } = results;
   
-  // Filter files by type - expanded to include regression visualizations
-  const getFilesByType = (fileType: string) => {
-    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
-  };
-
-  const visualizationFiles = [
-    ...getFilesByType('confusion_matrix'),
-    ...getFilesByType('roc_curve'),
-    ...getFilesByType('evaluation_curve'),
-    ...getFilesByType('precision_recall_curve'),
-    ...getFilesByType('learning_curve'),
-    ...getFilesByType('feature_importance'),
-    ...getFilesByType('true_vs_predicted'),
-    ...getFilesByType('predicted_vs_residuals')
-  ];
-
-  const modelMetadataFile = files.find(file => 
-    file.file_type === 'model_metadata' || 
-    file.file_type.includes('ensemble.json')
-  );
-  
-  const readmeFile = files.find(file => 
-    file.file_type === 'readme' || 
-    file.file_type.includes('README.md')
-  );
-  
-  const predictionsFile = files.find(file => 
-    file.file_type === 'predictions_csv' ||
-    file.file_type.includes('predictions')
-  );
-  
-  // Add leaderboard file detection
-  const leaderboardFile = files.find(file => 
-    file.file_type === 'leaderboard_csv' || 
-    file.file_type.includes('leaderboard')
-  );
-  
-  // Updated to prioritize model_file_url from experimentResults
-  // If not available, fall back to the existing method of searching through files
-  const getModelFileUrl = () => {
-    if (model_file_url) {
-      console.log('[MLJARExperimentResults] Using model_file_url:', model_file_url);
-      return model_file_url;
-    }
-    
-    // Fallback: find the model file in the files array
-    const modelFile = files.find(file => 
+  // Get unique downloadable files (model and report)
+  const downloadableFiles = Array.from(new Set(
+    files.filter(file => 
       file.file_type === 'model' || 
-      file.file_type.includes('model') ||
-      file.file_name?.includes('.pkl')
-    );
-    
-    console.log('[MLJARExperimentResults] Using fallback model file:', modelFile);
-    return modelFile?.file_url;
-  };
+      file.file_type.includes('report')
+    ).map(file => file.file_url)
+  )).map(url => {
+    const file = files.find(f => f.file_url === url);
+    return file ? file : null;
+  }).filter(Boolean) as typeof files;
   
-  // Get the model download URL
-  const modelDownloadUrl = getModelFileUrl();
+  const visualizationFiles = categorizeVisualizations(files);
+  const isClassification = task_type?.includes('classification');
   
-  // Format metric for display
-  const formatMetric = (value: number | undefined) => {
-    if (value === undefined) return 'N/A';
-    if (typeof value !== 'number') return String(value);
-    
-    const isPercentage = ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(
-      m => primaryMetric.name.toLowerCase().includes(m)
-    );
-    
-    return isPercentage 
-      ? `${(value * 100).toFixed(2)}%` 
-      : value.toFixed(4);
-  };
+  // Display algorithm or engine based on what's available
+  const displayAlgorithm = model_display_name || 
+                          algorithm || 
+                          (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
   
-  // Format created_at date for display
-  const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
-  const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
-
-  // Helper to render per-class metrics if present - Updated to handle both formats
-  const renderPerClassMetrics = () => {
-    const perClassMetrics = getPerClassMetrics();
-    
-    if (!perClassMetrics || Object.keys(perClassMetrics).length === 0) {
-      return null;
-    }
-
-    return (
-      <Collapsible 
-        open={perClassMetricsOpen} 
-        onOpenChange={setPerClassMetricsOpen}
-        className="mt-6 border rounded-md overflow-hidden"
-      >
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 text-left">
-          <span className="font-medium">Per-Class Metrics</span>
-          {perClassMetricsOpen ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="p-4">
-            <ResponsiveTable>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Precision</TableHead>
-                  <TableHead>Recall</TableHead>
-                  <TableHead>F1-Score</TableHead>
-                  <TableHead>Support</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(perClassMetrics).map(([classLabel, metrics]) => (
-                  <TableRow key={classLabel}>
-                    <TableCell>{classLabel}</TableCell>
-                    <TableCell>
-                      {metrics.precision !== undefined 
-                        ? formatMetricValue(metrics.precision, true) 
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {metrics.recall !== undefined 
-                        ? formatMetricValue(metrics.recall, true) 
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {getF1Score(metrics) !== undefined 
-                        ? formatMetricValue(getF1Score(metrics), true) 
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {metrics.support !== undefined 
-                        ? metrics.support 
-                        : 'N/A'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </ResponsiveTable>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    );
-  };
-
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">
-              {model_display_name || experiment_name || 'MLJAR Experiment Results'}
-            </CardTitle>
+            <CardTitle className="text-xl">{model_display_name || 'MLJAR AutoML Results'}</CardTitle>
           </div>
+          
           <Badge variant="outline" className="bg-primary/10 text-primary">
-            Engine: {automl_engine?.toUpperCase() || 'AutoML'}
+            MLJAR AutoML
           </Badge>
         </div>
         
         <CardDescription className="flex flex-wrap gap-x-4 mt-2">
           <span className="inline-flex items-center">
-            <BarChart4 className="h-3.5 w-3.5 mr-1" />
             Task: <span className="font-semibold ml-1">{formatTaskType(task_type)}</span>
           </span>
           
-          {target_column && (
-            <span className="inline-flex items-center">
-              <TableIcon className="h-3.5 w-3.5 mr-1" />
-              Target: <span className="font-semibold ml-1">{target_column}</span>
-            </span>
-          )}
-          
-          {/* Show created_at date instead of Training time */}
           <span className="inline-flex items-center">
-            <Clock className="h-3.5 w-3.5 mr-1" />
-            Created: <span className="font-semibold ml-1">{formattedCreatedAt}</span>
+            Target: <span className="font-semibold ml-1">{target_column}</span>
           </span>
           
-          {experiment_id && (
-            <span className="inline-flex items-center">
-              <span className="font-mono text-xs text-muted-foreground">ID: {experiment_id.substring(0, 8)}</span>
-            </span>
-          )}
+          <span className="inline-flex items-center">
+            Time: <span className="font-semibold ml-1">{formatTrainingTime(training_time_sec)}</span>
+          </span>
         </CardDescription>
       </CardHeader>
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
-            <TabsTrigger value="summary" className="text-sm flex items-center gap-1">
-              <Award className="h-4 w-4" />
-              <span>Summary</span>
+            <TabsTrigger value="metrics" className="text-sm flex items-center gap-1">
+              <Activity className="h-4 w-4" />
+              <span>Metrics</span>
             </TabsTrigger>
             
-            <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
+            <TabsTrigger value="visualizations" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
-              <span>Charts</span>
+              <span>Visualizations</span>
             </TabsTrigger>
             
-            <TabsTrigger value="predictions" className="text-sm flex items-center gap-1">
-              <TableIcon className="h-4 w-4" />
-              <span>Predictions</span>
+            <TabsTrigger value="settings" className="text-sm flex items-center gap-1">
+              <Settings className="h-4 w-4" />
+              <span>Configuration</span>
             </TabsTrigger>
             
-            <TabsTrigger value="metadata" className="text-sm flex items-center gap-1">
-              <Info className="h-4 w-4" />
-              <span>Model Details</span>
+            <TabsTrigger value="report" className="text-sm flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              <span>Report</span>
             </TabsTrigger>
           </TabsList>
           
-          {/* Summary Tab */}
-          <TabsContent value="summary" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Experiment Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <span className="text-sm text-muted-foreground">Task Type:</span>
-                      <span className="text-sm font-medium">{formatTaskType(task_type)}</span>
-                      
-                      <span className="text-sm text-muted-foreground">Target Column:</span>
-                      <span className="text-sm font-medium">{target_column}</span>
-                      
-                      <span className="text-sm text-muted-foreground">Best Model:</span>
-                      <span className="text-sm font-medium">{bestModelLabel}</span>
-                      
-                      {/* Replace Training Time: N/A with Created At date */}
-                      <span className="text-sm text-muted-foreground">Created At:</span>
-                      <span className="text-sm font-medium">{formattedCreatedAt}</span>
-                      
-                      {automl_engine && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Engine:</span>
-                          <span className="text-sm font-medium">{automl_engine.toUpperCase()}</span>
-                        </>
-                      )}
-                      
-                      {completed_at && (
-                        <>
-                          <span className="text-sm text-muted-foreground">Completed:</span>
-                          <span className="text-sm font-medium">{formattedCompletedAt}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="shadow-sm col-span-2">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Performance Metrics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {primaryMetric.name
-                          .replace(/_/g, ' ')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ')}
-                      </h3>
-                      <p className="text-3xl font-bold text-primary">
-                        {formatMetric(primaryMetric.value)}
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      {Object.entries(metrics).map(([key, value]) => {
-                        if (
-                          key === 'best_model_label' ||
-                          key === 'metric_used' ||
-                          key === 'metric_value' ||
-                          key === 'classification_report' ||
-                          key === 'confusion_matrix' ||
-                          key === 'source' ||
-                          key === 'per_class' || // Skip the per_class object here
-                          typeof value !== 'number'
-                        ) return null;
-                        
-                        // Enhanced formatting of metric display names
-                        const metricDisplayName = key
-                          .replace(/_/g, ' ')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        
-                        const isPercent = isPercentageMetric(key);
-                        
-                        return (
-                          <div key={key} className="p-3 bg-muted/40 rounded-md">
-                            <span className="block text-sm text-muted-foreground">
-                              {metricDisplayName}
-                            </span>
-                            <span className="text-lg font-medium">
-                              {formatMetricValue(value as number, isPercent)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Add the Per-Class Metrics collapsible section */}
-                    {renderPerClassMetrics()}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <TabsContent value="metrics" className="p-6">
+            <MetricsGrid metrics={metrics} taskType={task_type} />
+            
+            {model_file_url && (
+              <div className="mt-6">
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Download Model</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" asChild>
+                      <a href={model_file_url} download target="_blank" rel="noopener noreferrer">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            
+            {metrics.classification_report && (
+              <div className="mt-6">
+                <h3 className="text-base font-semibold mb-2">Classification Report</h3>
+                <div className="bg-muted/40 p-4 rounded-md">
+                  <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
+                    {typeof metrics.classification_report === 'string' 
+                      ? metrics.classification_report 
+                      : JSON.stringify(metrics.classification_report, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
           </TabsContent>
           
-          {/* Charts Tab */}
-          <TabsContent value="charts" className="p-6">
+          <TabsContent value="visualizations" className="p-6">
             {visualizationFiles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {visualizationFiles.map((file, index) => (
-                  <Dialog key={index}>
-                    <DialogTrigger asChild>
-                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">
-                            {formatVisualizationName(file.file_type)}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3">
-                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            <div 
-                              className="absolute inset-0 bg-cover bg-center"
-                              style={{ backgroundImage: `url(${file.file_url})` }}
+                  <Card key={index} className="overflow-hidden">
+                    <CardHeader className="py-2 px-4 bg-muted/30">
+                      <CardTitle className="text-sm font-medium">
+                        {formatVisualizationName(file.file_type)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div className="cursor-pointer hover:opacity-90 transition-opacity rounded-md overflow-hidden">
+                            <img 
+                              src={file.file_url} 
+                              alt={formatVisualizationName(file.file_type)} 
+                              className="w-full rounded-md"
                             />
                           </div>
-                        </CardContent>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
-                      </DialogHeader>
-                      <div className="p-1">
-                        <img 
-                          src={file.file_url} 
-                          alt={file.file_type} 
-                          className="w-full rounded-md"
-                        />
-                        <div className="mt-4 flex justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Image
-                            </a>
-                          </Button>
-                        </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <div className="p-1">
+                            <img 
+                              src={file.file_url} 
+                              alt={formatVisualizationName(file.file_type)} 
+                              className="w-full rounded-md"
+                            />
+                            <div className="mt-4 flex justify-end">
+                              <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <div className="mt-2 flex justify-end">
+                        <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
-                <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
+                <BarChart4 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Visualizations Available</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  No visualization files were found for this experiment.
+                  Visualizations may not be available for this model or are still being generated.
                 </p>
               </div>
             )}
           </TabsContent>
           
-          {/* Predictions Tab */}
-          <TabsContent value="predictions" className="p-6">
-            {predictionsFile ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Model Predictions</CardTitle>
-                  <CardDescription>
-                    Preview of predictions made by the MLJAR model
-                  </CardDescription>
+          <TabsContent value="settings" className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Model Configuration</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CSVPreview
-                    fileUrl={predictionsFile.file_url}
-                    downloadUrl={predictionsFile.file_url}
-                    maxRows={10}
-                    engineName={automl_engine?.toUpperCase()}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="text-center py-12">
-                <TableIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Predictions Available</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Prediction data is not available for this experiment.
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          
-          {/* Model Details Tab - WITH Leaderboard Table */}
-          <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
-              {/* Model File Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Model File</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center pt-2">
-                  {modelDownloadUrl ? (
-                    <Button asChild>
-                      <a href={modelDownloadUrl} download>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Model
-                      </a>
-                    </Button>
-                  ) : (
-                    <Button disabled variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Not Available
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Model Metadata Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Metadata</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center pt-2">
-                  {modelMetadataFile ? (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => downloadFile(modelMetadataFile.file_url, 'model_metadata.json')}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download JSON
-                    </Button>
-                  ) : (
-                    <Button disabled variant="outline">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Not Available
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Documentation Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-center">Documentation</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center pt-2">
-                  {readmeFile ? (
-                    <Button variant="outline" onClick={() => setReadmePreviewOpen(true)}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Readme
-                    </Button>
-                  ) : (
-                    <Button disabled variant="outline">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Not Available
-                    </Button>
-                  )}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-muted-foreground">Engine:</span>
+                      <span className="font-medium">MLJAR AutoML</span>
+                      
+                      <span className="text-muted-foreground">Task Type:</span>
+                      <span className="font-medium">{formatTaskType(task_type)}</span>
+                      
+                      <span className="text-muted-foreground">Target Column:</span>
+                      <span className="font-medium">{target_column}</span>
+                      
+                      {experimentId && (
+                        <>
+                          <span className="text-muted-foreground">Experiment ID:</span>
+                          <span className="font-mono text-xs">{experimentId}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
-            
-            {/* Add the Leaderboard Table here */}
-            {leaderboardFile && (
-              <H2OLeaderboardTable
-                data={leaderboardFile.file_url}
-                defaultSortMetric={task_type?.includes('classification') ? 'logloss' : 'rmse'}
-                engineType="mljar"
-                maxRows={10}
-              />
-            )}
-            
-            {/* Documentation Dialog */}
-            <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Model Documentation</DialogTitle>
-                </DialogHeader>
-                
-                <div className="mt-4">
-                  <iframe
-                    src={readmeFile?.file_url}
-                    className="w-full h-[60vh] border rounded"
-                    title="Model Documentation"
-                  />
-                  
-                  <div className="flex justify-end mt-4">
-                    <Button asChild variant="outline" size="sm">
-                      <a href={readmeFile?.file_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Open in New Tab
-                      </a>
+          </TabsContent>
+          
+          <TabsContent value="report" className="p-6">
+            <div className="flex flex-col items-center justify-center py-6 space-y-6">
+              {model_file_url && (
+                <Card className="w-full max-w-md shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Trained Model</CardTitle>
+                    <CardDescription>Download the trained model file</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-center pb-6">
+                    <Button onClick={() => downloadFile(model_file_url, 'trained_model.zip')}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Model
                     </Button>
-                  </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {report_file_url && (
+                <Card className="w-full max-w-md shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Full Report</CardTitle>
+                    <CardDescription>View the complete analysis report</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-center pb-6">
+                    <Button onClick={() => downloadFile(report_file_url, 'model_report.html')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download Report
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {downloadableFiles.length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">
+                    No additional reports are available for this experiment.
+                  </p>
                 </div>
-              </DialogContent>
-            </Dialog>
-            
-            {/* Add some simple info below the cards if needed */}
-            {automl_engine && (
-              <div className="mt-6 text-center text-sm text-muted-foreground">
-                This model was trained using {automl_engine.toUpperCase()} AutoML engine
-                {training_time_sec && ` in ${formatTrainingTime(training_time_sec)}`}
-              </div>
-            )}
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
       
       <CardFooter className="flex justify-between border-t p-4">
-        <div className="flex gap-2">
-          {onReset && (
-            <Button variant="outline" onClick={onReset}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              New Experiment
-            </Button>
-          )}
-          
-          {onRefresh && (
-            <Button variant="secondary" onClick={onRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          )}
-        </div>
+        <Button variant="outline" onClick={onReset}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Run New Experiment
+        </Button>
+        
+        {onRefresh && (
+          <Button variant="ghost" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Results
+          </Button>
+        )}
         
         {completed_at && (
           <div className="text-xs text-muted-foreground flex items-center">
             <Clock className="h-3 w-3 mr-1" />
-            {formattedCompletedAt}
+            Completed: {new Date(completed_at).toLocaleString()}
           </div>
         )}
       </CardFooter>
