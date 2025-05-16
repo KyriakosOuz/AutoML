@@ -136,13 +136,9 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     );
     
     return [...parsedData].sort((a, b) => {
-      // Safely extract values, ensuring they're numeric
-      const aValue = typeof a[sortField] === 'number' ? a[sortField] : parseFloat(a[sortField]) || 0;
-      const bValue = typeof b[sortField] === 'number' ? b[sortField] : parseFloat(b[sortField]) || 0;
+      const aValue = parseFloat(a[sortField]) || 0;
+      const bValue = parseFloat(b[sortField]) || 0;
       
-      // For metrics where lower is better and we're sorting ascending,
-      // or metrics where higher is better and we're sorting descending,
-      // we want smaller values first
       if (sortDirection === 'asc') {
         return aValue - bValue;
       } else {
@@ -155,8 +151,9 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   useEffect(() => {
     if (sortedData.length > 0 && onBestModelFound) {
       // Determine the best model based on the sorted data and sort direction
-      // The best model is always the first one after sorting
-      const bestModel = sortedData[0];
+      // For metric_value, the best model depends on whether we're sorting asc or desc
+      const bestModelIndex = sortDirection === 'asc' ? 0 : 0;
+      const bestModel = sortedData[bestModelIndex];
       const modelId = bestModel.model_id || bestModel.name || bestModel.model_name || '';
       
       if (modelId) {
@@ -186,8 +183,6 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
         metric => field.toLowerCase().includes(metric.toLowerCase())
       );
       
-      // Default sort direction: ascending (lower to higher) for metrics where lower is better
-      // This ensures the best model is at the top by default
       setSortDirection(lowerIsBetter ? 'asc' : 'desc');
     }
   };
