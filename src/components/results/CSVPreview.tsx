@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,8 +42,10 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           const extractedHeaders = parseCSVRow(headerRow);
           setHeaders(extractedHeaders);
           
-          // Parse data rows (skip header row, limit to maxRows)
-          const parsedData = rows.slice(1, maxRows + 1).map(row => parseCSVRow(row));
+          // Parse data rows (skip header row)
+          // Only limit to maxRows if it's defined
+          const rowsToProcess = maxRows ? rows.slice(1, maxRows + 1) : rows.slice(1);
+          const parsedData = rowsToProcess.map(row => parseCSVRow(row));
           setData(parsedData);
         }
         
