@@ -29,7 +29,6 @@ import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 import { downloadFile } from '../training/prediction/utils/downloadUtils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import H2OLeaderboardTable from './H2OLeaderboardTable';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -304,12 +303,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const predictionsFile = files.find(file => 
     file.file_type === 'predictions_csv' ||
     file.file_type.includes('predictions')
-  );
-  
-  // Add leaderboard file detection
-  const leaderboardFile = files.find(file => 
-    file.file_type === 'leaderboard_csv' || 
-    file.file_type.includes('leaderboard')
   );
   
   // Updated to prioritize model_file_url from experimentResults
@@ -676,7 +669,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - WITH Leaderboard Table */}
+          {/* Model Details Tab - REMOVED Leaderboard Table */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
               {/* Model File Card */}
@@ -744,42 +737,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             </div>
-            
-            {/* Add the Leaderboard Table here */}
-            {leaderboardFile && (
-              <H2OLeaderboardTable
-                data={leaderboardFile.file_url}
-                defaultSortMetric={task_type?.includes('classification') ? 'logloss' : 'rmse'}
-                engineType="mljar"
-                maxRows={10}
-              />
-            )}
-            
-            {/* Documentation Dialog */}
-            <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Model Documentation</DialogTitle>
-                </DialogHeader>
-                
-                <div className="mt-4">
-                  <iframe
-                    src={readmeFile?.file_url}
-                    className="w-full h-[60vh] border rounded"
-                    title="Model Documentation"
-                  />
-                  
-                  <div className="flex justify-end mt-4">
-                    <Button asChild variant="outline" size="sm">
-                      <a href={readmeFile?.file_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Open in New Tab
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
             
             {/* Add some simple info below the cards if needed */}
             {automl_engine && (
