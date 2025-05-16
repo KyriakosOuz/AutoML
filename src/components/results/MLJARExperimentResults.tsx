@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -8,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
-import MLJARLeaderboardTable from './MLJARLeaderboardTable';
 import { 
   Award, 
   BarChart4, 
@@ -676,7 +676,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - Updated to replace the Per-Class Metrics card with the Leaderboard Table */}
+          {/* Model Details Tab - REMOVED the Leaderboard Table */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Model File Card */}
@@ -744,25 +744,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             </div>
-            
-            {/* Replace Per-Class Metrics with Leaderboard Table */}
-            {leaderboardFile && (
-              <Card className="shadow-sm mt-6">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Models Leaderboard</CardTitle>
-                  <CardDescription>
-                    Comparison of all models trained during the experiment
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <MLJARLeaderboardTable 
-                    data={leaderboardFile.file_url} 
-                    defaultSortMetric={primaryMetric.name}
-                    maxRows={10}
-                  />
-                </CardContent>
-              </Card>
-            )}
             
             {/* Documentation Dialog */}
             <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
