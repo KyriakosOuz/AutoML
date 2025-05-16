@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -30,6 +29,7 @@ import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 import { downloadFile } from '../training/prediction/utils/downloadUtils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import H2OLeaderboardTable from './H2OLeaderboardTable';
 
 interface MLJARExperimentResultsProps {
   experimentId: string | null;
@@ -676,9 +676,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - REMOVED the Leaderboard Table */}
+          {/* Model Details Tab - WITH Leaderboard Table */}
           <TabsContent value="metadata" className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
               {/* Model File Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
@@ -744,6 +744,16 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Add the Leaderboard Table here */}
+            {leaderboardFile && (
+              <H2OLeaderboardTable
+                data={leaderboardFile.file_url}
+                defaultSortMetric={task_type?.includes('classification') ? 'logloss' : 'rmse'}
+                engineType="mljar"
+                maxRows={10}
+              />
+            )}
             
             {/* Documentation Dialog */}
             <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
