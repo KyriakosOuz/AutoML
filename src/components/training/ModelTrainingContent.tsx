@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -268,6 +269,17 @@ const ModelTrainingContent: React.FC = () => {
     setAutoSwitchAttempts(0); // Reset the auto switch counter
   };
 
+  // Add debug logging for badge display
+  useEffect(() => {
+    console.log("ModelTrainingContent - Badge display:", {
+      lastTrainingType,
+      activeTab,
+      isPredicting,
+      showingAutoMLBadge: lastTrainingType === 'automl' && !isPredicting,
+      showingCustomBadge: lastTrainingType === 'custom' && !isPredicting
+    });
+  }, [lastTrainingType, activeTab, isPredicting]);
+
   return (
     <div className="space-y-6">
       <DatasetSummary />
@@ -295,7 +307,9 @@ const ModelTrainingContent: React.FC = () => {
               <span className="font-semibold">
                 {isPredicting ? "Generating prediction..." : getStatusMessage()}
               </span>
-              {lastTrainingType === 'automl' && activeTab !== 'custom' && !isPredicting && (
+              
+              {/* ✅ FIXED: Fixed badge display logic - now mutually exclusive */}
+              {lastTrainingType === 'automl' && !isPredicting && (
                 <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AutoML</span>
               )}
               {lastTrainingType === 'custom' && !isPredicting && (
