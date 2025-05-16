@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +22,9 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
   const [headers, setHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalRowCount, setTotalRowCount] = useState<number>(0);
 
+  // Add dependency on maxRows to ensure we refetch when it changes
   useEffect(() => {
     const fetchCSV = async () => {
       try {
@@ -34,6 +37,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         
         const text = await response.text();
         const rows = text.split('\n');
+        setTotalRowCount(Math.max(0, rows.length - 1)); // Total rows minus header
         
         // Extract headers from the first row
         if (rows.length > 0) {
@@ -45,7 +49,11 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           // Parse data rows (skip header row)
           // Only limit to maxRows if it's defined
           const rowsToProcess = maxRows ? rows.slice(1, maxRows + 1) : rows.slice(1);
-          const parsedData = rowsToProcess.map(row => parseCSVRow(row));
+          const parsedData = rowsToProcess.map(row => parseCSVRow(row)).filter(row => 
+            // Filter out empty rows (last row might be empty)
+            row.some(cell => cell.trim() !== '')
+          );
+          
           setData(parsedData);
         }
         
@@ -60,7 +68,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     if (fileUrl) {
       fetchCSV();
     }
-  }, [fileUrl, maxRows]);
+  }, [fileUrl, maxRows]); // Added maxRows as dependency
 
   // Helper function to handle CSV parsing with quotes
   const parseCSVRow = (row: string): string[] => {
@@ -169,9 +177,10 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         </Table>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        Showing {data.length} rows of data. Download the full CSV for complete dataset.
+        {maxRows && data.length < totalRowCount 
+          ? `Showing ${data.length} of ${totalRowCount} rows.` 
+          : `Showing all ${data.length} rows.`}
       </p>
-      {/* Download Full CSV button removed from here */}
     </div>
   );
 };

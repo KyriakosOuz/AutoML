@@ -157,6 +157,13 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     }
   };
   
+  // New function to handle toggling the leaderboard rows display
+  const handleToggleLeaderboardRows = () => {
+    console.log('Toggling leaderboard rows, current state:', showAllLeaderboardRows);
+    setShowAllLeaderboardRows(prevState => !prevState);
+    console.log('New state will be:', !showAllLeaderboardRows);
+  };
+  
   if (isLoading || status === 'processing' || status === 'running') {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md">
@@ -836,7 +843,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   <div className="flex justify-center mt-4">
                     <Button 
                       variant="outline" 
-                      onClick={() => setShowAllLeaderboardRows(!showAllLeaderboardRows)}
+                      onClick={handleToggleLeaderboardRows}
                     >
                       {showAllLeaderboardRows ? (
                         <>Show Less</>
