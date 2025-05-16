@@ -690,7 +690,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Leaderboard Tab */}
+          {/* Leaderboard Tab - UPDATED to pass task_type to H2OLeaderboardTable */}
           <TabsContent value="leaderboard" className="p-6">
             {hasLeaderboardData ? (
               <Card>
@@ -702,12 +702,13 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    {/* Pass onBestModelFound callback to H2OLeaderboardTable */}
+                    {/* Pass the task_type prop to H2OLeaderboardTable */}
                     <H2OLeaderboardTable 
                       data={leaderboardData}
                       defaultSortMetric={primaryMetric?.name || 'auc'}
                       selectedModelId={selectedModel}
                       onBestModelFound={handleBestModelFound}
+                      taskType={task_type} // Add the task_type prop here
                     />
                   </div>
                 </CardContent>
