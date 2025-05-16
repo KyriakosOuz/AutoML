@@ -92,7 +92,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
   const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
-  const [showAllLeaderboardRows, setShowAllLeaderboardRows] = useState(false);
+  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const [readmeContent, setReadmeContent] = useState<string>('');
   const [isLoadingReadme, setIsLoadingReadme] = useState(false);
   
@@ -159,9 +159,9 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   
   // New function to handle toggling the leaderboard rows display
   const handleToggleLeaderboardRows = () => {
-    console.log('Toggling leaderboard rows, current state:', showAllLeaderboardRows);
-    setShowAllLeaderboardRows(prevState => !prevState);
-    console.log('New state will be:', !showAllLeaderboardRows);
+    console.log('Toggling leaderboard rows, current state:', leaderboardExpanded);
+    setLeaderboardExpanded(prevState => !prevState);
+    console.log('New state will be:', !leaderboardExpanded);
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -195,9 +195,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     );
   }
 
-  if (error || status === 'failed') {
-    const errorMessage = experimentResults?.error_message || error;
-    
+  if (error || !experimentResults) {
     return (
       <Card className="w-full mt-6 rounded-lg shadow-md border-destructive/30">
         <CardHeader>
@@ -211,7 +209,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{experimentResults?.error_message || error}</AlertDescription>
           </Alert>
           <div className="flex space-x-2 mt-4">
             {onReset && (
@@ -237,48 +235,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       </Card>
     );
   }
-
-  if (!experimentResults) {
-    return (
-      <Card className="w-full mt-6 rounded-lg shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <Award className="h-5 w-5 mr-2 text-primary" />
-            No MLJAR Results Available
-          </CardTitle>
-          <CardDescription>
-            Select or run an experiment to view results
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center py-12">
-          <div className="flex flex-col items-center space-y-4">
-            <Image className="h-12 w-12 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No experiment data available
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // New function to fetch README content
-  const fetchReadmeContent = async (url: string) => {
-    try {
-      setIsLoadingReadme(true);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch README: ${response.status}`);
-      }
-      const text = await response.text();
-      setReadmeContent(text);
-    } catch (error) {
-      console.error('Error fetching README:', error);
-      setReadmeContent('Error loading README content');
-    } finally {
-      setIsLoadingReadme(false);
-    }
-  };
 
   // Extract relevant information from experiment results
   const {
@@ -814,7 +770,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               </Card>
             </div>
             
-            {/* New Leaderboard Card */}
+            {/* New Leaderboard Card with Collapsible */}
             {leaderboardFile && (
               <Card className="shadow-sm mt-6">
                 <CardHeader>
@@ -834,24 +790,42 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CSVPreview
-                    fileUrl={leaderboardFile.file_url}
-                    downloadUrl={leaderboardFile.file_url}
-                    maxRows={showAllLeaderboardRows ? undefined : 10}
-                    engineName={automl_engine?.toUpperCase()}
-                  />
-                  <div className="flex justify-center mt-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleToggleLeaderboardRows}
-                    >
-                      {showAllLeaderboardRows ? (
-                        <>Show Less</>
-                      ) : (
-                        <>Show All</>
-                      )}
-                    </Button>
-                  </div>
+                  <Collapsible
+                    open={leaderboardExpanded}
+                    onOpenChange={setLeaderboardExpanded}
+                    className="w-full"
+                  >
+                    {/* Default preview with limited rows when collapsed */}
+                    <CSVPreview
+                      fileUrl={leaderboardFile.file_url}
+                      downloadUrl={leaderboardFile.file_url}
+                      maxRows={leaderboardExpanded ? undefined : 5} // Show 5 rows when collapsed, all rows when expanded
+                      engineName={automl_engine?.toUpperCase()}
+                    />
+                    
+                    <CollapsibleTrigger className="w-full mt-4">
+                      <Button 
+                        variant="outline" 
+                        className="w-full flex items-center justify-center"
+                      >
+                        {leaderboardExpanded ? (
+                          <span className="flex items-center">
+                            <ChevronUp className="h-4 w-4 mr-2" />
+                            Show Less
+                          </span>
+                        ) : (
+                          <span className="flex items-center">
+                            <ChevronDown className="h-4 w-4 mr-2" />
+                            Show All Rows
+                          </span>
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent>
+                      {/* Additional content is not needed here as the CSVPreview handles both states */}
+                    </CollapsibleContent>
+                  </Collapsible>
                 </CardContent>
               </Card>
             )}

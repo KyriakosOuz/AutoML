@@ -24,7 +24,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [totalRowCount, setTotalRowCount] = useState<number>(0);
 
-  // Add dependency on maxRows to ensure we refetch when it changes
+  // Re-fetch data when maxRows changes to support collapsible functionality
   useEffect(() => {
     const fetchCSV = async () => {
       try {
@@ -68,7 +68,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     if (fileUrl) {
       fetchCSV();
     }
-  }, [fileUrl, maxRows]); // Added maxRows as dependency
+  }, [fileUrl, maxRows]); // Ensure refetch when maxRows changes
 
   // Helper function to handle CSV parsing with quotes
   const parseCSVRow = (row: string): string[] => {
