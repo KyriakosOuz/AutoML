@@ -141,24 +141,20 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       !file.file_type.includes('label_encoder') &&
       !file.file_type.includes('readme') &&
       !file.file_type.includes('predictions') &&
-      // Filter out leaderboard CSV files from visualizations for both H2O and MLJAR experiments
       !((results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') && 
         file.file_type.includes('leaderboard'))
     );
   };
   
-  // Function to specifically find the MLJAR model file
   const getMLJARModelFile = () => {
     if (!results?.files) return null;
     
-    // First try to find a file specifically with "model" file_type
     const modelFile = results.files.find(file => 
       file.file_type === 'model'
     );
     
     if (modelFile) return modelFile;
     
-    // Fallback: look for any file that might contain "model" in the URL and ends with .pkl
     return results.files.find(file => 
       file.file_url.includes('model') && 
       file.file_url.toLowerCase().endsWith('.pkl')
@@ -168,12 +164,10 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const getModelFile = () => {
     if (!results?.files) return null;
     
-    // For MLJAR experiments, use the specialized function
     if (results.automl_engine?.toLowerCase() === 'mljar') {
       return getMLJARModelFile();
     }
     
-    // For other experiments, keep the existing logic
     return results.files.find(file => 
       file.file_type === 'model' || 
       file.file_type.includes('model')
@@ -201,7 +195,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const getLeaderboardFile = () => {
     if (!results?.files) return null;
     
-    // Check for both H2O and MLJAR experiments
     if (results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') {
       return results.files.find(file => 
         file.file_type.includes('leaderboard')
@@ -212,14 +205,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   };
 
   const canTuneModel = () => {
-    console.log("canTuneModel check:", {
-      hasAutoML: !!results?.automl_engine,
-      algorithm: results?.algorithm,
-      algorithm_choice: results?.algorithm_choice,
-      training_type: results?.training_type,
-      status: results?.status
-    });
-    
     return results && 
            ((results.training_type === 'custom') || (!results.automl_engine)) && 
            (results.algorithm || results.algorithm_choice) && 
@@ -232,19 +217,15 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
-  // Function to extract filename from URL or create appropriate one
   const getModelFileName = (fileUrl: string) => {
     try {
-      // Try to extract filename from URL
       const urlParts = fileUrl.split('/');
       const lastPart = urlParts[urlParts.length - 1];
       
-      // If the URL has a filename with extension, use it directly
       if (lastPart.includes('.')) {
         return lastPart;
       }
       
-      // Otherwise create a name based on experiment details
       const enginePart = results?.automl_engine?.toLowerCase() || 'model';
       const algoPart = results?.algorithm || results?.algorithm_choice || 'trained';
       const extension = fileUrl.endsWith('.zip') ? '.zip' : 
@@ -252,12 +233,10 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       
       return `${enginePart}_${algoPart}${extension}`;
     } catch (err) {
-      // Fallback if anything goes wrong
       return `model_${Date.now()}.model`;
     }
   };
 
-  // Improved function to handle file downloads
   const handleFileDownload = async (url: string, filename: string) => {
     try {
       const response = await fetch(url);
@@ -276,7 +255,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       link.click();
       document.body.removeChild(link);
       
-      // Clean up the blob URL
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
       
       toast({
@@ -330,25 +308,21 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
   const hasPerClassMetrics = results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0;
   
-  // Helper to determine if metric should be displayed as percentage
   const isPercentageMetric = (name: string): boolean => {
     const percentageMetrics = ['accuracy', 'auc', 'aucpr', 'f1', 'precision', 'recall'];
     return percentageMetrics.some(metric => name.toLowerCase().includes(metric));
   };
   
-  // New function to render per-class metrics table
   const renderPerClassMetricsTable = () => {
     if (!results?.metrics?.per_class) return null;
     
     const perClassData = results.metrics.per_class;
     const classLabels = Object.keys(perClassData).sort((a, b) => {
-      // Try to sort numerically if possible
       const numA = Number(a);
       const numB = Number(b);
       if (!isNaN(numA) && !isNaN(numB)) {
         return numA - numB;
       }
-      // Fallback to string comparison
       return a.localeCompare(b);
     });
 
@@ -372,7 +346,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
             <TableBody>
               {classLabels.map(classLabel => {
                 const classData = perClassData[classLabel];
-                // Handle the different naming conventions (f1-score vs f1_score)
                 const f1Score = classData["f1-score"] !== undefined ? classData["f1-score"] : classData.f1_score;
                 
                 return (
@@ -681,7 +654,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                           </Card>
                         )}
 
-                        {/* Add new metrics for H2O binary classification */}
                         {isBinaryClassification && results.metrics?.specificity !== undefined && (
                           <Card className="bg-muted/40">
                             <CardHeader className="py-3">
@@ -873,7 +845,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
-                          // Skip metrics that are already displayed in cards and the per_class object
                           const skipKeys = ['accuracy', 'f1_score', 'f1-score', 'f1', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error', 'per_class', 'source'];
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
@@ -887,7 +858,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       </div>
                     )}
                     
-                    {/* Render per-class metrics table if available */}
                     {hasPerClassMetrics && isMulticlassClassification && renderPerClassMetricsTable()}
                     
                     {(!results.metrics || Object.keys(results.metrics).length === 0) && (
@@ -975,15 +945,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 onClick={() => {
                                   const file = getModelFile();
                                   if (file) {
-                                    // For MLJAR experiments, ensure we're using the correct file
                                     if (isMLJARExperiment) {
                                       console.log("Downloading MLJAR model file:", file);
-                                      // Extract filename from the URL - should be something like mljar_model_Ensemble_9cfabb8f.pkl
                                       const fileName = file.file_url.split('/').pop() || 'mljar_model.pkl';
-                                      // Use the direct download method for MLJAR models
                                       handleFileDownload(file.file_url, fileName);
                                     } else {
-                                      // For other experiments, use the existing logic
                                       const fileName = getModelFileName(file.file_url);
                                       handleFileDownload(file.file_url, fileName);
                                     }
@@ -1004,7 +970,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </div>
                       )}
                       
-                      {/* Add Leaderboard CSV download for both H2O and MLJAR experiments */}
                       {getLeaderboardFile() && (
                         <Card className="bg-muted/40">
                           <CardContent className="pt-6">
@@ -1066,7 +1031,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Card>
                       )}
                       
-                      {/* Documentation Section for README */}
                       {getReadmeFile() && (
                         <Card className="bg-muted/40">
                           <CardHeader className="pb-2 pt-4">
@@ -1099,7 +1063,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </Card>
                       )}
                       
-                      {/* Predictions Section for CSV */}
                       {getPredictionsFile() && (
                         <Card className="bg-muted/40">
                           <CardHeader className="pb-2 pt-4">
