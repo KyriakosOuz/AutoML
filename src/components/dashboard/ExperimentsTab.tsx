@@ -273,20 +273,11 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    // Keep validation for task type selection
+    // Only keep validation for having at least 2 experiments and task type selection
     if (taskType === 'all') {
       toast({
         title: "Task Type Required",
         description: "Please select a specific task type before comparing experiments.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (activeTab === 'all') {
-      toast({
-        title: "Filter Required",
-        description: "Please filter experiments by training method before comparing.",
         variant: "destructive",
       });
       return;
@@ -425,11 +416,8 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    // Only checking if the active tab is not 'all' and task type is not 'all'
-    if (activeTab === 'all') return false;
-    
+    // Only check if there's a specific task type selected and at least 2 experiments selected
     if (taskType === 'all') return false;
-    
     return selectedExperiments.length >= 2;
   };
 
