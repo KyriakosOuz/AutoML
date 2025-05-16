@@ -136,13 +136,17 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     );
     
     return [...parsedData].sort((a, b) => {
-      const aValue = parseFloat(a[sortField]) || 0;
-      const bValue = parseFloat(b[sortField]) || 0;
+      // Ensure we're working with numeric values for comparison
+      const aValue = typeof a[sortField] === 'number' ? a[sortField] : parseFloat(a[sortField]) || 0;
+      const bValue = typeof b[sortField] === 'number' ? b[sortField] : parseFloat(b[sortField]) || 0;
       
+      // Fixed: Always sort ALL rows consistently
       if (lowerIsBetter) {
+        // Lower values are better, so ascending sort means smallest first
         return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       } else {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        // Higher values are better, so ascending sort means largest first
+        return sortDirection === 'asc' ? bValue - aValue : aValue - bValue;
       }
     });
   }, [parsedData, sortField, sortDirection]);
