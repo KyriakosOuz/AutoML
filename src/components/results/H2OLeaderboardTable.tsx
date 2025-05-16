@@ -21,15 +21,15 @@ interface H2OLeaderboardTableProps {
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
-  defaultSortMetric = 'auc',
+  defaultSortMetric = 'metric_value', // Changed default sort metric to metric_value
   selectedModelId,
-  onBestModelFound, // New prop
-  maxRows = 10, // Default to showing 10 rows
-  engineType = 'h2o', // Default to H2O
+  onBestModelFound,
+  maxRows = 10,
+  engineType = 'h2o',
   className
 }) => {
   const [sortField, setSortField] = useState<string>(defaultSortMetric);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Default to ascending (lowest to highest)
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -131,7 +131,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     if (parsedData.length === 0) return [];
     
     // Determine if this metric is one where lower is better
-    const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss'].some(
+    const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss', 'metric_value'].some(
       metric => sortField.toLowerCase().includes(metric.toLowerCase())
     );
     
@@ -181,7 +181,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
       setSortField(field);
       
       // For metrics where lower is better, default to ascending
-      const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss'].some(
+      const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss', 'metric_value'].some(
         metric => field.toLowerCase().includes(metric.toLowerCase())
       );
       
