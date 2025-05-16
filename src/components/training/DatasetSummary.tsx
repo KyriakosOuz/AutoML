@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -133,7 +134,7 @@ const DatasetSummary: React.FC = () => {
     }
     
     return (
-      <Badge variant="outline" className={`${color} flex items-center gap-1`}>
+      <Badge variant="outline" className={`${color} inline-flex items-center gap-1`}>
         {icon}
         {taskType === 'binary_classification' ? 'Binary Classification' :
          taskType === 'multiclass_classification' ? 'Multiclass Classification' :
@@ -178,7 +179,7 @@ const DatasetSummary: React.FC = () => {
           
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Task Type</p>
-            <div>{getTaskTypeBadge()}</div>
+            <div className="flex">{getTaskTypeBadge()}</div>
           </div>
         </div>
         
