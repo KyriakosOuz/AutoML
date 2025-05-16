@@ -774,17 +774,12 @@ const ExperimentsTab: React.FC = () => {
                               )}
                             </>
                           ) : isMLJARExperiment && isBinaryClassification ? (
-                            // MLJAR binary classification specific metrics
+                            // MLJAR binary classification specific metrics - UPDATED to show only 4 metrics
                             <>
-                              <div>AUC: {renderMetricValue(experiment.metrics?.auc)}</div>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
                               <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
                               <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
-                              <div>LogLoss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
-                              {experiment.metrics?.mcc && 
-                                <div>MCC: {renderMetricValue(experiment.metrics?.mcc, false)}</div>
-                              }
                             </>
                           ) : (
                             // Default classification metrics for other experiments
