@@ -443,7 +443,7 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    // Remove check for automl_engine === 'all'
+    // Modified to allow comparison with "All Engines" selection
     if (activeTab === 'all') return false;
     
     if (taskType === 'all') return false;
