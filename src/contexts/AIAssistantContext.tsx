@@ -38,7 +38,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export async function askMistral(prompt: string, context: string, sessionId: string) {
   const headers = await getAuthHeaders();
   
-  const res = await fetch(`${API_BASE_URL}/api/ai-assistant/`, {
+  const res = await fetch(`${API_BASE_URL}/ai-assistant/`, {
     method: "POST",
     headers: {
       ...headers,
@@ -60,7 +60,7 @@ export async function askMistral(prompt: string, context: string, sessionId: str
 export async function getMistralHistory(sessionId: string) {
   const headers = await getAuthHeaders();
   
-  const res = await fetch(`${API_BASE_URL}/api/ai-assistant/history/?session_id=${sessionId}`, {
+  const res = await fetch(`${API_BASE_URL}/ai-assistant/history/?session_id=${sessionId}`, {
     headers
   });
   
