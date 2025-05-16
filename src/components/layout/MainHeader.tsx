@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -44,39 +43,55 @@ const MainHeader = () => {
             <p>
               First, select the target column — the thing you want to predict — and the features that should be used to make the prediction.
             </p>
-            <p>
-              Choose your training method:
-            </p>
-            <div className="ml-4">
-              <p className="font-medium">AutoML:</p>
-              <p className="ml-2">
-                Automatically tests different algorithms and settings to find the best model for your data. You don't need to adjust anything manually — just click "Start AutoML" and the system will find the top model for you.
+            
+            <div className="mt-3">
+              <p className="font-medium mb-2">
+                Choose your training method:
               </p>
-              
-              <p className="font-medium mt-2">Custom Training:</p>
-              <p className="ml-2">
-                You manually pick an algorithm (like Decision Tree, Random Forest, etc.), and optionally adjust its hyperparameters. This gives you more control over the model behavior.
+              <div className="ml-4 space-y-3">
+                <div>
+                  <p className="font-medium">AutoML:</p>
+                  <p className="ml-2">
+                    Automatically tests different algorithms and settings to find the best model for your data. You don't need to adjust anything manually — just click "Start AutoML" and the system will find the top model for you.
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="font-medium">Custom Training:</p>
+                  <p className="ml-2">
+                    You manually pick an algorithm (like Decision Tree, Random Forest, etc.), and optionally adjust its hyperparameters. This gives you more control over the model behavior.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-3">
+              <p className="font-medium mb-2">
+                After training completes, you will see:
+              </p>
+              <ul className="list-disc ml-6 space-y-1">
+                <li>A summary of results (accuracy, RMSE, F1, or other metrics depending on your task)</li>
+                <li>Visualizations like confusion matrices, ROC curves, feature importance charts, and more</li>
+                <li>A Download button to get your trained model file</li>
+              </ul>
+            </div>
+            
+            <div className="mt-3">
+              <p className="font-medium mb-1">Next Steps:</p>
+              <p>
+                Use your trained model to make predictions manually (by entering data) or by uploading a CSV.
+              </p>
+              <p className="mt-2">
+                If you're not happy with the results, you can retrain with different settings.
               </p>
             </div>
-            <p>
-              After training completes, you will see:
-            </p>
-            <ul className="list-disc ml-6">
-              <li>A summary of results (accuracy, RMSE, F1, or other metrics depending on your task)</li>
-              <li>Visualizations like confusion matrices, ROC curves, feature importance charts, and more</li>
-              <li>A Download button to get your trained model file</li>
-            </ul>
-            <p className="font-medium">Next Steps:</p>
-            <p>
-              Use your trained model to make predictions manually (by entering data) or by uploading a CSV.
-            </p>
-            <p>
-              If you're not happy with the results, you can retrain with different settings.
-            </p>
-            <p className="font-medium">Tip:</p>
-            <p>
-              After finishing training and predictions, your experiments are stored. You can find them later inside the Dashboard under the Experiments tab.
-            </p>
+            
+            <div className="mt-3">
+              <p className="font-medium mb-1">Tip:</p>
+              <p>
+                After finishing training and predictions, your experiments are stored. You can find them later inside the Dashboard under the Experiments tab.
+              </p>
+            </div>
           </div>
         )
       };

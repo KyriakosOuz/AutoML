@@ -11,6 +11,8 @@ const TrainingContext = createContext<TrainingContextValue | undefined>(undefine
 
 // New constant for experiment name storage
 const EXPERIMENT_NAME_STORAGE_KEY = 'experiment_name';
+// Add new storage key for active tab to persist tab selection
+const ACTIVE_TAB_STORAGE_KEY = 'active_training_tab';
 // New flag to prevent resultsLoaded from being reset during loading
 const RESULTS_LOADED_DELAY_MS = 1500; // Extended delay before potentially setting resultsLoaded back to false
 
@@ -18,8 +20,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
   const { toast } = useToast();
   const [state, setState] = useState<TrainingContextState>({
     isTraining: false,
-    isSubmitting: false, // Initialize isSubmitting state
-    isPredicting: false, // Add new isPredicting state
+    isSubmitting: false,
+    isPredicting: false,
     lastTrainingType: null,
     automlParameters: defaultAutomlParameters,
     customParameters: defaultCustomParameters,
@@ -29,16 +31,17 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeExperimentId: null,
     experimentResults: null,
     isLoadingResults: false,
-    experimentStatus: 'idle', // Changed from 'processing' to 'idle'
+    experimentStatus: 'idle',
     statusResponse: null,
     automlEngine: defaultAutomlParameters.automlEngine,
     testSize: defaultAutomlParameters.testSize,
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
-    activeTab: 'automl',
+    // ✅ FIXED: Initialize activeTab from localStorage if available, fallback to 'automl'
+    activeTab: localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'automl',
     isCheckingLastExperiment: false,
-    resultsLoaded: false, // Initialize resultsLoaded state explicitly
-    experimentName: null, // Initialize experiment name as null
+    resultsLoaded: false,
+    experimentName: null,
   });
 
   // Track if we just completed polling - extend timeout for more reliability
@@ -61,18 +64,21 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         const savedExperimentId = localStorage.getItem(EXPERIMENT_STORAGE_KEY);
         const savedTrainingType = localStorage.getItem(EXPERIMENT_TYPE_STORAGE_KEY) as 'automl' | 'custom' | null;
         const savedExperimentName = localStorage.getItem(EXPERIMENT_NAME_STORAGE_KEY);
+        const savedActiveTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'automl';
         
         if (savedExperimentId) {
           console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
           
-          // First update state with basic info we have from storage
+          // ✅ FIXED: Also restore saved tab when restoring an experiment
           setState(prev => ({
             ...prev,
             activeExperimentId: savedExperimentId,
             lastTrainingType: savedTrainingType,
-            experimentStatus: 'processing', // Start with processing status until we know more
+            experimentStatus: 'processing',
             isLoadingResults: true,
-            experimentName: savedExperimentName // Restore saved experiment name
+            experimentName: savedExperimentName,
+            // Respect the saved active tab
+            activeTab: savedActiveTab
           }));
           
           // Then check the actual experiment status from the API
@@ -254,6 +260,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
         localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
         localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+        // ✅ FIXED: Don't remove the active tab when clearing experiment
+        // This allows user's tab selection to persist between experiments
       }
     } catch (error) {
       console.error("Error saving experiment data to localStorage:", error);
@@ -687,6 +695,13 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeExperimentId, state.experimentResults, state.isLoadingResults, state.experimentName, state.lastTrainingType, recentlyCompletedPolling, toast, currentPollingInfo, isAutoMLExperiment]);
 
+  // ✅ NEW: Save active tab to localStorage when it changes
+  useEffect(() => {
+    if (state.activeTab) {
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, state.activeTab);
+    }
+  }, [state.activeTab]);
+
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
@@ -731,6 +746,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Clear saved AutoML training configuration when resetting training state
       localStorage.removeItem("automlTrainingConfig");
       
+      // ✅ FIXED: Remember the current tab selection before reset
+      const currentTab = state.activeTab;
+      // Don't keep results/predict tabs selected after reset
+      const newTab = (currentTab === 'results' || currentTab === 'predict') ? 'automl' : currentTab;
+      
       setState({
         isTraining: false,
         isSubmitting: false,
@@ -750,7 +770,7 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         testSize: defaultAutomlParameters.testSize,
         stratify: defaultAutomlParameters.stratify,
         randomSeed: defaultAutomlParameters.randomSeed,
-        activeTab: 'automl',
+        activeTab: newTab, // ✅ FIXED: Use preserved tab selection after reset
         isCheckingLastExperiment: false,
         resultsLoaded: false,
         experimentName: null,
@@ -772,6 +792,12 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Clear saved AutoML training configuration when clearing experiment results
       localStorage.removeItem("automlTrainingConfig");
       
+      // ✅ FIXED: Remember the current tab selection
+      const currentTab = state.activeTab;
+      // Don't keep results/predict tabs selected after clearing
+      const newTab = (currentTab === 'results' || currentTab === 'predict') ? 
+        (state.lastTrainingType === 'custom' ? 'custom' : 'automl') : currentTab;
+      
       setState(prev => ({
         ...prev,
         experimentResults: null,
@@ -779,7 +805,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         statusResponse: null,
         resultsLoaded: false,
         experimentName: null,
-        isPredicting: false
+        isPredicting: false,
+        activeTab: newTab // ✅ FIXED: Use appropriate tab selection after clearing
       }));
       localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
       localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);

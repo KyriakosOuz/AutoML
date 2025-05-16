@@ -8,16 +8,17 @@ import TrainingSidePanel from '@/components/ai-assistant/TrainingSidePanel';
 import { TrainingProvider } from '@/contexts/training/TrainingContext';
 
 const ModelTrainingPageContent: React.FC = () => {
-  const { checkLastExperiment, lastTrainingType, isTraining, isPredicting } = useTraining();
+  const { checkLastExperiment, lastTrainingType, isTraining, isPredicting, activeTab } = useTraining();
   
   // Debug: Log training state on mount and changes
   useEffect(() => {
     console.log("[ModelTrainingPage] Training state:", {
       isTraining,
       isPredicting,
-      trainingType: lastTrainingType || 'none'
+      trainingType: lastTrainingType || 'none',
+      activeTab // ✅ FIXED: Also log the current activeTab
     });
-  }, [isTraining, isPredicting, lastTrainingType]);
+  }, [isTraining, isPredicting, lastTrainingType, activeTab]);
   
   // Check for the most recent experiment when the component mounts
   useEffect(() => {
