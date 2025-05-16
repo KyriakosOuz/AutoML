@@ -170,16 +170,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       <p className="text-xs text-muted-foreground mt-2">
         Showing {data.length} rows of data. Download the full CSV for complete dataset.
       </p>
-      {downloadUrl && (
-        <div className="mt-4 flex justify-end">
-          <Button 
-            onClick={() => handleDownload(downloadUrl)}
-          >
-            <DownloadCloud className="h-4 w-4 mr-2" />
-            Download Full CSV
-          </Button>
-        </div>
-      )}
+      {/* Download Full CSV button removed from here */}
     </div>
   );
 };
