@@ -40,13 +40,20 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     }
   };
   
-  const [sortField, setSortField] = useState<string>(defaultSortMetric || getDefaultSortMetric());
+  const [sortField, setSortField] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Default to ascending (lowest to highest)
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAll, setShowAll] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [actualSortField, setActualSortField] = useState<string>('');
+
+  // Initialize sort field based on taskType and defaultSortMetric
+  useEffect(() => {
+    const metric = defaultSortMetric || getDefaultSortMetric();
+    setSortField(metric.toLowerCase());
+  }, [defaultSortMetric, taskType]);
 
   // Parse CSV data if provided as string
   useEffect(() => {
@@ -138,19 +145,64 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     parseData();
   }, [data, engineType]);
 
+  // Find the actual column name that matches the sort field (case-insensitive)
+  useEffect(() => {
+    if (columns.length > 0 && sortField) {
+      // Find the actual column name that matches sortField (case-insensitive)
+      const foundColumn = columns.find(
+        col => col.toLowerCase() === sortField.toLowerCase()
+      );
+      
+      // If found, set the actualSortField to the actual column name with proper case
+      if (foundColumn) {
+        console.log(`Found matching column: ${foundColumn} for sort field: ${sortField}`);
+        setActualSortField(foundColumn);
+      } else {
+        // If not found, try to find a column that contains the sort field name
+        const partialMatch = columns.find(
+          col => col.toLowerCase().includes(sortField.toLowerCase())
+        );
+        
+        if (partialMatch) {
+          console.log(`Found partial match column: ${partialMatch} for sort field: ${sortField}`);
+          setActualSortField(partialMatch);
+        } else {
+          // Default to the first metric column if available
+          const metricColumns = columns.filter(col => 
+            ['logloss', 'rmse', 'mse', 'mae', 'auc', 'accuracy'].some(
+              metric => col.toLowerCase().includes(metric.toLowerCase())
+            )
+          );
+          
+          if (metricColumns.length > 0) {
+            console.log(`Using first available metric column: ${metricColumns[0]}`);
+            setActualSortField(metricColumns[0]);
+          } else if (columns.length > 1) {
+            // Use the second column (assuming first is model name/id)
+            setActualSortField(columns[1]);
+          } else {
+            setActualSortField(columns[0]);
+          }
+        }
+      }
+    }
+  }, [columns, sortField]);
+
   // Sort the data based on current sort field and direction
   const sortedData = useMemo(() => {
-    if (parsedData.length === 0) return [];
+    if (parsedData.length === 0 || !actualSortField) return parsedData;
     
     // Determine if this metric is one where lower is better
     const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss', 'metric_value'].some(
-      metric => sortField.toLowerCase().includes(metric.toLowerCase())
+      metric => actualSortField.toLowerCase().includes(metric.toLowerCase())
     );
+    
+    console.log(`Sorting by ${actualSortField}, lowerIsBetter: ${lowerIsBetter}, direction: ${sortDirection}`);
     
     return [...parsedData].sort((a, b) => {
       // Ensure we're working with numeric values for comparison
-      const aValue = typeof a[sortField] === 'number' ? a[sortField] : parseFloat(a[sortField]) || 0;
-      const bValue = typeof b[sortField] === 'number' ? b[sortField] : parseFloat(b[sortField]) || 0;
+      const aValue = typeof a[actualSortField] === 'number' ? a[actualSortField] : parseFloat(a[actualSortField]) || 0;
+      const bValue = typeof b[actualSortField] === 'number' ? b[actualSortField] : parseFloat(b[actualSortField]) || 0;
       
       // Fixed: Always sort ALL rows consistently
       if (lowerIsBetter) {
@@ -161,7 +213,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
         return sortDirection === 'asc' ? bValue - aValue : aValue - bValue;
       }
     });
-  }, [parsedData, sortField, sortDirection]);
+  }, [parsedData, actualSortField, sortDirection]);
 
   // Notify parent component about the best model when data is sorted
   useEffect(() => {
@@ -183,24 +235,10 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     }
   }, [sortedData, onBestModelFound, engineType]);
 
-  // Use effect to ensure initial sort field is set correctly
-  useEffect(() => {
-    // Update sortField if defaultSortMetric changes, or on first render
-    if (defaultSortMetric) {
-      setSortField(defaultSortMetric);
-    } else {
-      const taskSpecificMetric = getDefaultSortMetric();
-      // Only set if it's different to avoid unnecessary re-renders
-      if (sortField !== taskSpecificMetric) {
-        setSortField(taskSpecificMetric);
-      }
-    }
-  }, [defaultSortMetric, taskType]);
-
   // Handle sorting
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      // Toggle direction if clicking the same field
+    // If clicking the same field, toggle direction
+    if (field.toLowerCase() === actualSortField.toLowerCase()) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       // Set new field and determine default sort direction based on metric type
@@ -454,7 +492,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                         .join(' ')}
                       <ArrowUpDown className="ml-1 h-3 w-3" />
-                      {sortField === column && (
+                      {column.toLowerCase() === actualSortField.toLowerCase() && (
                         <span className="ml-1 text-xs">
                           {sortDirection === 'asc' ? '↑' : '↓'}
                         </span>
@@ -490,7 +528,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
                         </div>
                       ) : (
                         <div className={
-                          column === sortField ? "font-medium" : ""
+                          column.toLowerCase() === actualSortField.toLowerCase() ? "font-medium" : ""
                         }>
                           {formatValue(row[column], column)}
                         </div>
