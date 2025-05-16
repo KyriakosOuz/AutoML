@@ -757,21 +757,13 @@ const ExperimentsTab: React.FC = () => {
                               <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
                               <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
-                          ) : isH2OExperiment ? (
-                            // Special metrics display for H2O experiments
+                          ) : isH2OExperiment && isBinaryClassification ? (
+                            // UPDATED: H2O binary classification metrics - showing only 4 specific metrics
                             <>
-                              <div>AUC: {renderMetricValue(experiment.metrics?.auc)}</div>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
-                              <div>LogLoss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
-                              <div>AUCPR: {renderMetricValue(experiment.metrics?.aucpr)}</div>
-                              {isBinaryClassification && (
-                                <>
-                                  <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
-                                  <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
-                                  <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
-                                  <div>Specificity: {renderMetricValue(experiment.metrics?.specificity)}</div>
-                                </>
-                              )}
+                              <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
+                              <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
+                              <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>
                           ) : isMLJARExperiment && isBinaryClassification ? (
                             // MLJAR binary classification specific metrics - UPDATED to show only 4 metrics
