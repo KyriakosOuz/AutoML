@@ -111,6 +111,20 @@ const ExperimentResultsPage: React.FC = () => {
     setTimeout(() => setShareUrlCopied(false), 2000);
   };
 
+  // Handle CSV or other file downloads
+  const handleFileDownload = async (url: string, filename: string) => {
+    try {
+      await downloadFile(url, filename);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Download Error",
+        description: "There was a problem downloading the file. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Retry fetching results
   const handleRetry = () => {
     setError(null);
@@ -422,7 +436,11 @@ const ExperimentResultsPage: React.FC = () => {
                                   {new Date(file.created_at).toLocaleString()}
                                 </p>
                               </div>
-                              <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${file.file_type.replace('_', '-')}.png`)}>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleFileDownload(file.file_url, `${file.file_type.replace('_', '-')}.png`)}
+                              >
                                 <DownloadCloud className="h-4 w-4 mr-2" />
                                 Download
                               </Button>
@@ -451,7 +469,7 @@ const ExperimentResultsPage: React.FC = () => {
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-col items-center">
-                          <Button onClick={() => downloadFile(modelFile.file_url, 'trained_model.zip')}>
+                          <Button onClick={() => handleFileDownload(modelFile.file_url, 'trained_model.zip')}>
                             <DownloadCloud className="h-4 w-4 mr-2" />
                             Download Model
                           </Button>

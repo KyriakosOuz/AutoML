@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { downloadCSV } from '@/components/training/prediction/utils/downloadUtils';
 
 interface ComparisonExperiment {
   experiment_id: string;
@@ -63,8 +66,42 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   const useScrolling = experimentsCount > 5;
   const minWidth = useScrolling ? `${180 + (experimentsCount * 180)}px` : undefined;
   
+  // Function to handle exporting to CSV
+  const handleExportToCsv = () => {
+    // Convert experiments data to a format suitable for CSV
+    const csvData = experiments.map(exp => {
+      const metricsData: Record<string, any> = {
+        experiment_name: exp.experiment_name,
+        experiment_id: exp.experiment_id,
+        algorithm: exp.algorithm,
+        engine: exp.engine,
+        dataset_name: exp.dataset_name,
+        created_at: format(new Date(exp.created_at), 'yyyy-MM-dd HH:mm:ss')
+      };
+      
+      // Add all available metrics
+      Object.entries(exp.metrics).forEach(([key, value]) => {
+        if (value !== undefined) {
+          metricsData[key] = value;
+        }
+      });
+      
+      return metricsData;
+    });
+    
+    // Download the CSV file
+    downloadCSV(csvData, 'comparison_results.csv');
+  };
+  
   return (
     <div className="space-y-6">
+      <div className="flex justify-end mb-4">
+        <Button size="sm" variant="outline" onClick={handleExportToCsv}>
+          <Download className="h-4 w-4 mr-2" />
+          Export to CSV
+        </Button>
+      </div>
+      
       <ResponsiveTable minWidth={minWidth}>
         <TableHeader>
           <TableRow>

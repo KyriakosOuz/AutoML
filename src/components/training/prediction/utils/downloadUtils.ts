@@ -47,13 +47,55 @@ export const downloadJSON = (data: any, filename: string) => {
   document.body.removeChild(link);
 };
 
-// Function to download a file from a URL
-export const downloadFile = (url: string, filename: string) => {
-  // Create a hidden anchor element
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+// Function to download a file from a URL by fetching it first
+export const downloadFile = async (url: string, filename: string) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.status}`);
+    }
+    
+    // Get the content type to determine how to handle the file
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      // For JSON files
+      const jsonData = await response.json();
+      downloadJSON(jsonData, filename);
+    } else if (contentType && contentType.includes('text/csv')) {
+      // For CSV files
+      const text = await response.text();
+      const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', downloadUrl);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } else {
+      // For all other file types, use a direct download approach
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', downloadUrl);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    }
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    // Fall back to the direct link method if the fetch fails
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 };
