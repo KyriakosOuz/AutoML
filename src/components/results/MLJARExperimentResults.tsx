@@ -813,12 +813,14 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     onOpenChange={setLeaderboardExpanded}
                     className="w-full"
                   >
-                    {/* Default preview with limited rows when collapsed */}
+                    {/* Default preview with limited rows when collapsed, sorted by metric_value */}
                     <CSVPreview
                       fileUrl={leaderboardFile.file_url}
                       downloadUrl={leaderboardFile.file_url}
                       maxRows={leaderboardExpanded ? undefined : 5} // Show 5 rows when collapsed, all rows when expanded
                       engineName={automl_engine?.toUpperCase()}
+                      initialSortColumn="metric_value"
+                      initialSortDirection="asc" // Sort ascending (lowest value first)
                     />
                     
                     <CollapsibleTrigger className="w-full mt-4">

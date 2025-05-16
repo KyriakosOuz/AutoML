@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DownloadCloud } from 'lucide-react';
+import { DownloadCloud, ArrowDown, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CSVPreviewProps {
@@ -9,19 +10,26 @@ interface CSVPreviewProps {
   downloadUrl?: string;
   maxRows?: number;
   engineName?: string;
+  initialSortColumn?: string;
+  initialSortDirection?: 'asc' | 'desc';
 }
 
 const CSVPreview: React.FC<CSVPreviewProps> = ({ 
   fileUrl, 
   downloadUrl,
   maxRows,
-  engineName
+  engineName,
+  initialSortColumn,
+  initialSortDirection = 'asc'
 }) => {
   const [data, setData] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [totalRowCount, setTotalRowCount] = useState<number>(0);
+  const [sortedData, setSortedData] = useState<string[][]>([]);
+  const [sortColumn, setSortColumn] = useState<number | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialSortDirection);
 
   // Re-fetch data when maxRows changes to support collapsible functionality
   useEffect(() => {
@@ -54,6 +62,22 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           );
           
           setData(parsedData);
+
+          // If initialSortColumn is provided, find its index
+          if (initialSortColumn) {
+            const columnIndex = extractedHeaders.findIndex(
+              header => header.toLowerCase() === initialSortColumn.toLowerCase()
+            );
+            
+            if (columnIndex !== -1) {
+              setSortColumn(columnIndex);
+              sortDataByColumn(parsedData, columnIndex, sortDirection);
+            } else {
+              setSortedData(parsedData);
+            }
+          } else {
+            setSortedData(parsedData);
+          }
         }
         
       } catch (err) {
@@ -67,7 +91,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     if (fileUrl) {
       fetchCSV();
     }
-  }, [fileUrl, maxRows]); // Ensure refetch when maxRows changes
+  }, [fileUrl, maxRows, initialSortColumn, initialSortDirection]); // Ensure refetch when maxRows changes
 
   // Helper function to handle CSV parsing with quotes
   const parseCSVRow = (row: string): string[] => {
@@ -92,6 +116,40 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     result.push(currentValue);
     
     return result;
+  };
+
+  // Helper function to sort data by column
+  const sortDataByColumn = (dataToSort: string[][], column: number, direction: 'asc' | 'desc') => {
+    // Clone the data to avoid modifying the original
+    const newData = [...dataToSort];
+    
+    newData.sort((a, b) => {
+      const valueA = a[column] || '';
+      const valueB = b[column] || '';
+
+      // Try to convert to numbers for numeric sorting
+      const numA = parseFloat(valueA);
+      const numB = parseFloat(valueB);
+
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return direction === 'asc' ? numA - numB : numB - numA;
+      }
+      
+      // Default to string comparison
+      if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+      if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setSortedData(newData);
+  };
+
+  // Handle clicking on a column header to sort
+  const handleSort = (columnIndex: number) => {
+    const newDirection = sortColumn === columnIndex && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortDirection(newDirection);
+    setSortColumn(columnIndex);
+    sortDataByColumn(data, columnIndex, newDirection);
   };
   
   // Function to trigger file download instead of opening in a new tab
@@ -156,14 +214,25 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           <TableHeader>
             <TableRow>
               {headers.map((header, index) => (
-                <TableHead key={index} className="bg-muted/50 font-medium">
-                  {header}
+                <TableHead 
+                  key={index} 
+                  className={`bg-muted/50 font-medium cursor-pointer hover:bg-muted/70 ${sortColumn === index ? 'bg-muted/70' : ''}`}
+                  onClick={() => handleSort(index)}
+                >
+                  <div className="flex items-center justify-between">
+                    {header}
+                    {sortColumn === index && (
+                      sortDirection === 'asc' ? 
+                        <ArrowUp className="w-4 h-4 ml-1" /> : 
+                        <ArrowDown className="w-4 h-4 ml-1" />
+                    )}
+                  </div>
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, rowIndex) => (
+            {sortedData.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 {row.map((cell, cellIndex) => (
                   <TableCell key={cellIndex} className="font-mono text-xs">
@@ -176,9 +245,9 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         </Table>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        {maxRows && data.length < totalRowCount 
-          ? `Showing ${data.length} of ${totalRowCount} rows.` 
-          : `Showing all ${data.length} rows.`}
+        {maxRows && sortedData.length < totalRowCount 
+          ? `Showing ${sortedData.length} of ${totalRowCount} rows.` 
+          : `Showing all ${sortedData.length} rows.`}
       </p>
     </div>
   );
