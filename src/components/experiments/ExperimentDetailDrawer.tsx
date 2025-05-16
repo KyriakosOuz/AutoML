@@ -141,8 +141,9 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       !file.file_type.includes('label_encoder') &&
       !file.file_type.includes('readme') &&
       !file.file_type.includes('predictions') &&
-      // Filter out leaderboard CSV files from visualizations for H2O experiments
-      !(results.automl_engine?.toLowerCase() === 'h2o' && file.file_type.includes('leaderboard'))
+      // Filter out leaderboard CSV files from visualizations for both H2O and MLJAR experiments
+      !((results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') && 
+        file.file_type.includes('leaderboard'))
     );
   };
   
@@ -198,11 +199,16 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   };
 
   const getLeaderboardFile = () => {
-    if (!results?.files || results.automl_engine?.toLowerCase() !== 'h2o') return null;
+    if (!results?.files) return null;
     
-    return results.files.find(file => 
-      file.file_type.includes('leaderboard')
-    );
+    // Check for both H2O and MLJAR experiments
+    if (results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') {
+      return results.files.find(file => 
+        file.file_type.includes('leaderboard')
+      );
+    }
+    
+    return null;
   };
 
   const canTuneModel = () => {
@@ -940,7 +946,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                         </div>
                       )}
                       
-                      {/* Add Leaderboard CSV download for H2O experiments */}
+                      {/* Add Leaderboard CSV download for both H2O and MLJAR experiments */}
                       {getLeaderboardFile() && (
                         <Card className="bg-muted/40">
                           <CardContent className="pt-6">
@@ -948,7 +954,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                               <div>
                                 <h3 className="font-medium">Leaderboard CSV</h3>
                                 <p className="text-sm text-muted-foreground">
-                                  Models comparison from H2O AutoML run
+                                  Models comparison from {results?.automl_engine || 'AutoML'} run
                                 </p>
                               </div>
                               <Button 
@@ -957,7 +963,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                   if (file) {
                                     handleFileDownload(
                                       file.file_url, 
-                                      `${results.automl_engine}_leaderboard.csv`
+                                      `${results?.automl_engine || 'automl'}_leaderboard.csv`
                                     );
                                   }
                                 }}
