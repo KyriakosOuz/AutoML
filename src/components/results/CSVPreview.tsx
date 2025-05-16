@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,7 +14,7 @@ interface CSVPreviewProps {
 const CSVPreview: React.FC<CSVPreviewProps> = ({ 
   fileUrl, 
   downloadUrl,
-  maxRows = 10,
+  maxRows,
   engineName
 }) => {
   const [data, setData] = useState<string[][]>([]);
@@ -47,7 +46,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           setHeaders(extractedHeaders);
           
           // Parse data rows (skip header row)
-          // Only limit to maxRows if it's defined
+          // Only limit to maxRows if it's defined, otherwise show all rows
           const rowsToProcess = maxRows ? rows.slice(1, maxRows + 1) : rows.slice(1);
           const parsedData = rowsToProcess.map(row => parseCSVRow(row)).filter(row => 
             // Filter out empty rows (last row might be empty)
