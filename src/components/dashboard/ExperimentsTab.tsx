@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search, Filter, AlertTriangle } from 'lucide-react';
+import { Trash2, Eye, List, Plus, Check, X, Loader, Info, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -273,17 +273,9 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    // Add validation for engine selection
-    if (activeTab === 'automl' && automlEngine === 'all') {
-      toast({
-        title: "Engine Selection Required",
-        description: "Please select a specific AutoML engine (MLJAR or H2O) before comparing experiments.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Remove validation for engine selection - users can now compare with "All Engines"
     
-    // Add validation for task type selection
+    // Keep validation for task type selection
     if (taskType === 'all') {
       toast({
         title: "Task Type Required",
@@ -312,7 +304,8 @@ const ExperimentsTab: React.FC = () => {
     }
 
     // Verify that all selected AutoML experiments use the same engine
-    if (activeTab === 'automl' && selectedExperiments.length > 1) {
+    // This check is kept because the API might still require it
+    if (activeTab === 'automl' && selectedExperiments.length > 1 && automlEngine === 'all') {
       const selectedExperimentObjects = experiments.filter(exp => selectedExperiments.includes(exp.id));
       const engines = new Set(selectedExperimentObjects.map(exp => exp.automl_engine));
       
@@ -450,10 +443,8 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    // Update to check for specific engine and task type when in AutoML mode
+    // Remove check for automl_engine === 'all'
     if (activeTab === 'all') return false;
-    
-    if (activeTab === 'automl' && automlEngine === 'all') return false;
     
     if (taskType === 'all') return false;
     
@@ -504,15 +495,6 @@ const ExperimentsTab: React.FC = () => {
           <ToggleGroupItem value="mljar">MLJAR</ToggleGroupItem>
           <ToggleGroupItem value="h2o">H2O</ToggleGroupItem>
         </ToggleGroup>
-        
-        {selectedExperiments.length > 0 && automlEngine === 'all' && (
-          <Alert variant="warning" className="bg-amber-50">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Select a specific engine (MLJAR or H2O) to enable comparison.
-            </AlertDescription>
-          </Alert>
-        )}
       </div>
     );
   };
@@ -521,15 +503,6 @@ const ExperimentsTab: React.FC = () => {
     <div className="flex flex-col space-y-4">
       <h3 className="text-sm font-medium">Task Type</h3>
       {renderTaskTypeButtons()}
-      
-      {selectedExperiments.length > 0 && taskType === 'all' && (
-        <Alert variant="warning" className="bg-amber-50">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Select a specific task type to enable comparison.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 
