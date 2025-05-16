@@ -17,18 +17,30 @@ interface H2OLeaderboardTableProps {
   maxRows?: number; // New prop to control how many rows to display by default
   engineType?: 'h2o' | 'mljar'; // New prop to specify engine type
   className?: string; // Allow passing className for styling
+  taskType?: string; // Added task type prop to determine default sort metric
 }
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
-  defaultSortMetric = 'metric_value', // Changed default sort metric to metric_value
+  defaultSortMetric,
   selectedModelId,
   onBestModelFound,
   maxRows = 10,
   engineType = 'h2o',
-  className
+  className,
+  taskType = 'binary_classification' // Default to binary classification if not provided
 }) => {
-  const [sortField, setSortField] = useState<string>(defaultSortMetric);
+  // Determine appropriate sort metric based on task type
+  const getDefaultSortMetric = () => {
+    if (taskType === 'regression') {
+      return 'rmse';
+    } else {
+      // For binary_classification and multiclass_classification
+      return 'logloss';
+    }
+  };
+  
+  const [sortField, setSortField] = useState<string>(defaultSortMetric || getDefaultSortMetric());
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Default to ascending (lowest to highest)
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
@@ -170,6 +182,20 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
       }
     }
   }, [sortedData, onBestModelFound, engineType]);
+
+  // Use effect to ensure initial sort field is set correctly
+  useEffect(() => {
+    // Update sortField if defaultSortMetric changes, or on first render
+    if (defaultSortMetric) {
+      setSortField(defaultSortMetric);
+    } else {
+      const taskSpecificMetric = getDefaultSortMetric();
+      // Only set if it's different to avoid unnecessary re-renders
+      if (sortField !== taskSpecificMetric) {
+        setSortField(taskSpecificMetric);
+      }
+    }
+  }, [defaultSortMetric, taskType]);
 
   // Handle sorting
   const handleSort = (field: string) => {
