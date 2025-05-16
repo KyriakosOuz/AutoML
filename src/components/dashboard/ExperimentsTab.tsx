@@ -273,7 +273,7 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    // Only keep validation for having at least 2 experiments and task type selection
+    // Restore the validation for active tab and task type
     if (taskType === 'all') {
       toast({
         title: "Task Type Required",
@@ -283,10 +283,29 @@ const ExperimentsTab: React.FC = () => {
       return;
     }
     
+    if (activeTab === 'all') {
+      toast({
+        title: "Filter Required",
+        description: "Please filter experiments by training method before comparing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (selectedExperiments.length < 2) {
       toast({
         title: "Selection Required",
         description: "Please select at least 2 experiments to compare.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add validation to ensure all selected experiments use the same engine
+    if (activeTab === 'automl' && automlEngine === 'all') {
+      toast({
+        title: "Engine Filter Required",
+        description: "Please select a specific AutoML engine (MLJAR or H2O) before comparing.",
         variant: "destructive",
       });
       return;
@@ -416,8 +435,14 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    // Only check if there's a specific task type selected and at least 2 experiments selected
+    // Restore the check for active tab and task type
+    if (activeTab === 'all') return false;
+    
     if (taskType === 'all') return false;
+    
+    // For AutoML experiments, require a specific engine to be selected
+    if (activeTab === 'automl' && automlEngine === 'all') return false;
+    
     return selectedExperiments.length >= 2;
   };
 

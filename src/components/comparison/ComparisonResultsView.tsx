@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +53,9 @@ const ComparisonResultsView: React.FC<ComparisonResultsViewProps> = ({ experimen
   
   const firstExperiment = experiments[0];
   const isRegression = firstExperiment.task_type.includes('regression');
+  
+  // Determine the engine type from the first experiment
+  const engineType = firstExperiment.engine?.toLowerCase();
   
   // Determine metrics based on task type
   const metrics = isRegression 
