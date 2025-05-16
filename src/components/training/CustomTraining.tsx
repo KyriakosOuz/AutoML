@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Beaker, HelpCircle, Play, Settings, Loader } from 'lucide-react';
+import { AlertCircle, Beaker, HelpCircle, Play, Settings, Loader, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateExperimentName } from '@/lib/constants';
 import { ALLOWED_ALGORITHMS, DEFAULT_HYPERPARAMETERS } from '@/lib/constants';
@@ -21,6 +21,7 @@ import HyperParameterEditor from './HyperParameterEditor';
 import CustomTrainingResults from './CustomTrainingResults';
 import { ExperimentResults } from '@/types/training';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 const CustomTraining: React.FC = () => {
   
@@ -52,6 +53,27 @@ const CustomTraining: React.FC = () => {
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [isLoadingAlgorithms, setIsLoadingAlgorithms] = useState(false);
   const [hasFetchedParams, setHasFetchedParams] = useState(false);
+  
+  // Track submitted values for display during training
+  const [submittedValues, setSubmittedValues] = useState<{
+    algorithm: string;
+    experimentName: string;
+    testSize: number;
+    stratify: boolean;
+    randomSeed: number;
+    hyperparameters: Record<string, any>;
+    useDefaultHyperparameters: boolean;
+    enableVisualization: boolean;
+  }>({
+    algorithm: '',
+    experimentName: '',
+    testSize: 0.2,
+    stratify: true,
+    randomSeed: 42,
+    hyperparameters: {},
+    useDefaultHyperparameters: true,
+    enableVisualization: true
+  });
 
   const navigate = useNavigate();
 
@@ -182,6 +204,18 @@ const CustomTraining: React.FC = () => {
       
       setActiveExperimentId(null);
       
+      // Save submitted values before training starts
+      setSubmittedValues({
+        algorithm: customParameters.algorithm,
+        experimentName: experimentName,
+        testSize: customParameters.testSize,
+        stratify: customParameters.stratify,
+        randomSeed: customParameters.randomSeed,
+        hyperparameters: customParameters.hyperparameters || {},
+        useDefaultHyperparameters: customParameters.useDefaultHyperparameters,
+        enableVisualization: customParameters.enableVisualization
+      });
+      
       // IMPROVED: Set training type BEFORE setting isTraining to ensure proper tab disabling
       console.log('[CustomTraining] Setting lastTrainingType to "custom"');
       setLastTrainingType('custom');
@@ -286,6 +320,9 @@ const CustomTraining: React.FC = () => {
           <CardTitle className="flex items-center gap-2 text-xl text-primary">
             <Beaker className="h-5 w-5" />
             Custom Training
+            {isTraining && (
+              <Badge className="ml-2 bg-amber-500">Training in Progress</Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Train models with custom algorithms and hyperparameters
@@ -293,6 +330,49 @@ const CustomTraining: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {/* New section: Display active configuration during training */}
+            {isTraining && (
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                <h3 className="text-sm font-medium mb-2">Training Configuration</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-slate-500">Algorithm:</span>{' '}
+                    <span className="font-medium">{submittedValues.algorithm.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Experiment:</span>{' '}
+                    <span className="font-medium">{submittedValues.experimentName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Test Size:</span>{' '}
+                    <span className="font-medium">{(submittedValues.testSize * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Stratify:</span>{' '}
+                    <span className="font-medium">{submittedValues.stratify ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Random Seed:</span>{' '}
+                    <span className="font-medium">{submittedValues.randomSeed}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Hyperparameters:</span>{' '}
+                    <span className="font-medium">{submittedValues.useDefaultHyperparameters ? 'Default' : 'Custom'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* New persistent information alert about background processing */}
+            {isTraining && (
+              <Alert className="mb-4 bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600 mr-2" />
+                <AlertDescription>
+                  <span className="font-semibold">Training continues in the background:</span> You can close this browser tab or window, and your training will continue on our servers. Return anytime to check progress.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label>Algorithm</Label>
               <Select
