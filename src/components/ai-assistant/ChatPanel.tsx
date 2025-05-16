@@ -41,7 +41,7 @@ const ChatPanel: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2 border-b bg-background">
-        <h3 className="font-medium">ML Explainer Assistant</h3>
+        <h3 className="font-medium">IEE AutoML Assistant</h3>
         <div className="flex items-center space-x-1">
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -75,7 +75,7 @@ const ChatPanel: React.FC = () => {
       <ScrollArea className="flex-1 p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4 py-12">
-            <h3 className="text-lg font-medium mb-2">ML Explainer Assistant</h3>
+            <h3 className="text-lg font-medium mb-2">IEE AutoML Assistant</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Ask me about ML metrics, model results, and concepts. I can help interpret your model performance and explain machine learning concepts.
             </p>

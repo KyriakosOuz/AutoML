@@ -67,7 +67,7 @@ const AISidePanel: React.FC<AISidePanelProps> = ({ insights, loading = false }) 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-medium">AI Assistant</h2>
+              <h2 className="text-lg font-medium">IEE AutoML Assistant</h2>
             </div>
             <Button 
               variant="ghost" 
