@@ -2,41 +2,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Download, ChevronDown, ChevronUp } from 'lucide-react';
-import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronDown, ChevronUp, Download, ArrowUp, ArrowDown } from 'lucide-react';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 
 interface H2OLeaderboardTableProps {
   data: any[] | string; // Accept either array or CSV string
   defaultSortMetric?: string;
   selectedModelId?: string | null;
-  onBestModelFound?: (modelName: string) => void; // New callback prop
-  maxRows?: number; // New prop to control how many rows to display by default
-  engineType?: 'h2o' | 'mljar'; // New prop to specify engine type
-  className?: string; // Allow passing className for styling
+  onBestModelFound?: (modelName: string) => void;
+  maxRows?: number;
+  engineType?: 'h2o' | 'mljar';
+  className?: string;
 }
 
 const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   data,
-  defaultSortMetric = 'auc',
+  defaultSortMetric = 'metric_value',
   selectedModelId,
-  onBestModelFound, // New prop
-  maxRows = 10, // Default to showing 10 rows
-  engineType = 'h2o', // Default to H2O
+  onBestModelFound,
+  maxRows = 10,
+  engineType = 'h2o',
   className
 }) => {
   const [sortField, setSortField] = useState<string>(defaultSortMetric);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAll, setShowAll] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Parse CSV data if provided as string
+  // Parse CSV data
   useEffect(() => {
     const parseData = async () => {
       setLoading(true);
@@ -58,7 +58,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
             csvContent = data;
           }
           
-          // Enhanced CSV parsing for MLJAR and H2O formats
+          // Enhanced CSV parsing
           const lines = csvContent.trim().split('\n');
           const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
           
@@ -139,10 +139,10 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
       const aValue = parseFloat(a[sortField]) || 0;
       const bValue = parseFloat(b[sortField]) || 0;
       
-      if (lowerIsBetter) {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      if (sortDirection === 'asc') {
+        return aValue - bValue;
       } else {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        return bValue - aValue;
       }
     });
   }, [parsedData, sortField, sortDirection]);
@@ -150,8 +150,10 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
   // Notify parent component about the best model when data is sorted
   useEffect(() => {
     if (sortedData.length > 0 && onBestModelFound) {
-      // Get the model_id from the first (best) model in the sorted data
-      const bestModel = sortedData[0];
+      // Determine the best model based on the sorted data and sort direction
+      // For metric_value, the best model depends on whether we're sorting asc or desc
+      const bestModelIndex = sortDirection === 'asc' ? 0 : 0;
+      const bestModel = sortedData[bestModelIndex];
       const modelId = bestModel.model_id || bestModel.name || bestModel.model_name || '';
       
       if (modelId) {
@@ -165,7 +167,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
         onBestModelFound(formattedModelName);
       }
     }
-  }, [sortedData, onBestModelFound, engineType]);
+  }, [sortedData, onBestModelFound, engineType, sortDirection]);
 
   // Handle sorting
   const handleSort = (field: string) => {
@@ -173,7 +175,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
       // Toggle direction if clicking the same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new field and determine default sort direction based on metric type
+      // Set new field and determine default sort direction
       setSortField(field);
       
       // For metrics where lower is better, default to ascending
@@ -217,60 +219,50 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     return numValue.toFixed(4);
   };
 
-  // Improved display columns logic to handle both H2O and MLJAR formats
+  // Display columns that are most relevant
   const displayColumns = useMemo(() => {
     if (columns.length === 0) return [];
     
     // Important model identifier columns that should be shown first
-    const identifierColumns = ['model_id', 'name', 'model_name', 'algorithm', 'model_type', 'model', 'type'];
+    const identifierColumns = ['model_id', 'name', 'model_name', 'algorithm', 'model_type'];
     
-    // Important metric columns (more comprehensive list)
+    // Important metric columns
     const metricColumns = [
-      'auc', 'logloss', 'rmse', 'mse', 'mae', 'rmsle', 'r2',
-      'accuracy', 'f1', 'precision', 'recall', 'mean_per_class_error',
-      'training_time_sec', 'training_time', 'train_time', 'fit_time',
-      'score', 'aucpr', 'f1_score', 'r2_score', 'cv_score', 'metric_value'
+      'metric_value', 'auc', 'logloss', 'rmse', 'mse', 'mae', 
+      'accuracy', 'f1', 'precision', 'recall', 'training_time_sec'
     ];
     
-    // First, include identifier columns in the order they appear
+    // Ordered columns for display
     const orderedColumns: string[] = [];
     
-    // Add identifier columns first if they exist
+    // Add identifier columns first
     identifierColumns.forEach(idCol => {
       if (columns.includes(idCol)) {
         orderedColumns.push(idCol);
       }
     });
     
-    // Then add metric columns if they exist
+    // Then add metric columns
     metricColumns.forEach(metricCol => {
       if (columns.includes(metricCol)) {
         orderedColumns.push(metricCol);
       }
     });
     
-    // Finally, add any remaining columns that might be metrics
+    // Add any remaining metric-like columns
     columns.forEach(col => {
       if (!orderedColumns.includes(col) && (
         col.includes('score') || 
         col.includes('metric') || 
         col.includes('error') || 
-        col.includes('loss') || 
         col.includes('accuracy') || 
-        col.includes('auc') || 
-        col.includes('time') ||
-        col.includes('val_')
+        col.includes('auc')
       )) {
         orderedColumns.push(col);
       }
     });
     
-    // If we have less than 3 columns, include all columns
-    if (orderedColumns.length < 3) {
-      return columns;
-    }
-    
-    return orderedColumns;
+    return orderedColumns.length > 0 ? orderedColumns : columns;
   }, [columns]);
 
   // Handle download of the leaderboard CSV
@@ -340,7 +332,6 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
     return showAll ? sortedData : sortedData.slice(0, maxRows);
   }, [sortedData, showAll, maxRows]);
 
-  // Add component rendering with Card layout for consistent styling with MLJAR components
   if (error) {
     return (
       <Card className={`mt-4 border-destructive/50 ${className || ''}`}>
@@ -423,10 +414,11 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
                         .split(' ')
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                         .join(' ')}
-                      <ArrowUpDown className="ml-1 h-3 w-3" />
                       {sortField === column && (
-                        <span className="ml-1 text-xs">
-                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        <span className="ml-1">
+                          {sortDirection === 'asc' ? 
+                            <ArrowUp className="inline h-3 w-3" /> : 
+                            <ArrowDown className="inline h-3 w-3" />}
                         </span>
                       )}
                     </Button>
@@ -437,7 +429,7 @@ const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
             <TableBody>
               {displayedData.map((row, index) => (
                 <TableRow 
-                  key={row.model_id || row.name || row.model_name || row.model || `model-${index}`} 
+                  key={row.model_id || row.name || row.model_name || `model-${index}`} 
                   className={
                     (row.model_id === selectedModelId || 
                      row.name === selectedModelId || 
