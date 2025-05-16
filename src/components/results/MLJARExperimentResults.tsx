@@ -20,7 +20,8 @@ import {
   Loader,
   Image,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ExperimentResults, PerClassMetric } from '@/types/training';
 import { ExperimentStatus } from '@/contexts/training/types';
@@ -91,6 +92,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [predictionsDialogOpen, setPredictionsDialogOpen] = useState(false);
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
   const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
+  const [showAllLeaderboardRows, setShowAllLeaderboardRows] = useState(false);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -344,6 +346,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
+
+  // Get the leaderboard file
+  const leaderboardFile = files.find(file => 
+    file.file_type === 'leaderboard_csv' ||
+    file.file_type.includes('leaderboard')
+  );
 
   // Helper to render per-class metrics if present - Updated to handle both formats
   const renderPerClassMetrics = () => {
@@ -737,6 +745,48 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
             </div>
+            
+            {/* New Leaderboard Card */}
+            {leaderboardFile && (
+              <Card className="shadow-sm mt-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Model Leaderboard</CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => downloadFile(leaderboardFile.file_url, 'model_leaderboard.csv')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download CSV
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    View models evaluated during experiment
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <CSVPreview
+                    fileUrl={leaderboardFile.file_url}
+                    downloadUrl={leaderboardFile.file_url}
+                    maxRows={showAllLeaderboardRows ? undefined : 10}
+                    engineName={automl_engine?.toUpperCase()}
+                  />
+                  <div className="flex justify-center mt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowAllLeaderboardRows(!showAllLeaderboardRows)}
+                    >
+                      {showAllLeaderboardRows ? (
+                        <>Show Less</>
+                      ) : (
+                        <>Show All</>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Add some simple info below the cards if needed */}
             {automl_engine && (
