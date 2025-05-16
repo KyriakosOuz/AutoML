@@ -669,7 +669,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Model Details Tab - REMOVED Leaderboard Table */}
+          {/* Model Details Tab */}
           <TabsContent value="metadata" className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
               {/* Model File Card */}
@@ -694,7 +694,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card */}
+              {/* Model Metadata Card - UPDATED to use downloadFile directly */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Metadata</CardTitle>
