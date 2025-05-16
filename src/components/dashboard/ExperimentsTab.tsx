@@ -55,6 +55,9 @@ interface ExperimentMetrics {
   logloss?: number;
   aucpr?: number;
   mean_per_class_error?: number[][];
+  // Add missing properties that were causing TypeScript errors
+  specificity?: number;
+  mcc?: number;
 }
 
 interface Experiment {
