@@ -58,8 +58,8 @@ const MainHeader = () => {
               alt="KyrO Logo" 
               className="h-5 w-5 sm:h-6 sm:w-6" 
             />
-            <span className="hidden sm:inline">KyrO AutoML</span>
-            <span className="sm:hidden">KyrO</span>
+            <span className="hidden sm:inline">IEE AutoML</span>
+            <span className="sm:hidden">IEE</span>
           </Link>
         </div>
         
