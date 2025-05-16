@@ -67,7 +67,7 @@ const AuthPage = () => {
           <div className="flex justify-center mb-2">
             <Cpu className="h-10 w-10 text-gray-900" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">KyrO AutoML</h1>
+          <h1 className="text-3xl font-bold text-gray-900">IEE AutoML</h1>
           <p className="text-gray-600 mt-2">Sign in to access your datasets and models</p>
         </div>
 
