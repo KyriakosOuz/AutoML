@@ -325,6 +325,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   
   const isRegression = results?.task_type === 'regression';
   const isMulticlassClassification = results?.task_type === 'multiclass_classification';
+  const isBinaryClassification = results?.task_type === 'binary_classification';
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
   const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
   const hasPerClassMetrics = results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0;
@@ -676,6 +677,63 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 {results.metrics.logloss.toFixed(4)}
                               </div>
                               <p className="text-xs text-muted-foreground">Logarithmic Loss</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Add new metrics for H2O binary classification */}
+                        {isBinaryClassification && results.metrics?.specificity !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Specificity</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.specificity)}`}>
+                                {formatMetric(results.metrics.specificity)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">True Negative Rate</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {isBinaryClassification && results.metrics?.precision !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Precision</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.precision)}`}>
+                                {formatMetric(results.metrics.precision)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Positive Predictive Value</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {isBinaryClassification && results.metrics?.recall !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Recall</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.recall)}`}>
+                                {formatMetric(results.metrics.recall)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Sensitivity/True Positive Rate</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {isBinaryClassification && results.metrics?.f1_score !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">F1 Score</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.f1_score)}`}>
+                                {formatMetric(results.metrics.f1_score)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Harmonic mean of precision and recall</p>
                             </CardContent>
                           </Card>
                         )}

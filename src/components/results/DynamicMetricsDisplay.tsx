@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +39,7 @@ const formatMetricName = (key: string): string => {
     'mse': 'MSE',
     'mae': 'MAE',
     'r2': 'R² Score',
+    'specificity': 'Specificity',
   };
 
   return metricNameMap[key] || key.replace(/_/g, ' ').split(' ').map(
@@ -54,6 +54,7 @@ const getMetricsForTaskType = (
   bestModelDetails?: Record<string, any>
 ): Record<string, number | undefined> => {
   const isClassification = taskType.includes('classification');
+  const isBinary = taskType.includes('binary');
   const result: Record<string, number | undefined> = {};
   
   // Combine metrics from both sources, prioritizing bestModelDetails
@@ -82,6 +83,11 @@ const getMetricsForTaskType = (
     }
     if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
     if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+    
+    // Add specificity for binary classification
+    if (isBinary && combinedMetrics.specificity !== undefined) {
+      result.specificity = combinedMetrics.specificity;
+    }
   } else {
     // Regression metrics
     result.mae = combinedMetrics.mae;
@@ -95,7 +101,7 @@ const getMetricsForTaskType = (
 
 // Helper function to determine if a metric should be displayed as a percentage
 const isPercentageMetric = (metricName: string): boolean => {
-  return ['accuracy', 'f1', 'f1_score', 'precision', 'recall', 'auc', 'aucpr'].includes(metricName.toLowerCase());
+  return ['accuracy', 'f1', 'f1_score', 'precision', 'recall', 'auc', 'aucpr', 'specificity'].includes(metricName.toLowerCase());
 };
 
 // Component to display a confusion matrix
