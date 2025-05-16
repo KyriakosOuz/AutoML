@@ -273,8 +273,6 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const handleCompareSelected = async () => {
-    // Remove validation for engine selection - users can now compare with "All Engines"
-    
     // Keep validation for task type selection
     if (taskType === 'all') {
       toast({
@@ -301,22 +299,6 @@ const ExperimentsTab: React.FC = () => {
         variant: "destructive",
       });
       return;
-    }
-
-    // Verify that all selected AutoML experiments use the same engine
-    // This check is kept because the API might still require it
-    if (activeTab === 'automl' && selectedExperiments.length > 1 && automlEngine === 'all') {
-      const selectedExperimentObjects = experiments.filter(exp => selectedExperiments.includes(exp.id));
-      const engines = new Set(selectedExperimentObjects.map(exp => exp.automl_engine));
-      
-      if (engines.size > 1) {
-        toast({
-          title: "Engine Mismatch",
-          description: "You can only compare experiments using the same AutoML engine (MLJAR or H2O).",
-          variant: "destructive",
-        });
-        return;
-      }
     }
 
     try {
@@ -443,7 +425,7 @@ const ExperimentsTab: React.FC = () => {
   };
 
   const isCompareButtonEnabled = () => {
-    // Modified to allow comparison with "All Engines" selection
+    // Only checking if the active tab is not 'all' and task type is not 'all'
     if (activeTab === 'all') return false;
     
     if (taskType === 'all') return false;
