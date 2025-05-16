@@ -37,8 +37,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     testSize: defaultAutomlParameters.testSize,
     stratify: defaultAutomlParameters.stratify,
     randomSeed: defaultAutomlParameters.randomSeed,
-    // ✅ FIXED: Initialize activeTab from localStorage if available, fallback to 'automl'
-    activeTab: localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'automl',
+    // ✅ FIXED: Initialize activeTab from localStorage but ensure it's a valid tab type
+    activeTab: (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'automl') as 'automl' | 'custom' | 'results' | 'predict',
     isCheckingLastExperiment: false,
     resultsLoaded: false,
     experimentName: null,
@@ -66,6 +66,11 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
         const savedExperimentName = localStorage.getItem(EXPERIMENT_NAME_STORAGE_KEY);
         const savedActiveTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'automl';
         
+        // Validate the saved activeTab to ensure it's one of the allowed values
+        const validTabValue = ['automl', 'custom', 'results', 'predict'].includes(savedActiveTab) 
+          ? savedActiveTab as 'automl' | 'custom' | 'results' | 'predict'
+          : 'automl';
+        
         if (savedExperimentId) {
           console.log("[TrainingContext] Restored experiment ID from storage:", savedExperimentId);
           
@@ -77,8 +82,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
             experimentStatus: 'processing',
             isLoadingResults: true,
             experimentName: savedExperimentName,
-            // Respect the saved active tab
-            activeTab: savedActiveTab
+            // Respect the saved active tab, but ensure it's a valid type
+            activeTab: validTabValue
           }));
           
           // Then check the actual experiment status from the API
