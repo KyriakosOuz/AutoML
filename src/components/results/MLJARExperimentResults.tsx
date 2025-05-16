@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -93,6 +93,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [readmePreviewOpen, setReadmePreviewOpen] = useState(false);
   const [perClassMetricsOpen, setPerClassMetricsOpen] = useState(false);
   const [showAllLeaderboardRows, setShowAllLeaderboardRows] = useState(false);
+  const [readmeContent, setReadmeContent] = useState<string>('');
+  const [isLoadingReadme, setIsLoadingReadme] = useState(false);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -236,6 +238,24 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       </Card>
     );
   }
+
+  // New function to fetch README content
+  const fetchReadmeContent = async (url: string) => {
+    try {
+      setIsLoadingReadme(true);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch README: ${response.status}`);
+      }
+      const text = await response.text();
+      setReadmeContent(text);
+    } catch (error) {
+      console.error('Error fetching README:', error);
+      setReadmeContent('Error loading README content');
+    } finally {
+      setIsLoadingReadme(false);
+    }
+  };
 
   // Extract relevant information from experiment results
   const {
@@ -702,7 +722,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card - UPDATED to use downloadFile directly */}
+              {/* Model Metadata Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Metadata</CardTitle>
@@ -725,17 +745,42 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Documentation Card */}
+              {/* Documentation Card - UPDATED to use a Dialog */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Documentation</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center pt-2">
                   {readmeFile ? (
-                    <Button variant="outline" onClick={() => setReadmePreviewOpen(true)}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Readme
-                    </Button>
+                    <Dialog open={readmePreviewOpen} onOpenChange={setReadmePreviewOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => fetchReadmeContent(readmeFile.file_url)}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Readme
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>README Documentation</DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-4">
+                          {isLoadingReadme ? (
+                            <div className="flex justify-center py-8">
+                              <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                              <pre className="whitespace-pre-wrap font-mono text-sm bg-muted p-4 rounded-md overflow-auto">
+                                {readmeContent}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   ) : (
                     <Button disabled variant="outline">
                       <FileText className="h-4 w-4 mr-2" />
