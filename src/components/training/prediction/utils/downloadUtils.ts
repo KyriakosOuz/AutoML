@@ -47,7 +47,7 @@ export const downloadJSON = (data: any, filename: string) => {
   document.body.removeChild(link);
 };
 
-// New function to download a file from a URL
+// Function to download a file from a URL
 export const downloadFile = (url: string, filename: string) => {
   // Create a hidden anchor element
   const link = document.createElement('a');

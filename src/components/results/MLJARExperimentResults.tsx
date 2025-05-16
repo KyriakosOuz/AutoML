@@ -28,7 +28,7 @@ import { ExperimentStatus } from '@/contexts/training/types';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
-import { downloadFile } from '../training/prediction/utils/downloadUtils';
+import { downloadFile, downloadJSON } from '../training/prediction/utils/downloadUtils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface MLJARExperimentResultsProps {
@@ -139,6 +139,22 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         metrics.f1_score;
     }
     return undefined;
+  };
+  
+  // New function to handle JSON metadata download
+  const handleMetadataDownload = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch metadata: ${response.status}`);
+      }
+      const jsonData = await response.json();
+      downloadJSON(jsonData, 'model_metadata.json');
+    } catch (error) {
+      console.error('Error downloading model metadata:', error);
+      // Fall back to direct download if fetch fails
+      downloadFile(url, 'model_metadata.json');
+    }
   };
   
   if (isLoading || status === 'processing' || status === 'running') {
@@ -722,7 +738,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Model Metadata Card */}
+              {/* Model Metadata Card - UPDATED to use handleMetadataDownload */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Metadata</CardTitle>
@@ -731,7 +747,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   {modelMetadataFile ? (
                     <Button 
                       variant="outline" 
-                      onClick={() => downloadFile(modelMetadataFile.file_url, 'model_metadata.json')}
+                      onClick={() => handleMetadataDownload(modelMetadataFile.file_url)}
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Download JSON
@@ -745,7 +761,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                 </CardContent>
               </Card>
               
-              {/* Documentation Card - UPDATED to use a Dialog */}
+              {/* Documentation Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-center">Documentation</CardTitle>
