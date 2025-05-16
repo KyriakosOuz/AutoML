@@ -54,13 +54,13 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
           setHeaders(extractedHeaders);
           
           // Parse data rows (skip header row)
-          // Only limit to maxRows if it's defined, otherwise show all rows
-          const rowsToProcess = maxRows ? rows.slice(1, maxRows + 1) : rows.slice(1);
-          const parsedData = rowsToProcess.map(row => parseCSVRow(row)).filter(row => 
+          // Process ALL rows now, regardless of maxRows
+          const parsedData = rows.slice(1).map(row => parseCSVRow(row)).filter(row => 
             // Filter out empty rows (last row might be empty)
             row.some(cell => cell.trim() !== '')
           );
           
+          // Store the full dataset
           setData(parsedData);
 
           // If initialSortColumn is provided, find its index
@@ -71,7 +71,9 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
             
             if (columnIndex !== -1) {
               setSortColumn(columnIndex);
-              sortDataByColumn(parsedData, columnIndex, sortDirection);
+              // Sort the full data first
+              const sorted = sortDataByColumnWithoutStateUpdate(parsedData, columnIndex, sortDirection);
+              setSortedData(sorted);
             } else {
               setSortedData(parsedData);
             }
@@ -91,7 +93,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     if (fileUrl) {
       fetchCSV();
     }
-  }, [fileUrl, maxRows, initialSortColumn, initialSortDirection]); // Ensure refetch when maxRows changes
+  }, [fileUrl, initialSortColumn, initialSortDirection]); // Removed maxRows to prevent refetching when it changes
 
   // Helper function to handle CSV parsing with quotes
   const parseCSVRow = (row: string): string[] => {
@@ -118,8 +120,9 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     return result;
   };
 
-  // Helper function to sort data by column
-  const sortDataByColumn = (dataToSort: string[][], column: number, direction: 'asc' | 'desc') => {
+  // New helper function that sorts data without updating state
+  // Used for initial sort and internal calculations
+  const sortDataByColumnWithoutStateUpdate = (dataToSort: string[][], column: number, direction: 'asc' | 'desc'): string[][] => {
     // Clone the data to avoid modifying the original
     const newData = [...dataToSort];
     
@@ -141,7 +144,13 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       return 0;
     });
 
-    setSortedData(newData);
+    return newData;
+  };
+
+  // Helper function to sort data by column and update state
+  const sortDataByColumn = (column: number, direction: 'asc' | 'desc') => {
+    const sorted = sortDataByColumnWithoutStateUpdate(data, column, direction);
+    setSortedData(sorted);
   };
 
   // Handle clicking on a column header to sort
@@ -149,7 +158,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     const newDirection = sortColumn === columnIndex && sortDirection === 'asc' ? 'desc' : 'asc';
     setSortDirection(newDirection);
     setSortColumn(columnIndex);
-    sortDataByColumn(data, columnIndex, newDirection);
+    sortDataByColumn(columnIndex, newDirection);
   };
   
   // Function to trigger file download instead of opening in a new tab
@@ -207,6 +216,9 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     );
   }
 
+  // Only limit the rows for display, AFTER sorting
+  const dataToDisplay = maxRows ? sortedData.slice(0, maxRows) : sortedData;
+
   return (
     <div className="w-full">
       <div className="rounded-md border overflow-hidden">
@@ -232,7 +244,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedData.map((row, rowIndex) => (
+            {dataToDisplay.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 {row.map((cell, cellIndex) => (
                   <TableCell key={cellIndex} className="font-mono text-xs">
@@ -245,8 +257,8 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         </Table>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        {maxRows && sortedData.length < totalRowCount 
-          ? `Showing ${sortedData.length} of ${totalRowCount} rows.` 
+        {maxRows && sortedData.length > maxRows
+          ? `Showing ${dataToDisplay.length} of ${sortedData.length} rows.` 
           : `Showing all ${sortedData.length} rows.`}
       </p>
     </div>
