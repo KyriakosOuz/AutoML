@@ -77,7 +77,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask the AI assistant..."
+          placeholder="Ask about your metrics or ML concepts..."
           className="resize-none min-h-[40px]"
           disabled={isLoading}
           rows={1}

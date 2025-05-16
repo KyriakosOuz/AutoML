@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -213,17 +212,17 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
   if (pathname.includes('/dataset/upload') || pathname.includes('/dataset/explore')) {
     if (!datasetContext || !datasetContext.datasetId) {
       return [
-        "What kind of dataset should I upload?",
-        "How do I prepare my CSV file for upload?",
-        "What types of data formats are supported?",
+        "What makes a good training dataset?",
+        "How do I know if my data is balanced?",
+        "What should I look for in my data before modeling?",
       ];
     }
     
     return [
-      "Can you give me an overview of this dataset?",
-      "What issues should I look out for in this data?",
-      "Which columns have the most missing values?",
-      "What data types do I need to check?",
+      "Is this enough data for machine learning?",
+      "How do I interpret these data distributions?",
+      "Are these outliers problematic for my model?",
+      "How much missing data is too much?",
     ];
   }
   
@@ -231,89 +230,89 @@ const getSuggestedPromptsForRoute = (pathname: string, datasetContext: any | nul
   if (datasetContext?.processingStage === 'raw' || 
      (pathname.includes('/dataset/explore') && datasetContext?.overview?.total_missing_values > 0)) {
     return [
-      "Was this the best missing value strategy?",
-      "Should I drop or impute this column?",
-      "What's the impact of using mean imputation?",
-      "Is hot deck suitable for categorical data?",
+      "When should I use mean vs. median imputation?",
+      "Is my imputation strategy introducing bias?",
+      "What's the impact of dropping vs. imputing?",
+      "How do different imputation methods affect model accuracy?",
     ];
   }
   
   // 3. Feature Selection
   if (pathname.includes('/dataset/features') || datasetContext?.processingStage === 'cleaned') {
     return [
-      "Which features are best for predicting the target?",
-      "Are these selected features too correlated?",
-      "Should I remove features with low importance?",
-      "Is my target column suitable for classification?",
+      "What's a good feature importance score?",
+      "How do I interpret feature correlations?",
+      "Are these features sufficient for my model?",
+      "Should I remove correlated features?",
     ];
   }
   
   // 4. Preprocessing
   if (pathname.includes('/dataset/preprocess') || datasetContext?.processingStage === 'final') {
     return [
-      "Is normalization necessary for this data?",
-      "What balancing method should I use?",
-      "What happens if I don't normalize?",
-      "How do I handle class imbalance better?",
+      "When is normalization necessary?",
+      "How do I interpret my class balance ratio?",
+      "What's the difference between scaling and normalization?",
+      "How does class imbalance affect different algorithms?",
     ];
   }
   
   // 5. Model Training
   if (pathname.includes('/training')) {
     return [
-      "What algorithms would work best for this task?",
-      "Is this model likely to overfit?",
-      "Should I try a different algorithm?",
-      "How does AutoML choose the best model?",
+      "What hyperparameters matter most for this algorithm?",
+      "Why would my model be underfitting?",
+      "How do I know if my model is overfitting?",
+      "What's a good learning rate for my model?",
     ];
   }
   
   // 6. Model Results & Visualizations
   if (pathname.includes('/training') && window.__TRAINING_CONTEXT__?.experimentStatus === 'completed') {
     return [
-      "Explain these metrics in plain language",
-      "Is this a good model?",
-      "What can I improve to increase accuracy?",
-      "What does the confusion matrix mean?",
+      "Is 75% accuracy good for my classification model?",
+      "How do I interpret this confusion matrix?",
+      "What's a good AUC score?",
+      "Why is precision more important than recall for my use case?",
     ];
   }
   
   // 7. Predictions
   if (pathname.includes('/training') && pathname.includes('predict')) {
     return [
-      "How accurate are these predictions?",
-      "What if the input format is slightly different?",
-      "Why did the model predict this value?",
-      "Can I use this model on new regions?",
+      "How reliable are these prediction probabilities?",
+      "What's a good confidence threshold for my model?",
+      "How can I improve my model's prediction accuracy?",
+      "What do these prediction intervals mean?",
     ];
   }
   
   // 8. Dashboard & Comparisons
   if (pathname.includes('/dashboard')) {
     return [
-      "Which model is best and why?",
-      "Compare these experiments for me",
-      "How do I choose the best one?",
-      "What trends do you notice in my experiments?",
+      "Which metrics should I prioritize when comparing models?",
+      "Is this difference in model performance significant?",
+      "How do I interpret differences in learning curves?",
+      "When is a simpler model better than a complex one?",
     ];
   }
   
   // 9. Experiment details
   if (pathname.includes('/experiment')) {
     return [
-      "Explain these model results to me",
-      "How could I improve this experiment?",
-      "What do these metrics tell me about my model?",
-      "Should I deploy this model?",
+      "Is this model performance good enough for production?",
+      "What do these evaluation metrics tell me?",
+      "How do I interpret this ROC curve?",
+      "What's causing these false positives in my model?",
     ];
   }
   
   // General prompts
   return [
-    "What can this AutoML platform do?",
-    "How do I get started with machine learning?",
-    "What's the difference between classification and regression?",
-    "How do I upload and prepare my dataset?",
+    "What's a good F1 score for my model?",
+    "How do I interpret the confusion matrix?",
+    "What's the difference between precision and recall?",
+    "Is my model's performance statistically significant?",
   ];
 };
 
