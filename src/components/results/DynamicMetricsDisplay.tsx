@@ -57,6 +57,7 @@ const getMetricsForTaskType = (
 ): Record<string, number | undefined> => {
   const isClassification = taskType.includes('classification');
   const isBinary = taskType.includes('binary');
+  const isMulticlass = taskType.includes('multiclass');
   const result: Record<string, number | undefined> = {};
   
   // Combine metrics from both sources, prioritizing bestModelDetails
@@ -70,30 +71,39 @@ const getMetricsForTaskType = (
   }
   
   if (isClassification) {
-    // Classification metrics
-    result.auc = combinedMetrics.auc;
-    result.logloss = combinedMetrics.logloss;
-    result.accuracy = combinedMetrics.accuracy;
-    result.aucpr = combinedMetrics.aucpr;
-    result.mean_per_class_error = combinedMetrics.mean_per_class_error;
-    result.rmse = combinedMetrics.rmse;
-    result.mse = combinedMetrics.mse;
-    
-    // Add F1, precision, recall if available
-    if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined) {
-      result.f1_score = combinedMetrics.f1_score !== undefined ? combinedMetrics.f1_score : combinedMetrics.f1;
-    }
-    if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
-    if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
-    
-    // Add specificity for binary classification
-    if (isBinary && combinedMetrics.specificity !== undefined) {
-      result.specificity = combinedMetrics.specificity;
-    }
-    
-    // Add MCC for binary classification if available
-    if (isBinary && combinedMetrics.mcc !== undefined) {
-      result.mcc = combinedMetrics.mcc;
+    if (isMulticlass) {
+      // For multiclass classification, show only these three metrics
+      result.accuracy = combinedMetrics.accuracy;
+      result.precision = combinedMetrics.precision;
+      result.recall = combinedMetrics.recall;
+    } else if (isBinary) {
+      // For binary classification, show these four metrics
+      result.accuracy = combinedMetrics.accuracy;
+      
+      // Add F1 score if available
+      if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined) {
+        result.f1_score = combinedMetrics.f1_score !== undefined ? combinedMetrics.f1_score : combinedMetrics.f1;
+      }
+      
+      // Add precision and recall
+      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+    } else {
+      // Default classification metrics
+      result.accuracy = combinedMetrics.accuracy;
+      result.logloss = combinedMetrics.logloss;
+      result.auc = combinedMetrics.auc;
+      result.aucpr = combinedMetrics.aucpr;
+      result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+      result.rmse = combinedMetrics.rmse;
+      result.mse = combinedMetrics.mse;
+      
+      // Add F1, precision, recall if available
+      if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined) {
+        result.f1_score = combinedMetrics.f1_score !== undefined ? combinedMetrics.f1_score : combinedMetrics.f1;
+      }
+      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
     }
   } else {
     // Regression metrics
@@ -161,6 +171,27 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ confusionMatrix, labe
   );
 };
 
+// Get descriptions for metrics
+const getMetricDescription = (metricName: string): string => {
+  const descriptions: Record<string, string> = {
+    'accuracy': 'Overall prediction accuracy',
+    'precision': 'Positive predictive value',
+    'recall': 'Sensitivity/True Positive Rate',
+    'f1_score': 'Harmonic mean of precision and recall',
+    'auc': 'Area Under the ROC Curve',
+    'aucpr': 'Area Under the Precision-Recall Curve',
+    'logloss': 'Logarithmic loss',
+    'rmse': 'Root Mean Squared Error',
+    'mse': 'Mean Squared Error',
+    'mae': 'Mean Absolute Error',
+    'r2': 'Coefficient of determination',
+    'specificity': 'True Negative Rate',
+    'mcc': 'Matthews Correlation Coefficient',
+  };
+  
+  return descriptions[metricName.toLowerCase()] || '';
+};
+
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPercentage = false }) => {
   // Format the display value
   let displayValue = typeof value === 'number' 
@@ -192,6 +223,11 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPe
         <div className="text-2xl font-bold">
           {displayValue}
         </div>
+        {description && (
+          <div className="text-sm text-muted-foreground mt-1">
+            {description}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -216,12 +252,14 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
           
           // Get description and percentage formatting
           const isPercent = isPercentageMetric(key);
+          const description = getMetricDescription(key);
           
           return (
             <MetricCard
               key={key}
               title={formatMetricName(key)}
               value={value}
+              description={description}
               isPercentage={isPercent}
             />
           );
