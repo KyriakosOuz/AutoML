@@ -96,6 +96,24 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [readmeContent, setReadmeContent] = useState<string>('');
   const [isLoadingReadme, setIsLoadingReadme] = useState(false);
   
+  // Add the missing fetchReadmeContent function
+  const fetchReadmeContent = async (url: string) => {
+    try {
+      setIsLoadingReadme(true);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch README: ${response.status}`);
+      }
+      const text = await response.text();
+      setReadmeContent(text);
+    } catch (error) {
+      console.error('Error fetching README:', error);
+      setReadmeContent('Failed to load README content. Please try downloading the file instead.');
+    } finally {
+      setIsLoadingReadme(false);
+    }
+  };
+  
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
     if (value === undefined) return 'N/A';
