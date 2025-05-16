@@ -25,22 +25,88 @@ const MainHeader = () => {
     if (currentPath.includes('/dataset')) {
       return {
         title: "Dataset Help",
-        content: "In the Datasets tab, you upload your CSV files, clean missing values, select important features, and prepare your data for training. You can also preview or download datasets from here."
+        content: (
+          <div className="space-y-4">
+            <p>
+              In the Datasets tab, you upload your CSV files, clean missing values, select important features, and prepare your data for training. You can also preview or download datasets from here.
+            </p>
+          </div>
+        )
       };
     } else if (currentPath.includes('/training')) {
       return {
         title: "Training Help",
-        content: "Training is where you build your machine learning models. First, select the target column — the thing you want to predict — and the features that should be used to make the prediction. Choose your training method: AutoML: Automatically tests different algorithms and settings to find the best model for your data. You don't need to adjust anything manually — just click \"Start AutoML\" and the system will find the top model for you. Custom Training: You manually pick an algorithm (like Decision Tree, Random Forest, etc.), and optionally adjust its hyperparameters. This gives you more control over the model behavior. After training completes, you will see: A summary of results (accuracy, RMSE, F1, or other metrics depending on your task). Visualizations like confusion matrices, ROC curves, feature importance charts, and more. A Download button to get your trained model file. Next Steps: Use your trained model to make predictions manually (by entering data) or by uploading a CSV. If you're not happy with the results, you can retrain with different settings. Tip: After finishing training and predictions, your experiments are stored. You can find them later inside the Dashboard under the Experiments tab."
+        content: (
+          <div className="space-y-4">
+            <p>
+              Training is where you build your machine learning models.
+            </p>
+            <p>
+              First, select the target column — the thing you want to predict — and the features that should be used to make the prediction.
+            </p>
+            <p>
+              Choose your training method:
+            </p>
+            <div className="ml-4">
+              <p className="font-medium">AutoML:</p>
+              <p className="ml-2">
+                Automatically tests different algorithms and settings to find the best model for your data. You don't need to adjust anything manually — just click "Start AutoML" and the system will find the top model for you.
+              </p>
+              
+              <p className="font-medium mt-2">Custom Training:</p>
+              <p className="ml-2">
+                You manually pick an algorithm (like Decision Tree, Random Forest, etc.), and optionally adjust its hyperparameters. This gives you more control over the model behavior.
+              </p>
+            </div>
+            <p>
+              After training completes, you will see:
+            </p>
+            <ul className="list-disc ml-6">
+              <li>A summary of results (accuracy, RMSE, F1, or other metrics depending on your task)</li>
+              <li>Visualizations like confusion matrices, ROC curves, feature importance charts, and more</li>
+              <li>A Download button to get your trained model file</li>
+            </ul>
+            <p className="font-medium">Next Steps:</p>
+            <p>
+              Use your trained model to make predictions manually (by entering data) or by uploading a CSV.
+            </p>
+            <p>
+              If you're not happy with the results, you can retrain with different settings.
+            </p>
+            <p className="font-medium">Tip:</p>
+            <p>
+              After finishing training and predictions, your experiments are stored. You can find them later inside the Dashboard under the Experiments tab.
+            </p>
+          </div>
+        )
       };
     } else if (currentPath.includes('/dashboard')) {
       return {
         title: "Dashboard Help",
-        content: "The Dashboard is your workspace overview. Here you can browse and manage all your Datasets, Experiments, and Comparisons in one place. You can view details, download files, delete records, or start new training based on existing work. Think of it like your ML project's control center — everything is accessible here."
+        content: (
+          <div className="space-y-4">
+            <p>
+              The Dashboard is your workspace overview. Here you can browse and manage all your Datasets, Experiments, and Comparisons in one place.
+            </p>
+            <p>
+              You can view details, download files, delete records, or start new training based on existing work.
+            </p>
+            <p>
+              Think of it like your ML project's control center — everything is accessible here.
+            </p>
+          </div>
+        )
       };
     } else {
       return {
         title: "Help",
-        content: "Welcome to AutoML Web App. Select a section from the navigation to get started."
+        content: (
+          <div className="space-y-4">
+            <p>
+              Welcome to AutoML Web App. Select a section from the navigation to get started.
+            </p>
+          </div>
+        )
       };
     }
   };
@@ -146,10 +212,10 @@ const MainHeader = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>{helpContent.title}</DialogTitle>
-                <DialogDescription className="mt-4 text-sm leading-relaxed whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-                  {helpContent.content}
-                </DialogDescription>
               </DialogHeader>
+              <div className="mt-2 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+                {helpContent.content}
+              </div>
             </DialogContent>
           </Dialog>
           
