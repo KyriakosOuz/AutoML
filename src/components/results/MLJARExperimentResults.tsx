@@ -773,7 +773,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                             </div>
                           ) : (
                             <div className="prose prose-sm max-w-none dark:prose-invert">
-                              <pre className="whitespace-pre-wrap font-mono text-sm bg-muted p-4 rounded-md overflow-auto">
+                              <pre className="whitespace-pre-wrap font-mono text-xs p-4 rounded-md overflow-auto bg-muted">
                                 {readmeContent}
                               </pre>
                             </div>
