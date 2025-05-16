@@ -726,6 +726,8 @@ const ExperimentsTab: React.FC = () => {
                 {experiments.map((experiment) => {
                   const isRegression = experiment.task_type === 'regression';
                   const isH2OExperiment = experiment.automl_engine?.toLowerCase() === 'h2o';
+                  const isMLJARExperiment = experiment.automl_engine?.toLowerCase() === 'mljar';
+                  const isBinaryClassification = experiment.task_type === 'binary_classification';
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -759,9 +761,30 @@ const ExperimentsTab: React.FC = () => {
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>LogLoss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
                               <div>AUCPR: {renderMetricValue(experiment.metrics?.aucpr)}</div>
+                              {isBinaryClassification && (
+                                <>
+                                  <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
+                                  <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
+                                  <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
+                                  <div>Specificity: {renderMetricValue(experiment.metrics?.specificity)}</div>
+                                </>
+                              )}
+                            </>
+                          ) : isMLJARExperiment && isBinaryClassification ? (
+                            // MLJAR binary classification specific metrics
+                            <>
+                              <div>AUC: {renderMetricValue(experiment.metrics?.auc)}</div>
+                              <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
+                              <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
+                              <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
+                              <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
+                              <div>LogLoss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
+                              {experiment.metrics?.mcc && 
+                                <div>MCC: {renderMetricValue(experiment.metrics?.mcc, false)}</div>
+                              }
                             </>
                           ) : (
-                            // Default classification metrics for non-H2O experiments
+                            // Default classification metrics for other experiments
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>

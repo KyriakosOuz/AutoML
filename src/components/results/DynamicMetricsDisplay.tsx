@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +41,7 @@ const formatMetricName = (key: string): string => {
     'mae': 'MAE',
     'r2': 'R² Score',
     'specificity': 'Specificity',
+    'mcc': 'MCC', // Added Matthews Correlation Coefficient
   };
 
   return metricNameMap[key] || key.replace(/_/g, ' ').split(' ').map(
@@ -87,6 +89,11 @@ const getMetricsForTaskType = (
     // Add specificity for binary classification
     if (isBinary && combinedMetrics.specificity !== undefined) {
       result.specificity = combinedMetrics.specificity;
+    }
+    
+    // Add MCC for binary classification if available
+    if (isBinary && combinedMetrics.mcc !== undefined) {
+      result.mcc = combinedMetrics.mcc;
     }
   } else {
     // Regression metrics
