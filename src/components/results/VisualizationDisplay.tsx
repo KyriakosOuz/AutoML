@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Filter files to only include visualizations - updated to include regression visualizations
+  // Enhanced filtering to capture ALL visualization types
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -27,6 +27,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'visualization',
       'roc_curve',
       'precision_recall_curve',
+      'precision_recall',
       'class_distribution',
       'variable_importance',
       'learning_curve',
@@ -36,6 +37,11 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
+
+  // Log which visualizations were found
+  console.log("[VisualizationDisplay] Found visualization files:", 
+    visualizationFiles.map(f => ({ type: f.file_type, url: f.file_url }))
+  );
 
   if (visualizationFiles.length === 0) {
     return (
@@ -97,14 +103,18 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   );
 };
 
-// Helper function to format visualization names in a user-friendly way
+// Enhanced helper function to format visualization names in a user-friendly way
 const formatVisualizationName = (fileType: string): string => {
   if (fileType.includes('confusion_matrix')) {
-    return 'Confusion Matrix';
-  } else if (fileType.includes('roc_curve')) {
+    return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
+  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    // Check if this is a precision-recall curve first
+    if (fileType.includes('precision_recall')) {
+      return 'Precision-Recall Curve';
+    }
     return 'ROC Curve';
   } else if (fileType.includes('precision_recall')) {
-    return 'Precision-Recall';
+    return 'Precision-Recall Curve';
   } else if (fileType.includes('learning_curve')) {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance') || fileType.includes('importance')) {

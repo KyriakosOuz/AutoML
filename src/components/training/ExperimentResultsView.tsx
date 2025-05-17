@@ -53,7 +53,9 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       hasData: !!data,
       hasError: !!error,
       modelName: data?.model_display_name,
-      filesCount: data?.files?.length
+      filesCount: data?.files?.length,
+      filesTypes: data?.files?.map(f => f.file_type),
+      metrics: data?.metrics ? Object.keys(data.metrics) : []
     });
   }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
   
@@ -87,7 +89,9 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         status: data.status,
         algorithm: data.algorithm,
         automl_engine: data.automl_engine,
-        filesCount: data.files?.length
+        filesCount: data.files?.length,
+        metricKeys: data.metrics ? Object.keys(data.metrics) : [],
+        hasPerClass: data.metrics?.per_class ? Object.keys(data.metrics.per_class).length : 0
       });
       
       setLocalLoadingState(false); // ✅ Always safe to update this
@@ -128,6 +132,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   // Use memoized values for result type determination
   const resultType = useMemo(() => {
     return {
+      // Explicitly check for MLJAR engine (case insensitive)
       isMljarExperiment: data?.automl_engine?.toLowerCase() === "mljar",
       isH2OExperiment: data?.automl_engine?.toLowerCase() === "h2o",
       isAutoMLExperiment: !!data?.automl_engine,
@@ -166,7 +171,8 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     automl_engine: data.automl_engine,
     model_name: data.model_display_name,
     filesCount: data.files?.length,
-    metricsKeys: data.metrics ? Object.keys(data.metrics) : []
+    metricsKeys: data.metrics ? Object.keys(data.metrics) : [],
+    perClassMetrics: data.metrics?.per_class ? Object.keys(data.metrics.per_class) : []
   });
 
   // Render the appropriate component based on experiment type

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -17,7 +17,7 @@ const ExperimentDetailPage: React.FC = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (error) {
       console.error('Failed to load experiment:', error);
       toast({
@@ -27,6 +27,22 @@ const ExperimentDetailPage: React.FC = () => {
       });
     }
   }, [error]);
+  
+  // Add debug logging to see what data is available
+  useEffect(() => {
+    if (data) {
+      console.log('ExperimentDetailPage: Experiment data loaded:', {
+        id: experimentId,
+        automlEngine: data.automl_engine,
+        taskType: data.task_type,
+        status: data.status,
+        model: data.model_display_name,
+        metrics: data.metrics ? Object.keys(data.metrics) : [],
+        filesCount: data.files?.length,
+        fileTypes: data.files?.map(f => f.file_type)
+      });
+    }
+  }, [data, experimentId]);
   
   // Determine the status to pass to ExperimentResultsContainer
   const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');

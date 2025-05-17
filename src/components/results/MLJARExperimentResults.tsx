@@ -63,6 +63,9 @@ const formatVisualizationName = (fileType: string): string => {
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
   } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    if (fileType.includes('precision_recall')) {
+      return 'Precision-Recall Curve';
+    }
     return 'ROC Curve';
   } else if (fileType.includes('precision_recall')) {
     return 'Precision-Recall Curve';
@@ -109,8 +112,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           experimentResults.files.filter(f => 
             f.file_type.includes('confusion_matrix') || 
             f.file_type.includes('evaluation_curve') || 
-            f.file_type.includes('learning_curve')
-          ).length : 0
+            f.file_type.includes('learning_curve') ||
+            f.file_type.includes('precision_recall_curve')
+          ).map(f => f.file_type) : [],
+        allFiles: experimentResults.files ? experimentResults.files.map(f => f.file_type) : []
       });
     }
   }, [experimentResults]);
@@ -151,10 +156,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   
   // Helper to get per-class metrics from either legacy or new format
   const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
-    if (!experimentResults) return undefined;
+    if (!experimentResults || !experimentResults.metrics) return undefined;
     
     // Check for the new format (metrics.per_class)
-    if (experimentResults.metrics?.per_class && 
+    if (experimentResults.metrics.per_class && 
         Object.keys(experimentResults.metrics.per_class).length > 0) {
       return experimentResults.metrics.per_class;
     }
@@ -312,22 +317,26 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type - expanded to include regression visualizations and ensure all types are covered
-  const getFilesByType = (fileType: string) => {
-    return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
-  };
+  // Enhanced filter to capture all visualization types
+  // This new implementation ensures we catch all visualization types from the files array
+  const visualizationFiles = files.filter(file => {
+    return file.file_type.includes('confusion_matrix') ||
+           file.file_type.includes('evaluation_curve') ||
+           file.file_type.includes('precision_recall') ||
+           file.file_type.includes('learning_curve') ||
+           file.file_type.includes('feature_importance') ||
+           file.file_type.includes('true_vs_predicted') ||
+           file.file_type.includes('predicted_vs_residuals') ||
+           file.file_type.includes('roc_curve');
+  });
 
-  // Ensure we include all visualization types from the sample data
-  const visualizationFiles = [
-    ...getFilesByType('confusion_matrix'),
-    ...getFilesByType('roc_curve'),
-    ...getFilesByType('evaluation_curve'),
-    ...getFilesByType('precision_recall_curve'),
-    ...getFilesByType('learning_curve'),
-    ...getFilesByType('feature_importance'),
-    ...getFilesByType('true_vs_predicted'),
-    ...getFilesByType('predicted_vs_residuals')
-  ];
+  // Log visualization files to debug
+  console.log("[MLJARExperimentResults] Visualization files:", 
+    visualizationFiles.map(f => ({
+      file_type: f.file_type,
+      file_url: f.file_url
+    }))
+  );
 
   const modelMetadataFile = files.find(file => 
     file.file_type === 'model_metadata' || 
@@ -585,7 +594,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mt-4">
-                      {/* Make sure to include all required metrics for multiclass classification */}
+                      {/* Explicitly show all required metrics for multiclass classification */}
                       {['accuracy', 'precision', 'recall', 'f1-score', 'logloss'].map((key) => {
                         // For 'f1-score', check both hyphenated and underscore versions
                         let value;
@@ -596,6 +605,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           value = metrics[key];
                         }
                         
+                        // Skip if the metric doesn't exist
                         if (value === undefined) return null;
                         
                         // Enhanced formatting of metric display names
@@ -952,3 +962,4 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
+
