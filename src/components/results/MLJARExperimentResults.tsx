@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -941,13 +940,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
               New Experiment
             </Button>
           )}
-          
-          {onRefresh && (
-            <Button variant="secondary" onClick={onRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          )}
         </div>
         
         {completed_at && (
@@ -962,4 +954,3 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
-
