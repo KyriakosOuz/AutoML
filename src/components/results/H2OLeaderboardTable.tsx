@@ -1,89 +1,566 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, ExternalLink } from 'lucide-react';
-import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import { ArrowUpDown, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export interface H2OLeaderboardTableProps {
-  leaderboardData: any[];
-  leaderboardCsvUrl?: string;
+interface H2OLeaderboardTableProps {
+  data: any[] | string; // Accept either array or CSV string
+  defaultSortMetric?: string;
+  selectedModelId?: string | null;
+  onBestModelFound?: (modelName: string) => void; // New callback prop
+  maxRows?: number; // New prop to control how many rows to display by default
+  engineType?: 'h2o' | 'mljar'; // New prop to specify engine type
+  className?: string; // Allow passing className for styling
+  taskType?: string; // Added task type prop to determine default sort metric
 }
 
-const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({ 
-  leaderboardData,
-  leaderboardCsvUrl
+const H2OLeaderboardTable: React.FC<H2OLeaderboardTableProps> = ({
+  data,
+  defaultSortMetric,
+  selectedModelId,
+  onBestModelFound,
+  maxRows = 10,
+  engineType = 'h2o',
+  className,
+  taskType = 'binary_classification' // Default to binary classification if not provided
 }) => {
-  if (!leaderboardData || leaderboardData.length === 0) {
+  // Determine appropriate sort metric based on task type
+  const getDefaultSortMetric = () => {
+    if (taskType === 'regression') {
+      return 'rmse';
+    } else {
+      // For binary_classification and multiclass_classification
+      return 'logloss';
+    }
+  };
+  
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Default to ascending (lowest to highest)
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showAll, setShowAll] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actualSortField, setActualSortField] = useState<string>('');
+
+  // Initialize sort field based on taskType and defaultSortMetric
+  useEffect(() => {
+    const metric = defaultSortMetric || getDefaultSortMetric();
+    setSortField(metric.toLowerCase());
+  }, [defaultSortMetric, taskType]);
+
+  // Parse CSV data if provided as string
+  useEffect(() => {
+    const parseData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Handle string data (CSV content or URL)
+        if (typeof data === 'string') {
+          console.log(`Parsing CSV data for ${engineType} leaderboard`);
+          
+          let csvContent: string;
+          
+          // Check if it's a URL or direct CSV content
+          if (data.startsWith('http')) {
+            console.log('Fetching CSV from URL:', data);
+            const response = await fetch(data);
+            if (!response.ok) throw new Error('Failed to fetch CSV');
+            csvContent = await response.text();
+          } else {
+            csvContent = data;
+          }
+          
+          // Enhanced CSV parsing for MLJAR and H2O formats
+          const lines = csvContent.trim().split('\n');
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          
+          const rows = lines.slice(1).map(line => {
+            // Handle quoted values correctly (they might contain commas)
+            const values: string[] = [];
+            let inQuotes = false;
+            let currentValue = '';
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                values.push(currentValue.replace(/"/g, '').trim());
+                currentValue = '';
+              } else {
+                currentValue += char;
+              }
+            }
+            
+            // Don't forget to add the last value
+            values.push(currentValue.replace(/"/g, '').trim());
+            
+            // Create object from headers and values
+            return headers.reduce((obj, header, i) => {
+              // Convert numeric strings to numbers
+              const value = values[i] || '';
+              const numValue = parseFloat(value);
+              obj[header] = !isNaN(numValue) && value !== '' ? numValue : value;
+              return obj;
+            }, {} as Record<string, any>);
+          });
+          
+          setParsedData(rows);
+          setColumns(headers);
+        }
+        // Handle array data
+        else if (Array.isArray(data) && data.length > 0) {
+          console.log(`Using array data for ${engineType} leaderboard, length:`, data.length);
+          setParsedData(data);
+          
+          // Extract columns from the first item
+          if (data.length > 0) {
+            const firstItem = data[0];
+            setColumns(Object.keys(firstItem));
+          }
+        }
+        else {
+          console.log('No valid leaderboard data provided');
+          setParsedData([]);
+          setColumns([]);
+        }
+      } catch (error) {
+        console.error(`Error parsing ${engineType} leaderboard data:`, error);
+        setError(error instanceof Error ? error.message : 'Unknown error parsing data');
+        setParsedData([]);
+        setColumns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    parseData();
+  }, [data, engineType]);
+
+  // Find the actual column name that matches the sort field (case-insensitive)
+  useEffect(() => {
+    if (columns.length > 0 && sortField) {
+      // Find the actual column name that matches sortField (case-insensitive)
+      const foundColumn = columns.find(
+        col => col.toLowerCase() === sortField.toLowerCase()
+      );
+      
+      // If found, set the actualSortField to the actual column name with proper case
+      if (foundColumn) {
+        console.log(`Found matching column: ${foundColumn} for sort field: ${sortField}`);
+        setActualSortField(foundColumn);
+      } else {
+        // If not found, try to find a column that contains the sort field name
+        const partialMatch = columns.find(
+          col => col.toLowerCase().includes(sortField.toLowerCase())
+        );
+        
+        if (partialMatch) {
+          console.log(`Found partial match column: ${partialMatch} for sort field: ${sortField}`);
+          setActualSortField(partialMatch);
+        } else {
+          // Default to the first metric column if available
+          const metricColumns = columns.filter(col => 
+            ['logloss', 'rmse', 'mse', 'mae', 'auc', 'accuracy'].some(
+              metric => col.toLowerCase().includes(metric.toLowerCase())
+            )
+          );
+          
+          if (metricColumns.length > 0) {
+            console.log(`Using first available metric column: ${metricColumns[0]}`);
+            setActualSortField(metricColumns[0]);
+          } else if (columns.length > 1) {
+            // Use the second column (assuming first is model name/id)
+            setActualSortField(columns[1]);
+          } else {
+            setActualSortField(columns[0]);
+          }
+        }
+      }
+    }
+  }, [columns, sortField]);
+
+  // Sort the data based on current sort field and direction
+  const sortedData = useMemo(() => {
+    if (parsedData.length === 0 || !actualSortField) return parsedData;
+    
+    // Determine if this metric is one where lower is better
+    const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss', 'metric_value'].some(
+      metric => actualSortField.toLowerCase().includes(metric.toLowerCase())
+    );
+    
+    console.log(`Sorting by ${actualSortField}, lowerIsBetter: ${lowerIsBetter}, direction: ${sortDirection}`);
+    
+    return [...parsedData].sort((a, b) => {
+      // Ensure we're working with numeric values for comparison
+      const aValue = typeof a[actualSortField] === 'number' ? a[actualSortField] : parseFloat(a[actualSortField]) || 0;
+      const bValue = typeof b[actualSortField] === 'number' ? b[actualSortField] : parseFloat(b[actualSortField]) || 0;
+      
+      // Fixed: Always sort ALL rows consistently
+      if (lowerIsBetter) {
+        // Lower values are better, so ascending sort means smallest first
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      } else {
+        // Higher values are better, so ascending sort means largest first
+        return sortDirection === 'asc' ? bValue - aValue : aValue - bValue;
+      }
+    });
+  }, [parsedData, actualSortField, sortDirection]);
+
+  // Notify parent component about the best model when data is sorted
+  useEffect(() => {
+    if (sortedData.length > 0 && onBestModelFound) {
+      // Get the model_id from the first (best) model in the sorted data
+      const bestModel = sortedData[0];
+      const modelId = bestModel.model_id || bestModel.name || bestModel.model_name || '';
+      
+      if (modelId) {
+        // Format the model name (e.g., "DRF_1")
+        const parts = modelId.split('_');
+        const formattedModelName = parts.length >= 2 
+          ? `${parts[0]}_${parts[1]}`
+          : modelId;
+        
+        console.log(`Found best ${engineType} model:`, formattedModelName);
+        onBestModelFound(formattedModelName);
+      }
+    }
+  }, [sortedData, onBestModelFound, engineType]);
+
+  // Handle sorting
+  const handleSort = (field: string) => {
+    // If clicking the same field, toggle direction
+    if (field.toLowerCase() === actualSortField.toLowerCase()) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and determine default sort direction based on metric type
+      setSortField(field);
+      
+      // For metrics where lower is better, default to ascending
+      const lowerIsBetter = ['logloss', 'rmse', 'mse', 'mae', 'error', 'loss', 'metric_value'].some(
+        metric => field.toLowerCase().includes(metric.toLowerCase())
+      );
+      
+      setSortDirection(lowerIsBetter ? 'asc' : 'desc');
+    }
+  };
+
+  // Format a metric value for display
+  const formatValue = (value: string | number, column: string) => {
+    if (value === undefined || value === null) return 'N/A';
+    
+    const numValue = typeof value === 'number' ? value : parseFloat(value);
+    
+    if (isNaN(numValue)) return value;
+    
+    // Format as percentage for certain metrics
+    const percentageMetrics = ['auc', 'accuracy', 'precision', 'recall', 'f1', 'r2'];
+    const isPercentage = percentageMetrics.some(metric => 
+      column.toLowerCase().includes(metric.toLowerCase())
+    );
+    
+    if (isPercentage && numValue >= 0 && numValue <= 1) {
+      return `${(numValue * 100).toFixed(2)}%`;
+    }
+    
+    // Format as time for training_time
+    if (column.includes('time') || column.includes('duration')) {
+      if (numValue >= 60) {
+        const minutes = Math.floor(numValue / 60);
+        const seconds = Math.round(numValue % 60);
+        return `${minutes}m ${seconds}s`;
+      }
+      return `${numValue.toFixed(1)}s`;
+    }
+    
+    // Default number formatting
+    return numValue.toFixed(4);
+  };
+
+  // Improved display columns logic to handle both H2O and MLJAR formats
+  const displayColumns = useMemo(() => {
+    if (columns.length === 0) return [];
+    
+    // Important model identifier columns that should be shown first
+    const identifierColumns = ['model_id', 'name', 'model_name', 'algorithm', 'model_type', 'model', 'type'];
+    
+    // Important metric columns (more comprehensive list)
+    const metricColumns = [
+      'auc', 'logloss', 'rmse', 'mse', 'mae', 'rmsle', 'r2',
+      'accuracy', 'f1', 'precision', 'recall', 'mean_per_class_error',
+      'training_time_sec', 'training_time', 'train_time', 'fit_time',
+      'score', 'aucpr', 'f1_score', 'r2_score', 'cv_score', 'metric_value'
+    ];
+    
+    // First, include identifier columns in the order they appear
+    const orderedColumns: string[] = [];
+    
+    // Add identifier columns first if they exist
+    identifierColumns.forEach(idCol => {
+      if (columns.includes(idCol)) {
+        orderedColumns.push(idCol);
+      }
+    });
+    
+    // Then add metric columns if they exist
+    metricColumns.forEach(metricCol => {
+      if (columns.includes(metricCol)) {
+        orderedColumns.push(metricCol);
+      }
+    });
+    
+    // Finally, add any remaining columns that might be metrics
+    columns.forEach(col => {
+      if (!orderedColumns.includes(col) && (
+        col.includes('score') || 
+        col.includes('metric') || 
+        col.includes('error') || 
+        col.includes('loss') || 
+        col.includes('accuracy') || 
+        col.includes('auc') || 
+        col.includes('time') ||
+        col.includes('val_')
+      )) {
+        orderedColumns.push(col);
+      }
+    });
+    
+    // If we have less than 3 columns, include all columns
+    if (orderedColumns.length < 3) {
+      return columns;
+    }
+    
+    return orderedColumns;
+  }, [columns]);
+
+  // Handle download of the leaderboard CSV
+  const handleDownloadLeaderboard = async () => {
+    try {
+      // If we have a URL, fetch the CSV file
+      if (typeof data === 'string' && data.startsWith('http')) {
+        const response = await fetch(data);
+        if (!response.ok) throw new Error('Failed to fetch leaderboard data');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${engineType}_leaderboard.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } 
+      // If we have CSV string data
+      else if (typeof data === 'string' && !data.startsWith('http')) {
+        const blob = new Blob([data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${engineType}_leaderboard.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+      // If we have array data, convert to CSV
+      else if (Array.isArray(data) && data.length > 0) {
+        const headers = Object.keys(data[0]).join(',');
+        const csvRows = data.map(row => Object.values(row).join(','));
+        const csvContent = [headers, ...csvRows].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${engineType}_leaderboard.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error('No valid data to download');
+      }
+      
+      toast({
+        title: 'Download started',
+        description: 'The leaderboard CSV is downloading.',
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Download failed',
+        description: 'Failed to download leaderboard data.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Get displayed data based on showAll setting
+  const displayedData = useMemo(() => {
+    return showAll ? sortedData : sortedData.slice(0, maxRows);
+  }, [sortedData, showAll, maxRows]);
+
+  // Add component rendering with Card layout for consistent styling with MLJAR components
+  if (error) {
     return (
-      <Card>
+      <Card className={`mt-4 border-destructive/50 ${className || ''}`}>
         <CardHeader>
-          <CardTitle className="text-base">Leaderboard</CardTitle>
+          <CardTitle className="text-destructive">Leaderboard Error</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">No leaderboard data available for this model.</p>
+          <p>{error}</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Get column headers from the first item's keys
-  const columnsToShow = Object.keys(leaderboardData[0]).filter(key => 
-    !key.includes('_') && 
-    key !== 'id' && 
-    key !== 'model_id' &&
-    key !== 'description'
-  );
+  if (loading) {
+    return (
+      <Card className={`mt-4 ${className || ''}`}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold flex items-center justify-between">
+            <span>Models Leaderboard</span>
+            <Skeleton className="h-9 w-36" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (parsedData.length === 0) {
+    return (
+      <Card className={`mt-4 ${className || ''}`}>
+        <CardHeader>
+          <CardTitle>Models Leaderboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">No models data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Model Leaderboard</CardTitle>
-        {leaderboardCsvUrl && (
+    <Card className={`mt-4 ${className || ''}`}>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-semibold">Model Leaderboard</CardTitle>
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => downloadFile(leaderboardCsvUrl, 'h2o_leaderboard.csv')}
+            onClick={handleDownloadLeaderboard}
+            className="flex items-center gap-1"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Download CSV
+            <Download className="h-4 w-4" /> Download CSV
           </Button>
-        )}
+        </div>
       </CardHeader>
+      
       <CardContent>
-        <div className="overflow-x-auto">
+        <ResponsiveTable minWidth="800px">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Rank</TableHead>
-                <TableHead>Model</TableHead>
-                {columnsToShow.map(column => (
+                {displayColumns.map((column) => (
                   <TableHead key={column} className="whitespace-nowrap">
-                    {column.charAt(0).toUpperCase() + column.slice(1)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-medium"
+                      onClick={() => handleSort(column)}
+                    >
+                      {column
+                        .replace(/_/g, ' ')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ')}
+                      <ArrowUpDown className="ml-1 h-3 w-3" />
+                      {column.toLowerCase() === actualSortField.toLowerCase() && (
+                        <span className="ml-1 text-xs">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </Button>
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboardData.map((model, index) => (
-                <TableRow key={model.model_id || index}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium">
-                    {model.model_id || `Model ${index + 1}`}
-                  </TableCell>
-                  {columnsToShow.map(column => (
+              {displayedData.map((row, index) => (
+                <TableRow 
+                  key={row.model_id || row.name || row.model_name || row.model || `model-${index}`} 
+                  className={
+                    (row.model_id === selectedModelId || 
+                     row.name === selectedModelId || 
+                     row.model_name === selectedModelId) 
+                      ? "bg-primary/10" 
+                      : ""
+                  }
+                >
+                  {displayColumns.map((column) => (
                     <TableCell key={column}>
-                      {typeof model[column] === 'number' 
-                        ? model[column].toFixed(4)
-                        : model[column]}
+                      {column === 'model_id' || column === 'name' || column === 'model_name' || 
+                       column === 'model' || column === 'algorithm' || column === 'model_type' ? (
+                        <div className="font-medium flex items-center gap-2">
+                          {row[column]}
+                          {index === 0 && (
+                            <Badge className="bg-primary/20 text-primary border-primary/30" variant="outline">
+                              Best
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <div className={
+                          column.toLowerCase() === actualSortField.toLowerCase() ? "font-medium" : ""
+                        }>
+                          {formatValue(row[column], column)}
+                        </div>
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ResponsiveTable>
+        
+        {sortedData.length > maxRows && (
+          <div className="flex justify-center mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center gap-1"
+            >
+              {showAll ? (
+                <>
+                  <ChevronUp className="h-4 w-4" /> Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" /> Show All ({sortedData.length} models)
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

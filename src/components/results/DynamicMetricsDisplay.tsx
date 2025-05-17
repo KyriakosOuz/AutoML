@@ -1,12 +1,16 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { PerClassMetric } from '@/types/training';
 
 interface MetricCardProps {
   title: string;
-  value: number | string;
+  value: string | number;
   description?: string;
-  colorClass?: string;
+  isPercentage?: boolean;
 }
 
 interface DynamicMetricsDisplayProps {
@@ -15,241 +19,335 @@ interface DynamicMetricsDisplayProps {
   bestModelDetails?: Record<string, any>;
 }
 
-const formatValue = (value: number | undefined, isPercentage: boolean = false): string => {
+// Helper function for formatting metric values
+const formatMetricValue = (value: number | undefined, decimals: number = 3): string => {
   if (value === undefined) return 'N/A';
-  if (isPercentage) {
-    return `${(value * 100).toFixed(2)}%`;
-  }
-  return value.toFixed(4);
+  return value.toFixed(decimals);
 };
 
-const getMetricColor = (value: number | undefined, isErrorMetric: boolean = false): string => {
-  if (value === undefined) return 'text-gray-400';
+// Helper function to format metric names for display
+const formatMetricName = (key: string): string => {
+  const metricNameMap: Record<string, string> = {
+    'auc': 'AUC',
+    'logloss': 'Log Loss',
+    'aucpr': 'AUC PR',
+    'mean_per_class_error': 'Mean Per Class Error',
+    'accuracy': 'Accuracy',
+    'f1': 'F1 Score',
+    'f1_score': 'F1 Score',
+    'f1-score': 'F1 Score',
+    'precision': 'Precision',
+    'recall': 'Recall',
+    'rmse': 'RMSE',
+    'mse': 'MSE',
+    'mae': 'MAE',
+    'r2': 'R² Score',
+    'specificity': 'Specificity',
+    'mcc': 'MCC',
+  };
 
-  if (isErrorMetric) {
-    // For error metrics (lower is better)
-    if (value <= 0.1) return 'text-green-600';
-    if (value <= 0.3) return 'text-emerald-600';
-    if (value <= 0.5) return 'text-amber-600';
-    return 'text-red-600';
+  return metricNameMap[key] || key.replace(/_/g, ' ').split(' ').map(
+    word => word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+};
+
+// Determine which metrics to show based on task type
+const getMetricsForTaskType = (
+  taskType: string, 
+  metrics: Record<string, any>,
+  bestModelDetails?: Record<string, any>
+): Record<string, number | undefined> => {
+  const isClassification = taskType.includes('classification');
+  const isBinary = taskType.includes('binary');
+  const isMulticlass = taskType.includes('multiclass');
+  const result: Record<string, number | undefined> = {};
+  
+  // Combine metrics from both sources, prioritizing bestModelDetails
+  const combinedMetrics = { ...metrics };
+  if (bestModelDetails) {
+    Object.entries(bestModelDetails).forEach(([key, value]) => {
+      if (typeof value === 'number') {
+        combinedMetrics[key] = value;
+      }
+    });
+  }
+  
+  if (isClassification) {
+    if (isMulticlass) {
+      // For multiclass classification, show only accuracy, precision and recall
+      result.accuracy = combinedMetrics.accuracy;
+      result.precision = combinedMetrics.precision;
+      result.recall = combinedMetrics.recall;
+      // Also include F1 score if we need to show it later
+      if (combinedMetrics['f1-score'] !== undefined) {
+        result['f1-score'] = combinedMetrics['f1-score'];
+      } else if (combinedMetrics.f1_score !== undefined) {
+        result.f1_score = combinedMetrics.f1_score;
+      } else if (combinedMetrics.f1 !== undefined) {
+        result.f1 = combinedMetrics.f1;
+      }
+    } else if (isBinary) {
+      // For binary classification, show only these four metrics
+      result.accuracy = combinedMetrics.accuracy;
+      
+      // Add F1 score if available
+      if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
+        result.f1_score = combinedMetrics.f1_score !== undefined ? 
+          combinedMetrics.f1_score : 
+          (combinedMetrics.f1 !== undefined ? 
+            combinedMetrics.f1 : 
+            combinedMetrics['f1-score']);
+      }
+      
+      // Add precision and recall
+      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+    } else {
+      // Default classification metrics
+      result.accuracy = combinedMetrics.accuracy;
+      result.logloss = combinedMetrics.logloss;
+      result.auc = combinedMetrics.auc;
+      result.aucpr = combinedMetrics.aucpr;
+      result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+      result.rmse = combinedMetrics.rmse;
+      result.mse = combinedMetrics.mse;
+      
+      // Add F1, precision, recall if available
+      if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
+        result.f1_score = combinedMetrics.f1_score !== undefined ? 
+          combinedMetrics.f1_score : 
+          (combinedMetrics.f1 !== undefined ? 
+            combinedMetrics.f1 : 
+            combinedMetrics['f1-score']);
+      }
+      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+    }
   } else {
-    // For performance metrics (higher is better)
-    if (value >= 0.9) return 'text-green-600';
-    if (value >= 0.7) return 'text-emerald-600';
-    if (value >= 0.5) return 'text-amber-600';
-    return 'text-red-600';
+    // Regression metrics
+    result.mae = combinedMetrics.mae;
+    result.rmse = combinedMetrics.rmse;
+    result.mse = combinedMetrics.mse;
+    result.r2 = combinedMetrics.r2;
   }
+  
+  return result;
 };
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, colorClass }) => {
+// Helper function to determine if a metric should be displayed as a percentage
+const isPercentageMetric = (metricName: string): boolean => {
+  return ['accuracy', 'f1', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'aucpr', 'specificity'].includes(metricName.toLowerCase());
+};
+
+// Component to display a confusion matrix
+interface ConfusionMatrixProps {
+  confusionMatrix?: number[][];
+  labels?: string[];
+}
+
+const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ confusionMatrix, labels }) => {
+  if (!confusionMatrix || confusionMatrix.length === 0) return null;
+  
+  // Generate default labels if not provided
+  const matrixLabels = labels || Array.from({ length: confusionMatrix.length }, (_, i) => `Class ${i}`);
+  
   return (
-    <Card className="shadow-sm">
+    <Card className="mt-6">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
+        <CardTitle className="text-base">Confusion Matrix</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${colorClass || ''}`}>
-          {value}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Actual / Predicted</TableHead>
+                {matrixLabels.map((label, idx) => (
+                  <TableHead key={idx}>{label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {confusionMatrix.map((row, rowIdx) => (
+                <TableRow key={rowIdx}>
+                  <TableCell className="font-medium">{matrixLabels[rowIdx]}</TableCell>
+                  {row.map((cell, cellIdx) => (
+                    <TableCell 
+                      key={cellIdx} 
+                      className={rowIdx === cellIdx ? "font-bold bg-primary/10" : ""}
+                    >
+                      {cell}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Get descriptions for metrics
+const getMetricDescription = (metricName: string): string => {
+  const descriptions: Record<string, string> = {
+    'accuracy': 'Overall prediction accuracy',
+    'precision': 'Positive predictive value',
+    'recall': 'Sensitivity/True Positive Rate',
+    'f1_score': 'Harmonic mean of precision and recall',
+    'f1-score': 'Harmonic mean of precision and recall',
+    'auc': 'Area Under the ROC Curve',
+    'aucpr': 'Area Under the Precision-Recall Curve',
+    'logloss': 'Logarithmic loss',
+    'rmse': 'Root Mean Squared Error',
+    'mse': 'Mean Squared Error',
+    'mae': 'Mean Absolute Error',
+    'r2': 'Coefficient of determination',
+    'specificity': 'True Negative Rate',
+    'mcc': 'Matthews Correlation Coefficient',
+  };
+  
+  return descriptions[metricName.toLowerCase()] || '';
+};
+
+// New component to display per-class metrics
+interface PerClassMetricsTableProps {
+  perClassMetrics: Record<string, PerClassMetric>;
+}
+
+const PerClassMetricsTable: React.FC<PerClassMetricsTableProps> = ({ perClassMetrics }) => {
+  if (!perClassMetrics || Object.keys(perClassMetrics).length === 0) return null;
+  
+  return (
+    <Card className="mt-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Per-Class Metrics</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class</TableHead>
+                <TableHead>Precision</TableHead>
+                <TableHead>Recall</TableHead>
+                <TableHead>F1 Score</TableHead>
+                <TableHead>Support</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(perClassMetrics).map(([className, metrics]) => (
+                <TableRow key={className}>
+                  <TableCell className="font-medium">{className}</TableCell>
+                  <TableCell>{(metrics.precision * 100).toFixed(2)}%</TableCell>
+                  <TableCell>{(metrics.recall * 100).toFixed(2)}%</TableCell>
+                  <TableCell>
+                    {(metrics['f1-score'] !== undefined ? 
+                      metrics['f1-score'] : metrics.f1_score) !== undefined ? 
+                      ((metrics['f1-score'] !== undefined ? 
+                        metrics['f1-score'] : metrics.f1_score) * 100).toFixed(2) + '%' : 'N/A'}
+                  </TableCell>
+                  <TableCell>{metrics.support}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPercentage = false }) => {
+  // Format the display value
+  let displayValue = typeof value === 'number' 
+    ? isPercentage 
+      ? `${(value * 100).toFixed(2)}%` 
+      : value.toFixed(4)
+    : value;
+  
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center">
+          {title}
+          {description && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="ml-1">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">{description}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">
+          {displayValue}
         </div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <div className="text-sm text-muted-foreground mt-1">
+            {description}
+          </div>
         )}
       </CardContent>
     </Card>
   );
 };
 
-const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({ metrics, taskType, bestModelDetails }) => {
-  // Special multiclass metrics from H2O
-  const h2oMulticlassMetrics = useMemo(() => {
-    return {
-      mean_per_class_error: metrics.mean_per_class_error,
-      logloss: metrics.logloss,
-      rmse: metrics.rmse,
-      mse: metrics.mse
-    };
-  }, [metrics]);
+const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({ 
+  metrics, 
+  taskType,
+  bestModelDetails 
+}) => {
+  const isClassification = taskType.includes('classification');
+  const isMulticlass = taskType.includes('multiclass');
+  const taskSpecificMetrics = getMetricsForTaskType(taskType, metrics, bestModelDetails);
   
-  const isH2OMulticlass = useMemo(() => {
-    return taskType?.includes('multiclass') && metrics?.mean_per_class_error !== undefined;
-  }, [metrics, taskType]);
-
-  const isH2OBinary = useMemo(() => {
-    return taskType?.includes('binary') && bestModelDetails?.auc !== undefined;
-  }, [bestModelDetails, taskType]);
-
-  const isClassification = taskType?.includes('classification');
-  const isRegression = taskType?.includes('regression');
-
-  // Determine primary metrics based on task type
-  const primaryMetrics = useMemo(() => {
-    if (isH2OBinary) {
-      return [
-        {
-          title: 'AUC',
-          value: formatValue(bestModelDetails?.auc, true),
-          colorClass: getMetricColor(bestModelDetails?.auc),
-          description: 'Area Under ROC Curve'
-        },
-        {
-          title: 'Accuracy',
-          value: formatValue(bestModelDetails?.accuracy, true),
-          colorClass: getMetricColor(bestModelDetails?.accuracy),
-          description: 'Overall prediction accuracy'
-        },
-        {
-          title: 'F1 Score',
-          value: formatValue(bestModelDetails?.f1, true),
-          colorClass: getMetricColor(bestModelDetails?.f1),
-          description: 'Harmonic mean of precision and recall'
-        },
-        {
-          title: 'Precision',
-          value: formatValue(bestModelDetails?.precision, true),
-          colorClass: getMetricColor(bestModelDetails?.precision),
-          description: 'Positive predictive value'
-        },
-        {
-          title: 'Recall',
-          value: formatValue(bestModelDetails?.recall, true),
-          colorClass: getMetricColor(bestModelDetails?.recall),
-          description: 'True positive rate'
-        },
-        {
-          title: 'Specificity',
-          value: formatValue(bestModelDetails?.specificity, true),
-          colorClass: getMetricColor(bestModelDetails?.specificity),
-          description: 'True negative rate'
-        }
-      ];
-    }
-
-    if (isH2OMulticlass) {
-      return [
-        {
-          title: 'Mean Per Class Error',
-          value: formatValue(h2oMulticlassMetrics.mean_per_class_error, true),
-          colorClass: getMetricColor(1 - h2oMulticlassMetrics.mean_per_class_error),
-          description: 'Average error across all classes'
-        },
-        {
-          title: 'Log Loss',
-          value: formatValue(h2oMulticlassMetrics.logloss),
-          colorClass: getMetricColor(h2oMulticlassMetrics.logloss, true),
-          description: 'Logarithmic loss (lower is better)'
-        },
-        {
-          title: 'RMSE',
-          value: formatValue(h2oMulticlassMetrics.rmse),
-          colorClass: getMetricColor(h2oMulticlassMetrics.rmse, true),
-          description: 'Root mean squared error'
-        },
-        {
-          title: 'MSE',
-          value: formatValue(h2oMulticlassMetrics.mse),
-          colorClass: getMetricColor(h2oMulticlassMetrics.mse, true),
-          description: 'Mean squared error'
-        }
-      ];
-    }
-
-    if (isClassification) {
-      const f1Score = metrics.f1 || metrics.f1_score || metrics['f1-score'];
-      return [
-        {
-          title: 'Accuracy',
-          value: formatValue(metrics.accuracy, true),
-          colorClass: getMetricColor(metrics.accuracy),
-          description: 'Overall prediction accuracy'
-        },
-        {
-          title: 'F1 Score',
-          value: formatValue(f1Score, true),
-          colorClass: getMetricColor(f1Score),
-          description: 'Harmonic mean of precision and recall'
-        },
-        {
-          title: 'Precision',
-          value: formatValue(metrics.precision, true),
-          colorClass: getMetricColor(metrics.precision),
-          description: 'Positive predictive value'
-        },
-        {
-          title: 'Recall',
-          value: formatValue(metrics.recall, true),
-          colorClass: getMetricColor(metrics.recall),
-          description: 'True positive rate / Sensitivity'
-        }
-      ];
-    }
-
-    if (isRegression) {
-      return [
-        {
-          title: 'R² Score',
-          value: formatValue(metrics.r2 || metrics.r2_score, true),
-          colorClass: getMetricColor(metrics.r2 || metrics.r2_score),
-          description: 'Coefficient of determination'
-        },
-        {
-          title: 'MAE',
-          value: formatValue(metrics.mae),
-          colorClass: getMetricColor(metrics.mae, true),
-          description: 'Mean Absolute Error (lower is better)'
-        },
-        {
-          title: 'RMSE',
-          value: formatValue(metrics.rmse),
-          colorClass: getMetricColor(metrics.rmse, true),
-          description: 'Root Mean Squared Error (lower is better)'
-        }
-      ];
-    }
-
-    // Default case: display any available metrics
-    return Object.entries(metrics)
-      .filter(([key, value]) => typeof value === 'number' && !key.includes('_'))
-      .map(([key, value]) => {
-        const isErrorMetric = ['loss', 'error', 'mse', 'rmse', 'mae'].some(
-          term => key.toLowerCase().includes(term)
-        );
-        
-        return {
-          title: key
-            .replace(/_/g, ' ')
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' '),
-          value: formatValue(value as number, !isErrorMetric && value >= 0 && value <= 1),
-          colorClass: isErrorMetric 
-            ? getMetricColor(value as number, true) 
-            : getMetricColor(value as number),
-          description: ''
-        };
-      });
-  }, [metrics, taskType, bestModelDetails, h2oMulticlassMetrics, isH2OBinary, isH2OMulticlass, isClassification, isRegression]);
-
-  if (Object.keys(metrics).length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-muted-foreground">No metrics data available.</p>
-      </div>
-    );
-  }
-
+  // Get confusion matrix if available
+  const confusionMatrix = metrics.confusion_matrix || bestModelDetails?.confusion_matrix;
+  
+  // Check for per_class metrics
+  const perClassMetrics = metrics.per_class || (metrics.metrics && metrics.metrics.per_class);
+  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {primaryMetrics.map((metric, index) => (
-          <MetricCard
-            key={index}
-            title={metric.title}
-            value={metric.value}
-            description={metric.description}
-            colorClass={metric.colorClass}
-          />
-        ))}
+        {Object.entries(taskSpecificMetrics).map(([key, value]) => {
+          if (value === undefined) return null;
+          
+          // Get description and percentage formatting
+          const isPercent = isPercentageMetric(key);
+          const description = getMetricDescription(key);
+          
+          return (
+            <MetricCard
+              key={key}
+              title={formatMetricName(key)}
+              value={value}
+              description={description}
+              isPercentage={isPercent}
+            />
+          );
+        })}
       </div>
+      
+      {/* Add Per-Class Metrics Table for multiclass classification */}
+      {isMulticlass && perClassMetrics && (
+        <PerClassMetricsTable perClassMetrics={perClassMetrics} />
+      )}
+      
+      {isClassification && confusionMatrix && (
+        <ConfusionMatrix 
+          confusionMatrix={confusionMatrix} 
+          labels={metrics.class_labels || bestModelDetails?.class_labels}
+        />
+      )}
     </div>
   );
 };
