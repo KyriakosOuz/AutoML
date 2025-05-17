@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -31,7 +30,8 @@ import {
   X,
   Sliders,
   Table as TableIcon,
-  FileText as FileTextIcon
+  FileText as FileTextIcon,
+  Filter
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -42,6 +42,13 @@ import TuneModelModal from './TuneModelModal';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 interface ExperimentDetailDrawerProps {
   experimentId: string | null;
@@ -54,6 +61,8 @@ interface VisualizationFile {
   file_url: string;
   file_type: string;
   file_name?: string;
+  class_label?: string;
+  category?: string;
 }
 
 interface ModelFile {
@@ -75,6 +84,11 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isTuneModalOpen, setIsTuneModalOpen] = useState(false);
   const { toast } = useToast();
+  
+  // New states for visualization filtering
+  const [visualSearchTerm, setVisualSearchTerm] = useState<string>('');
+  const [selectedVisualCategories, setSelectedVisualCategories] = useState<string[]>([]);
+  const [availableVisualCategories, setAvailableVisualCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (isOpen && experimentId) {
@@ -85,6 +99,17 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       setResults(null);
     }
   }, [experimentId, isOpen]);
+
+  useEffect(() => {
+    if (results) {
+      // Extract categories from visualization files
+      const categories = getVisualizationFiles()
+        .map(file => file.category || getCategoryFromFileType(file.file_type))
+        .filter((category, index, self) => category && self.indexOf(category) === index);
+      
+      setAvailableVisualCategories(categories as string[]);
+    }
+  }, [results]);
 
   const fetchExperimentDetails = async () => {
     if (!experimentId) return;
@@ -117,20 +142,68 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
 
+  // Helper function to categorize visualization files
+  const getCategoryFromFileType = (fileType: string): string => {
+    fileType = fileType.toLowerCase();
+    if (fileType.includes('confusion_matrix')) return 'Confusion Matrix';
+    if (fileType.includes('roc_curve') || fileType.includes('auc')) return 'ROC Curves';
+    if (fileType.includes('precision_recall') || fileType.includes('pr_curve')) return 'Precision-Recall';
+    if (fileType.includes('feature_importance') || fileType.includes('importance')) return 'Feature Importance';
+    if (fileType.includes('learning_curve')) return 'Learning Curves';
+    if (fileType.includes('shap')) return 'SHAP Values';
+    if (fileType.includes('calibration')) return 'Calibration';
+    if (fileType.includes('residual')) return 'Residual Analysis';
+    if (fileType.includes('ice_age') || fileType.includes('ice age')) return 'ICE Plots';
+    if (fileType.includes('partial_dependence') || fileType.includes('pdp')) return 'Partial Dependence';
+    if (fileType.includes('ice_')) return 'ICE Plots';
+    if (fileType.includes('distribution')) return 'Distributions';
+    return 'Other';
+  };
+
+  // Extract class label from file name if possible
+  const getClassLabelFromFileName = (fileName: string | undefined): string | undefined => {
+    if (!fileName) return undefined;
+    
+    // Check for common class label patterns in filenames
+    const iceAgeMatch = fileName.match(/ice\s*age\s*(\d+)/i);
+    if (iceAgeMatch) return `Ice Age ${iceAgeMatch[1]}`;
+    
+    const classMatch = fileName.match(/class[_\s-]*(\d+|[a-z]+)/i);
+    if (classMatch) return `Class ${classMatch[1]}`;
+    
+    return undefined;
+  };
+
   // Helper function to get visualization files from results
   const getVisualizationFiles = (): VisualizationFile[] => {
     if (!results || !results.files) return [];
     
     // Filter files to only include visualization types
-    const visualTypes = ['confusion_matrix', 'roc_curve', 'precision_recall', 'feature_importance', 'learning_curve', 'shap', 'partial_dependence', 'ice', 'residuals', 'calibration'];
+    const visualTypes = [
+      'confusion_matrix', 'roc_curve', 'precision_recall', 'feature_importance', 
+      'learning_curve', 'shap', 'partial_dependence', 'ice', 'residuals', 'calibration',
+      'chart', 'plot', 'graph', 'visualization', 'distribution', 'ice_age'
+    ];
     
-    return (results.files || [])
-      .filter(file => visualTypes.some(type => file.file_type?.toLowerCase().includes(type)))
-      .map(file => ({
-        file_url: file.file_url,
-        file_type: file.file_type || 'visualization',
-        file_name: file.file_name
-      }));
+    const files = (results.files || [])
+      .filter(file => visualTypes.some(type => 
+        file.file_type?.toLowerCase().includes(type) || 
+        (file.file_name && file.file_name.toLowerCase().includes(type))
+      ))
+      .map(file => {
+        const category = getCategoryFromFileType(file.file_type || file.file_name || '');
+        const classLabel = getClassLabelFromFileName(file.file_name);
+        
+        return {
+          file_url: file.file_url,
+          file_type: file.file_type || 'visualization',
+          file_name: file.file_name,
+          category,
+          class_label: classLabel
+        };
+      });
+      
+    return files;
   };
   
   // Helper function to get model file from results
@@ -280,6 +353,24 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       default:
         return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     }
+  };
+  
+  // Filter visualizations based on search and categories
+  const getFilteredVisualizations = () => {
+    const allVisuals = getVisualizationFiles();
+    
+    return allVisuals.filter(visual => {
+      const searchMatch = !visualSearchTerm || 
+        visual.file_name?.toLowerCase().includes(visualSearchTerm.toLowerCase()) ||
+        visual.file_type?.toLowerCase().includes(visualSearchTerm.toLowerCase()) ||
+        visual.class_label?.toLowerCase().includes(visualSearchTerm.toLowerCase()) ||
+        visual.category?.toLowerCase().includes(visualSearchTerm.toLowerCase());
+      
+      const categoryMatch = selectedVisualCategories.length === 0 || 
+        (visual.category && selectedVisualCategories.includes(visual.category));
+      
+      return searchMatch && categoryMatch;
+    });
   };
   
   const renderLoadingState = () => (
@@ -646,6 +737,35 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                           </Card>
                         )}
                         
+                        {/* H2O Multiclass specific metrics */}
+                        {isMulticlassClassification && results.metrics?.mse !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">MSE</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {formatMetric(results.metrics.mse)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Mean Squared Error</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {isMulticlassClassification && results.metrics?.rmse !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">RMSE</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {formatMetric(results.metrics.rmse)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Root Mean Squared Error</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
                         {results.metrics?.logloss !== undefined && (
                           <Card className="bg-muted/40">
                             <CardHeader className="py-3">
@@ -756,34 +876,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                   </TableRow>
                                 </TableBody>
                               </Table>
-                            </CardContent>
-                          </Card>
-                        )}
-                        
-                        {results.metrics?.mse !== undefined && (
-                          <Card className="bg-muted/40">
-                            <CardHeader className="py-3">
-                              <CardTitle className="text-sm">MSE</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">
-                                {results.metrics.mse.toFixed(4)}
-                              </div>
-                              <p className="text-xs text-muted-foreground">Mean Squared Error</p>
-                            </CardContent>
-                          </Card>
-                        )}
-                        
-                        {results.metrics?.rmse !== undefined && (
-                          <Card className="bg-muted/40">
-                            <CardHeader className="py-3">
-                              <CardTitle className="text-sm">RMSE</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">
-                                {results.metrics.rmse.toFixed(4)}
-                              </div>
-                              <p className="text-xs text-muted-foreground">Root Mean Squared Error</p>
                             </CardContent>
                           </Card>
                         )}
@@ -900,11 +992,65 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                   <CardContent>
                     {getVisualizationFiles().length > 0 ? (
                       <div className="space-y-6">
-                        {getVisualizationFiles().length > 0 && (
-                          <div>
-                            <h3 className="text-lg font-medium mb-3">Charts & Plots</h3>
+                        {/* Visualization filtering UI */}
+                        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                          <div className="relative w-full">
+                            <Input
+                              placeholder="Search visualizations..."
+                              value={visualSearchTerm}
+                              onChange={(e) => setVisualSearchTerm(e.target.value)}
+                              className="h-9 pl-8"
+                            />
+                            <div className="absolute left-2.5 top-2.5 text-muted-foreground">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                              </svg>
+                            </div>
+                          </div>
+                          
+                          {availableVisualCategories.length > 0 && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-9">
+                                  <Filter className="h-4 w-4 mr-2" />
+                                  Filter
+                                  {selectedVisualCategories.length > 0 && (
+                                    <Badge variant="secondary" className="ml-2 px-1 py-0">
+                                      {selectedVisualCategories.length}
+                                    </Badge>
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-56">
+                                {availableVisualCategories.map(category => (
+                                  <DropdownMenuCheckboxItem
+                                    key={category}
+                                    checked={selectedVisualCategories.includes(category)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedVisualCategories([...selectedVisualCategories, category]);
+                                      } else {
+                                        setSelectedVisualCategories(
+                                          selectedVisualCategories.filter(c => c !== category)
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    {category}
+                                  </DropdownMenuCheckboxItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+
+                        {/* Filtered visualizations */}
+                        <div>
+                          <h3 className="text-lg font-medium mb-3">Charts & Plots</h3>
+                          {getFilteredVisualizations().length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              {getVisualizationFiles().map((file, index) => (
+                              {getFilteredVisualizations().map((file, index) => (
                                 <div 
                                   key={index}
                                   className="overflow-hidden rounded-md border cursor-pointer hover:border-primary/50 transition-colors"
@@ -922,14 +1068,23 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                   </div>
                                   <div className="p-2">
                                     <p className="text-xs font-medium capitalize">
-                                      {file.file_type.replace(/_/g, ' ')}
+                                      {file.class_label || file.category || file.file_type.replace(/_/g, ' ')}
                                     </p>
+                                    {file.class_label && file.category && file.category !== file.class_label && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {file.category}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="py-8 text-center text-muted-foreground">
+                              No matching visualizations found
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -1152,12 +1307,30 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       {selectedImage && (
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
           <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                Visualization Detail
+              </DialogTitle>
+            </DialogHeader>
             <div className="relative">
               <img 
                 src={selectedImage} 
                 alt="Visualization"
                 className="w-full h-auto"
               />
+              <Button 
+                size="sm"
+                className="absolute top-2 right-2"
+                variant="secondary"
+                onClick={() => {
+                  const filename = selectedImage.split('/').pop() || 'visualization.png';
+                  handleFileDownload(selectedImage, filename);
+                }}
+              >
+                <DownloadIcon className="h-4 w-4 mr-2" />
+                Download
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
