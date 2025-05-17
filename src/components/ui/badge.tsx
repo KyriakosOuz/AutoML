@@ -17,6 +17,10 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
         metric: "border-transparent bg-primary text-primary-foreground hover:bg-primary/90 text-[10px] py-0 px-1.5",
+        // ✅ NEW: Add specific badge variants for training types
+        automl: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200/80 text-[10px] py-0 px-1.5",
+        custom: "border-transparent bg-orange-100 text-orange-800 hover:bg-orange-200/80 text-[10px] py-0 px-1.5",
+        prediction: "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-200/80 text-[10px] py-0 px-1.5",
       },
     },
     defaultVariants: {

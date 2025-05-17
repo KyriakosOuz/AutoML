@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
@@ -26,6 +25,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     setIsTraining, 
     setExperimentStatus, 
     lastTrainingType,
+    setLastTrainingType, // ✅ NEW: Get the setter for lastTrainingType
     experimentStatus,
     resultsLoaded,
     isTraining
@@ -43,6 +43,38 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
+  // ✅ NEW: Update lastTrainingType when results arrive
+  useEffect(() => {
+    if (data) {
+      // Determine training type from results
+      let detectedType = 'automl';
+      if (data.training_type) {
+        detectedType = data.training_type;
+      } else if (data.algorithm) {
+        detectedType = 'custom';
+      } else if (!data.automl_engine) {
+        detectedType = 'custom'; // If no automl_engine, likely custom
+      }
+      
+      if (detectedType !== lastTrainingType) {
+        console.log("[ExperimentResultsView] Updating lastTrainingType based on results:", {
+          from: lastTrainingType,
+          to: detectedType,
+          modelName: data.model_display_name,
+          trainingType: data.training_type,
+          algorithm: data.algorithm,
+          automlEngine: data.automl_engine
+        });
+        
+        // Update lastTrainingType in context
+        setLastTrainingType(detectedType);
+        
+        // Also update in localStorage for persistence
+        localStorage.setItem('lastTrainingType', detectedType);
+      }
+    }
+  }, [data, lastTrainingType, setLastTrainingType]);
+  
   // Log key state changes and include model_display_name
   useEffect(() => {
     console.log("[ExperimentResultsView] Component mounted or updated:", { 
@@ -55,7 +87,9 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       modelName: data?.model_display_name,
       filesCount: data?.files?.length,
       filesTypes: data?.files?.map(f => f.file_type),
-      metrics: data?.metrics ? Object.keys(data.metrics) : []
+      metrics: data?.metrics ? Object.keys(data.metrics) : [],
+      trainingType: data?.training_type,
+      algorithm: data?.algorithm
     });
   }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
   
@@ -94,7 +128,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         hasPerClass: data.metrics?.per_class ? Object.keys(data.metrics.per_class).length : 0
       });
       
-      setLocalLoadingState(false); // ✅ Always safe to update this
+      setLocalLoadingState(false); // �� Always safe to update this
       
       // ✅ Set other global flags ONLY if not already correct
       if (!resultsLoaded) {
@@ -117,9 +151,28 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     }
   }, [data, isLoading, error, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus, resultsLoaded, isTraining]);
 
-  // Handler for the "Run New Experiment" button
+  // Handler for the "Run New Experiment" button - ✅ UPDATED to respect training type
   const handleReset = () => {
-    console.log("[ExperimentResultsView] Resetting training state");
+    // Determine most accurate training type before reset
+    let trainingType = 'automl';
+    
+    if (data?.training_type) {
+      trainingType = data.training_type;
+    } else if (data?.algorithm) {
+      trainingType = 'custom';
+    } else if (lastTrainingType) {
+      trainingType = lastTrainingType;
+    }
+    
+    console.log("[ExperimentResultsView] Resetting training state with type:", trainingType);
+    
+    // Update lastTrainingType in context before reset
+    setLastTrainingType(trainingType);
+    
+    // Save to localStorage
+    localStorage.setItem('lastTrainingType', trainingType);
+    
+    // Reset state
     resetTrainingState();
   };
 

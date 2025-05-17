@@ -90,7 +90,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     }
   };
 
-  // Handler for the "Run New Experiment" button
+  // Handler for the "Run New Experiment" button - FIX: Respect training type
   const handleReset = () => {
     console.log("[ExperimentResultsContainer] Resetting training state and stopping all polling");
     
@@ -100,8 +100,9 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     // Then reset the training state
     resetTrainingState();
     
-    // Set active tab to 'automl' to match behavior of Reset Training button
-    setActiveTab('automl');
+    // ✅ FIXED: Respect the current training type rather than forcing 'automl'
+    const trainingType = determineTrainingType();
+    setActiveTab(trainingType === 'custom' ? 'custom' : 'automl');
     
     // If an external onReset was provided, call it as well
     if (onReset) {

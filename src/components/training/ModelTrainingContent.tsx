@@ -40,21 +40,50 @@ const ModelTrainingContent: React.FC = () => {
   // Debug state to track tab switching attempts
   const [autoSwitchAttempts, setAutoSwitchAttempts] = useState(0);
   
-  // ✅ NEW: Add currentTrainingType state to "lock in" the training type when a run starts
+  // Add currentTrainingType state to "lock in" the training type when a run starts
   const [currentTrainingType, setCurrentTrainingType] = useState<string | null>(null);
   
-  // ✅ NEW: Effect to manage currentTrainingType based on training state
+  // ✅ NEW: Initialize from localStorage on mount
+  useEffect(() => {
+    const savedTrainingType = localStorage.getItem('lastTrainingType');
+    if (savedTrainingType && !currentTrainingType) {
+      console.log("ModelTrainingContent - Restored training type from localStorage:", savedTrainingType);
+      setCurrentTrainingType(savedTrainingType);
+    }
+  }, []);
+
+  // ✅ NEW: Save lastTrainingType to localStorage
+  useEffect(() => {
+    if (lastTrainingType) {
+      console.log("ModelTrainingContent - Saving training type to localStorage:", lastTrainingType);
+      localStorage.setItem('lastTrainingType', lastTrainingType);
+    }
+  }, [lastTrainingType]);
+  
+  // Effect to manage currentTrainingType based on training state
   useEffect(() => {
     if (isTraining && activeExperimentId) {
       console.log("ModelTrainingContent - Locking in training type:", lastTrainingType);
       setCurrentTrainingType(lastTrainingType); // Lock it in during training
     }
     if (!isTraining && !activeExperimentId) {
-      console.log("ModelTrainingContent - Resetting current training type");
-      setCurrentTrainingType(null); // Reset after training ends
+      // Don't reset currentTrainingType here - we want to preserve it
+      // This allows the badge to remain accurate even after an experiment completes
+      // setCurrentTrainingType(null); // REMOVED: Don't reset after training ends
     }
   }, [isTraining, activeExperimentId, lastTrainingType]);
   
+  // ✅ NEW: Set training type from results when they arrive
+  useEffect(() => {
+    if (experimentResults?.training_type) {
+      console.log("ModelTrainingContent - Setting training type from results:", experimentResults.training_type);
+      setCurrentTrainingType(experimentResults.training_type);
+    } else if (experimentResults?.algorithm) {
+      console.log("ModelTrainingContent - Setting training type from algorithm:", 'custom');
+      setCurrentTrainingType('custom');
+    }
+  }, [experimentResults]);
+
   // Detailed logging for relevant state changes
   useEffect(() => {
     console.log("ModelTrainingContent - State update:", { 
@@ -64,7 +93,7 @@ const ModelTrainingContent: React.FC = () => {
       isLoadingResults, 
       resultsLoaded,
       lastTrainingType,
-      currentTrainingType, // ✅ ADDED: Log the new state
+      currentTrainingType,
       showResultsAndPredict: showResultsAndPredict(),
       activeTab
     });
@@ -270,17 +299,23 @@ const ModelTrainingContent: React.FC = () => {
     return '';
   };
 
-  // Handle reset button click
+  // Handle reset button click - ✅ UPDATED to preserve training type
   const handleReset = () => {
     console.log("Reset button clicked, stopping polling and resetting training state");
+    // Capture current training type before reset
+    const trainingType = currentTrainingType || lastTrainingType || 'automl';
+    
     stopPolling(); // First stop any active polling
     resetTrainingState(); // Then reset the training state
-    setCurrentTrainingType(null); // ✅ ADDED: Reset currentTrainingType on reset
     
-    // ✅ FIXED: Don't force switch back to automl - use more intelligent default
+    // Don't reset currentTrainingType to preserve the type - REMOVED
+    // setCurrentTrainingType(null);
+    
+    // Don't force switch back to automl - use more intelligent default
     // Let the activeTab remain as is, unless it's a results/predict tab
     if (activeTab === 'results' || activeTab === 'predict') {
-      setActiveTab('automl');
+      // ✅ FIXED: Set tab based on training type instead of always 'automl'
+      setActiveTab(trainingType === 'custom' ? 'custom' : 'automl');
     }
     setAutoSwitchAttempts(0); // Reset the auto switch counter
   };
@@ -289,13 +324,22 @@ const ModelTrainingContent: React.FC = () => {
   useEffect(() => {
     console.log("ModelTrainingContent - Badge display:", {
       lastTrainingType,
-      currentTrainingType,  // ✅ ADDED: Include the new state in debug logs
+      currentTrainingType,
       activeTab,
       isPredicting,
       showingAutoMLBadge: currentTrainingType === 'automl' && !isPredicting,
       showingCustomBadge: currentTrainingType === 'custom' && !isPredicting
     });
   }, [lastTrainingType, currentTrainingType, activeTab, isPredicting]);
+
+  // ✅ NEW: Determine the most accurate training type to display
+  const getDisplayTrainingType = () => {
+    // Priority order: experimentResults > currentTrainingType > lastTrainingType
+    if (experimentResults?.training_type) return experimentResults.training_type;
+    if (experimentResults?.algorithm) return 'custom';
+    if (currentTrainingType) return currentTrainingType;
+    return lastTrainingType || 'automl';
+  };
 
   return (
     <div className="space-y-6">
@@ -325,11 +369,11 @@ const ModelTrainingContent: React.FC = () => {
                 {isPredicting ? "Generating prediction..." : getStatusMessage()}
               </span>
               
-              {/* ✅ UPDATED: Use currentTrainingType instead of lastTrainingType for badges */}
-              {currentTrainingType === 'automl' && !isPredicting && (
+              {/* ✅ UPDATED: Use getDisplayTrainingType for badges */}
+              {getDisplayTrainingType() === 'automl' && !isPredicting && (
                 <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AutoML</span>
               )}
-              {currentTrainingType === 'custom' && !isPredicting && (
+              {getDisplayTrainingType() === 'custom' && !isPredicting && (
                 <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Custom</span>
               )}
               {isPredicting && (
@@ -347,12 +391,12 @@ const ModelTrainingContent: React.FC = () => {
         </Alert>
       )}
 
-      {/* Add info message when viewing existing experiment results - updated to use currentTrainingType */}
+      {/* Add info message when viewing existing experiment results - updated to use getDisplayTrainingType */}
       {activeExperimentId && experimentResults && resultsLoaded && !isProcessing && !isLoadingResults && (
         <Alert variant="info" className="mb-4">
           <Info className="h-4 w-4 text-blue-500 mr-2" />
           <AlertDescription className="text-sm">
-            Viewing results for {currentTrainingType === 'automl' ? 
+            Viewing results for {getDisplayTrainingType() === 'automl' ? 
               <span className="font-medium">AutoML</span> : 
               <span className="font-medium">Custom</span>} experiment <strong>{experimentResults.experiment_name || activeExperimentId.substring(0, 8)}</strong>
             {experimentResults.algorithm && ` using ${experimentResults.algorithm}`}

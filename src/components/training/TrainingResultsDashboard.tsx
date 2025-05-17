@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, Award, PieChart } from 'lucide-react';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
 import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 interface TrainingResultsDashboardProps {
   onReset: () => void;
@@ -16,11 +17,23 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
     activeExperimentId, 
     experimentStatus,
     error,
-    resetTrainingState
+    resetTrainingState,
+    lastTrainingType,
+    experimentResults
   } = useTraining();
+
+  // ✅ NEW: Determine the most accurate training type to display
+  const getTrainingType = () => {
+    if (experimentResults?.training_type) return experimentResults.training_type;
+    if (experimentResults?.algorithm) return 'custom';
+    return lastTrainingType || 'automl';
+  };
 
   // A proper reset handler that uses the training context
   const handleReset = () => {
+    // Save current training type before reset
+    const currentType = getTrainingType();
+    
     // Call the provided onReset (for any parent component handlers)
     if (onReset) {
       onReset();
@@ -28,6 +41,9 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
     
     // Also call the training context resetTrainingState
     resetTrainingState();
+    
+    // Store the training type in localStorage for persistence
+    localStorage.setItem('lastTrainingType', currentType);
   };
 
   if (error) {
@@ -77,8 +93,20 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
     );
   }
 
+  const trainingType = getTrainingType();
+
   return (
     <div className="space-y-4">
+      {/* ✅ NEW: Display training type badge */}
+      <div className="flex justify-end">
+        <Badge 
+          variant={trainingType === 'custom' ? 'custom' : 'automl'}
+          className="text-xs"
+        >
+          {trainingType === 'custom' ? 'Custom Training' : 'AutoML'}
+        </Badge>
+      </div>
+      
       <ExperimentResultsContainer 
         experimentId={activeExperimentId}
         status={experimentStatus}
