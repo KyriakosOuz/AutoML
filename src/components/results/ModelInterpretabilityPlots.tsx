@@ -8,6 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface PlotMetadata {
   plot_type: string;
@@ -26,6 +35,10 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pdp');
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
@@ -129,6 +142,84 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       return plotsData.icePlots.filter(plot => plot.feature === activeFeature);
     }
   }, [activeFeature, activeTab, plotsData]);
+
+  // All plots for pagination
+  const allPlots = useMemo(() => {
+    return [...plotsData.pdpPlots, ...plotsData.icePlots]
+      .sort((a, b) => {
+        // Sort first by feature
+        if (a.feature < b.feature) return -1;
+        if (a.feature > b.feature) return 1;
+        
+        // Then by plot type
+        if (a.plot_type < b.plot_type) return -1;
+        if (a.plot_type > b.plot_type) return 1;
+        
+        // Then by class_id
+        return a.class_id - b.class_id;
+      });
+  }, [plotsData.pdpPlots, plotsData.icePlots]);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(allPlots.length / itemsPerPage);
+  
+  // Get current page items
+  const currentItems = allPlots.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages are less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Always include first page
+      pageNumbers.push(1);
+      
+      // Calculate start and end of middle pages
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if at boundaries
+      if (currentPage <= 2) {
+        endPage = 3;
+      } else if (currentPage >= totalPages - 1) {
+        startPage = totalPages - 2;
+      }
+      
+      // Add ellipsis if needed
+      if (startPage > 2) {
+        pageNumbers.push(-1); // -1 represents ellipsis
+      }
+      
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (endPage < totalPages - 1) {
+        pageNumbers.push(-2); // -2 represents ellipsis
+      }
+      
+      // Always include last page
+      pageNumbers.push(totalPages);
+    }
+    
+    return pageNumbers;
+  };
 
   if (plotsData.features.length === 0) {
     return (
@@ -516,52 +607,84 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...plotsData.pdpPlots, ...plotsData.icePlots]
-                      .sort((a, b) => {
-                        // Sort first by feature
-                        if (a.feature < b.feature) return -1;
-                        if (a.feature > b.feature) return 1;
-                        
-                        // Then by plot type
-                        if (a.plot_type < b.plot_type) return -1;
-                        if (a.plot_type > b.plot_type) return 1;
-                        
-                        // Then by class_id
-                        return a.class_id - b.class_id;
-                      })
-                      .map((plot, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {plot.plot_type === 'pdp' ? 'PDP' : 'ICE'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{plot.feature}</TableCell>
-                          <TableCell>{plot.class_id}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" asChild>
-                              <a 
-                                href={plot.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ZoomIn className="h-4 w-4" />
-                              </a>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild>
-                              <a 
-                                href={plot.file_url}
-                                download
-                              >
-                                <Download className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {currentItems.map((plot, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {plot.plot_type === 'pdp' ? 'PDP' : 'ICE'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{plot.feature}</TableCell>
+                        <TableCell>{plot.class_id}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <a 
+                              href={plot.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ZoomIn className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a 
+                              href={plot.file_url}
+                              download
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="py-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {getPageNumbers().map((pageNum, index) => {
+                        if (pageNum < 0) {
+                          return (
+                            <PaginationItem key={`ellipsis-${index}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              isActive={pageNum === currentPage}
+                              onClick={() => handlePageChange(pageNum)}
+                              className="cursor-pointer"
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
