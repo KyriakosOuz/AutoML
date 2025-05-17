@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -70,6 +71,37 @@ interface ModelFile {
   file_type: string;
   file_name?: string;
 }
+
+// Helper function to categorize visualization files based on their type or name
+const getCategoryFromFileType = (fileType: string): string => {
+  const lowerType = fileType.toLowerCase();
+  
+  if (lowerType.includes('confusion_matrix')) {
+    return 'Confusion Matrix';
+  } else if (lowerType.includes('roc') || lowerType.includes('auc')) {
+    return 'ROC Curve';
+  } else if (lowerType.includes('precision_recall')) {
+    return 'Precision-Recall';
+  } else if (lowerType.includes('feature') && lowerType.includes('importance')) {
+    return 'Feature Importance';
+  } else if (lowerType.includes('learning_curve')) {
+    return 'Learning Curve';
+  } else if (lowerType.includes('shap')) {
+    return 'SHAP Values';
+  } else if (lowerType.includes('partial_dependence') || lowerType.includes('pd_plot')) {
+    return 'Partial Dependence';
+  } else if (lowerType.includes('ice') || lowerType.includes('individual_conditional')) {
+    return 'ICE Plots';
+  } else if (lowerType.includes('residual')) {
+    return 'Residual Analysis';
+  } else if (lowerType.includes('calibration')) {
+    return 'Calibration Plot';
+  } else if (lowerType.includes('class_distribution')) {
+    return 'Class Distribution';
+  } else {
+    return 'Other Visualization';
+  }
+};
 
 const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   experimentId,
@@ -490,3 +522,4 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
 };
 
 export default ExperimentDetailDrawer;
+
