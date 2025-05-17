@@ -132,145 +132,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     }
   };
   
-  const getVisualizationFiles = () => {
-    if (!results?.files) return [];
-    
-    return results.files.filter(file => 
-      !file.file_type.includes('model') && 
-      !file.file_type.includes('report') &&
-      !file.file_type.includes('label_encoder') &&
-      !file.file_type.includes('readme') &&
-      !file.file_type.includes('predictions') &&
-      !((results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') && 
-        file.file_type.includes('leaderboard'))
-    );
-  };
-  
-  const getMLJARModelFile = () => {
-    if (!results?.files) return null;
-    
-    const modelFile = results.files.find(file => 
-      file.file_type === 'model'
-    );
-    
-    if (modelFile) return modelFile;
-    
-    return results.files.find(file => 
-      file.file_url.includes('model') && 
-      file.file_url.toLowerCase().endsWith('.pkl')
-    );
-  };
-  
-  const getModelFile = () => {
-    if (!results?.files) return null;
-    
-    if (results.automl_engine?.toLowerCase() === 'mljar') {
-      return getMLJARModelFile();
-    }
-    
-    return results.files.find(file => 
-      file.file_type === 'model' || 
-      file.file_type.includes('model')
-    );
-  };
-
-  const getReadmeFile = () => {
-    if (!results?.files) return null;
-    
-    return results.files.find(file => 
-      file.file_type === 'readme' || 
-      file.file_type.includes('README.md')
-    );
-  };
-  
-  const getPredictionsFile = () => {
-    if (!results?.files) return null;
-    
-    return results.files.find(file => 
-      file.file_type === 'predictions_csv' ||
-      file.file_type.includes('predictions')
-    );
-  };
-
-  const getLeaderboardFile = () => {
-    if (!results?.files) return null;
-    
-    if (results.automl_engine?.toLowerCase() === 'h2o' || results.automl_engine?.toLowerCase() === 'mljar') {
-      return results.files.find(file => 
-        file.file_type.includes('leaderboard')
-      );
-    }
-    
-    return null;
-  };
-
-  const canTuneModel = () => {
-    return results && 
-           ((results.training_type === 'custom') || (!results.automl_engine)) && 
-           (results.algorithm || results.algorithm_choice) && 
-           (results.status === 'completed' || results.status === 'success');
-  };
-  
-  const handleTuneSuccess = () => {
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
-
-  const getModelFileName = (fileUrl: string) => {
-    try {
-      const urlParts = fileUrl.split('/');
-      const lastPart = urlParts[urlParts.length - 1];
-      
-      if (lastPart.includes('.')) {
-        return lastPart;
-      }
-      
-      const enginePart = results?.automl_engine?.toLowerCase() || 'model';
-      const algoPart = results?.algorithm || results?.algorithm_choice || 'trained';
-      const extension = fileUrl.endsWith('.zip') ? '.zip' : 
-                        fileUrl.endsWith('.pkl') ? '.pkl' : '.model';
-      
-      return `${enginePart}_${algoPart}${extension}`;
-    } catch (err) {
-      return `model_${Date.now()}.model`;
-    }
-  };
-
-  const handleFileDownload = async (url: string, filename: string) => {
-    try {
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download file (${response.status} ${response.statusText})`);
-      }
-      
-      const blob = await response.blob();
-      const downloadUrl = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
-      
-      toast({
-        title: "Download Started",
-        description: `Downloading ${filename}`,
-      });
-    } catch (err) {
-      console.error("Error downloading file:", err);
-      toast({
-        title: "Download Failed",
-        description: err instanceof Error ? err.message : "Failed to download file",
-        variant: "destructive"
-      });
-    }
-  };
-  
   const renderLoadingState = () => (
     <div className="space-y-4 p-6">
       <div className="flex items-center space-x-4">
@@ -307,11 +168,6 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === 'h2o';
   const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
   const hasPerClassMetrics = results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0;
-  
-  const isPercentageMetric = (name: string): boolean => {
-    const percentageMetrics = ['accuracy', 'auc', 'aucpr', 'f1', 'precision', 'recall'];
-    return percentageMetrics.some(metric => name.toLowerCase().includes(metric));
-  };
   
   const renderPerClassMetricsTable = () => {
     if (!results?.metrics?.per_class) return null;
@@ -650,6 +506,20 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                                 {results.metrics.logloss.toFixed(4)}
                               </div>
                               <p className="text-xs text-muted-foreground">Logarithmic Loss</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {isMulticlassClassification && results.metrics?.mean_per_class_error !== undefined && (
+                          <Card className="bg-muted/40">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Mean Per-Class Error</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {formatMetric(results.metrics.mean_per_class_error)}
+                              </div>
+                              <p className="text-xs text-muted-foreground">Average error across all classes</p>
                             </CardContent>
                           </Card>
                         )}
