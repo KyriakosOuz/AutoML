@@ -18,7 +18,9 @@ import {
   Info,
   Loader,
   Image,
-  AlertTriangle
+  AlertTriangle,
+  Activity,
+  Settings
 } from 'lucide-react';
 import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import { formatTrainingTime } from '@/utils/formatUtils';
@@ -26,6 +28,8 @@ import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 import H2OLeaderboardTable from './H2OLeaderboardTable';
 import DynamicMetricsDisplay from './DynamicMetricsDisplay';
+import MetricsGrid from '../training/charts/MetricsGrid';
+import ModelInterpretabilityPlots from './ModelInterpretabilityPlots';
 
 interface H2OExperimentResultsProps {
   experimentId: string | null;
@@ -525,7 +529,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 rounded-none border-b h-12">
+          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
             <TabsTrigger value="summary" className="text-sm flex items-center gap-1">
               <Award className="h-4 w-4" />
               <span>Summary</span>
@@ -539,6 +543,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
               <BarChart4 className="h-4 w-4" />
               <span>Charts</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="interpretability" className="text-sm flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              <span>Interpretability</span>
             </TabsTrigger>
             
             <TabsTrigger value="predictions" className="text-sm flex items-center gap-1">
@@ -711,7 +720,11 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Predictions Tab - MODIFIED to remove the Model File card */}
+          {/* New Interpretability tab */}
+          <TabsContent value="interpretability" className="p-6">
+            <ModelInterpretabilityPlots files={files} />
+          </TabsContent>
+          
           <TabsContent value="predictions" className="p-6">
             <div className="grid grid-cols-1 gap-6">
               {/* Predictions Card - Now full width */}
