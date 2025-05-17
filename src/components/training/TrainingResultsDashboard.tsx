@@ -20,45 +20,61 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
     error,
     resetTrainingState,
     lastTrainingType,
-    experimentResults
+    experimentResults,
+    setLastTrainingType
   } = useTraining();
 
-  // ✅ IMPROVED: More robust training type detection logic
+  // ✅ IMPROVED: More robust training type detection logic with additional logging
   const getTrainingType = (): TrainingType => {
     // First check if results have explicit training_type
     if (experimentResults?.training_type === 'custom') {
+      console.log("[TrainingResultsDashboard] Detected custom training from training_type");
       return 'custom';
     }
     
     // Then check if results have algorithm (custom training indicator)
     if (experimentResults?.algorithm) {
+      console.log("[TrainingResultsDashboard] Detected custom training from algorithm field");
       return 'custom';
     }
     
     // Then check if results have automl_engine (automl indicator)
     if (experimentResults?.automl_engine) {
+      console.log("[TrainingResultsDashboard] Detected automl from automl_engine field");
       return 'automl';
     }
     
     // If neither is available, use lastTrainingType from context
+    console.log("[TrainingResultsDashboard] Using lastTrainingType from context:", lastTrainingType);
     return lastTrainingType === 'custom' ? 'custom' : 'automl';
   };
 
-  // A proper reset handler that uses the training context
+  // ✅ IMPROVED: Enhanced reset handler with better training type preservation
   const handleReset = () => {
     // Save current training type before reset
     const currentType = getTrainingType();
+    console.log("[TrainingResultsDashboard] Resetting with training type:", currentType);
+    
+    // Explicitly update the lastTrainingType in context before reset
+    if (currentType && currentType !== lastTrainingType) {
+      console.log("[TrainingResultsDashboard] Updating lastTrainingType in context:", currentType);
+      setLastTrainingType(currentType);
+    }
+    
+    // Store the training type in localStorage for persistence
+    if (currentType) {
+      console.log("[TrainingResultsDashboard] Storing training type in localStorage:", currentType);
+      localStorage.setItem('lastTrainingType', currentType);
+    }
     
     // Call the provided onReset (for any parent component handlers)
     if (onReset) {
       onReset();
     }
     
-    // Also call the training context resetTrainingState
+    // Call the training context resetTrainingState
+    // The resetTrainingState function has been modified to preserve the training type
     resetTrainingState();
-    
-    // Store the training type in localStorage for persistence
-    localStorage.setItem('lastTrainingType', currentType);
   };
 
   if (error) {
@@ -109,10 +125,11 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
   }
 
   const trainingType = getTrainingType();
+  console.log("[TrainingResultsDashboard] Current training type:", trainingType);
 
   return (
     <div className="space-y-4">
-      {/* ✅ NEW: Display training type badge */}
+      {/* Display training type badge */}
       <div className="flex justify-end">
         <Badge 
           variant={trainingType === 'custom' ? 'custom' : 'automl'}
@@ -125,8 +142,6 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
       <ExperimentResultsContainer 
         experimentId={activeExperimentId}
         status={experimentStatus}
-        // No need to explicitly pass onReset as ExperimentResultsContainer 
-        // now uses the training context directly
       />
       
       {experimentStatus === 'success' && (

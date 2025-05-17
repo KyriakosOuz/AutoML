@@ -30,7 +30,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const { toast } = useToast();
   
   // Access the training context to reset training state
-  const { resetTrainingState, stopPolling, setActiveTab, lastTrainingType } = useTraining();
+  const { resetTrainingState, stopPolling, setActiveTab, lastTrainingType, setLastTrainingType } = useTraining();
 
   useEffect(() => {
     if (providedResults) {
@@ -90,21 +90,35 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     }
   };
 
-  // Handler for the "Run New Experiment" button - FIX: Respect training type
+  // ✅ IMPROVED: Handler for the "Run New Experiment" button with enhanced training type detection
   const handleReset = () => {
     console.log("[ExperimentResultsContainer] Resetting training state and stopping all polling");
     
     // First ensure all polling is explicitly stopped
     stopPolling();
     
-    // Then reset the training state
-    resetTrainingState();
-    
-    // ✅ IMPROVED: More robust training type detection
+    // ✅ IMPROVED: More robust training type detection with detailed logging
     const trainingType = determineTrainingType();
+    console.log("[ExperimentResultsContainer] Determined training type before reset:", trainingType);
     
-    // Set active tab based on determined type
+    // ✅ FIXED: Always update the lastTrainingType in context if we have a valid type
+    if (trainingType && trainingType !== lastTrainingType) {
+      console.log("[ExperimentResultsContainer] Updating lastTrainingType in context:", trainingType);
+      setLastTrainingType(trainingType);
+    }
+    
+    // ✅ FIXED: Always save to localStorage if we have a valid type
+    if (trainingType) {
+      console.log("[ExperimentResultsContainer] Saving training type to localStorage:", trainingType);
+      localStorage.setItem('lastTrainingType', trainingType);
+    }
+    
+    // ✅ FIXED: Set active tab based on determined type before reset
+    console.log("[ExperimentResultsContainer] Setting active tab to:", trainingType === 'custom' ? 'custom' : 'automl');
     setActiveTab(trainingType === 'custom' ? 'custom' : 'automl');
+    
+    // Then reset the training state (which now preserves the lastTrainingType)
+    resetTrainingState();
     
     // If an external onReset was provided, call it as well
     if (onReset) {
@@ -129,7 +143,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === "h2o";
   
-  // ✅ IMPROVED: More robust training type detection logic
+  // ✅ IMPROVED: More robust training type detection logic with enhanced logging
   const determineTrainingType = (): TrainingType => {
     // First check if results have explicit training_type
     if (results?.training_type === 'custom') {

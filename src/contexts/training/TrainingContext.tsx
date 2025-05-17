@@ -707,6 +707,114 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [state.activeTab]);
 
+  const resetTrainingState = () => {
+    // Enhanced reset to ensure all polling is stopped
+    stopPolling();
+    setCurrentPollingInfo({
+      experimentId: null,
+      type: null
+    });
+    setRecentlyCompletedPolling(false);
+    setIsAutoMLExperiment(false);
+    
+    // ✅ IMPROVED: Save the current training type before reset
+    const currentTrainingType = state.lastTrainingType;
+    console.log("[TrainingContext] Preserving training type during reset:", currentTrainingType);
+    
+    // Clear saved AutoML training configuration when resetting training state
+    localStorage.removeItem("automlTrainingConfig");
+    
+    // ✅ FIXED: Remember the current tab selection before reset
+    const currentTab = state.activeTab;
+    // Don't keep results/predict tabs selected after reset
+    const newTab = (currentTab === 'results' || currentTab === 'predict') ? 
+      // ✅ FIXED: Use the current training type to determine the default tab
+      (currentTrainingType === 'custom' ? 'custom' : 'automl') : 
+      currentTab;
+    
+    console.log("[TrainingContext] Tab selection after reset:", {
+      previousTab: currentTab,
+      newTab: newTab,
+      trainingType: currentTrainingType
+    });
+    
+    setState({
+      isTraining: false,
+      isSubmitting: false,
+      isPredicting: false,
+      // ✅ FIXED: Preserve lastTrainingType instead of setting to null
+      lastTrainingType: currentTrainingType,
+      automlParameters: defaultAutomlParameters,
+      customParameters: defaultCustomParameters,
+      automlResult: null,
+      customResult: null,
+      error: null,
+      activeExperimentId: null,
+      experimentResults: null,
+      isLoadingResults: false,
+      experimentStatus: 'idle',
+      statusResponse: null,
+      automlEngine: defaultAutomlParameters.automlEngine,
+      testSize: defaultAutomlParameters.testSize,
+      stratify: defaultAutomlParameters.stratify,
+      randomSeed: defaultAutomlParameters.randomSeed,
+      activeTab: newTab, // ✅ FIXED: Use preserved tab selection after reset
+      isCheckingLastExperiment: false,
+      resultsLoaded: false,
+      experimentName: null,
+    });
+    
+    // ✅ FIXED: Only clear experiment-specific data, not training type
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+    
+    // ✅ IMPROVED: Only update EXPERIMENT_TYPE_STORAGE_KEY if we're clearing it completely
+    if (!currentTrainingType) {
+      localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
+    }
+  };
+  
+  const clearExperimentResults = () => {
+    // Enhanced clear to ensure all polling is stopped
+    stopPolling();
+    setCurrentPollingInfo({
+      experimentId: null,
+      type: null
+    });
+    setRecentlyCompletedPolling(false);
+    setIsAutoMLExperiment(false);
+    
+    // ✅ IMPROVED: Save the current training type before clearing
+    const currentTrainingType = state.lastTrainingType;
+    console.log("[TrainingContext] Preserving training type during clear:", currentTrainingType);
+    
+    // Clear saved AutoML training configuration when clearing experiment results
+    localStorage.removeItem("automlTrainingConfig");
+    
+    // ✅ FIXED: Remember the current tab selection
+    const currentTab = state.activeTab;
+    // Don't keep results/predict tabs selected after clearing
+    const newTab = (currentTab === 'results' || currentTab === 'predict') ? 
+      // ✅ FIXED: Use the current training type to determine the default tab
+      (currentTrainingType === 'custom' ? 'custom' : 'automl') : 
+      currentTab;
+    
+    setState(prev => ({
+      ...prev,
+      experimentResults: null,
+      activeExperimentId: null,
+      statusResponse: null,
+      resultsLoaded: false,
+      experimentName: null,
+      isPredicting: false,
+      activeTab: newTab // Use appropriate tab selection after clearing
+    }));
+    
+    // ✅ FIXED: Only clear experiment-specific data, not training type
+    localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
+    localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
+  };
+
   const contextValue: TrainingContextValue = {
     ...state,
     setIsTraining: (isTraining) => setState(prev => ({ ...prev, isTraining })),
@@ -738,85 +846,8 @@ export const TrainingProvider: React.FC<{ children: ReactNode }> = ({ children }
     setActiveTab: (tab) => setState(prev => ({ ...prev, activeTab: tab })),
     setResultsLoaded: (loaded) => setState(prev => ({ ...prev, resultsLoaded: loaded })),
     setExperimentName: (name) => setState(prev => ({ ...prev, experimentName: name })),
-    resetTrainingState: () => {
-      // Enhanced reset to ensure all polling is stopped
-      stopPolling();
-      setCurrentPollingInfo({
-        experimentId: null,
-        type: null
-      });
-      setRecentlyCompletedPolling(false);
-      setIsAutoMLExperiment(false);
-      
-      // Clear saved AutoML training configuration when resetting training state
-      localStorage.removeItem("automlTrainingConfig");
-      
-      // ✅ FIXED: Remember the current tab selection before reset
-      const currentTab = state.activeTab;
-      // Don't keep results/predict tabs selected after reset
-      const newTab = (currentTab === 'results' || currentTab === 'predict') ? 'automl' : currentTab;
-      
-      setState({
-        isTraining: false,
-        isSubmitting: false,
-        isPredicting: false,
-        lastTrainingType: null,
-        automlParameters: defaultAutomlParameters,
-        customParameters: defaultCustomParameters,
-        automlResult: null,
-        customResult: null,
-        error: null,
-        activeExperimentId: null,
-        experimentResults: null,
-        isLoadingResults: false,
-        experimentStatus: 'idle',
-        statusResponse: null,
-        automlEngine: defaultAutomlParameters.automlEngine,
-        testSize: defaultAutomlParameters.testSize,
-        stratify: defaultAutomlParameters.stratify,
-        randomSeed: defaultAutomlParameters.randomSeed,
-        activeTab: newTab, // ✅ FIXED: Use preserved tab selection after reset
-        isCheckingLastExperiment: false,
-        resultsLoaded: false,
-        experimentName: null,
-      });
-      localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
-    },
-    clearExperimentResults: () => {
-      // Enhanced clear to ensure all polling is stopped
-      stopPolling();
-      setCurrentPollingInfo({
-        experimentId: null,
-        type: null
-      });
-      setRecentlyCompletedPolling(false);
-      setIsAutoMLExperiment(false);
-      
-      // Clear saved AutoML training configuration when clearing experiment results
-      localStorage.removeItem("automlTrainingConfig");
-      
-      // ✅ FIXED: Remember the current tab selection
-      const currentTab = state.activeTab;
-      // Don't keep results/predict tabs selected after clearing
-      const newTab = (currentTab === 'results' || currentTab === 'predict') ? 
-        (state.lastTrainingType === 'custom' ? 'custom' : 'automl') : currentTab;
-      
-      setState(prev => ({
-        ...prev,
-        experimentResults: null,
-        activeExperimentId: null,
-        statusResponse: null,
-        resultsLoaded: false,
-        experimentName: null,
-        isPredicting: false,
-        activeTab: newTab // ✅ FIXED: Use appropriate tab selection after clearing
-      }));
-      localStorage.removeItem(EXPERIMENT_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_TYPE_STORAGE_KEY);
-      localStorage.removeItem(EXPERIMENT_NAME_STORAGE_KEY);
-    },
+    resetTrainingState,
+    clearExperimentResults,
     getExperimentResults,
     startPolling, 
     stopPolling,
