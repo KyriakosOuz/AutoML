@@ -41,6 +41,7 @@ import TuneModelModal from './TuneModelModal';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import MetricsGrid from '@/components/training/charts/MetricsGrid';
 
 interface ExperimentDetailDrawerProps {
   experimentId: string | null;
@@ -282,6 +283,10 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     normalizedMetrics.precision = metrics.precision;
     normalizedMetrics.recall = metrics.recall;
     normalizedMetrics.accuracy = metrics.accuracy;
+    normalizedMetrics.logloss = metrics.logloss;
+    normalizedMetrics.auc = metrics.auc;
+    normalizedMetrics.aucpr = metrics.aucpr;
+    normalizedMetrics.mean_per_class_error = metrics.mean_per_class_error;
     
     return normalizedMetrics;
   };
@@ -351,10 +356,22 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const isMLJARExperiment = results?.automl_engine?.toLowerCase() === 'mljar';
   const hasPerClassMetrics = results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0;
   
+  // Check if experiment has per-class metrics from either source
+  const hasPerClassMetricsCombined = 
+    (results?.metrics?.per_class && Object.keys(results.metrics.per_class).length > 0) || 
+    (results?.per_class_metrics && Object.keys(results.per_class_metrics).length > 0);
+  
+  // Use either metrics.per_class or per_class_metrics based on availability
+  const getPerClassMetricsData = () => {
+    if (results?.metrics?.per_class) return results.metrics.per_class;
+    if (results?.per_class_metrics) return results.per_class_metrics;
+    return null;
+  };
+  
   const renderPerClassMetricsTable = () => {
-    if (!results?.metrics?.per_class) return null;
+    const perClassData = getPerClassMetricsData();
+    if (!perClassData) return null;
     
-    const perClassData = results.metrics.per_class;
     const classLabels = Object.keys(perClassData).sort((a, b) => {
       const numA = Number(a);
       const numB = Number(b);
@@ -406,6 +423,101 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
           </ResponsiveTable>
         </CardContent>
       </Card>
+    );
+  };
+  
+  // Helper function to render metrics for MLJAR multiclass classification
+  const renderMLJARMulticlassMetrics = () => {
+    if (!isMLJARExperiment || !isMulticlassClassification || !results?.metrics) return null;
+    
+    const normalizedMetrics = normalizeMetrics(results.metrics);
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {normalizedMetrics.accuracy !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Accuracy</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getMetricColor(normalizedMetrics.accuracy)}`}>
+                {formatMetric(normalizedMetrics.accuracy)}
+              </div>
+              <p className="text-xs text-muted-foreground">Overall prediction accuracy</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {normalizedMetrics.f1_score !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">F1 Score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getMetricColor(normalizedMetrics.f1_score)}`}>
+                {formatMetric(normalizedMetrics.f1_score)}
+              </div>
+              <p className="text-xs text-muted-foreground">Harmonic mean of precision and recall</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {normalizedMetrics.precision !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Precision</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getMetricColor(normalizedMetrics.precision)}`}>
+                {formatMetric(normalizedMetrics.precision)}
+              </div>
+              <p className="text-xs text-muted-foreground">Positive predictive value</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {normalizedMetrics.recall !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Recall</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getMetricColor(normalizedMetrics.recall)}`}>
+                {formatMetric(normalizedMetrics.recall)}
+              </div>
+              <p className="text-xs text-muted-foreground">Sensitivity/True Positive Rate</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {normalizedMetrics.logloss !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">LogLoss</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {normalizedMetrics.logloss.toFixed(4)}
+              </div>
+              <p className="text-xs text-muted-foreground">Logarithmic Loss</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {normalizedMetrics.auc !== undefined && (
+          <Card className="bg-muted/40">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">AUC</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getMetricColor(normalizedMetrics.auc)}`}>
+                {formatMetric(normalizedMetrics.auc)}
+              </div>
+              <p className="text-xs text-muted-foreground">Area Under ROC Curve</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     );
   };
   
@@ -836,14 +948,15 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                           </Card>
                         )}
                         
-                        {results.metrics?.f1_score !== undefined && (
+                        {/* Check both formats of f1 score */}
+                        {(results.metrics?.f1_score !== undefined || results.metrics?.['f1-score'] !== undefined) && (
                           <Card className="bg-muted/40">
                             <CardHeader className="py-3">
                               <CardTitle className="text-sm">F1 Score</CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics.f1_score)}`}>
-                                {formatMetric(results.metrics.f1_score)}
+                              <div className={`text-2xl font-bold ${getMetricColor(results.metrics?.f1_score ?? results.metrics?.['f1-score'])}`}>
+                                {formatMetric(results.metrics?.f1_score ?? results.metrics?.['f1-score'])}
                               </div>
                               <p className="text-xs text-muted-foreground">Harmonic mean of precision and recall</p>
                             </CardContent>
@@ -896,7 +1009,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
-                        {Object.entries(results.metrics).map(([key, value]) => {
+                        {Object.entries(normalizeMetrics(results.metrics)).map(([key, value]) => {
                           const skipKeys = [
                             'accuracy', 'f1_score', 'f1-score', 'f1', 
                             'precision', 'recall', 'auc', 'r2', 
@@ -904,6 +1017,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                             'logloss', 'mean_per_class_error', 'per_class', 'source'
                           ];
                           
+                          // Skip metrics that are already displayed above
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
                           return (
@@ -916,7 +1030,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                       </div>
                     )}
                     
-                    {hasPerClassMetrics && isMulticlassClassification && renderPerClassMetricsTable()}
+                    {hasPerClassMetricsCombined && isMulticlassClassification && renderPerClassMetricsTable()}
                     
                     {(!results.metrics || Object.keys(results.metrics).length === 0) && (
                       <div className="text-center py-8 text-muted-foreground">
