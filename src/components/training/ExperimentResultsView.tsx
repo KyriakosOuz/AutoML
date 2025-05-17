@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentStatus } from '@/types/training';
+import { ExperimentStatus, TrainingType } from '@/types/training';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -56,21 +56,24 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         detectedType = 'custom'; // If no automl_engine, likely custom
       }
       
-      if (detectedType !== lastTrainingType) {
+      // ✅ FIXED: Validate and cast the training type to ensure it's a valid TrainingType
+      const validatedType: TrainingType = detectedType === 'custom' ? 'custom' : 'automl';
+      
+      if (validatedType !== lastTrainingType) {
         console.log("[ExperimentResultsView] Updating lastTrainingType based on results:", {
           from: lastTrainingType,
-          to: detectedType,
+          to: validatedType,
           modelName: data.model_display_name,
           trainingType: data.training_type,
           algorithm: data.algorithm,
           automlEngine: data.automl_engine
         });
         
-        // Update lastTrainingType in context
-        setLastTrainingType(detectedType);
+        // Update lastTrainingType in context with validated type
+        setLastTrainingType(validatedType);
         
         // Also update in localStorage for persistence
-        localStorage.setItem('lastTrainingType', detectedType);
+        localStorage.setItem('lastTrainingType', validatedType);
       }
     }
   }, [data, lastTrainingType, setLastTrainingType]);
@@ -166,11 +169,14 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     
     console.log("[ExperimentResultsView] Resetting training state with type:", trainingType);
     
+    // ✅ FIXED: Validate and cast the training type
+    const validatedType: TrainingType = trainingType === 'custom' ? 'custom' : 'automl';
+    
     // Update lastTrainingType in context before reset
-    setLastTrainingType(trainingType);
+    setLastTrainingType(validatedType);
     
     // Save to localStorage
-    localStorage.setItem('lastTrainingType', trainingType);
+    localStorage.setItem('lastTrainingType', validatedType);
     
     // Reset state
     resetTrainingState();
@@ -268,7 +274,8 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           error={null}
           onReset={handleReset}
           onRefresh={handleRefresh}
-          trainingType={data.training_type as 'automl' | 'custom'}
+          // ✅ FIXED: Ensure training type is properly validated as a literal type
+          trainingType={data.training_type === 'custom' ? 'custom' : 'automl'}
         />
       </div>
     );

@@ -7,6 +7,7 @@ import { RefreshCw, AlertTriangle, Award, PieChart } from 'lucide-react';
 import ExperimentResultsContainer from '@/components/experiments/ExperimentResultsContainer';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { TrainingType } from '@/types/training';
 
 interface TrainingResultsDashboardProps {
   onReset: () => void;
@@ -23,10 +24,14 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
   } = useTraining();
 
   // ✅ NEW: Determine the most accurate training type to display
-  const getTrainingType = () => {
-    if (experimentResults?.training_type) return experimentResults.training_type;
+  const getTrainingType = (): TrainingType => {
+    if (experimentResults?.training_type) {
+      // ✅ FIXED: Ensure we return a valid TrainingType
+      return experimentResults.training_type === 'custom' ? 'custom' : 'automl';
+    }
     if (experimentResults?.algorithm) return 'custom';
-    return lastTrainingType || 'automl';
+    // ✅ FIXED: Ensure we validate lastTrainingType
+    return lastTrainingType === 'custom' ? 'custom' : 'automl';
   };
 
   // A proper reset handler that uses the training context

@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults as ExperimentResultsType, ExperimentStatus } from '@/types/training';
+import { ExperimentResults as ExperimentResultsType, ExperimentStatus, TrainingType } from '@/types/training';
 import { useToast } from '@/hooks/use-toast';
 import ExperimentResults from '../results/ExperimentResults';
 import MLJARExperimentResults from '../results/MLJARExperimentResults';
@@ -102,7 +103,11 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     
     // ✅ FIXED: Respect the current training type rather than forcing 'automl'
     const trainingType = determineTrainingType();
-    setActiveTab(trainingType === 'custom' ? 'custom' : 'automl');
+    
+    // ✅ FIXED: Make sure we validate the type to be either 'automl' or 'custom'
+    const validatedType: TrainingType = trainingType === 'custom' ? 'custom' : 'automl'; 
+    
+    setActiveTab(validatedType === 'custom' ? 'custom' : 'automl');
     
     // If an external onReset was provided, call it as well
     if (onReset) {
@@ -128,11 +133,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === "h2o";
   
   // Determine the correct training type from results or context
-  const determineTrainingType = () => {
+  const determineTrainingType = (): TrainingType => {
     // First check if results have explicit training_type
     if (results?.training_type) {
       console.log("[ExperimentResultsContainer] Using training_type from results:", results.training_type);
-      return results.training_type;
+      // Make sure we return a valid TrainingType
+      return results.training_type === 'custom' ? 'custom' : 'automl';
     }
     
     // Then check if results have algorithm (custom training indicator)
@@ -149,7 +155,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     
     // If neither is available, use lastTrainingType from context
     console.log("[ExperimentResultsContainer] Falling back to lastTrainingType from context:", lastTrainingType);
-    return lastTrainingType;
+    // Make sure we return a valid TrainingType
+    return lastTrainingType === 'custom' ? 'custom' : 'automl';
   };
   
   const currentTrainingType = determineTrainingType();
