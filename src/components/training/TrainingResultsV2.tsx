@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { trainingApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { ExperimentResults } from '@/types/training';
+import { ExperimentResults, PerClassMetric } from '@/types/training';
 import { useTraining } from '@/contexts/training/TrainingContext';
 import MetricsGrid from './charts/MetricsGrid';
 import {
@@ -22,7 +24,9 @@ import {
   Settings,
   Activity,
   Microscope,
-  Loader
+  Loader,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { formatTrainingTime } from '@/utils/formatUtils';
 import { downloadFile } from './prediction/utils/downloadUtils';
@@ -82,15 +86,18 @@ const categorizeVisualizations = (files: {file_type: string, file_url: string}[]
   );
 };
 
-// Helper function to get F1 score from either f1 or f1_score fields
-const getF1Score = (metrics: { f1_score?: number; f1?: number }): number | undefined => {
-  return metrics.f1_score !== undefined ? metrics.f1_score : metrics.f1;
+// Helper function to get F1 score from either f1-score or f1_score fields
+const getF1Score = (metrics: { f1_score?: number; f1?: number; 'f1-score'?: number }): number | undefined => {
+  return metrics['f1-score'] !== undefined ? metrics['f1-score'] : 
+         metrics.f1_score !== undefined ? metrics.f1_score : 
+         metrics.f1;
 };
 
 const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onReset }) => {
   const { isLoadingResults, experimentResults } = useTraining();
   const [activeTab, setActiveTab] = useState<string>('metrics');
   const [error, setError] = useState<string | null>(null);
+  const [perClassMetricsOpen, setPerClassMetricsOpen] = useState<boolean>(false);
   const { toast } = useToast();
   
   // Format a metric value for display
@@ -111,6 +118,32 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     if (value >= 0.7) return 'text-emerald-600';
     if (value >= 0.5) return 'text-amber-600';
     return 'text-red-600';
+  };
+  
+  // Helper function to determine if a metric should be displayed as percentage
+  const isPercentageMetric = (metricName: string): boolean => {
+    return ['accuracy', 'f1', 'precision', 'recall', 'auc', 'f1-score'].some(m => 
+      metricName.toLowerCase().includes(m)
+    );
+  };
+  
+  // Helper to get per-class metrics from either naming format
+  const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
+    if (!experimentResults || !experimentResults.metrics) return undefined;
+    
+    // Check for the per_class format (nested object)
+    if (experimentResults.metrics.per_class && 
+        Object.keys(experimentResults.metrics.per_class).length > 0) {
+      return experimentResults.metrics.per_class;
+    }
+    
+    // Fallback to legacy per_class_metrics at the top level
+    if (experimentResults.per_class_metrics && 
+        Object.keys(experimentResults.per_class_metrics).length > 0) {
+      return experimentResults.per_class_metrics;
+    }
+    
+    return undefined;
   };
   
   if (isLoadingResults || !experimentResults) {
@@ -209,11 +242,81 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
   const visualizationFiles = categorizeVisualizations(files);
   
   const isClassification = task_type?.includes('classification');
+  const isMulticlass = task_type === 'multiclass_classification';
   
   // Display algorithm or engine based on what's available
   const displayAlgorithm = model_display_name || 
                           algorithm || 
                           (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
+  
+  // Get per-class metrics for multiclass classification
+  const perClassMetrics = getPerClassMetrics();
+  
+  // Render the per-class metrics table
+  const renderPerClassMetrics = () => {
+    if (!perClassMetrics || Object.keys(perClassMetrics).length === 0) {
+      return null;
+    }
+    
+    return (
+      <Collapsible 
+        open={perClassMetricsOpen} 
+        onOpenChange={setPerClassMetricsOpen}
+        className="mt-6 border rounded-md"
+      >
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 hover:bg-muted/50 transition-colors text-left">
+          <span className="font-medium">Per-Class Metrics</span>
+          {perClassMetricsOpen ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-4 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Precision</TableHead>
+                  <TableHead>Recall</TableHead>
+                  <TableHead>F1-Score</TableHead>
+                  <TableHead>Support</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(perClassMetrics).map(([classLabel, metrics]) => (
+                  <TableRow key={classLabel}>
+                    <TableCell className="font-medium">{classLabel}</TableCell>
+                    <TableCell>
+                      {metrics.precision !== undefined 
+                        ? formatMetric(metrics.precision) 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {metrics.recall !== undefined 
+                        ? formatMetric(metrics.recall) 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {(metrics['f1-score'] !== undefined || metrics.f1_score !== undefined)
+                        ? formatMetric(metrics['f1-score'] || metrics.f1_score)
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {metrics.support !== undefined 
+                        ? metrics.support 
+                        : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
   
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -275,6 +378,9 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           <TabsContent value="metrics" className="p-6">
             {/* Use the enhanced MetricsGrid component */}
             <MetricsGrid metrics={metrics} taskType={task_type} />
+            
+            {/* Add Per-Class Metrics for Multiclass Classification */}
+            {isMulticlass && perClassMetrics && renderPerClassMetrics()}
             
             {/* Add Download Model button as a card */}
             {model_file_url && (
