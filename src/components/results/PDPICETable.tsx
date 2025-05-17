@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileImage, ExternalLink } from 'lucide-react';
 
-interface PDPPlot {
+export interface PDPPlot {
   plot_type: 'pdp' | 'ice';
   feature: string;
   class_id?: string | number;

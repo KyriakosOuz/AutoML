@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +19,7 @@ interface H2OExperimentResultsProps {
   isLoading: boolean;
   error: string | null;
   onReset?: () => void;
+  onRefresh?: () => void;
 }
 
 const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
@@ -28,7 +28,8 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   experimentResults,
   isLoading,
   error,
-  onReset
+  onReset,
+  onRefresh
 }) => {
   const [activeTab, setActiveTab] = useState<string>('metrics');
   
@@ -88,7 +89,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
         // Try to extract feature name and plot type from file type
         const fileType = file.file_type?.toLowerCase() || '';
         const isPDP = fileType.includes('pdp');
-        const isICE = fileType.includes('ice');
         
         // Extract feature name from file type or name
         let feature = 'Unknown';
@@ -109,7 +109,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
         }
         
         return {
-          plot_type: isPDP ? 'pdp' : 'ice',
+          plot_type: isPDP ? 'pdp' as const : 'ice' as const, // Fix the type here with "as const"
           feature: feature,
           class_id: classId,
           file_url: file.file_url,
@@ -190,8 +190,8 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
           
           <TabsContent value="leaderboard">
             <H2OLeaderboardTable 
-              leaderboard={experimentResults.leaderboard || []} 
-              leaderboardCsv={experimentResults.leaderboard_csv}
+              leaderboardData={experimentResults.leaderboard || []} 
+              leaderboardCsvUrl={experimentResults.leaderboard_csv}
             />
           </TabsContent>
           
@@ -201,12 +201,20 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
         </Tabs>
       </CardContent>
       <CardFooter>
-        {onReset && (
-          <Button onClick={onReset}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Run New Experiment
-          </Button>
-        )}
+        <div className="flex space-x-2">
+          {onReset && (
+            <Button onClick={onReset}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Run New Experiment
+            </Button>
+          )}
+          {onRefresh && (
+            <Button variant="outline" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Results
+            </Button>
+          )}
+        </div>
       </CardFooter>
     </Card>
   );
