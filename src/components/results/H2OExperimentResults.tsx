@@ -802,13 +802,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
               New Experiment
             </Button>
           )}
-          
-          {onRefresh && (
-            <Button variant="secondary" onClick={onRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          )}
         </div>
         
         {completed_at && (
