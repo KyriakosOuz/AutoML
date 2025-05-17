@@ -376,6 +376,46 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </TabsList>
           
           <TabsContent value="metrics" className="p-6">
+            {/* Make sure to include all the multiclass classification metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+              {/* Add specific metrics for multiclass classification */}
+              {isMulticlass && (
+                <>
+                  {['accuracy', 'precision', 'recall', 'f1-score', 'logloss'].map((metricName) => {
+                    // Handle both formats for f1-score
+                    let metricValue;
+                    if (metricName === 'f1-score') {
+                      metricValue = metrics['f1-score'] !== undefined ? metrics['f1-score'] :
+                                    metrics.f1_score !== undefined ? metrics.f1_score : undefined;
+                    } else {
+                      metricValue = metrics[metricName];
+                    }
+                    
+                    if (metricValue === undefined) return null;
+                    
+                    return (
+                      <div 
+                        key={metricName} 
+                        className="bg-muted/30 p-4 rounded-lg"
+                      >
+                        <p className="text-sm text-muted-foreground">
+                          {metricName.replace(/_/g, ' ').replace(/-/g, ' ')
+                            .split(' ')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')}
+                        </p>
+                        <p className="text-2xl font-semibold">
+                          {metricName === 'logloss' 
+                            ? formatRegressionMetric(metricValue) 
+                            : formatMetric(metricValue)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+            
             {/* Use the enhanced MetricsGrid component */}
             <MetricsGrid metrics={metrics} taskType={task_type} />
             

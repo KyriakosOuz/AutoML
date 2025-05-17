@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -281,7 +282,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'logloss',
-        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics.f1)
+        value: metrics.metric_value || (metrics.logloss || metrics.f1_score || metrics.accuracy || metrics['f1-score'] || metrics.f1)
       };
     } else {
       return {
@@ -370,7 +371,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     file.file_type.includes('leaderboard')
   );
 
-  // Helper to render per-class metrics if present - Updated to handle both formats
+  // Helper to render per-class metrics if present - Updated to handle both formats and include all classes
   const renderPerClassMetrics = () => {
     const perClassMetrics = getPerClassMetrics();
     
@@ -565,6 +566,42 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mt-4">
+                      {/* Make sure to include all required metrics for multiclass classification */}
+                      {['accuracy', 'precision', 'recall', 'f1-score', 'logloss'].map((key) => {
+                        // For 'f1-score', check both hyphenated and underscore versions
+                        let value;
+                        if (key === 'f1-score') {
+                          value = metrics['f1-score'] !== undefined ? metrics['f1-score'] : 
+                                  metrics.f1_score !== undefined ? metrics.f1_score : undefined;
+                        } else {
+                          value = metrics[key];
+                        }
+                        
+                        if (value === undefined) return null;
+                        
+                        // Enhanced formatting of metric display names
+                        const metricDisplayName = key
+                          .replace(/_/g, ' ')
+                          .replace('-', ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ');
+                        
+                        const isPercent = isPercentageMetric(key);
+                        
+                        return (
+                          <div key={key} className="p-3 bg-muted/40 rounded-md">
+                            <span className="block text-sm text-muted-foreground">
+                              {metricDisplayName}
+                            </span>
+                            <span className="text-lg font-medium">
+                              {formatMetricValue(value as number, isPercent)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Display additional metrics not covered by the loop above */}
                       {Object.entries(metrics).map(([key, value]) => {
                         if (
                           key === 'best_model_label' ||
@@ -574,6 +611,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                           key === 'confusion_matrix' ||
                           key === 'source' ||
                           key === 'per_class' || // Skip the per_class object here
+                          key === 'accuracy' ||
+                          key === 'precision' ||
+                          key === 'recall' ||
+                          key === 'f1-score' ||
+                          key === 'f1_score' ||
+                          key === 'logloss' ||
                           typeof value !== 'number'
                         ) return null;
                         
