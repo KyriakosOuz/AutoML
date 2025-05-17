@@ -22,6 +22,7 @@ interface MetricsBlockProps {
     // Additional H2O metrics
     aucpr?: number;
     mean_per_class_error?: number;
+    mse?: number;
     best_model_details?: Record<string, any>;
     confusion_matrix?: number[][];
     class_labels?: string[];
@@ -44,6 +45,7 @@ const MetricsBlock: React.FC<MetricsBlockProps> = ({ metrics, taskType, modelFil
         metrics={metrics} 
         taskType={taskType} 
         bestModelDetails={metrics.best_model_details}
+        mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
       />
       
       {/* Add Download Model button if URL is provided */}

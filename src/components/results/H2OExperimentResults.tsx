@@ -612,7 +612,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       metrics={metrics} 
                       taskType={task_type} 
                       bestModelDetails={bestModelDetails}
-                      mainMetric="logloss" // Set logloss as the main metric
+                      mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
                     />
                   </div>
                 </CardContent>
