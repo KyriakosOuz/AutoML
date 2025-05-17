@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -122,8 +121,25 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     if (!results || !results.files) return [];
     
     // Filter files to only include visualization types
-    const visualTypes = ['confusion_matrix', 'roc_curve', 'precision_recall', 'feature_importance', 'learning_curve', 'shap', 'partial_dependence', 'ice', 'residuals', 'calibration'];
+    const visualTypes = [
+      'confusion_matrix', 'evaluation_curve', 'roc_curve', 
+      'precision_recall', 'feature_importance', 'learning_curve', 
+      'shap', 'partial_dependence', 'ice', 'residuals', 'calibration'
+    ];
     
+    // Check if the results have visualizations_by_type field for better categorization
+    if (results.visualizations_by_type && typeof results.visualizations_by_type === 'object') {
+      // Flatten the visualization types from the backend categorization
+      return Object.values(results.visualizations_by_type)
+        .flat()
+        .map(file => ({
+          file_url: file.file_url,
+          file_type: file.file_type || 'visualization',
+          file_name: file.file_name
+        }));
+    }
+    
+    // Fallback to the traditional filtering
     return (results.files || [])
       .filter(file => visualTypes.some(type => file.file_type?.toLowerCase().includes(type)))
       .map(file => ({
@@ -252,6 +268,22 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     if (onRefresh) {
       onRefresh();
     }
+  };
+
+  // Helper function to normalize metrics
+  const normalizeMetrics = (metrics: any) => {
+    if (!metrics) return {};
+    
+    // Create a new object to avoid mutating the original
+    const normalizedMetrics = { ...metrics };
+    
+    // Handle key mismatches for common metrics
+    normalizedMetrics.f1_score = metrics.f1_score ?? metrics['f1-score'];
+    normalizedMetrics.precision = metrics.precision;
+    normalizedMetrics.recall = metrics.recall;
+    normalizedMetrics.accuracy = metrics.accuracy;
+    
+    return normalizedMetrics;
   };
 
   const formatMetric = (value: number | undefined) => {
@@ -865,12 +897,18 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                     {results.metrics && Object.entries(results.metrics).length > 0 && (
                       <div className="mt-4">
                         {Object.entries(results.metrics).map(([key, value]) => {
-                          const skipKeys = ['accuracy', 'f1_score', 'f1-score', 'f1', 'precision', 'recall', 'auc', 'r2', 'mae', 'mse', 'rmse', 'aucpr', 'logloss', 'mean_per_class_error', 'per_class', 'source'];
+                          const skipKeys = [
+                            'accuracy', 'f1_score', 'f1-score', 'f1', 
+                            'precision', 'recall', 'auc', 'r2', 
+                            'mae', 'mse', 'rmse', 'aucpr', 
+                            'logloss', 'mean_per_class_error', 'per_class', 'source'
+                          ];
+                          
                           if (skipKeys.includes(key) || typeof value !== 'number') return null;
                           
                           return (
                             <div key={key} className="flex justify-between border-b py-2">
-                              <div className="capitalize">{key.replace(/_/g, ' ')}</div>
+                              <div className="capitalize">{key.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                               <div className="font-medium">{formatMetric(value as number)}</div>
                             </div>
                           );
