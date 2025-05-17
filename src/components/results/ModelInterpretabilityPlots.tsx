@@ -25,30 +25,88 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pdp');
 
-  // Extract PDP, ICE plots and their metadata
+  // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
-    // Filter plots with metadata
-    const pdpPlots = files.filter(file => 
-      file.file_type?.includes('pdp_plot') || 
-      (file.file_type?.includes('pdp') && file.feature)
-    );
+    // Extract feature information from file_type names
+    const extractMetadata = (file: any): PlotMetadata | null => {
+      // For files that already have metadata from the backend
+      if (file.feature && file.class_id !== undefined && file.plot_type) {
+        return {
+          plot_type: file.plot_type,
+          feature: file.feature,
+          class_id: file.class_id,
+          file_url: file.file_url,
+          related_feature_importance: file.related_feature_importance
+        };
+      }
+
+      // For files that need metadata extraction from file_type
+      const fileType = file.file_type || '';
+      
+      // Handle PDP plots (format: pdp_FeatureName_ClassID)
+      if (fileType.startsWith('pdp_')) {
+        const parts = fileType.split('_');
+        if (parts.length >= 3) {
+          return {
+            plot_type: 'pdp',
+            feature: parts[1],
+            class_id: parseInt(parts[2], 10),
+            file: fileType,
+            file_url: file.file_url
+          };
+        }
+      }
+      
+      // Handle ICE plots (format: ice_FeatureName_ClassID)
+      if (fileType.startsWith('ice_')) {
+        const parts = fileType.split('_');
+        if (parts.length >= 3) {
+          return {
+            plot_type: 'ice',
+            feature: parts[1],
+            class_id: parseInt(parts[2], 10),
+            file: fileType,
+            file_url: file.file_url
+          };
+        }
+      }
+      
+      return null;
+    };
     
-    const icePlots = files.filter(file => 
-      file.file_type?.includes('ice_plot') || 
-      (file.file_type?.includes('ice') && file.feature)
-    );
+    // Extract metadata from all files
+    const allMetadata = files
+      .map(extractMetadata)
+      .filter(Boolean) as PlotMetadata[];
+    
+    // Split by plot type
+    const pdpPlots = allMetadata.filter(plot => plot.plot_type === 'pdp');
+    const icePlots = allMetadata.filter(plot => plot.plot_type === 'ice');
     
     // Get unique features across both plot types
     const allFeatures = [...pdpPlots, ...icePlots]
       .map(plot => plot.feature)
-      .filter(Boolean)
       .filter((value, index, self) => self.indexOf(value) === index)
       .sort();
+    
+    // Find feature importance plot
+    const featureImportancePlot = files.find(file => 
+      file.file_type?.includes('importance') || 
+      file.file_type?.includes('variable_importance')
+    );
+    
+    // Link PDP/ICE plots to feature importance if available
+    if (featureImportancePlot) {
+      [...pdpPlots, ...icePlots].forEach(plot => {
+        plot.related_feature_importance = featureImportancePlot.file_url;
+      });
+    }
     
     return {
       pdpPlots,
       icePlots,
       features: allFeatures,
+      featureImportancePlot
     };
   }, [files]);
 
@@ -69,14 +127,6 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       return plotsData.icePlots.filter(plot => plot.feature === activeFeature);
     }
   }, [activeFeature, activeTab, plotsData]);
-
-  // Find feature importance plot
-  const featureImportancePlot = useMemo(() => {
-    return files.find(file => 
-      file.file_type?.includes('importance') || 
-      file.file_type?.includes('variable_importance')
-    );
-  }, [files]);
 
   if (plotsData.features.length === 0) {
     return (
@@ -142,7 +192,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                     </TabsTrigger>
                   </TabsList>
                   
-                  {featureImportancePlot && (
+                  {plotsData.featureImportancePlot && (
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="text-xs">
@@ -153,14 +203,14 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                       <DialogContent className="max-w-3xl">
                         <div className="p-1">
                           <img 
-                            src={featureImportancePlot.file_url} 
+                            src={plotsData.featureImportancePlot.file_url} 
                             alt="Feature Importance" 
                             className="w-full rounded-md"
                           />
                           <div className="mt-4 flex justify-end">
                             <Button variant="outline" size="sm" asChild>
                               <a 
-                                href={featureImportancePlot.file_url}
+                                href={plotsData.featureImportancePlot.file_url}
                                 download={`feature_importance.png`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -373,7 +423,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                         <TableRow key={idx}>
                           <TableCell>
                             <Badge variant="outline">
-                              {plot.plot_type === 'pdp' || plot.file_type.includes('pdp') ? 'PDP' : 'ICE'}
+                              {plot.plot_type === 'pdp' ? 'PDP' : 'ICE'}
                             </Badge>
                           </TableCell>
                           <TableCell>{plot.feature}</TableCell>
