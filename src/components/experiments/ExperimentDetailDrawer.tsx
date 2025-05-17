@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -47,6 +48,18 @@ interface ExperimentDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh?: () => void;
+}
+
+interface VisualizationFile {
+  file_url: string;
+  file_type: string;
+  file_name?: string;
+}
+
+interface ModelFile {
+  file_url: string;
+  file_type: string;
+  file_name?: string;
 }
 
 const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
@@ -101,6 +114,143 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to get visualization files from results
+  const getVisualizationFiles = (): VisualizationFile[] => {
+    if (!results || !results.files) return [];
+    
+    // Filter files to only include visualization types
+    const visualTypes = ['confusion_matrix', 'roc_curve', 'precision_recall', 'feature_importance', 'learning_curve', 'shap', 'partial_dependence', 'ice', 'residuals', 'calibration'];
+    
+    return (results.files || [])
+      .filter(file => visualTypes.some(type => file.file_type?.toLowerCase().includes(type)))
+      .map(file => ({
+        file_url: file.file_url,
+        file_type: file.file_type || 'visualization',
+        file_name: file.file_name
+      }));
+  };
+  
+  // Helper function to get model file from results
+  const getModelFile = (): ModelFile | null => {
+    if (!results || !results.files) return null;
+    
+    // Look for model files
+    const modelFile = (results.files || []).find(file => 
+      file.file_type?.toLowerCase().includes('model') || 
+      file.file_name?.toLowerCase().includes('model') ||
+      file.file_name?.toLowerCase().includes('.pkl') ||
+      file.file_name?.toLowerCase().includes('.h5') ||
+      file.file_name?.toLowerCase().includes('.joblib') ||
+      file.file_url?.toLowerCase().includes('model')
+    );
+    
+    return modelFile ? {
+      file_url: modelFile.file_url,
+      file_type: modelFile.file_type || 'model',
+      file_name: modelFile.file_name
+    } : null;
+  };
+  
+  // Helper function to get leaderboard file
+  const getLeaderboardFile = (): ModelFile | null => {
+    if (!results || !results.files) return null;
+    
+    const leaderboardFile = (results.files || []).find(file => 
+      file.file_type?.toLowerCase().includes('leaderboard') || 
+      file.file_name?.toLowerCase().includes('leaderboard')
+    );
+    
+    return leaderboardFile ? {
+      file_url: leaderboardFile.file_url,
+      file_type: leaderboardFile.file_type || 'leaderboard',
+      file_name: leaderboardFile.file_name
+    } : null;
+  };
+  
+  // Helper function to get readme/documentation file
+  const getReadmeFile = (): ModelFile | null => {
+    if (!results || !results.files) return null;
+    
+    const readmeFile = (results.files || []).find(file => 
+      file.file_type?.toLowerCase().includes('readme') || 
+      file.file_name?.toLowerCase().includes('readme') ||
+      file.file_type?.toLowerCase().includes('documentation') || 
+      file.file_name?.toLowerCase().includes('documentation') ||
+      file.file_name?.toLowerCase().includes('.md')
+    );
+    
+    return readmeFile ? {
+      file_url: readmeFile.file_url,
+      file_type: readmeFile.file_type || 'documentation',
+      file_name: readmeFile.file_name
+    } : null;
+  };
+  
+  // Helper function to get predictions file
+  const getPredictionsFile = (): ModelFile | null => {
+    if (!results || !results.files) return null;
+    
+    const predictionsFile = (results.files || []).find(file => 
+      file.file_type?.toLowerCase().includes('prediction') || 
+      file.file_name?.toLowerCase().includes('prediction')
+    );
+    
+    return predictionsFile ? {
+      file_url: predictionsFile.file_url,
+      file_type: predictionsFile.file_type || 'predictions',
+      file_name: predictionsFile.file_name
+    } : null;
+  };
+  
+  // Function to handle file download
+  const handleFileDownload = (url: string, filename: string) => {
+    downloadFile(url, filename);
+    toast({
+      title: "Download Started",
+      description: `Downloading ${filename}...`
+    });
+  };
+  
+  // Function to get formatted model file name
+  const getModelFileName = (url: string): string => {
+    const urlParts = url.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    
+    if (fileName) {
+      return fileName;
+    }
+    
+    return results?.automl_engine 
+      ? `${results.automl_engine.toLowerCase()}_model.zip` 
+      : 'trained_model.zip';
+  };
+  
+  // Function to check if model can be tuned
+  const canTuneModel = (): boolean => {
+    // Only allow tuning for completed experiments with algorithm info
+    if (!results) return false;
+    if (results.status !== 'completed' && results.status !== 'success') return false;
+    
+    // Check if it's a custom training experiment
+    return !!results.algorithm || !!results.algorithm_choice;
+  };
+  
+  // Handler for successful model tuning
+  const handleTuneSuccess = () => {
+    setIsTuneModalOpen(false);
+    
+    // Show success message
+    toast({
+      title: "Tuning Job Submitted",
+      description: "Your model tuning job has been submitted successfully."
+    });
+    
+    // Refresh experiment details if callback provided
+    if (onRefresh) {
+      onRefresh();
     }
   };
 
