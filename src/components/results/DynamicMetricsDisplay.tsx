@@ -11,12 +11,14 @@ interface MetricCardProps {
   value: string | number;
   description?: string;
   isPercentage?: boolean;
+  isMain?: boolean; // New prop to highlight main metric
 }
 
 interface DynamicMetricsDisplayProps {
   metrics: Record<string, any>;
   taskType: string;
   bestModelDetails?: Record<string, any>;
+  mainMetric?: string; // New prop to specify the main metric
 }
 
 // Helper function for formatting metric values
@@ -55,7 +57,8 @@ const formatMetricName = (key: string): string => {
 const getMetricsForTaskType = (
   taskType: string, 
   metrics: Record<string, any>,
-  bestModelDetails?: Record<string, any>
+  bestModelDetails?: Record<string, any>,
+  mainMetric?: string
 ): Record<string, number | undefined> => {
   const isClassification = taskType.includes('classification');
   const isBinary = taskType.includes('binary');
@@ -74,10 +77,22 @@ const getMetricsForTaskType = (
   
   if (isClassification) {
     if (isMulticlass) {
-      // For multiclass classification, show only accuracy, precision and recall
-      result.accuracy = combinedMetrics.accuracy;
-      result.precision = combinedMetrics.precision;
-      result.recall = combinedMetrics.recall;
+      // For multiclass classification, always include the main metric (logloss) if available
+      if (mainMetric && combinedMetrics[mainMetric] !== undefined) {
+        result[mainMetric] = combinedMetrics[mainMetric];
+      }
+      
+      // Add H2O multiclass specific metrics
+      if (combinedMetrics.mean_per_class_error !== undefined) result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+      if (combinedMetrics.logloss !== undefined) result.logloss = combinedMetrics.logloss;
+      if (combinedMetrics.rmse !== undefined) result.rmse = combinedMetrics.rmse;
+      if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;
+      
+      // Also include these standard metrics
+      if (combinedMetrics.accuracy !== undefined) result.accuracy = combinedMetrics.accuracy;
+      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+      
       // Also include F1 score if we need to show it later
       if (combinedMetrics['f1-score'] !== undefined) {
         result['f1-score'] = combinedMetrics['f1-score'];
@@ -199,13 +214,14 @@ const getMetricDescription = (metricName: string): string => {
     'f1-score': 'Harmonic mean of precision and recall',
     'auc': 'Area Under the ROC Curve',
     'aucpr': 'Area Under the Precision-Recall Curve',
-    'logloss': 'Logarithmic loss',
+    'logloss': 'Cross-entropy loss, lower values are better',
     'rmse': 'Root Mean Squared Error',
     'mse': 'Mean Squared Error',
     'mae': 'Mean Absolute Error',
     'r2': 'Coefficient of determination',
     'specificity': 'True Negative Rate',
     'mcc': 'Matthews Correlation Coefficient',
+    'mean_per_class_error': 'Average classification error across all classes',
   };
   
   return descriptions[metricName.toLowerCase()] || '';
@@ -259,7 +275,7 @@ const PerClassMetricsTable: React.FC<PerClassMetricsTableProps> = ({ perClassMet
   );
 };
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPercentage = false }) => {
+const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPercentage = false, isMain = false }) => {
   // Format the display value
   let displayValue = typeof value === 'number' 
     ? isPercentage 
@@ -268,8 +284,8 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPe
     : value;
   
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className={`${isMain ? 'border-primary border-2' : ''}`}>
+      <CardHeader className={`pb-2 ${isMain ? 'bg-primary/10' : ''}`}>
         <CardTitle className="text-base flex items-center">
           {title}
           {description && (
@@ -284,10 +300,11 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPe
               </Tooltip>
             </TooltipProvider>
           )}
+          {isMain && <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Main</span>}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
+        <div className={`text-2xl font-bold ${isMain ? 'text-primary' : ''}`}>
           {displayValue}
         </div>
         {description && (
@@ -303,11 +320,12 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPe
 const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({ 
   metrics, 
   taskType,
-  bestModelDetails 
+  bestModelDetails,
+  mainMetric = 'logloss' // Default main metric is logloss for H2O multiclass
 }) => {
   const isClassification = taskType.includes('classification');
   const isMulticlass = taskType.includes('multiclass');
-  const taskSpecificMetrics = getMetricsForTaskType(taskType, metrics, bestModelDetails);
+  const taskSpecificMetrics = getMetricsForTaskType(taskType, metrics, bestModelDetails, mainMetric);
   
   // Get confusion matrix if available
   const confusionMatrix = metrics.confusion_matrix || bestModelDetails?.confusion_matrix;
@@ -324,6 +342,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
           // Get description and percentage formatting
           const isPercent = isPercentageMetric(key);
           const description = getMetricDescription(key);
+          const isMainMetric = key === mainMetric;
           
           return (
             <MetricCard
@@ -332,6 +351,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
               value={value}
               description={description}
               isPercentage={isPercent}
+              isMain={isMainMetric}
             />
           );
         })}

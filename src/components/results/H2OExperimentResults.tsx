@@ -607,83 +607,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {primaryMetric.name.replace(/_/g, ' ')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ')}
-                      </h3>
-                      <p className="text-3xl font-bold text-primary">
-                        {isPercentageMetric(primaryMetric.name) 
-                          ? formatMetricValue(primaryMetric.value, true)
-                          : formatMetricValue(primaryMetric.value, false)}
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-                      {Object.entries(metrics).map(([key, value]) => {
-                        if (
-                          key === 'best_model_label' ||
-                          key === 'metric_used' ||
-                          key === 'metric_value' ||
-                          key === 'classification_report' ||
-                          key === 'confusion_matrix' ||
-                          key === 'source' ||
-                          key === 'mean_per_class_error' ||  // Skip it here, we'll handle it separately
-                          typeof value !== 'number'
-                        ) return null;
-                        
-                        // Enhanced formatting of metric display names
-                        const metricDisplayName = key
-                          .replace(/_/g, ' ')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        
-                        const isPercent = isPercentageMetric(key);
-                        
-                        return (
-                          <div key={key} className="p-3 bg-muted/40 rounded-md">
-                            <span className="block text-sm text-muted-foreground">
-                              {metricDisplayName}
-                            </span>
-                            <span className="text-lg font-medium">
-                              {formatMetricValue(value as number, isPercent)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Replace individual boxes with a table for mean_per_class_error */}
-                      {metrics.mean_per_class_error && Array.isArray(metrics.mean_per_class_error) && 
-                       metrics.mean_per_class_error.length > 0 && 
-                       Array.isArray(metrics.mean_per_class_error[0]) && (
-                        <div className="col-span-3 p-3 bg-muted/40 rounded-md">
-                          <span className="block text-sm text-muted-foreground mb-2">
-                            Per Class Error Rates
-                          </span>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Class</TableHead>
-                                <TableHead>Error Rate</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <TableRow>
-                                <TableCell>0</TableCell>
-                                <TableCell>{formatMetricValue(metrics.mean_per_class_error[0][0], true)}</TableCell>
-                              </TableRow>
-                              <TableRow>
-                                <TableCell>1</TableCell>
-                                <TableCell>{formatMetricValue(metrics.mean_per_class_error[0][1], true)}</TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </div>
+                    <DynamicMetricsDisplay 
+                      metrics={metrics} 
+                      taskType={task_type} 
+                      bestModelDetails={bestModelDetails}
+                      mainMetric="logloss" // Set logloss as the main metric
+                    />
                   </div>
                 </CardContent>
               </Card>
