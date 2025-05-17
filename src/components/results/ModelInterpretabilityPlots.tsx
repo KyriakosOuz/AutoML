@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, FileChart, Link as LinkIcon } from 'lucide-react';
+import { Download, ZoomIn, FileText, Link as LinkIcon } from 'lucide-react';
 
 interface PlotMetadata {
   plot_type: string;
@@ -89,7 +89,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
         </CardHeader>
         <CardContent className="flex justify-center py-8">
           <div className="text-center">
-            <FileChart className="mx-auto h-12 w-12 text-muted-foreground" />
+            <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
             <p className="mt-2 text-sm text-muted-foreground">
               No interpretability plots available
             </p>
@@ -103,7 +103,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileChart className="h-5 w-5" />
+          <FileText className="h-5 w-5" />
           Model Interpretability
         </CardTitle>
         <CardDescription>
