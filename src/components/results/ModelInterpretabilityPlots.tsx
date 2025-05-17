@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp, BarChart } from 'lucide-react';
+import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
@@ -372,82 +371,38 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                     </TabsTrigger>
                   </TabsList>
                   
-                  <div className="flex space-x-2">
-                    {/* Feature Importance Button */}
+                  {plotsData.featureImportancePlot && (
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="text-xs">
-                          <BarChart className="h-3.5 w-3.5 mr-1" />
-                          Feature Importance
+                          <LinkIcon className="h-3.5 w-3.5 mr-1" />
+                          View Feature Importance
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
                         <div className="p-1">
-                          {plotsData.featureImportancePlot ? (
-                            <>
-                              <img 
-                                src={plotsData.featureImportancePlot.file_url} 
-                                alt="Feature Importance" 
-                                className="w-full rounded-md"
-                              />
-                              <div className="mt-4 flex justify-end">
-                                <Button variant="outline" size="sm" asChild>
-                                  <a 
-                                    href={plotsData.featureImportancePlot.file_url}
-                                    download={`feature_importance.png`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </a>
-                                </Button>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center py-12">
-                              <p className="text-muted-foreground">
-                                No feature importance plot available
-                              </p>
-                            </div>
-                          )}
+                          <img 
+                            src={plotsData.featureImportancePlot.file_url} 
+                            alt="Feature Importance" 
+                            className="w-full rounded-md"
+                          />
+                          <div className="mt-4 flex justify-end">
+                            <Button variant="outline" size="sm" asChild>
+                              <a 
+                                href={plotsData.featureImportancePlot.file_url}
+                                download={`feature_importance.png`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </a>
+                            </Button>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
-                    
-                    {plotsData.featureImportancePlot && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-xs">
-                            <LinkIcon className="h-3.5 w-3.5 mr-1" />
-                            View Feature Importance
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <div className="p-1">
-                            <img 
-                              src={plotsData.featureImportancePlot.file_url} 
-                              alt="Feature Importance" 
-                              className="w-full rounded-md"
-                            />
-                            <div className="mt-4 flex justify-end">
-                              <Button variant="outline" size="sm" asChild>
-                                <a 
-                                  href={plotsData.featureImportancePlot.file_url}
-                                  download={`feature_importance.png`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
+                  )}
                 </div>
                 
                 <TabsContent value="pdp" className="mt-0">
