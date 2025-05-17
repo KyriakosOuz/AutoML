@@ -96,6 +96,24 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const [readmeContent, setReadmeContent] = useState<string>('');
   const [isLoadingReadme, setIsLoadingReadme] = useState(false);
+
+  // Log when the component renders to help debug issues with visuals and metrics
+  useEffect(() => {
+    if (experimentResults) {
+      console.log("[MLJARExperimentResults] Rendering with metrics:", {
+        metricKeys: experimentResults.metrics ? Object.keys(experimentResults.metrics) : [],
+        hasPerClassMetrics: experimentResults.metrics?.per_class ? 
+          Object.keys(experimentResults.metrics.per_class).length : 
+          (experimentResults.per_class_metrics ? Object.keys(experimentResults.per_class_metrics).length : 0),
+        visualFiles: experimentResults.files ? 
+          experimentResults.files.filter(f => 
+            f.file_type.includes('confusion_matrix') || 
+            f.file_type.includes('evaluation_curve') || 
+            f.file_type.includes('learning_curve')
+          ).length : 0
+      });
+    }
+  }, [experimentResults]);
   
   // Add the missing fetchReadmeContent function
   const fetchReadmeContent = async (url: string) => {
@@ -294,11 +312,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // Filter files by type - expanded to include regression visualizations
+  // Filter files by type - expanded to include regression visualizations and ensure all types are covered
   const getFilesByType = (fileType: string) => {
     return files.filter(file => file.file_type === fileType || file.file_type.includes(fileType));
   };
 
+  // Ensure we include all visualization types from the sample data
   const visualizationFiles = [
     ...getFilesByType('confusion_matrix'),
     ...getFilesByType('roc_curve'),

@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { ExperimentResults, ExperimentStatus } from '@/types/training';
+import { ExperimentStatus } from '@/types/training';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -16,7 +17,7 @@ interface ExperimentResultsViewProps {
   experimentId: string;
 }
 
-const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
+export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   experimentId
 }) => {
   const { 
@@ -33,7 +34,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const [localLoadingState, setLocalLoadingState] = useState(true); // Local loading state
   
   // Use React Query with improved configuration
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['experiment', experimentId],
     queryFn: () => getExperimentResults(experimentId),
     enabled: !!experimentId,
@@ -51,13 +52,14 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       isLoading,
       hasData: !!data,
       hasError: !!error,
-      modelName: data?.model_display_name
+      modelName: data?.model_display_name,
+      filesCount: data?.files?.length
     });
   }, [experimentId, lastTrainingType, experimentStatus, isLoading, data, error]);
   
   // Special handling for AutoML results
   useEffect(() => {
-    const isAutoML = lastTrainingType === 'automl';
+    const isAutoML = lastTrainingType === 'automl' || data?.training_type === 'automl';
     
     // For AutoML experiments, make extra sure resultsLoaded is set to true when data is available
     if (isAutoML && data && !isLoading) {
@@ -73,7 +75,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       }
       
       if (experimentStatus !== 'completed' && experimentStatus !== 'failed') {
-        setExperimentStatus('completed');
+        setExperimentStatus(data.status === 'failed' ? 'failed' : 'completed');
       }
     }
   }, [data, isLoading, lastTrainingType, setResultsLoaded, setIsTraining, setExperimentStatus, experimentStatus, resultsLoaded, isTraining]);
@@ -84,7 +86,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       console.log("[ExperimentResultsView] Results loaded successfully", {
         status: data.status,
         algorithm: data.algorithm,
-        automl_engine: data.automl_engine
+        automl_engine: data.automl_engine,
+        filesCount: data.files?.length
       });
       
       setLocalLoadingState(false); // ✅ Always safe to update this
@@ -94,8 +97,10 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
         setResultsLoaded(true);
       }
       
-      if (experimentStatus !== 'completed') {
+      if (experimentStatus !== 'completed' && data.status !== 'failed') {
         setExperimentStatus('completed');
+      } else if (data.status === 'failed' && experimentStatus !== 'failed') {
+        setExperimentStatus('failed');
       }
       
       if (isTraining) {
@@ -112,6 +117,12 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
   const handleReset = () => {
     console.log("[ExperimentResultsView] Resetting training state");
     resetTrainingState();
+  };
+
+  // Handler for refreshing results
+  const handleRefresh = () => {
+    console.log("[ExperimentResultsView] Refreshing results");
+    refetch();
   };
 
   // Use memoized values for result type determination
@@ -153,7 +164,9 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     isCustomTrainingExperiment: resultType.isCustomTrainingExperiment,
     training_type: data.training_type,
     automl_engine: data.automl_engine,
-    model_name: data.model_display_name
+    model_name: data.model_display_name,
+    filesCount: data.files?.length,
+    metricsKeys: data.metrics ? Object.keys(data.metrics) : []
   });
 
   // Render the appropriate component based on experiment type
@@ -167,6 +180,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           isLoading={false}
           error={null}
           onReset={handleReset}
+          onRefresh={handleRefresh}
         />
       </div>
     );
@@ -180,6 +194,7 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           isLoading={false}
           error={null}
           onReset={handleReset}
+          onRefresh={handleRefresh}
         />
       </div>
     );
@@ -193,6 +208,8 @@ const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           isLoading={false}
           error={null}
           onReset={handleReset}
+          onRefresh={handleRefresh}
+          trainingType={data.training_type as 'automl' | 'custom'}
         />
       </div>
     );
