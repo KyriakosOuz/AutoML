@@ -371,6 +371,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Get best model details
   const bestModelDetails = leaderboard.length > 0 ? leaderboard[0] : null;
   
+  // Check if the task type is multiclass classification
+  const isMulticlassClassification = task_type?.includes('multiclass');
+  
   // Enhanced: Get the model name and trim it to the first two parts (e.g., "DRF_1")
   // Modified to prioritize the pre-parsed bestModelFromLeaderboard
   const getShortModelName = () => {
@@ -549,7 +552,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 rounded-none border-b h-12">
+          <TabsList className={`w-full grid ${isMulticlassClassification ? 'grid-cols-4' : 'grid-cols-5'} rounded-none border-b h-12`}>
             <TabsTrigger value="summary" className="text-sm flex items-center gap-1">
               <Award className="h-4 w-4" />
               <span>Summary</span>
@@ -560,10 +563,13 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
               <span>Leaderboard</span>
             </TabsTrigger>
             
-            <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
-              <BarChart4 className="h-4 w-4" />
-              <span>Charts</span>
-            </TabsTrigger>
+            {/* Conditionally render the Charts tab */}
+            {!isMulticlassClassification && (
+              <TabsTrigger value="charts" className="text-sm flex items-center gap-1">
+                <BarChart4 className="h-4 w-4" />
+                <span>Charts</span>
+              </TabsTrigger>
+            )}
             
             <TabsTrigger value="interpretability" className="text-sm flex items-center gap-1">
               <FileText className="h-4 w-4" />
@@ -695,62 +701,64 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             )}
           </TabsContent>
           
-          {/* Charts Tab */}
-          <TabsContent value="charts" className="p-6">
-            {visualizationFiles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visualizationFiles.map((file, index) => (
-                  <Dialog key={index}>
-                    <DialogTrigger asChild>
-                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">
-                            {formatVisualizationName(file.file_type)}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3">
-                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            <div 
-                              className="absolute inset-0 bg-cover bg-center"
-                              style={{ backgroundImage: `url(${file.file_url})` }}
-                            />
+          {/* Charts Tab - Only render if not multiclass classification */}
+          {!isMulticlassClassification && (
+            <TabsContent value="charts" className="p-6">
+              {visualizationFiles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {visualizationFiles.map((file, index) => (
+                    <Dialog key={index}>
+                      <DialogTrigger asChild>
+                        <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">
+                              {formatVisualizationName(file.file_type)}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-3">
+                            <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                              <div 
+                                className="absolute inset-0 bg-cover bg-center"
+                                style={{ backgroundImage: `url(${file.file_url})` }}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
+                        </DialogHeader>
+                        <div className="p-1">
+                          <img 
+                            src={file.file_url} 
+                            alt={file.file_type} 
+                            className="w-full rounded-md"
+                          />
+                          <div className="mt-4 flex justify-end">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Image
+                              </a>
+                            </Button>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
-                      </DialogHeader>
-                      <div className="p-1">
-                        <img 
-                          src={file.file_url} 
-                          alt={file.file_type} 
-                          className="w-full rounded-md"
-                        />
-                        <div className="mt-4 flex justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Image
-                            </a>
-                          </Button>
                         </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  No visualization files were found for this experiment.
-                </p>
-              </div>
-            )}
-          </TabsContent>
+                      </DialogContent>
+                    </Dialog>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    No visualization files were found for this experiment.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          )}
           
           {/* New Interpretability tab */}
           <TabsContent value="interpretability" className="p-6">
