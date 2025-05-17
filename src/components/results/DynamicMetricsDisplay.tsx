@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { PerClassMetric } from '@/types/training';
 
 interface MetricCardProps {
@@ -286,21 +286,27 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, isPe
   return (
     <Card className={`${isMain ? 'border-primary border-2' : ''}`}>
       <CardHeader className={`pb-2 ${isMain ? 'bg-primary/10' : ''}`}>
-        <CardTitle className="text-base flex items-center">
-          {title}
-          {description && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger className="ml-1">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="max-w-xs">{description}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {isMain && <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Main</span>}
+        <CardTitle className="text-base flex items-center justify-between">
+          <span className="truncate">{title}</span>
+          <div className="flex items-center">
+            {isMain && (
+              <Badge variant="outline" className="bg-primary text-primary-foreground ml-2">
+                Main
+              </Badge>
+            )}
+            {description && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="ml-1">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">{description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -335,7 +341,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
   
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {Object.entries(taskSpecificMetrics).map(([key, value]) => {
           if (value === undefined) return null;
           
