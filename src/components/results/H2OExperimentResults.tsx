@@ -85,6 +85,20 @@ const formatVisualizationName = (fileType: string): string => {
   return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
+// Helper function to determine the selection metric based on task type
+const getSelectionMetricForTaskType = (taskType: string = ''): string => {
+  switch (taskType) {
+    case 'binary_classification':
+      return 'AUC (Higher is better)';
+    case 'multiclass_classification':
+      return 'Mean Per Class Error (Lower is better)';
+    case 'regression':
+      return 'Mean Residual Deviance (Lower is better)';
+    default:
+      return 'Optimized metric';
+  }
+};
+
 const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   experimentId,
   status,
@@ -360,14 +374,17 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Enhanced: Get the model name and trim it to the first two parts (e.g., "DRF_1")
   // Modified to prioritize the pre-parsed bestModelFromLeaderboard
   const getShortModelName = () => {
-    // First priority - Use pre-parsed bestModelFromLeaderboard
+    // First priority - Use model_display_name from the API response
+    if (model_display_name) {
+      console.log("Using model_display_name from API:", model_display_name);
+      return model_display_name;
+    }
+    
+    // Second priority - Use pre-parsed bestModelFromLeaderboard
     if (bestModelFromLeaderboard) {
       console.log("Using pre-parsed best model name:", bestModelFromLeaderboard);
       return bestModelFromLeaderboard;
     }
-    
-    // Second priority: Use model_display_name if available
-    if (model_display_name) return model_display_name;
     
     // Third priority: Use the first model from leaderboard array
     if (bestModelDetails?.name) {
@@ -434,6 +451,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                        'Best Model';
                        
   const shortModelName = getShortModelName();
+  
+  // Determine the selection metric based on task type for the tooltip
+  const selectionMetric = getSelectionMetricForTaskType(task_type);
 
   // Get primary metric based on task type
   const getPrimaryMetric = () => {
@@ -573,7 +593,19 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       <span className="text-sm font-medium">{target_column}</span>
                       
                       <span className="text-sm text-muted-foreground">Best Model:</span>
-                      <span className="text-sm font-medium">{shortModelName}</span>
+                      <span className="text-sm font-medium flex items-center">
+                        {shortModelName}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3.5 w-3.5 ml-1 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Selected by {selectionMetric}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
                       
                       <span className="text-sm text-muted-foreground">Created At:</span>
                       <span className="text-sm font-medium">{formattedCreatedAt}</span>
