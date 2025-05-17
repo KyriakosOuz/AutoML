@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,9 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, FileText, Link as LinkIcon } from 'lucide-react';
+import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface PlotMetadata {
   plot_type: string;
@@ -24,6 +25,7 @@ interface ModelInterpretabilityPlotsProps {
 const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ files }) => {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pdp');
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
   // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
@@ -159,6 +161,92 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
         <CardDescription>
           Examine how features affect predictions across different classes
         </CardDescription>
+        <Collapsible
+          open={isExplanationOpen}
+          onOpenChange={setIsExplanationOpen}
+          className="mt-4 border rounded-md bg-muted/50"
+        >
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="flex w-full justify-between p-4">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">How to interpret these plots</span>
+              </div>
+              {isExplanationOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pb-4">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="pdp">
+                <AccordionTrigger className="text-sm font-medium">
+                  Understanding Partial Dependence Plots (PDP)
+                </AccordionTrigger>
+                <AccordionContent className="text-sm">
+                  <p className="mb-2">
+                    Partial Dependence Plots show how the feature on the x-axis influences the model's predictions for each class, averaging out the effects of all other features.
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Y-axis:</strong> Represents the predicted probability (or log-odds) for a specific class.</li>
+                    <li><strong>Higher lines:</strong> Classes with lines positioned higher have a greater probability of being predicted for that feature value.</li>
+                    <li><strong>Upward trends:</strong> As the feature value increases, the probability of that class increases.</li>
+                    <li><strong>Downward trends:</strong> As the feature value increases, the probability of that class decreases.</li>
+                    <li><strong>Crossing lines:</strong> When lines for different classes cross, it indicates that the model's preferred prediction changes from one class to another at that feature value.</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="ice">
+                <AccordionTrigger className="text-sm font-medium">
+                  Understanding Individual Conditional Expectation (ICE) Plots
+                </AccordionTrigger>
+                <AccordionContent className="text-sm">
+                  <p className="mb-2">
+                    ICE plots show how the prediction for individual instances would change as we vary the feature value on the x-axis.
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Multiple lines:</strong> Each line represents a specific instance from your dataset.</li>
+                    <li><strong>Line variation:</strong> When lines diverge significantly, it indicates the feature interacts strongly with other features.</li>
+                    <li><strong>Clustered lines:</strong> Suggest subgroups in your data where the feature has similar effects.</li>
+                    <li><strong>Outlier detection:</strong> Lines that behave very differently may represent outliers or important special cases.</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="comparing">
+                <AccordionTrigger className="text-sm font-medium">
+                  Comparing Across Classes
+                </AccordionTrigger>
+                <AccordionContent className="text-sm">
+                  <p>In multiclass models, these plots help you understand:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Class-specific feature importance:</strong> A feature may influence some classes more than others.</li>
+                    <li><strong>Feature thresholds:</strong> Identify critical values where a feature dramatically shifts predictions.</li>
+                    <li><strong>Competitive relationships:</strong> When one class's probability increases, others typically decrease (since all probabilities must sum to 1).</li>
+                    <li><strong>Feature interactions:</strong> The same feature may have opposite effects for different classes.</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="patterns">
+                <AccordionTrigger className="text-sm font-medium">
+                  Common Patterns to Look For
+                </AccordionTrigger>
+                <AccordionContent className="text-sm">
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Monotonic relationships:</strong> Consistent increases or decreases across the feature range.</li>
+                    <li><strong>Non-linear effects:</strong> Curves, plateaus, or threshold effects where impact changes across the feature's range.</li>
+                    <li><strong>Step functions:</strong> Sharp changes at certain thresholds suggest decision boundaries.</li>
+                    <li><strong>No effect:</strong> Flat lines indicate the feature has little influence on that class's prediction.</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CollapsibleContent>
+        </Collapsible>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -232,8 +320,19 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                       <CardTitle className="text-base">
                         {activeFeature && `PDP for ${activeFeature}`}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="flex items-center gap-1">
                         How {activeFeature} impacts predictions across classes
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-5 w-5 p-0 ml-1" 
+                          title="Learn how to interpret PDP plots"
+                          onClick={() => {
+                            setIsExplanationOpen(true);
+                          }}
+                        >
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4">
@@ -312,8 +411,19 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                       <CardTitle className="text-base">
                         {activeFeature && `ICE for ${activeFeature}`}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="flex items-center gap-1">
                         Individual Conditional Expectation plots for {activeFeature}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-5 w-5 p-0 ml-1" 
+                          title="Learn how to interpret ICE plots"
+                          onClick={() => {
+                            setIsExplanationOpen(true);
+                          }}
+                        >
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4">
