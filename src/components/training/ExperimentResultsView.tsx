@@ -43,37 +43,45 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid disrupting UI
   });
   
-  // ✅ NEW: Update lastTrainingType when results arrive
+  // ✅ IMPROVED: More robust training type detection logic
   useEffect(() => {
     if (data) {
-      // Determine training type from results
-      let detectedType = 'automl';
-      if (data.training_type) {
-        detectedType = data.training_type;
+      // ✅ FIXED: Use more robust detection with proper fallback
+      let detectedType: TrainingType | null = null;
+
+      if (data.training_type === 'custom') {
+        detectedType = 'custom';
       } else if (data.algorithm) {
         detectedType = 'custom';
-      } else if (!data.automl_engine) {
-        detectedType = 'custom'; // If no automl_engine, likely custom
+      } else if (data.automl_engine) {
+        detectedType = 'automl';
       }
-      
-      // ✅ FIXED: Validate and cast the training type to ensure it's a valid TrainingType
-      const validatedType: TrainingType = detectedType === 'custom' ? 'custom' : 'automl';
-      
-      if (validatedType !== lastTrainingType) {
+
+      // Fallback to lastTrainingType only if nothing is detected
+      if (!detectedType && lastTrainingType) {
+        detectedType = lastTrainingType;
+      }
+
+      // If still null, default to a safe value
+      if (!detectedType) {
+        detectedType = 'automl'; // Default fallback
+      }
+
+      if (detectedType && detectedType !== lastTrainingType) {
         console.log("[ExperimentResultsView] Updating lastTrainingType based on results:", {
           from: lastTrainingType,
-          to: validatedType,
+          to: detectedType,
           modelName: data.model_display_name,
           trainingType: data.training_type,
           algorithm: data.algorithm,
           automlEngine: data.automl_engine
         });
-        
+
         // Update lastTrainingType in context with validated type
-        setLastTrainingType(validatedType);
+        setLastTrainingType(detectedType);
         
         // Also update in localStorage for persistence
-        localStorage.setItem('lastTrainingType', validatedType);
+        localStorage.setItem('lastTrainingType', detectedType);
       }
     }
   }, [data, lastTrainingType, setLastTrainingType]);
@@ -156,27 +164,26 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
 
   // Handler for the "Run New Experiment" button - ✅ UPDATED to respect training type
   const handleReset = () => {
-    // Determine most accurate training type before reset
-    let trainingType = 'automl';
+    // ✅ IMPROVED: More robust training type detection
+    let trainingType: TrainingType = 'automl';
     
-    if (data?.training_type) {
-      trainingType = data.training_type;
+    if (data?.training_type === 'custom') {
+      trainingType = 'custom';
     } else if (data?.algorithm) {
       trainingType = 'custom';
+    } else if (data?.automl_engine) {
+      trainingType = 'automl';
     } else if (lastTrainingType) {
       trainingType = lastTrainingType;
     }
     
     console.log("[ExperimentResultsView] Resetting training state with type:", trainingType);
     
-    // ✅ FIXED: Validate and cast the training type
-    const validatedType: TrainingType = trainingType === 'custom' ? 'custom' : 'automl';
-    
     // Update lastTrainingType in context before reset
-    setLastTrainingType(validatedType);
+    setLastTrainingType(trainingType);
     
     // Save to localStorage
-    localStorage.setItem('lastTrainingType', validatedType);
+    localStorage.setItem('lastTrainingType', trainingType);
     
     // Reset state
     resetTrainingState();

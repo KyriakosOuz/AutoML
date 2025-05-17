@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType, ExperimentStatus, TrainingType } from '@/types/training';
@@ -101,13 +100,11 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     // Then reset the training state
     resetTrainingState();
     
-    // ✅ FIXED: Respect the current training type rather than forcing 'automl'
+    // ✅ IMPROVED: More robust training type detection
     const trainingType = determineTrainingType();
     
-    // ✅ FIXED: Make sure we validate the type to be either 'automl' or 'custom'
-    const validatedType: TrainingType = trainingType === 'custom' ? 'custom' : 'automl'; 
-    
-    setActiveTab(validatedType === 'custom' ? 'custom' : 'automl');
+    // Set active tab based on determined type
+    setActiveTab(trainingType === 'custom' ? 'custom' : 'automl');
     
     // If an external onReset was provided, call it as well
     if (onReset) {
@@ -132,13 +129,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
   const isMljarExperiment = results?.automl_engine?.toLowerCase() === "mljar";
   const isH2OExperiment = results?.automl_engine?.toLowerCase() === "h2o";
   
-  // Determine the correct training type from results or context
+  // ✅ IMPROVED: More robust training type detection logic
   const determineTrainingType = (): TrainingType => {
     // First check if results have explicit training_type
-    if (results?.training_type) {
+    if (results?.training_type === 'custom') {
       console.log("[ExperimentResultsContainer] Using training_type from results:", results.training_type);
-      // Make sure we return a valid TrainingType
-      return results.training_type === 'custom' ? 'custom' : 'automl';
+      return 'custom';
     }
     
     // Then check if results have algorithm (custom training indicator)
@@ -147,7 +143,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       return 'custom';
     }
     
-    // Then check if results have automl_engine (legacy detection)
+    // Then check if results have automl_engine (automl indicator)
     if (results?.automl_engine) {
       console.log("[ExperimentResultsContainer] Using automl_engine from results:", results.automl_engine);
       return 'automl';
@@ -155,7 +151,8 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     
     // If neither is available, use lastTrainingType from context
     console.log("[ExperimentResultsContainer] Falling back to lastTrainingType from context:", lastTrainingType);
-    // Make sure we return a valid TrainingType
+    
+    // Return lastTrainingType if valid, otherwise default to automl
     return lastTrainingType === 'custom' ? 'custom' : 'automl';
   };
   

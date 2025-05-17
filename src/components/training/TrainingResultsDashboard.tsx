@@ -23,14 +23,24 @@ const TrainingResultsDashboard: React.FC<TrainingResultsDashboardProps> = ({ onR
     experimentResults
   } = useTraining();
 
-  // ✅ NEW: Determine the most accurate training type to display
+  // ✅ IMPROVED: More robust training type detection logic
   const getTrainingType = (): TrainingType => {
-    if (experimentResults?.training_type) {
-      // ✅ FIXED: Ensure we return a valid TrainingType
-      return experimentResults.training_type === 'custom' ? 'custom' : 'automl';
+    // First check if results have explicit training_type
+    if (experimentResults?.training_type === 'custom') {
+      return 'custom';
     }
-    if (experimentResults?.algorithm) return 'custom';
-    // ✅ FIXED: Ensure we validate lastTrainingType
+    
+    // Then check if results have algorithm (custom training indicator)
+    if (experimentResults?.algorithm) {
+      return 'custom';
+    }
+    
+    // Then check if results have automl_engine (automl indicator)
+    if (experimentResults?.automl_engine) {
+      return 'automl';
+    }
+    
+    // If neither is available, use lastTrainingType from context
     return lastTrainingType === 'custom' ? 'custom' : 'automl';
   };
 
