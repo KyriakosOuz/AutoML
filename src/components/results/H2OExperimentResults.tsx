@@ -25,6 +25,7 @@ import { formatTrainingTime } from '@/utils/formatUtils';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import CSVPreview from './CSVPreview';
 import H2OLeaderboardTable from './H2OLeaderboardTable';
+import DynamicMetricsDisplay from './DynamicMetricsDisplay';
 
 interface H2OExperimentResultsProps {
   experimentId: string | null;
