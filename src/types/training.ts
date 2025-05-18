@@ -1,3 +1,4 @@
+
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -79,8 +80,6 @@ export interface PDPICEMetadata {
   feature?: string | null;
   file_url: string;
   file_type: string;
-  file_name?: string;
-  created_at?: string;
 }
 
 export interface ExperimentResults {

@@ -43,8 +43,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     hasError: !!error,
     resultTrainingType: experimentResults?.training_type,
     resultAutomlEngine: experimentResults?.automl_engine,
-    modelDisplayName: experimentResults?.model_display_name,
-    pdpIceMetadata: experimentResults?.pdp_ice_metadata?.length
+    modelDisplayName: experimentResults?.model_display_name
   });
   
   // Determine the actual training type to display in UI - improved logic
@@ -67,8 +66,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     // Check for PDP/ICE plots in files array
     if (experimentResults.files && experimentResults.files.length > 0) {
       const hasPdpIce = experimentResults.files.some(file => 
-        file.file_type?.toLowerCase().includes('pdp_') || 
-        file.file_type?.toLowerCase().includes('ice_')
+        file.file_type?.startsWith('pdp_') || file.file_type?.startsWith('ice_')
       );
       console.log("[ExperimentResults] Checked files for PDP/ICE:", hasPdpIce);
       return hasPdpIce;
@@ -231,9 +229,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsContent value="interpretability">
               <ModelInterpretabilityPlots 
                 files={experimentResults.pdp_ice_metadata ? 
-                  experimentResults : // Pass the whole result object if it has pdp_ice_metadata
-                  experimentResults}  // Always pass the whole results object
-                showCategoryTabs={true} // Enable category tabs for better organization
+                  [experimentResults] : // Pass the whole result object if it has pdp_ice_metadata
+                  experimentResults.files || []} // Otherwise pass the files array
               />
             </TabsContent>
           )}
@@ -258,3 +255,4 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
+
