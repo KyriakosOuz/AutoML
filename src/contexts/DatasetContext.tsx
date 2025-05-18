@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -23,8 +24,10 @@ export interface FeatureImportance {
 
 export interface ClassImbalanceData {
   needs_balancing: boolean;
+  is_imbalanced: boolean;
   class_distribution: Record<string, number>;
   target_column: string;
+  status_msg?: string;
   recommendation?: string;
 }
 
