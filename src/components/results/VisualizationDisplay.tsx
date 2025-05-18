@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Enhanced filtering to capture ALL visualization types
+  // Enhanced filtering to capture ALL visualization types, now including pdp plots
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -33,7 +33,10 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'learning_curve',
       'true_vs_predicted',
       'predicted_vs_residuals',
-      'residual_analysis'  // Added new regression visualization type
+      'residual_analysis',
+      'pdp', // Add PDP plots
+      'ice', // Add ICE plots
+      'partial_dependence' // Alternative naming for PDP
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
@@ -123,6 +126,24 @@ const formatVisualizationName = (fileType: string): string => {
     return 'True vs Predicted';
   } else if (fileType.includes('predicted_vs_residuals') || fileType.includes('residual_analysis')) {
     return 'Residual Analysis';
+  } else if (fileType.includes('pdp_')) {
+    // Parse PDP plot names to show feature and class
+    const parts = fileType.replace('pdp_', '').split('_');
+    if (parts.length >= 2) {
+      const feature = parts[0];
+      const className = parts.slice(1).join(' ');
+      return `PDP: ${feature} - ${className}`;
+    }
+    return 'Partial Dependence Plot';
+  } else if (fileType.includes('ice_')) {
+    // Parse ICE plot names to show feature and class
+    const parts = fileType.replace('ice_', '').split('_');
+    if (parts.length >= 2) {
+      const feature = parts[0];
+      const className = parts.slice(1).join(' ');
+      return `ICE: ${feature} - ${className}`;
+    }
+    return 'Individual Conditional Expectation';
   }
   
   return fileType.replace(/_/g, ' ');

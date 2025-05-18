@@ -87,6 +87,60 @@ export const automlTrain = async (
   }
 };
 
+// Helper function to categorize visualization files
+const categorizeVisualizationFiles = (files: any[] = []): Record<string, any[]> => {
+  const visualizationsByType: Record<string, any[]> = {
+    predictions: [],
+    confusion_matrix: [],
+    evaluation: [],
+    explainability: [],
+    feature_importance: [],
+    model: [],
+    pdp: [], // Added PDP plots category
+    ice: [], // Added ICE plots category
+    other: []
+  };
+
+  files.forEach(file => {
+    const fileType = file.file_type?.toLowerCase() || '';
+
+    if (fileType === 'model' || fileType === 'trained_model') {
+      visualizationsByType.model.push(file);
+    } else if (fileType.includes('predictions') || fileType.includes('prediction')) {
+      visualizationsByType.predictions.push(file);
+    } else if (fileType.includes('confusion_matrix')) {
+      visualizationsByType.confusion_matrix.push(file);
+    } else if (fileType.includes('roc') || fileType.includes('precision_recall') || 
+               fileType.includes('auc') || fileType.includes('metrics_curve')) {
+      visualizationsByType.evaluation.push(file);
+    } else if (fileType.includes('shap') || fileType.includes('explain')) {
+      visualizationsByType.explainability.push(file);
+    } else if (fileType.includes('importance') || fileType.includes('feature_impact')) {
+      visualizationsByType.feature_importance.push(file);
+    } else if (fileType.includes('pdp_')) {
+      visualizationsByType.pdp.push(file); // Categorize PDP plots
+    } else if (fileType.includes('ice_')) {
+      visualizationsByType.ice.push(file); // Categorize ICE plots
+    } else if (fileType === 'leaderboard_csv' || fileType === 'leaderboard') {
+      if (!visualizationsByType.leaderboard) {
+        visualizationsByType.leaderboard = [];
+      }
+      visualizationsByType.leaderboard.push(file);
+    } else {
+      visualizationsByType.other.push(file);
+    }
+  });
+
+  // Clean up empty categories
+  Object.keys(visualizationsByType).forEach(key => {
+    if (visualizationsByType[key].length === 0) {
+      delete visualizationsByType[key];
+    }
+  });
+
+  return visualizationsByType;
+};
+
 // Fetch experiment results endpoint (returns detailed results for experiment)
 export const getExperimentResults = async (
   experimentId: string
@@ -133,6 +187,10 @@ export const getExperimentResults = async (
       file.file_url?.includes('leaderboard')
     );
 
+    // Process files to extract visualizations by type
+    const visualizations_by_type = result.visualizations_by_type || 
+                                  categorizeVisualizationFiles(result.files);
+
     // Map the API response to our ExperimentResults type
     const experimentResults: ExperimentResults = {
       experimentId: result.experimentId || result.experiment_id,
@@ -160,6 +218,8 @@ export const getExperimentResults = async (
       model_display_name: result.model_display_name,
       leaderboard: result.leaderboard,
       leaderboard_csv: result.leaderboard_csv || (leaderboardFile ? leaderboardFile.file_content : null),
+      visualizations_by_type: visualizations_by_type,
+      pdp_ice_metadata: result.pdp_ice_metadata || [],
       training_results: {
         metrics: result.metrics,
         classification_report: result.metrics?.classification_report,

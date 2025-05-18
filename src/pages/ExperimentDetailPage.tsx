@@ -28,7 +28,7 @@ const ExperimentDetailPage: React.FC = () => {
     }
   }, [error]);
   
-  // Add debug logging to see what data is available
+  // Add debug logging to see what data is available, including visualization types
   useEffect(() => {
     if (data) {
       console.log('ExperimentDetailPage: Experiment data loaded:', {
@@ -39,7 +39,10 @@ const ExperimentDetailPage: React.FC = () => {
         model: data.model_display_name,
         metrics: data.metrics ? Object.keys(data.metrics) : [],
         filesCount: data.files?.length,
-        fileTypes: data.files?.map(f => f.file_type)
+        fileTypes: data.files?.map(f => f.file_type),
+        // Log PDP and ICE visualization files
+        pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
+        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
       });
     }
   }, [data, experimentId]);

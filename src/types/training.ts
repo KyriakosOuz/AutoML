@@ -42,6 +42,8 @@ export interface VisualizationsByType {
   explainability?: TrainingFile[];
   feature_importance?: TrainingFile[];
   model?: TrainingFile[];
+  pdp?: TrainingFile[]; // Added PDP plots
+  ice?: TrainingFile[]; // Added ICE plots
   other?: TrainingFile[];
   [key: string]: TrainingFile[] | undefined;
 }
