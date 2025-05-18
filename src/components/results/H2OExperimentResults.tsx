@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -793,31 +792,33 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                         </span>
                       </div>
                       
-                      {/* Mean Per Class Error */}
+                      {/* Modified Mean Per Class Error - Now takes less vertical space */}
                       {metrics.mean_per_class_error && (
                         <div className="col-span-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-3 mt-2">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">Mean Per Class Error</span>
-                            <span className="text-sm font-medium">
-                              {Array.isArray(metrics.mean_per_class_error[0]) 
-                                ? formatMetricValue(metrics.mean_per_class_error[0], true)
-                                : formatMetricValue(metrics.mean_per_class_error, true)
-                              }
-                            </span>
-                          </div>
-                          
-                          {Array.isArray(metrics.mean_per_class_error[0]) && (
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Class 0 Error:</span>
-                                <span>{formatMetricValue(metrics.mean_per_class_error[0][0], true)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Class 1 Error:</span>
-                                <span>{formatMetricValue(metrics.mean_per_class_error[0][1], true)}</span>
-                              </div>
+                          <div className="flex flex-wrap gap-x-4 items-center">
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium mr-2">Mean Per Class Error:</span>
+                              <span className="text-sm">
+                                {Array.isArray(metrics.mean_per_class_error[0]) 
+                                  ? formatMetricValue(metrics.mean_per_class_error[0], true)
+                                  : formatMetricValue(metrics.mean_per_class_error, true)
+                                }
+                              </span>
                             </div>
-                          )}
+                            
+                            {Array.isArray(metrics.mean_per_class_error[0]) && (
+                              <div className="flex gap-4 text-xs">
+                                <div className="flex items-center">
+                                  <span className="text-muted-foreground mr-1">Class 0:</span>
+                                  <span>{formatMetricValue(metrics.mean_per_class_error[0][0], true)}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="text-muted-foreground mr-1">Class 1:</span>
+                                  <span>{formatMetricValue(metrics.mean_per_class_error[0][1], true)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
