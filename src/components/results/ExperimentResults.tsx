@@ -9,6 +9,7 @@ import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
+import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -184,6 +185,12 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
+          {experimentResults?.files?.some(file => file.file_type?.includes('pdp_') || file.file_type?.includes('ice_') || 
+                           experimentResults?.pdp_ice_metadata?.length > 0) && (
+            <TabsContent value="interpretability" key="interpretability">
+              <ModelInterpretabilityPlots experiment={experimentResults} />
+            </TabsContent>
+          )}
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-between">

@@ -761,9 +761,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
           )}
           
           {/* New Interpretability tab */}
-          <TabsContent value="interpretability" className="p-6">
-            <ModelInterpretabilityPlots files={files} />
-          </TabsContent>
+          {experimentResults?.files?.some(file => file.file_type?.includes('pdp_') || file.file_type?.includes('ice_') || 
+                           experimentResults?.pdp_ice_metadata?.length > 0) && (
+            <TabsContent value="interpretability" key="interpretability">
+              <ModelInterpretabilityPlots experiment={experimentResults} />
+            </TabsContent>
+          )}
           
           <TabsContent value="predictions" className="p-6">
             <div className="grid grid-cols-1 gap-6">

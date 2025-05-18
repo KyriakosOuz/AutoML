@@ -29,10 +29,10 @@ interface PlotMetadata {
 }
 
 interface ModelInterpretabilityPlotsProps {
-  files: any[];
+  experiment: any; // Updated to receive full experiment object
 }
 
-const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ files }) => {
+const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ experiment }) => {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pdp');
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
@@ -40,13 +40,16 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // Extract files from the experiment object
+  const files = experiment.files || [];
 
   // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
     // Extract metadata from backend pdp_ice_metadata if available
     const extractMetadataFromBackend = () => {
-      // NEW: Receive pdp_ice_metadata from the full experiment object instead of from files
-      const pdpIceMetadata = (Array.isArray((files as any).pdp_ice_metadata) ? (files as any).pdp_ice_metadata : []) || [];
+      // NEW: Receive pdp_ice_metadata from the full experiment object
+      const pdpIceMetadata = Array.isArray(experiment.pdp_ice_metadata) ? experiment.pdp_ice_metadata : [];
       
       if (pdpIceMetadata.length > 0) {
         console.log("✅ Using pdp_ice_metadata from backend:", pdpIceMetadata);
@@ -157,7 +160,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       features: allFeatures,
       featureImportancePlot
     };
-  }, [files]);
+  }, [experiment, files]);
 
   // Set initial active feature if available
   React.useEffect(() => {
