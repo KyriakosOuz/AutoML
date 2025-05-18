@@ -14,6 +14,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   const files = results?.files || [];
   
   // Enhanced filtering to capture ALL visualization types, now including pdp plots
+  // and excluding model/CSV files
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -38,7 +39,19 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'ice', // Add ICE plots
       'partial_dependence' // Alternative naming for PDP
     ];
-    return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
+    
+    // Exclude model and CSV files
+    const excludeTypes = [
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
+    ];
+    
+    const isVisualization = visualTypes.some(type => file.file_type.toLowerCase().includes(type));
+    const isExcluded = excludeTypes.some(type => 
+      file.file_type.toLowerCase().includes(type) || 
+      (file.file_name && file.file_name.toLowerCase().includes(type))
+    );
+    
+    return isVisualization && !isExcluded;
   });
 
   // Log which visualizations were found

@@ -39,8 +39,18 @@ const ExperimentDetailPage: React.FC = () => {
         model: data.model_display_name,
         metrics: data.metrics ? Object.keys(data.metrics) : [],
         filesCount: data.files?.length,
+        // Log file types to debug visualization filtering
         fileTypes: data.files?.map(f => f.file_type),
-        // Log PDP and ICE visualization files
+        // Log model and CSV files specifically
+        modelFiles: data.files?.filter(f => 
+          f.file_type.includes('model') || 
+          f.file_url.includes('model')
+        ).map(f => f.file_type),
+        csvFiles: data.files?.filter(f => 
+          f.file_type.includes('csv') || 
+          f.file_url.includes('csv')
+        ).map(f => f.file_type),
+        // Log PDP and ICE visualization files separately
         pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
         iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
       });

@@ -121,18 +121,24 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   const getVisualizationFiles = (): VisualizationFile[] => {
     if (!results || !results.files) return [];
     
-    // Filter files to only include visualization types
+    // Filter files to only include visualization types and exclude model/CSV files
     const visualTypes = [
       'confusion_matrix', 'evaluation_curve', 'roc_curve', 
       'precision_recall', 'feature_importance', 'learning_curve', 
-      'shap', 'partial_dependence', 'ice', 'residuals', 'calibration'
+      'shap', 'partial_dependence', 'ice', 'pdp', 'residuals', 'calibration'
+    ];
+    
+    const excludeTypes = [
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
     ];
     
     // Check if the results have visualizations_by_type field for better categorization
     if (results.visualizations_by_type && typeof results.visualizations_by_type === 'object') {
       // Flatten the visualization types from the backend categorization
-      return Object.values(results.visualizations_by_type)
-        .flat()
+      // But exclude model and CSV files
+      return Object.entries(results.visualizations_by_type)
+        .filter(([category]) => category !== 'model' && category !== 'leaderboard' && category !== 'predictions')
+        .flatMap(([_, files]) => files)
         .map(file => ({
           file_url: file.file_url,
           file_type: file.file_type || 'visualization',
@@ -142,7 +148,20 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     
     // Fallback to the traditional filtering
     return (results.files || [])
-      .filter(file => visualTypes.some(type => file.file_type?.toLowerCase().includes(type)))
+      .filter(file => {
+        // Check if file type matches any visualization type
+        const isVisualization = visualTypes.some(type => 
+          file.file_type?.toLowerCase().includes(type)
+        );
+        
+        // Make sure it's not a model or CSV file
+        const isExcluded = excludeTypes.some(type => 
+          file.file_type?.toLowerCase().includes(type) || 
+          file.file_name?.toLowerCase().includes(type)
+        );
+        
+        return isVisualization && !isExcluded;
+      })
       .map(file => ({
         file_url: file.file_url,
         file_type: file.file_type || 'visualization',
