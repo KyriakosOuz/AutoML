@@ -42,6 +42,7 @@ export interface VisualizationsByType {
   explainability?: TrainingFile[];
   feature_importance?: TrainingFile[];
   model?: TrainingFile[];
+  pdp?: TrainingFile[];  // Added PDP type for Partial Dependency Plots
   other?: TrainingFile[];
   [key: string]: TrainingFile[] | undefined;
 }

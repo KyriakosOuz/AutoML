@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,10 +63,28 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance')) {
     return 'Feature Importance';
+  } else if (fileType.includes('pdp_')) {
+    // Format PDP plot titles
+    return formatPdpTitle(fileType);
   }
   
   // Default formatting: capitalize each word and replace underscores with spaces
   return fileType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+// Helper function to format PDP plot titles
+const formatPdpTitle = (fileType: string): string => {
+  if (!fileType.includes('pdp_')) return fileType;
+  
+  // Extract feature and class from the format "pdp_FEATURE_CLASS"
+  const parts = fileType.replace('pdp_', '').split('_');
+  if (parts.length >= 2) {
+    const className = parts.pop(); // Last part is the class name
+    const featureName = parts.join(' '); // Rest is the feature name
+    return `PDP: ${featureName} (${className})`;
+  }
+  
+  return `PDP: ${fileType.replace('pdp_', '').replace(/_/g, ' ')}`;
 };
 
 // Helper function to categorize visualization files
@@ -82,8 +99,35 @@ const categorizeVisualizations = (files: {file_type: string, file_url: string}[]
      file.file_type.includes('learning_curve') ||
      file.file_type.includes('feature_importance') ||
      file.file_type.includes('roc_curve') ||
-     file.file_type.includes('precision_recall'))
+     file.file_type.includes('precision_recall') ||
+     file.file_type.includes('pdp_'))
   );
+};
+
+// Get unique metrics (to avoid duplicates like specificity in H2O binary models)
+const getUniqueMetrics = (metrics: Record<string, any> = {}): Record<string, number> => {
+  if (!metrics || Object.keys(metrics).length === 0) return {};
+  
+  const uniqueMetrics: Record<string, number> = {};
+  const usedKeys = new Set<string>();
+  
+  for (const [key, value] of Object.entries(metrics)) {
+    if (key === 'per_class' || key === 'classification_report' || 
+        key === 'confusion_matrix' || key === 'source' || 
+        typeof value !== 'number') {
+      continue;
+    }
+    
+    // Skip duplicate specificity for H2O binary classification
+    if (key === 'specificity' && usedKeys.has(key)) {
+      continue;
+    }
+    
+    usedKeys.add(key);
+    uniqueMetrics[key] = value;
+  }
+  
+  return uniqueMetrics;
 };
 
 // Helper function to get F1 score from either f1-score or f1_score fields
@@ -128,7 +172,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
   };
   
   // Helper to get per-class metrics from either naming format
-  const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
+  const getPerClassMetrics = (experimentResults: ExperimentResults | null): Record<string, PerClassMetric> | undefined => {
     if (!experimentResults || !experimentResults.metrics) return undefined;
     
     // Check for the per_class format (nested object)
@@ -238,8 +282,11 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     return file ? file : null;
   }).filter(Boolean) as typeof files;
 
-  // Enhanced visualization files categorization
+  // Enhanced visualization files categorization, including PDP plots
   const visualizationFiles = categorizeVisualizations(files);
+  
+  // Check if we have PDP plots
+  const hasPdpPlots = files.some(file => file.file_type.includes('pdp_'));
   
   const isClassification = task_type?.includes('classification');
   const isMulticlass = task_type === 'multiclass_classification';
@@ -250,7 +297,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                           (automl_engine ? `${automl_engine.toUpperCase()}` : 'Not specified');
   
   // Get per-class metrics for multiclass classification
-  const perClassMetrics = getPerClassMetrics();
+  const perClassMetrics = getPerClassMetrics(experimentResults);
   
   // Render the per-class metrics table
   const renderPerClassMetrics = () => {
@@ -315,6 +362,58 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           </div>
         </CollapsibleContent>
       </Collapsible>
+    );
+  };
+  
+  // Render PDP plots section if available
+  const renderPdpPlots = () => {
+    if (!hasPdpPlots) return null;
+    
+    const pdpFiles = files.filter(file => file.file_type.includes('pdp_'));
+    
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-3">Partial Dependency Plots</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {pdpFiles.map((file, index) => (
+            <Card key={index} className="overflow-hidden">
+              <CardHeader className="py-2 px-4 bg-muted/30">
+                <CardTitle className="text-sm font-medium">
+                  {formatPdpTitle(file.file_type)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="cursor-pointer hover:opacity-90 transition-opacity rounded-md overflow-hidden">
+                      <img 
+                        src={file.file_url} 
+                        alt={formatPdpTitle(file.file_type)} 
+                        className="w-full rounded-md"
+                      />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                    <div className="p-1">
+                      <img 
+                        src={file.file_url} 
+                        alt={formatPdpTitle(file.file_type)} 
+                        className="w-full rounded-md"
+                      />
+                      <div className="mt-4 flex justify-end">
+                        <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatPdpTitle(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   };
   
@@ -417,7 +516,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
             </div>
             
             {/* Use the enhanced MetricsGrid component */}
-            <MetricsGrid metrics={metrics} taskType={task_type} />
+            <MetricsGrid metrics={getUniqueMetrics(metrics)} taskType={task_type} />
             
             {/* Add Per-Class Metrics for Multiclass Classification */}
             {isMulticlass && perClassMetrics && renderPerClassMetrics()}
@@ -457,50 +556,61 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
           
           <TabsContent value="visualizations" className="p-6">
             {visualizationFiles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visualizationFiles.map((file, index) => (
-                  <Card key={index} className="overflow-hidden">
-                    <CardHeader className="py-2 px-4 bg-muted/30">
-                      <CardTitle className="text-sm font-medium">
-                        {formatVisualizationName(file.file_type)}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <div className="cursor-pointer hover:opacity-90 transition-opacity rounded-md overflow-hidden">
-                            <img 
-                              src={file.file_url} 
-                              alt={formatVisualizationName(file.file_type)} 
-                              className="w-full rounded-md"
-                            />
+              <div className="space-y-8">
+                {/* Render PDP plots section */}
+                {renderPdpPlots()}
+                
+                {/* Other visualizations section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    {hasPdpPlots ? 'Other Visualizations' : 'Visualizations'}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {visualizationFiles.filter(file => !file.file_type.includes('pdp_')).map((file, index) => (
+                      <Card key={index} className="overflow-hidden">
+                        <CardHeader className="py-2 px-4 bg-muted/30">
+                          <CardTitle className="text-sm font-medium">
+                            {formatVisualizationName(file.file_type)}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <div className="cursor-pointer hover:opacity-90 transition-opacity rounded-md overflow-hidden">
+                                <img 
+                                  src={file.file_url} 
+                                  alt={formatVisualizationName(file.file_type)} 
+                                  className="w-full rounded-md"
+                                />
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl">
+                              <div className="p-1">
+                                <img 
+                                  src={file.file_url} 
+                                  alt={formatVisualizationName(file.file_type)} 
+                                  className="w-full rounded-md"
+                                />
+                                <div className="mt-4 flex justify-end">
+                                  <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Download
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <div className="mt-2 flex justify-end">
+                            <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </Button>
                           </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <div className="p-1">
-                            <img 
-                              src={file.file_url} 
-                              alt={formatVisualizationName(file.file_type)} 
-                              className="w-full rounded-md"
-                            />
-                            <div className="mt-4 flex justify-end">
-                              <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
-                                <Download className="h-4 w-4 mr-1" />
-                                Download
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <div className="mt-2 flex justify-end">
-                        <Button variant="outline" size="sm" onClick={() => downloadFile(file.file_url, `${formatVisualizationName(file.file_type).toLowerCase().replace(/\s+/g, '_')}.png`)}>
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="text-center py-12">
@@ -513,6 +623,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
             )}
           </TabsContent>
           
+          {/* Keep the details tab unchanged */}
           <TabsContent value="details" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
@@ -599,6 +710,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
             </div>
           </TabsContent>
           
+          {/* Keep the report tab unchanged */}
           <TabsContent value="report" className="p-6">
             <div className="flex flex-col items-center justify-center py-6 space-y-6">
               {model_file_url && (

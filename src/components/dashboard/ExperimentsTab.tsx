@@ -648,6 +648,8 @@ const ExperimentsTab: React.FC = () => {
     );
   };
 
+  const selectedExperiment = experiments.find(experiment => experiment.id === selectedExperimentId);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -849,11 +851,13 @@ const ExperimentsTab: React.FC = () => {
         </Card>
       )}
 
-      <ExperimentDetailDrawer
-        experimentId={selectedExperimentId}
-        isOpen={isDetailDrawerOpen}
-        onClose={handleCloseDetailDrawer}
-      />
+      {selectedExperiment && (
+        <ExperimentDetailDrawer
+          experiment={selectedExperiment}
+          isOpen={isDetailDrawerOpen}
+          onClose={() => setIsDetailDrawerOpen(false)}
+        />
+      )}
 
       <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
         <DialogContent className="max-w-4xl">
