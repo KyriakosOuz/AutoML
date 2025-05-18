@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Accordion,
@@ -32,10 +33,15 @@ import { Download, ExternalLink, File, FileText, HelpCircle, ImagePlus, Plus, Up
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ExperimentResults } from "@/types/training"
+import { useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
+import { getAuthHeaders } from '@/lib/utils';
 
 interface ExperimentDetailDrawerProps {
-  results: ExperimentResults | null;
+  results?: ExperimentResults | null;
   onClose: () => void;
+  experimentId?: string; // Add experimentId prop
+  isOpen?: boolean; // Add isOpen prop
 }
 
 interface VisualizationFile {
@@ -44,9 +50,46 @@ interface VisualizationFile {
   file_name?: string;
 }
 
-const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({ results, onClose }) => {
+const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({ results: initialResults, onClose, experimentId, isOpen }) => {
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [isFilesOpen, setIsFilesOpen] = useState(false);
+  const [results, setResults] = useState<ExperimentResults | null>(initialResults || null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch experiment details if experimentId is provided
+  useEffect(() => {
+    const fetchExperimentDetails = async () => {
+      if (!experimentId || !isOpen) return;
+      
+      try {
+        setIsLoading(true);
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/experiments/get-experiment-details/${experimentId}`, {
+          method: 'GET',
+          headers
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch experiment details');
+        
+        const data = await response.json();
+        setResults(data.data);
+      } catch (error) {
+        console.error('Error fetching experiment details:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load experiment details",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchExperimentDetails();
+  }, [experimentId, isOpen]);
+
+  // Don't render if not open
+  if (!isOpen) return null;
 
   // Get visualizations for the Charts & Plots section
   const getVisualizationFiles = (): VisualizationFile[] => {
@@ -174,6 +217,16 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({ results
       other: otherCount
     };
   }, [visualizationFiles]);
+
+  if (isLoading) {
+    return (
+      <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-xl z-50 overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Loading experiment details...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-xl z-50 overflow-y-auto">
