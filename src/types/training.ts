@@ -1,5 +1,4 @@
 
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -63,7 +62,7 @@ export interface TrainingResults {
   f1_score?: number[];
   aucpr?: number;
   logloss?: number;
-  mean_per_class_error?: number[][] | number; // Updated to allow both array and single number
+  mean_per_class_error?: number[][];
 }
 
 // Define the interface for per-class metrics
@@ -99,7 +98,6 @@ export interface ExperimentResults {
   metrics?: Record<string, any> & {
     'f1-score'?: number; // Add support for hyphenated format
     per_class?: Record<string, PerClassMetric>; // Add the nested per_class property
-    mean_per_class_error?: number[][] | number; // Explicitly include mean_per_class_error with correct typing
   };
   files?: TrainingFile[];
   algorithm?: string;

@@ -21,26 +21,9 @@ interface DynamicMetricsDisplayProps {
   mainMetric?: string; // New prop to specify the main metric
 }
 
-// Helper function for formatting metric values - updated to handle arrays
-const formatMetricValue = (value: number | undefined | number[][] | number[], decimals: number = 3): string => {
+// Helper function for formatting metric values
+const formatMetricValue = (value: number | undefined, decimals: number = 3): string => {
   if (value === undefined) return 'N/A';
-  
-  // Handle array values like mean_per_class_error
-  if (Array.isArray(value)) {
-    // For flat arrays, use the average
-    if (!Array.isArray(value[0])) {
-      const avgValue = (value as number[]).reduce((sum, val) => sum + val, 0) / value.length;
-      return avgValue.toFixed(decimals);
-    }
-    
-    // For 2D arrays (like from H2O), use the first value as a simplification
-    // In a real app, you might want more sophisticated handling
-    if (value.length > 0 && value[0].length > 0) {
-      return value[0][0].toFixed(decimals);
-    }
-    return 'N/A';
-  }
-  
   return value.toFixed(decimals);
 };
 
@@ -76,11 +59,11 @@ const getMetricsForTaskType = (
   metrics: Record<string, any>,
   bestModelDetails?: Record<string, any>,
   mainMetric?: string
-): Record<string, number | undefined | number[][] | number[]> => {
+): Record<string, number | undefined> => {
   const isClassification = taskType.includes('classification');
   const isBinary = taskType.includes('binary');
   const isMulticlass = taskType.includes('multiclass');
-  const result: Record<string, number | undefined | number[][] | number[]> = {};
+  const result: Record<string, number | undefined> = {};
   
   // Combine metrics from both sources, prioritizing bestModelDetails
   const combinedMetrics = { ...metrics };
@@ -99,7 +82,7 @@ const getMetricsForTaskType = (
         result[mainMetric] = combinedMetrics[mainMetric];
       }
       
-      // Add H2O multiclass specific metrics - preserving array type for mean_per_class_error
+      // Add H2O multiclass specific metrics
       if (combinedMetrics.mean_per_class_error !== undefined) result.mean_per_class_error = combinedMetrics.mean_per_class_error;
       if (combinedMetrics.logloss !== undefined) result.logloss = combinedMetrics.logloss;
       if (combinedMetrics.rmse !== undefined) result.rmse = combinedMetrics.rmse;
@@ -367,25 +350,11 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
           const description = getMetricDescription(key);
           const isMainMetric = key === mainMetric;
           
-          // Format the value based on its type
-          let displayValue: string | number = value;
-          
-          // Handle array values before passing to MetricCard
-          if (Array.isArray(value)) {
-            if (Array.isArray(value[0])) {
-              // 2D array like mean_per_class_error
-              displayValue = value[0][0];
-            } else {
-              // 1D array
-              displayValue = (value as number[]).reduce((sum, v) => sum + v, 0) / value.length;
-            }
-          }
-          
           return (
             <MetricCard
               key={key}
               title={formatMetricName(key)}
-              value={displayValue}
+              value={value}
               description={description}
               isPercentage={isPercent}
               isMain={isMainMetric}

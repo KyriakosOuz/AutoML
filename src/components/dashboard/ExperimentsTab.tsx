@@ -432,27 +432,8 @@ const ExperimentsTab: React.FC = () => {
     return undefined;
   };
 
-  // Updated function to handle both single numbers and array values
-  const renderMetricValue = (value: number | undefined | number[][], isPercentage: boolean = true) => {
+  const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
     if (typeof value === 'undefined') return 'N/A';
-    
-    // Handle mean_per_class_error which is a number[][] in H2O responses
-    if (Array.isArray(value)) {
-      // For mean_per_class_error, calculate average if it's an array
-      // This is a simplified approach - in production you might want more sophisticated handling
-      if (value.length === 0) return 'N/A';
-      
-      // If it's a flat array, average its values
-      if (!Array.isArray(value[0])) {
-        const avgValue = (value as number[]).reduce((sum, val) => sum + val, 0) / value.length;
-        return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
-      }
-      
-      // For 2D arrays, return a simplified representation
-      return isPercentage ? `${(value[0][0] * 100).toFixed(2)}%` : value[0][0].toFixed(4);
-    }
-    
-    // Handle regular number values
     return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
@@ -750,7 +731,6 @@ const ExperimentsTab: React.FC = () => {
                   const isH2OExperiment = experiment.automl_engine?.toLowerCase() === 'h2o';
                   const isMLJARExperiment = experiment.automl_engine?.toLowerCase() === 'mljar';
                   const isBinaryClassification = experiment.task_type === 'binary_classification';
-                  const isMulticlassClassification = experiment.task_type === 'multiclass_classification';
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -777,16 +757,8 @@ const ExperimentsTab: React.FC = () => {
                               <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
                               <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
-                          ) : isH2OExperiment && isMulticlassClassification ? (
-                            // H2O multiclass classification metrics - showing available metrics
-                            <>
-                              <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
-                              <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
-                              <div>Log Loss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
-                              <div>Mean Per-Class Error: {renderMetricValue(experiment.metrics?.mean_per_class_error)}</div>
-                            </>
                           ) : isH2OExperiment && isBinaryClassification ? (
-                            // H2O binary classification metrics
+                            // UPDATED: H2O binary classification metrics - showing only 4 specific metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
@@ -794,7 +766,7 @@ const ExperimentsTab: React.FC = () => {
                               <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>
                           ) : isMLJARExperiment && isBinaryClassification ? (
-                            // MLJAR binary classification specific metrics
+                            // MLJAR binary classification specific metrics - UPDATED to show only 4 metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
