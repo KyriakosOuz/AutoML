@@ -11,6 +11,7 @@ import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
+import RocCurveChart from '@/components/training/charts/RocCurveChart';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -88,6 +89,12 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }, [experimentResults]);
 
   console.log("[ExperimentResults] Has interpretability plots:", hasInterpretabilityPlots);
+
+  // Find ROC curve file if available
+  const rocCurveFile = experimentResults?.files?.find(file => 
+    file.file_type === 'evaluation_curve' && 
+    (file.file_url?.includes('roc_curve') || file.file_type.includes('roc_curve'))
+  );
 
   if (isLoading) {
     return (
@@ -217,7 +224,19 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             )}
           </TabsList>
           <TabsContent value="summary">
-            <ModelSummary results={experimentResults} />
+            <div className="space-y-4">
+              <ModelSummary results={experimentResults} />
+              
+              {/* Show ROC curve in summary if available */}
+              {rocCurveFile && (
+                <div className="mt-4">
+                  <RocCurveChart 
+                    imageUrl={rocCurveFile.file_url} 
+                    auc={experimentResults.metrics?.auc || experimentResults.metrics?.roc_auc}
+                  />
+                </div>
+              )}
+            </div>
           </TabsContent>
           <TabsContent value="metrics">
             <MetricsDisplay results={experimentResults} />

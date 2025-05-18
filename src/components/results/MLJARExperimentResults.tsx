@@ -111,8 +111,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           experimentResults.files.filter(f => 
             f.file_type.includes('confusion_matrix') || 
             f.file_type.includes('evaluation_curve') || 
-            f.file_type.includes('learning_curve') ||
-            f.file_type.includes('precision_recall_curve')
+            f.file_type.includes('precision_recall_curve') ||
+            f.file_type.includes('learning_curve')
           ).map(f => f.file_type) : [],
         allFiles: experimentResults.files ? experimentResults.files.map(f => f.file_type) : []
       });
@@ -317,7 +317,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const primaryMetric = getPrimaryMetric();
   
   // Enhanced filter to capture all visualization types
-  // This new implementation ensures we catch all visualization types from the files array
+  // Updated implementation to include the requested visualization types
   const visualizationFiles = files.filter(file => {
     return file.file_type.includes('confusion_matrix') ||
            file.file_type.includes('evaluation_curve') ||
@@ -326,7 +326,11 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
            file.file_type.includes('feature_importance') ||
            file.file_type.includes('true_vs_predicted') ||
            file.file_type.includes('predicted_vs_residuals') ||
-           file.file_type.includes('roc_curve');
+           file.file_type.includes('roc_curve') ||
+           file.file_type.includes('calibration_curve') ||
+           file.file_type.includes('cumulative_gains') ||
+           file.file_type.includes('ks_statistic') ||
+           file.file_type.includes('lift_curve');
   });
 
   // Log visualization files to debug
@@ -336,6 +340,38 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       file_url: f.file_url
     }))
   );
+
+  // Group visualization files by type for better organization
+  const groupedVisualizations = visualizationFiles.reduce((groups: Record<string, any[]>, file) => {
+    let category = 'other';
+    
+    if (file.file_type.includes('confusion_matrix')) {
+      category = 'confusion_matrix';
+    } else if (file.file_type.includes('roc_curve') || file.file_type.includes('precision_recall')) {
+      category = 'evaluation_curves';
+    } else if (file.file_type.includes('learning_curve')) {
+      category = 'learning_curves';
+    } else if (file.file_type.includes('feature_importance')) {
+      category = 'feature_importance';
+    } else if (file.file_type.includes('calibration_curve')) {
+      category = 'calibration_curves';
+    } else if (file.file_type.includes('cumulative_gains')) {
+      category = 'cumulative_gains';
+    } else if (file.file_type.includes('ks_statistic')) {
+      category = 'ks_statistic';
+    } else if (file.file_type.includes('lift_curve')) {
+      category = 'lift_curves';
+    }
+    
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    
+    groups[category].push(file);
+    return groups;
+  }, {});
+
+  console.log("[MLJARExperimentResults] Grouped visualizations:", Object.keys(groupedVisualizations));
 
   const modelMetadataFile = files.find(file => 
     file.file_type === 'model_metadata' || 
@@ -678,52 +714,408 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Charts Tab */}
+          {/* Charts Tab - Updated to include all chart types and better organization */}
           <TabsContent value="charts" className="p-6">
             {visualizationFiles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visualizationFiles.map((file, index) => (
-                  <Dialog key={index}>
-                    <DialogTrigger asChild>
-                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">
-                            {formatVisualizationName(file.file_type)}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3">
-                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                            <div 
-                              className="absolute inset-0 bg-cover bg-center"
-                              style={{ backgroundImage: `url(${file.file_url})` }}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
-                      </DialogHeader>
-                      <div className="p-1">
-                        <img 
-                          src={file.file_url} 
-                          alt={file.file_type} 
-                          className="w-full rounded-md"
-                        />
-                        <div className="mt-4 flex justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Image
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
+              <>
+                {/* First show confusion matrix if any */}
+                {groupedVisualizations.confusion_matrix && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Confusion Matrix</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.confusion_matrix.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">
+                                  {file.file_type.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix'}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt={file.file_type}
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>
+                                {file.file_type.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix'}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt={file.file_type} 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Evaluation Curves: ROC and Precision-Recall */}
+                {groupedVisualizations.evaluation_curves && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Evaluation Curves</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.evaluation_curves.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">
+                                  {file.file_url.includes('roc') ? 'ROC Curve' : 
+                                   file.file_url.includes('precision_recall') ? 'Precision-Recall Curve' : 
+                                   formatVisualizationName(file.file_type)}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt={file.file_type}
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>
+                                {file.file_url.includes('roc') ? 'ROC Curve' : 
+                                 file.file_url.includes('precision_recall') ? 'Precision-Recall Curve' : 
+                                 formatVisualizationName(file.file_type)}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt={file.file_type} 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Calibration Curves */}
+                {groupedVisualizations.calibration_curves && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Calibration Curves</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.calibration_curves.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Calibration Curve</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt="Calibration Curve"
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Calibration Curve</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt="Calibration Curve" 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Gains and Lift Curves */}
+                {(groupedVisualizations.cumulative_gains || groupedVisualizations.lift_curves) && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Gains and Lift Curves</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.cumulative_gains?.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Cumulative Gains Curve</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt="Cumulative Gains Curve"
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Cumulative Gains Curve</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt="Cumulative Gains Curve" 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                      
+                      {groupedVisualizations.lift_curves?.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Lift Curve</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt="Lift Curve"
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Lift Curve</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt="Lift Curve" 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* KS Statistic */}
+                {groupedVisualizations.ks_statistic && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">KS Statistic</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.ks_statistic.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">KS Statistic</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt="KS Statistic"
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>KS Statistic</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt="KS Statistic" 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Learning Curves */}
+                {groupedVisualizations.learning_curves && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Learning Curves</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.learning_curves.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">Learning Curve</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt="Learning Curve"
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Learning Curve</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt="Learning Curve" 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show any other visualizations that didn't fit into a category */}
+                {groupedVisualizations.other && groupedVisualizations.other.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium mb-4">Other Visualizations</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {groupedVisualizations.other.map((file, index) => (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base">
+                                  {formatVisualizationName(file.file_type)}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3">
+                                <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                                  <img 
+                                    src={file.file_url} 
+                                    alt={file.file_type}
+                                    className="object-contain max-h-full w-full"
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
+                            </DialogHeader>
+                            <div className="p-1">
+                              <img 
+                                src={file.file_url} 
+                                alt={file.file_type} 
+                                className="w-full rounded-md"
+                              />
+                              <div className="mt-4 flex justify-end">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Image
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
