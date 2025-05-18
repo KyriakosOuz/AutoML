@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Enhanced filtering to capture ALL visualization types
+  // Enhanced filtering to capture ALL visualization types, including ICE and PDP plots
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -33,10 +33,33 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'learning_curve',
       'true_vs_predicted',
       'predicted_vs_residuals',
-      'residual_analysis'  // Added new regression visualization type
+      'residual_analysis',
+      'pdp_', // Added PDP plot prefix
+      'ice_'  // Added ICE plot prefix
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
+
+  // If there are pdp_ice_metadata entries, add them to the visualizationFiles
+  if (results.pdp_ice_metadata && results.pdp_ice_metadata.length > 0) {
+    console.log("[VisualizationDisplay] Found pdp_ice_metadata entries:", results.pdp_ice_metadata.length);
+    
+    // Convert pdp_ice_metadata to format compatible with visualizationFiles
+    const pdpIceFiles = results.pdp_ice_metadata.map(meta => ({
+      file_id: meta.file_url.split('/').pop() || '',
+      file_type: meta.file_type || '',
+      file_url: meta.file_url,
+      created_at: meta.created_at || new Date().toISOString(),
+      file_name: `${meta.file_type}_${meta.feature}_${meta.class || ''}.png`
+    }));
+    
+    // Add only files that aren't already included (avoid duplicates)
+    pdpIceFiles.forEach(pdfIceFile => {
+      if (!visualizationFiles.some(file => file.file_url === pdfIceFile.file_url)) {
+        visualizationFiles.push(pdfIceFile);
+      }
+    });
+  }
 
   // Log which visualizations were found
   console.log("[VisualizationDisplay] Found visualization files:", 
@@ -105,6 +128,25 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
 
 // Enhanced helper function to format visualization names in a user-friendly way
 const formatVisualizationName = (fileType: string): string => {
+  // Handle PDP and ICE plot names with feature and class
+  if (fileType.includes('pdp_') || fileType.includes('ice_')) {
+    const parts = fileType.split('_');
+    const plotType = parts[0].toUpperCase(); // PDP or ICE
+    
+    // If we have at least 3 parts (pdp/ice_feature_class)
+    if (parts.length >= 3) {
+      const feature = parts[1];
+      const className = parts.slice(2).join(' '); // Combine remaining parts as class name
+      return `${plotType} - ${feature} (${className})`;
+    }
+    
+    // If we just have feature (pdp/ice_feature)
+    if (parts.length === 2) {
+      return `${plotType} - ${parts[1]}`;
+    }
+  }
+  
+  // Handle other standard visualization types
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
   } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
@@ -125,6 +167,7 @@ const formatVisualizationName = (fileType: string): string => {
     return 'Residual Analysis';
   }
   
+  // Default formatting
   return fileType.replace(/_/g, ' ');
 };
 

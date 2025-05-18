@@ -1,445 +1,275 @@
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
+import { Download, ImageIcon, Info } from 'lucide-react';
+import { TrainingFile, PDPICEMetadata, ExperimentResults } from '@/types/training';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PlotMetadata {
-  plot_type: string;
-  feature: string;
-  class_id?: number | string; // Allow both number and string class IDs
-  file?: string;
-  file_url: string;
-  related_feature_importance?: string;
+  id: string;
+  type: string;
+  feature?: string;
+  class?: string | null;
+  url: string;
+  fileName?: string;
+  category?: 'pdp' | 'ice' | 'other';
 }
 
 interface ModelInterpretabilityPlotsProps {
-  files: any[];
+  // Allow either files array or full results object
+  files: TrainingFile[] | ExperimentResults;
+  showCategoryTabs?: boolean;
 }
 
-const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ files }) => {
-  const [activeFeature, setActiveFeature] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('pdp');
-  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ files, showCategoryTabs = false }) => {
+  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
-  // Log files when component renders to help with debugging
-  console.log("[ModelInterpretabilityPlots] Files received:", files);
-
-  // Check if files include pdp_ice_metadata for more detailed metadata
-  const hasPdpIceMetadata = files.some(file => file.pdp_ice_metadata);
-  console.log("[ModelInterpretabilityPlots] Has PDP/ICE metadata:", hasPdpIceMetadata);
-
-  // Enhanced extraction of PDP, ICE plots and their metadata
-  const plotsData = useMemo(() => {
-    // Extract feature information from file_type names
-    const extractMetadata = (file: any): PlotMetadata | null => {
-      // For structured metadata that's directly available from backend (pdp_ice_metadata)
-      if (file.class !== undefined && file.feature !== undefined && file.file_url && file.file_type) {
-        console.log("[ModelInterpretabilityPlots] Using direct metadata for:", file.file_type);
-        return {
-          plot_type: file.file_type.startsWith('pdp_') ? 'pdp' : 
-                    file.file_type.startsWith('ice_') ? 'ice' : 'other',
-          feature: file.feature,
-          class_id: file.class, // Keep this as a string - don't parse to int
-          file_url: file.file_url,
-          related_feature_importance: null
-        };
-      }
-      
-      // For files that already have pre-extracted metadata from the backend
-      if (file.feature && file.class_id !== undefined && file.plot_type) {
-        console.log("[ModelInterpretabilityPlots] Using pre-extracted metadata for:", file.plot_type, file.feature, file.class_id);
-        return {
-          plot_type: file.plot_type,
-          feature: file.feature,
-          class_id: file.class_id, // Keep as is, don't parse
-          file_url: file.file_url,
-          related_feature_importance: file.related_feature_importance
-        };
-      }
-
-      // For files that need metadata extraction from file_type
-      const fileType = file.file_type || '';
-      
-      // Handle PDP plots (format: pdp_FeatureName_ClassID/ClassName)
-      if (fileType.startsWith('pdp_')) {
-        const parts = fileType.split('_');
-        if (parts.length >= 3) {
-          // Extract feature and class name
-          const feature = parts[1];
-          const className = parts.slice(2).join('_'); // Join remaining parts to handle class names with underscores
-          
-          console.log("[ModelInterpretabilityPlots] Extracted from PDP file_type:", 
-            { fileType, feature, className });
-            
-          return {
-            plot_type: 'pdp',
-            feature: feature,
-            class_id: className, // Keep class name as string
-            file: fileType,
-            file_url: file.file_url
-          };
-        }
-      }
-      
-      // Handle ICE plots (format: ice_FeatureName_ClassID/ClassName)
-      if (fileType.startsWith('ice_')) {
-        const parts = fileType.split('_');
-        if (parts.length >= 3) {
-          // Extract feature and class name
-          const feature = parts[1];
-          const className = parts.slice(2).join('_'); // Join remaining parts to handle class names with underscores
-          
-          console.log("[ModelInterpretabilityPlots] Extracted from ICE file_type:", 
-            { fileType, feature, className });
-            
-          return {
-            plot_type: 'ice',
-            feature: feature,
-            class_id: className, // Keep class name as string
-            file: fileType,
-            file_url: file.file_url
-          };
-        }
-      }
-      
-      return null;
-    };
+  // Process the input to extract plot metadata
+  const plotsMetadata = useMemo(() => {
+    console.log("[ModelInterpretabilityPlots] Processing input:", files);
     
-    // Check for pdp_ice_metadata structure which comes directly from backend
-    if (files.length && files[0].pdp_ice_metadata) {
-      console.log("[ModelInterpretabilityPlots] Using pdp_ice_metadata array");
-      const pdpIcePlots = files[0].pdp_ice_metadata
-        .map(metadata => extractMetadata(metadata))
-        .filter(Boolean) as PlotMetadata[];
+    // Determine if we're working with an ExperimentResults object or TrainingFile[]
+    const isExperimentResults = 'pdp_ice_metadata' in files || 'files' in files;
+    
+    let processedMetadata: PlotMetadata[] = [];
+
+    if (isExperimentResults) {
+      const results = files as ExperimentResults;
       
-      // Split by plot type
-      const pdpPlots = pdpIcePlots.filter(plot => plot.plot_type === 'pdp');
-      const icePlots = pdpIcePlots.filter(plot => plot.plot_type === 'ice');
-      
-      // Get unique features
-      const allFeatures = [...pdpPlots, ...icePlots]
-        .map(plot => plot.feature)
-        .filter(Boolean)
-        .filter((value, index, self) => value && self.indexOf(value) === index)
-        .sort();
-      
-      // Find feature importance plot if available
-      const featureImportancePlot = pdpIcePlots.find(plot => 
-        plot.plot_type === 'variable_importance' || 
-        plot.file?.includes('importance')
-      );
-      
-      if (featureImportancePlot) {
-        // Link PDP/ICE plots to feature importance
-        [...pdpPlots, ...icePlots].forEach(plot => {
-          plot.related_feature_importance = featureImportancePlot.file_url;
+      // First try to use pdp_ice_metadata if available
+      if (results.pdp_ice_metadata && results.pdp_ice_metadata.length > 0) {
+        console.log("[ModelInterpretabilityPlots] Using pdp_ice_metadata with", 
+                    results.pdp_ice_metadata.length, "items");
+        
+        processedMetadata = results.pdp_ice_metadata.map((meta: PDPICEMetadata) => {
+          const fileType = meta.file_type || '';
+          const category = fileType.startsWith('pdp_') ? 'pdp' : 
+                          fileType.startsWith('ice_') ? 'ice' : 'other';
+                          
+          // Extract feature and class from the file type if not provided directly
+          let feature = meta.feature;
+          let classValue = meta.class;
+          
+          if (!feature || !classValue) {
+            const parts = fileType.split('_');
+            if (parts.length >= 3) {
+              feature = feature || parts[1];
+              classValue = classValue || parts.slice(2).join('_');
+            }
+          }
+          
+          return {
+            id: meta.file_url,
+            type: fileType,
+            feature: feature || '',
+            class: classValue,
+            url: meta.file_url,
+            fileName: `${fileType}.png`,
+            category: category as 'pdp' | 'ice' | 'other'
+          };
         });
+      } 
+      // Then fallback to files array if available
+      else if (results.files && results.files.length > 0) {
+        const fileList = results.files;
+        
+        // Process files with pdp_ or ice_ prefixes
+        processedMetadata = fileList
+          .filter(file => 
+            file.file_type.startsWith('pdp_') || 
+            file.file_type.startsWith('ice_')
+          )
+          .map(file => {
+            const fileType = file.file_type;
+            const parts = fileType.split('_');
+            const category = fileType.startsWith('pdp_') ? 'pdp' : 'ice';
+            
+            // Extract feature and class from the file type
+            let feature = '';
+            let classValue = null;
+            
+            if (parts.length >= 3) {
+              feature = parts[1];
+              classValue = parts.slice(2).join('_');
+            } else if (parts.length === 2) {
+              feature = parts[1];
+            }
+            
+            return {
+              id: file.file_id,
+              type: fileType,
+              feature,
+              class: classValue,
+              url: file.file_url,
+              fileName: file.file_name || `${fileType}.png`,
+              category: category as 'pdp' | 'ice' | 'other'
+            };
+          });
       }
+    } else {
+      // Handle TrainingFile[] input
+      const fileList = files as TrainingFile[];
       
-      return {
-        pdpPlots,
-        icePlots,
-        features: allFeatures,
-        featureImportancePlot
-      };
+      // Process files with pdp_ or ice_ prefixes
+      processedMetadata = fileList
+        .filter(file => 
+          file.file_type.startsWith('pdp_') || 
+          file.file_type.startsWith('ice_')
+        )
+        .map(file => {
+          const fileType = file.file_type;
+          const parts = fileType.split('_');
+          const category = fileType.startsWith('pdp_') ? 'pdp' : 'ice';
+          
+          // Extract feature and class from the file type
+          let feature = '';
+          let classValue = null;
+          
+          if (parts.length >= 3) {
+            feature = parts[1];
+            classValue = parts.slice(2).join('_');
+          } else if (parts.length === 2) {
+            feature = parts[1];
+          }
+          
+          return {
+            id: file.file_id,
+            type: fileType,
+            feature,
+            class: classValue,
+            url: file.file_url,
+            fileName: file.file_name || `${fileType}.png`,
+            category: category as 'pdp' | 'ice' | 'other'
+          };
+        });
     }
-    
-    // Traditional file array processing if no pdp_ice_metadata
-    console.log("[ModelInterpretabilityPlots] Processing traditional file array");
-    
-    // Extract metadata from all files
-    const allMetadata = files
-      .map(extractMetadata)
-      .filter(Boolean) as PlotMetadata[];
-    
-    // Split by plot type
-    const pdpPlots = allMetadata.filter(plot => plot.plot_type === 'pdp');
-    const icePlots = allMetadata.filter(plot => plot.plot_type === 'ice');
-    
-    // Get unique features across both plot types
-    const allFeatures = [...pdpPlots, ...icePlots]
-      .map(plot => plot.feature)
-      .filter(Boolean)
-      .filter((value, index, self) => value && self.indexOf(value) === index)
-      .sort();
-    
-    // Find feature importance plot
-    const featureImportancePlot = files.find(file => 
-      file.file_type?.includes('importance') || 
-      file.file_type?.includes('variable_importance')
-    );
-    
-    // Link PDP/ICE plots to feature importance if available
-    if (featureImportancePlot) {
-      [...pdpPlots, ...icePlots].forEach(plot => {
-        plot.related_feature_importance = featureImportancePlot.file_url;
-      });
-    }
-    
-    return {
-      pdpPlots,
-      icePlots,
-      features: allFeatures,
-      featureImportancePlot
-    };
+
+    console.log("[ModelInterpretabilityPlots] Processed metadata:", processedMetadata);
+    return processedMetadata;
   }, [files]);
 
-  console.log("[ModelInterpretabilityPlots] Processed plots data:", {
-    pdpCount: plotsData.pdpPlots.length, 
-    iceCount: plotsData.icePlots.length,
-    features: plotsData.features,
-    hasFeatureImportance: !!plotsData.featureImportancePlot
-  });
-
-  // Set initial active feature if available
-  React.useEffect(() => {
-    if (plotsData.features.length > 0 && !activeFeature) {
-      setActiveFeature(plotsData.features[0]);
-    }
-  }, [plotsData.features, activeFeature]);
-
-  // Get plots for current active feature and tab
-  const currentPlots = useMemo(() => {
-    if (!activeFeature) return [];
+  // Extract unique features and classes for filtering
+  const { uniqueFeatures, uniqueClasses } = useMemo(() => {
+    const features = new Set<string>();
+    const classes = new Set<string>();
     
-    if (activeTab === 'pdp') {
-      return plotsData.pdpPlots.filter(plot => plot.feature === activeFeature);
-    } else {
-      return plotsData.icePlots.filter(plot => plot.feature === activeFeature);
+    plotsMetadata.forEach(plot => {
+      if (plot.feature) features.add(plot.feature);
+      if (plot.class) classes.add(plot.class);
+    });
+    
+    return {
+      uniqueFeatures: Array.from(features),
+      uniqueClasses: Array.from(classes).filter(c => c !== null) as string[]
+    };
+  }, [plotsMetadata]);
+
+  // Filter plots based on selected feature and class
+  const filteredPlots = useMemo(() => {
+    let filtered = [...plotsMetadata];
+    
+    if (selectedFeature) {
+      filtered = filtered.filter(plot => plot.feature === selectedFeature);
     }
-  }, [activeFeature, activeTab, plotsData]);
+    
+    if (selectedClass) {
+      filtered = filtered.filter(plot => plot.class === selectedClass);
+    }
+    
+    return filtered;
+  }, [plotsMetadata, selectedFeature, selectedClass]);
 
-  // All plots for pagination
-  const allPlots = useMemo(() => {
-    return [...plotsData.pdpPlots, ...plotsData.icePlots]
-      .sort((a, b) => {
-        // Sort first by feature
-        if (a.feature < b.feature) return -1;
-        if (a.feature > b.feature) return 1;
-        
-        // Then by plot type
-        if (a.plot_type < b.plot_type) return -1;
-        if (a.plot_type > b.plot_type) return 1;
-        
-        // Then by class_id (as string)
-        const classA = String(a.class_id || '');
-        const classB = String(b.class_id || '');
-        return classA.localeCompare(classB);
-      });
-  }, [plotsData.pdpPlots, plotsData.icePlots]);
+  // Split plots by category
+  const categorizedPlots = useMemo(() => {
+    const pdpPlots = filteredPlots.filter(plot => plot.category === 'pdp');
+    const icePlots = filteredPlots.filter(plot => plot.category === 'ice');
+    const otherPlots = filteredPlots.filter(plot => !['pdp', 'ice'].includes(plot.category || ''));
+    
+    return { pdpPlots, icePlots, otherPlots };
+  }, [filteredPlots]);
 
-  // Calculate total pages
-  const totalPages = Math.ceil(allPlots.length / itemsPerPage);
-  
-  // Get current page items
-  const currentItems = allPlots.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  // Handler for feature selection
+  const handleFeatureSelect = (feature: string) => {
+    setSelectedFeature(feature === selectedFeature ? null : feature);
   };
 
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if total pages are less than max visible
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      // Always include first page
-      pageNumbers.push(1);
-      
-      // Calculate start and end of middle pages
-      let startPage = Math.max(2, currentPage - 1);
-      let endPage = Math.min(totalPages - 1, currentPage + 1);
-      
-      // Adjust if at boundaries
-      if (currentPage <= 2) {
-        endPage = 3;
-      } else if (currentPage >= totalPages - 1) {
-        startPage = totalPages - 2;
-      }
-      
-      // Add ellipsis if needed
-      if (startPage > 2) {
-        pageNumbers.push(-1); // -1 represents ellipsis
-      }
-      
-      // Add middle pages
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(i);
-      }
-      
-      // Add ellipsis if needed
-      if (endPage < totalPages - 1) {
-        pageNumbers.push(-2); // -2 represents ellipsis
-      }
-      
-      // Always include last page
-      pageNumbers.push(totalPages);
-    }
-    
-    return pageNumbers;
+  // Handler for class selection
+  const handleClassSelect = (classValue: string) => {
+    setSelectedClass(classValue === selectedClass ? null : classValue);
   };
 
-  if (plotsData.features.length === 0) {
+  // If no plots are available
+  if (plotsMetadata.length === 0) {
     return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Model Interpretability</CardTitle>
-          <CardDescription>
-            No PDP or ICE plots are available for this model
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center py-8">
-          <div className="text-center">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              No interpretability plots available
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12">
+        <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">No Interpretability Plots Available</h3>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          No PDP or ICE plots were found for this experiment.
+        </p>
+      </div>
     );
   }
 
+  // Log info about what we're rendering
+  console.log("[ModelInterpretabilityPlots] Rendering with:", {
+    totalPlots: plotsMetadata.length,
+    filteredPlots: filteredPlots.length,
+    uniqueFeatures,
+    uniqueClasses,
+    selectedFeature,
+    selectedClass
+  });
+
+  // Helper function to format plot type for display
+  const formatPlotType = (type: string): string => {
+    if (type.startsWith('pdp_')) {
+      return 'Partial Dependence Plot';
+    } else if (type.startsWith('ice_')) {
+      return 'Individual Conditional Expectation';
+    }
+    return type.replace(/_/g, ' ');
+  };
+
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Model Interpretability
-        </CardTitle>
-        <CardDescription>
-          Examine how features affect predictions across different classes
-        </CardDescription>
-        <Collapsible
-          open={isExplanationOpen}
-          onOpenChange={setIsExplanationOpen}
-          className="mt-4 border rounded-md bg-muted/50"
-        >
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex w-full justify-between p-4">
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">How to interpret these plots</span>
-              </div>
-              {isExplanationOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pb-4">
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="pdp">
-                <AccordionTrigger className="text-sm font-medium">
-                  Understanding Partial Dependence Plots (PDP)
-                </AccordionTrigger>
-                <AccordionContent className="text-sm">
-                  <p className="mb-2">
-                    Partial Dependence Plots show how the feature on the x-axis influences the model's predictions for each class, averaging out the effects of all other features.
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Y-axis:</strong> Represents the predicted probability (or log-odds) for a specific class.</li>
-                    <li><strong>Higher lines:</strong> Classes with lines positioned higher have a greater probability of being predicted for that feature value.</li>
-                    <li><strong>Upward trends:</strong> As the feature value increases, the probability of that class increases.</li>
-                    <li><strong>Downward trends:</strong> As the feature value increases, the probability of that class decreases.</li>
-                    <li><strong>Crossing lines:</strong> When lines for different classes cross, it indicates that the model's preferred prediction changes from one class to another at that feature value.</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="ice">
-                <AccordionTrigger className="text-sm font-medium">
-                  Understanding Individual Conditional Expectation (ICE) Plots
-                </AccordionTrigger>
-                <AccordionContent className="text-sm">
-                  <p className="mb-2">
-                    ICE plots show how the prediction for individual instances would change as we vary the feature value on the x-axis.
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Multiple lines:</strong> Each line represents a specific instance from your dataset.</li>
-                    <li><strong>Line variation:</strong> When lines diverge significantly, it indicates the feature interacts strongly with other features.</li>
-                    <li><strong>Clustered lines:</strong> Suggest subgroups in your data where the feature has similar effects.</li>
-                    <li><strong>Outlier detection:</strong> Lines that behave very differently may represent outliers or important special cases.</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="comparing">
-                <AccordionTrigger className="text-sm font-medium">
-                  Comparing Across Classes
-                </AccordionTrigger>
-                <AccordionContent className="text-sm">
-                  <p>In multiclass models, these plots help you understand:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Class-specific feature importance:</strong> A feature may influence some classes more than others.</li>
-                    <li><strong>Feature thresholds:</strong> Identify critical values where a feature dramatically shifts predictions.</li>
-                    <li><strong>Competitive relationships:</strong> When one class's probability increases, others typically decrease (since all probabilities must sum to 1).</li>
-                    <li><strong>Feature interactions:</strong> The same feature may have opposite effects for different classes.</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="patterns">
-                <AccordionTrigger className="text-sm font-medium">
-                  Common Patterns to Look For
-                </AccordionTrigger>
-                <AccordionContent className="text-sm">
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Monotonic relationships:</strong> Consistent increases or decreases across the feature range.</li>
-                    <li><strong>Non-linear effects:</strong> Curves, plateaus, or threshold effects where impact changes across the feature's range.</li>
-                    <li><strong>Step functions:</strong> Sharp changes at certain thresholds suggest decision boundaries.</li>
-                    <li><strong>No effect:</strong> Flat lines indicate the feature has little influence on that class's prediction.</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Feature Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
-              <h3 className="text-sm font-medium mb-2">Features</h3>
-              <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                {plotsData.features.map(feature => (
+    <div className="space-y-6">
+      {/* Filters Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Filter Plots</CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="space-y-2 text-xs">
+                    <p><strong>PDP (Partial Dependence Plot)</strong>: Shows the marginal effect of a feature on the predicted outcome.</p>
+                    <p><strong>ICE (Individual Conditional Expectation)</strong>: Shows how the prediction changes for individual data points when a feature value changes.</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Features</h4>
+              <div className="flex flex-wrap gap-2">
+                {uniqueFeatures.map(feature => (
                   <Button
                     key={feature}
-                    variant={activeFeature === feature ? "secondary" : "ghost"}
-                    className="justify-start w-full text-left h-auto py-1.5 px-2"
-                    onClick={() => setActiveFeature(feature)}
+                    size="sm"
+                    variant={selectedFeature === feature ? "default" : "outline"}
+                    onClick={() => handleFeatureSelect(feature)}
                   >
                     {feature}
                   </Button>
@@ -447,339 +277,115 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
               </div>
             </div>
             
-            <div className="md:col-span-9">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <div className="flex justify-between items-center mb-2">
-                  <TabsList className="w-auto">
-                    <TabsTrigger value="pdp" className="text-xs">
-                      Partial Dependence Plots
-                    </TabsTrigger>
-                    <TabsTrigger value="ice" className="text-xs">
-                      ICE Plots
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  {plotsData.featureImportancePlot && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs">
-                          <LinkIcon className="h-3.5 w-3.5 mr-1" />
-                          View Feature Importance
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <div className="p-1">
-                          <img 
-                            src={plotsData.featureImportancePlot.file_url} 
-                            alt="Feature Importance" 
-                            className="w-full rounded-md"
-                          />
-                          <div className="mt-4 flex justify-end">
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={plotsData.featureImportancePlot.file_url}
-                                download={`feature_importance.png`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-                
-                <TabsContent value="pdp" className="mt-0">
-                  <Card>
-                    <CardHeader className="px-4 py-3">
-                      <CardTitle className="text-base">
-                        {activeFeature && `PDP for ${activeFeature}`}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-1">
-                        How {activeFeature} impacts predictions across classes
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-5 w-5 p-0 ml-1" 
-                          title="Learn how to interpret PDP plots"
-                          onClick={() => {
-                            setIsExplanationOpen(true);
-                          }}
-                        >
-                          <Info className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      {currentPlots.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {currentPlots.map((plot, idx) => (
-                            <Dialog key={idx}>
-                              <DialogTrigger asChild>
-                                <Card className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden">
-                                  <CardContent className="p-3">
-                                    <div className="aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
-                                      <img 
-                                        src={plot.file_url} 
-                                        alt={`${plot.feature} Class ${plot.class_id}`}
-                                        className="w-full h-full object-contain"
-                                      />
-                                      <div className="absolute bottom-2 right-2">
-                                        <Badge className="bg-primary">{plot.class_id}</Badge>
-                                      </div>
-                                      <div className="absolute top-2 right-2">
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                                          <ZoomIn className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-3xl">
-                                <div className="p-1">
-                                  <img 
-                                    src={plot.file_url} 
-                                    alt={`${plot.feature} Class ${plot.class_id}`} 
-                                    className="w-full rounded-md"
-                                  />
-                                  <div className="mt-4 flex justify-between items-center">
-                                    <div>
-                                      <h3 className="text-lg font-medium">
-                                        {plot.feature} - Class {plot.class_id}
-                                      </h3>
-                                      <p className="text-sm text-muted-foreground">
-                                        Partial Dependence Plot
-                                      </p>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a 
-                                        href={plot.file_url}
-                                        download={`pdp_${plot.feature}_class_${plot.class_id}.png`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <Download className="h-4 w-4 mr-2" />
-                                        Download
-                                      </a>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-muted-foreground">
-                            No PDP plots available for {activeFeature}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="ice" className="mt-0">
-                  <Card>
-                    <CardHeader className="px-4 py-3">
-                      <CardTitle className="text-base">
-                        {activeFeature && `ICE for ${activeFeature}`}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-1">
-                        Individual Conditional Expectation plots for {activeFeature}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-5 w-5 p-0 ml-1" 
-                          title="Learn how to interpret ICE plots"
-                          onClick={() => {
-                            setIsExplanationOpen(true);
-                          }}
-                        >
-                          <Info className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      {currentPlots.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {currentPlots.map((plot, idx) => (
-                            <Dialog key={idx}>
-                              <DialogTrigger asChild>
-                                <Card className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden">
-                                  <CardContent className="p-3">
-                                    <div className="aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
-                                      <img 
-                                        src={plot.file_url} 
-                                        alt={`${plot.feature} Class ${plot.class_id}`}
-                                        className="w-full h-full object-contain" 
-                                      />
-                                      <div className="absolute bottom-2 right-2">
-                                        <Badge className="bg-primary">{plot.class_id}</Badge>
-                                      </div>
-                                      <div className="absolute top-2 right-2">
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                                          <ZoomIn className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-3xl">
-                                <div className="p-1">
-                                  <img 
-                                    src={plot.file_url} 
-                                    alt={`${plot.feature} Class ${plot.class_id}`} 
-                                    className="w-full rounded-md"
-                                  />
-                                  <div className="mt-4 flex justify-between items-center">
-                                    <div>
-                                      <h3 className="text-lg font-medium">
-                                        {plot.feature} - Class {plot.class_id}
-                                      </h3>
-                                      <p className="text-sm text-muted-foreground">
-                                        Individual Conditional Expectation Plot
-                                      </p>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a 
-                                        href={plot.file_url}
-                                        download={`ice_${plot.feature}_class_${plot.class_id}.png`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <Download className="h-4 w-4 mr-2" />
-                                        Download
-                                      </a>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-muted-foreground">
-                            No ICE plots available for {activeFeature}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Classes</h4>
+              <div className="flex flex-wrap gap-2">
+                {uniqueClasses.map(classValue => (
+                  <Button
+                    key={classValue}
+                    size="sm"
+                    variant={selectedClass === classValue ? "default" : "outline"}
+                    onClick={() => handleClassSelect(classValue)}
+                  >
+                    {classValue}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+      
+      {/* Plots Display Section */}
+      {showCategoryTabs ? (
+        <Tabs defaultValue="all">
+          <TabsList>
+            <TabsTrigger value="all">All Plots</TabsTrigger>
+            <TabsTrigger value="pdp">PDP</TabsTrigger>
+            <TabsTrigger value="ice">ICE</TabsTrigger>
+          </TabsList>
           
-          {/* Plot Metadata Table */}
-          <Card className="mt-6">
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm">Interpretability Plots Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Feature</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentItems.map((plot, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {plot.plot_type === 'pdp' ? 'PDP' : 'ICE'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{plot.feature}</TableCell>
-                        <TableCell>{plot.class_id}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <a 
-                              href={plot.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ZoomIn className="h-4 w-4" />
-                            </a>
-                          </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a 
-                              href={plot.file_url}
-                              download
-                            >
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          <TabsContent value="all" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPlots.map((plot) => renderPlotCard(plot))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="pdp" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categorizedPlots.pdpPlots.map((plot) => renderPlotCard(plot))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="ice" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categorizedPlots.icePlots.map((plot) => renderPlotCard(plot))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPlots.map((plot) => renderPlotCard(plot))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Helper function to render a plot card
+  function renderPlotCard(plot: PlotMetadata) {
+    const title = plot.feature ? 
+      `${plot.feature} ${plot.class ? `(${plot.class})` : ''}` : 
+      formatPlotType(plot.type);
+    
+    const badge = plot.category === 'pdp' ? 'PDP' : plot.category === 'ice' ? 'ICE' : '';
+    
+    return (
+      <Dialog key={plot.id}>
+        <DialogTrigger asChild>
+          <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+            <CardContent className="p-4">
+              <div className="aspect-video bg-muted flex items-center justify-center rounded-md relative overflow-hidden">
+                <div 
+                  className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${plot.url})` }}
+                />
+                <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
+                {badge && (
+                  <span className="absolute top-2 right-2 bg-primary/20 text-primary text-xs font-medium px-2 py-1 rounded-full">
+                    {badge}
+                  </span>
+                )}
               </div>
-              
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="py-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                      
-                      {getPageNumbers().map((pageNum, index) => {
-                        if (pageNum < 0) {
-                          return (
-                            <PaginationItem key={`ellipsis-${index}`}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                        }
-                        
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink
-                              isActive={pageNum === currentPage}
-                              onClick={() => handlePageChange(pageNum)}
-                              className="cursor-pointer"
-                            >
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      })}
-                      
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
+              <div className="mt-2 text-center">
+                <p className="text-sm font-medium truncate">{title}</p>
+              </div>
             </CardContent>
           </Card>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </DialogTrigger>
+        <DialogContent className="max-w-3xl">
+          <div className="p-1">
+            <img 
+              src={plot.url} 
+              alt={title}
+              className="w-full rounded-md"
+            />
+            <div className="mt-4 flex justify-between items-center">
+              <div>
+                <h3 className="font-medium">{title}</h3>
+                <p className="text-sm text-muted-foreground">{formatPlotType(plot.type)}</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <a href={plot.url} download={plot.fileName || `${plot.type}.png`} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </a>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 };
 
 export default ModelInterpretabilityPlots;
-
