@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Enhanced filtering to capture ALL visualization types, including PDP plots
+  // Enhanced filtering to capture ALL visualization types
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -33,8 +33,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'learning_curve',
       'true_vs_predicted',
       'predicted_vs_residuals',
-      'residual_analysis',
-      'pdp_'  // Added to capture PDP plots
+      'residual_analysis'  // Added new regression visualization type
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));
   });
@@ -124,16 +123,6 @@ const formatVisualizationName = (fileType: string): string => {
     return 'True vs Predicted';
   } else if (fileType.includes('predicted_vs_residuals') || fileType.includes('residual_analysis')) {
     return 'Residual Analysis';
-  } else if (fileType.includes('pdp_')) {
-    // Format PDP plot names to be more readable
-    // Extract feature name and class from pdp_FEATURE_CLASS pattern
-    const parts = fileType.replace('pdp_', '').split('_');
-    if (parts.length >= 2) {
-      const className = parts.pop(); // Last part is the class name
-      const featureName = parts.join(' '); // Rest is the feature name
-      return `PDP: ${featureName} (${className})`;
-    }
-    return `PDP: ${fileType.replace('pdp_', '').replace(/_/g, ' ')}`;
   }
   
   return fileType.replace(/_/g, ' ');
