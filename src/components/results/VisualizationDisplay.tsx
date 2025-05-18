@@ -13,7 +13,7 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Enhanced filtering to capture ALL visualization types, including pdp and ice plots
+  // Enhanced filtering to capture ALL visualization types, now including pdp plots
   const visualizationFiles = files.filter(file => {
     const visualTypes = [
       'distribution', 
@@ -34,8 +34,8 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'true_vs_predicted',
       'predicted_vs_residuals',
       'residual_analysis',
-      'pdp', // Include PDP plots
-      'ice', // Include ICE plots
+      'pdp', // Add PDP plots
+      'ice', // Add ICE plots
       'partial_dependence' // Alternative naming for PDP
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));

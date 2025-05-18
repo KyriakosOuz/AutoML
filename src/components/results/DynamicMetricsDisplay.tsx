@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -84,15 +85,6 @@ const getMetricsForTaskType = (
   const isH2O = metrics?.automl_engine === 'h2o' || bestModelDetails?.automl_engine === 'h2o';
   const result: Record<string, number | number[] | number[][] | undefined> = {};
   
-  // Skip keys that shouldn't be included or might be duplicated
-  const skipKeys = [
-    'accuracy', 'f1_score', 'f1-score', 'f1', 
-    'precision', 'recall', 'auc', 'r2', 
-    'mae', 'mse', 'rmse', 'aucpr', 
-    'logloss', 'mean_per_class_error', 'per_class', 'source',
-    'specificity' // Added to prevent duplicate specificity metrics in H2O binary models
-  ];
-  
   // Combine metrics from both sources, prioritizing bestModelDetails
   const combinedMetrics = { ...metrics };
   if (bestModelDetails) {
@@ -103,30 +95,7 @@ const getMetricsForTaskType = (
     });
   }
   
-  // For H2O binary classification, prevent duplicate specificity
-  if (isH2O && isBinary) {
-    const uniqueMetricKeys = new Set();
-    
-    // First pass to add specificity only once if it exists
-    if (combinedMetrics.specificity !== undefined) {
-      result.specificity = combinedMetrics.specificity;
-      uniqueMetricKeys.add('specificity');
-    }
-    
-    // Second pass to add all other relevant metrics
-    Object.entries(combinedMetrics).forEach(([key, value]) => {
-      // Skip specificity since we've already handled it
-      if (key === 'specificity') return;
-      
-      if (typeof value === 'number' || Array.isArray(value)) {
-        // Skip keys in our skip list or keys we've already added
-        if (!skipKeys.includes(key) && !uniqueMetricKeys.has(key)) {
-          result[key] = value as number | number[] | number[][];
-          uniqueMetricKeys.add(key);
-        }
-      }
-    });
-  } else if (isClassification) {
+  if (isClassification) {
     if (isMulticlass && isH2O) {
       // H2O multiclass classification - use the metrics that are actually available
       if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;

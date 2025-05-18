@@ -1,3 +1,4 @@
+
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
@@ -95,8 +96,8 @@ const categorizeVisualizationFiles = (files: any[] = []): Record<string, any[]> 
     explainability: [],
     feature_importance: [],
     model: [],
-    pdp: [], // PDP plots category
-    ice: [], // ICE plots category
+    pdp: [], // Added PDP plots category
+    ice: [], // Added ICE plots category
     other: []
   };
 
