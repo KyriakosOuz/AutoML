@@ -85,12 +85,20 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
       // Update the class imbalance data in the context
       setClassImbalanceData(imbalanceData);
       
-      // If imbalance is detected and needs balancing, set the defaults to oversample + SMOTE
-      if (imbalanceData.needs_balancing) {
-        // Always set to oversample and SMOTE by default for datasets that need balancing
-        setBalanceStrategy('oversample');
-        // Only set SMOTE if we have numerical features, otherwise use random
-        setBalanceMethod(featureTypes.hasNumerical ? 'smote' : 'random');
+      // If imbalance is detected and there's a recommendation, update the balance strategy
+      if (imbalanceData.needs_balancing && imbalanceData.recommendation) {
+        const lowerCaseRec = imbalanceData.recommendation.toLowerCase();
+        
+        if (lowerCaseRec.includes('smote')) {
+          setBalanceStrategy('oversample');
+          setBalanceMethod('smote');
+        } else if (lowerCaseRec.includes('oversample')) {
+          setBalanceStrategy('oversample');
+          setBalanceMethod('random');
+        } else if (lowerCaseRec.includes('undersample')) {
+          setBalanceStrategy('undersample');
+          setBalanceMethod('random');
+        }
       }
     } catch (error) {
       console.error('PreprocessingCard: Error checking class imbalance:', error);
@@ -107,16 +115,6 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
       checkClassImbalance();
     }
   }, [datasetId, isClassification, classImbalanceData, isCheckingImbalance]);
-
-  // Effect to update balance strategy and method when class imbalance data changes
-  useEffect(() => {
-    if (classImbalanceData && classImbalanceData.needs_balancing) {
-      // Set oversample and SMOTE as default for imbalanced datasets that need balancing
-      setBalanceStrategy('oversample');
-      // Only set SMOTE if we have numerical features, otherwise use random
-      setBalanceMethod(featureTypes.hasNumerical ? 'smote' : 'random');
-    }
-  }, [classImbalanceData, featureTypes.hasNumerical]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
