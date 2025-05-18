@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateForGreece } from '@/lib/dateUtils';
 import LikertScale from './LikertScale';
+import { Progress } from '@/components/ui/progress';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CheckCircle } from 'lucide-react';
 
 // SUS questionnaire items
 const questions = [
@@ -33,11 +36,25 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
   );
   const [comments, setComments] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [characterCount, setCharacterCount] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleValueChange = (questionId: string, value: string) => {
     setFormValues(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleCommentsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setComments(e.target.value);
+    setCharacterCount(e.target.value.length);
+  };
+
+  const answeredCount = () => {
+    return Object.values(formValues).filter(val => val !== '').length;
+  };
+
+  const progressPercentage = () => {
+    return (answeredCount() / questions.length) * 100;
   };
 
   const isFormComplete = () => {
@@ -51,8 +68,6 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
     questions.forEach((question) => {
       const responseValue = parseInt(formValues[question.id]);
       if (!isNaN(responseValue)) {
-        // For odd-numbered questions (not reversed), the score contribution is the scale position minus 1
-        // For even-numbered questions (reversed), the score contribution is 5 minus the scale position
         if (!question.reversed) {
           score += responseValue - 1; // Scale from 0 to 4
         } else {
@@ -91,7 +106,6 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
 
     try {
       // Use custom SQL query via RPC instead of direct table operation
-      // This allows us to insert into the table without having updated TypeScript definitions
       const { error } = await (supabase.rpc as any)('insert_user_feedback', {
         p_user_id: user.id,
         p_responses: formValues,
@@ -120,25 +134,40 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>System Usability Scale (SUS)</CardTitle>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="mb-6">
+        <div className="flex justify-between mb-2 text-sm">
+          <span className="text-muted-foreground">{answeredCount()} of {questions.length} questions answered</span>
+          <span className="font-medium">{Math.round(progressPercentage())}% Complete</span>
+        </div>
+        <Progress value={progressPercentage()} className="h-2" />
+      </div>
+
+      <Card className="bg-white">
+        <CardHeader className="pb-2 border-b">
+          <CardTitle className="text-xl text-primary">System Usability Scale (SUS)</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {questions.map((question) => (
-              <div key={question.id} className="space-y-2">
-                <div className="font-medium">{question.text}</div>
-                <LikertScale
-                  value={formValues[question.id]}
-                  onChange={(value) => handleValueChange(question.id, value)}
-                  reversed={question.reversed}
-                />
+        <CardContent className="pt-6">
+          <div className="space-y-8">
+            {questions.map((question, index) => (
+              <div key={question.id} className="p-4 border border-muted rounded-lg transition-all hover:border-muted-foreground/50 hover:bg-muted/10">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary font-medium h-6 w-6 text-sm">
+                    {index + 1}
+                  </span>
+                  <h3 className="font-medium text-foreground">{question.text}</h3>
+                </div>
+                <div className="ml-9">
+                  <LikertScale
+                    value={formValues[question.id]}
+                    onChange={(value) => handleValueChange(question.id, value)}
+                    reversed={question.reversed}
+                  />
+                </div>
               </div>
             ))}
 
-            <div className="pt-4">
+            <div className="p-4 border border-muted rounded-lg transition-all hover:border-muted-foreground/50">
               <label htmlFor="comments" className="block text-sm font-medium mb-2">
                 Additional Comments (Optional)
               </label>
@@ -146,24 +175,42 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
                 id="comments"
                 placeholder="Please share any additional feedback or suggestions..."
                 value={comments}
-                onChange={(e) => setComments(e.target.value)}
+                onChange={handleCommentsChange}
                 rows={4}
-                className="w-full"
+                className="w-full resize-y min-h-[100px]"
               />
+              <div className="flex justify-end mt-1">
+                <span className="text-xs text-muted-foreground">
+                  {characterCount} characters
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
+        <CardFooter className="flex justify-end border-t pt-4 mt-4">
+          <Button 
+            type="submit" 
+            disabled={!isFormComplete() || isSubmitting}
+            className="px-8 py-2 h-11 relative"
+          >
+            <span className={`transition-all ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
+              {isFormComplete() ? "Submit Feedback" : `Complete All Questions (${answeredCount()}/${questions.length})`}
+            </span>
+            {isSubmitting && (
+              <AnimatePresence>
+                <motion.div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </Button>
+        </CardFooter>
       </Card>
-
-      <div className="flex justify-end">
-        <Button 
-          type="submit" 
-          disabled={!isFormComplete() || isSubmitting}
-          className="px-6"
-        >
-          {isSubmitting ? "Submitting..." : "Submit Feedback"}
-        </Button>
-      </div>
     </form>
   );
 };

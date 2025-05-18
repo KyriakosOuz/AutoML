@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import SUSForm from '@/components/feedback/SUSForm';
 import ThankYouView from '@/components/feedback/ThankYouView';
 import { formatDateForGreece } from '@/lib/dateUtils';
+import { motion } from 'framer-motion';
 
 const FeedbackPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -18,35 +19,50 @@ const FeedbackPage = () => {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center mb-8">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="mr-2"
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 py-8">
+      <div className="container max-w-4xl mx-auto px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
         >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-2xl font-bold">App Feedback</h1>
-      </div>
+          <div className="flex items-center mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="mr-3"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold text-primary">App Feedback</h1>
+          </div>
 
-      <div className="mb-8">
-        <p className="text-gray-600">
-          Please rate your experience with KyrO AutoML. Your feedback will help us improve the platform.
-          {submittedAt && (
-            <span className="block text-sm text-muted-foreground mt-2">
-              Last submitted: {formatDateForGreece(submittedAt)}
-            </span>
+          <div className="text-muted-foreground">
+            <p className="text-lg">
+              Please rate your experience with KyrO AutoML. Your feedback will help us improve the platform.
+              {submittedAt && (
+                <span className="block text-sm text-muted-foreground mt-2 font-medium">
+                  Last submitted: {formatDateForGreece(submittedAt)}
+                </span>
+              )}
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          {isSubmitted ? (
+            <ThankYouView />
+          ) : (
+            <SUSForm onSubmitSuccess={handleSubmitSuccess} />
           )}
-        </p>
+        </motion.div>
       </div>
-
-      {isSubmitted ? (
-        <ThankYouView />
-      ) : (
-        <SUSForm onSubmitSuccess={handleSubmitSuccess} />
-      )}
     </div>
   );
 };
