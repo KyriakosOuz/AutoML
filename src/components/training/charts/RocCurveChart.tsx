@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -12,29 +12,9 @@ interface RocCurveChartProps {
   fpr?: number[];
   tpr?: number[];
   auc?: number;
-  imageUrl?: string; // Added to support pre-rendered ROC curve images
 }
 
-const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc, imageUrl }) => {
-  // If we have an image URL, just render the image
-  if (imageUrl) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>ROC Curve {auc !== undefined && <span className="text-sm font-normal ml-2">(AUC: {auc.toFixed(4)})</span>}</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
-          <img 
-            src={imageUrl} 
-            alt="ROC Curve" 
-            className="max-h-full max-w-full object-contain"
-          />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // If no data and no image, show no data message
+const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc }) => {
   if (!fpr || !tpr || fpr.length === 0 || tpr.length === 0) {
     return (
       <Card>

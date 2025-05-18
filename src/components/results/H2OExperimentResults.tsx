@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -113,25 +114,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [bestModelFromLeaderboard, setBestModelFromLeaderboard] = useState<string | null>(null);
-  
-  // Find predictions file from files array
-  const predictionsFile = useMemo(() => {
-    if (!experimentResults || !experimentResults.files) return null;
-    return experimentResults.files.find(file => 
-      file.file_type === 'predictions_csv' || 
-      file.file_url?.includes('predictions')
-    );
-  }, [experimentResults]);
-
-  // Find model file from files array
-  const modelFile = useMemo(() => {
-    if (!experimentResults || !experimentResults.files) return null;
-    return experimentResults.files.find(file => 
-      file.file_type === 'trained_model' || 
-      file.file_type === 'model' ||
-      file.file_url?.includes('model')
-    );
-  }, [experimentResults]);
   
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
@@ -508,28 +490,25 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const visualizationFiles = [
     ...getFilesByType('confusion_matrix'),
     ...getFilesByType('roc_curve'),
-    ...getFilesByType('evaluation_curve'), // This captures ROC curves for binary classification
     ...getFilesByType('variable_importance'),
     ...getFilesByType('shap'),
     ...getFilesByType('partial_dependence'),
     ...getFilesByType('importance'),
+    ...getFilesByType('evaluation_curve'),
     ...getFilesByType('learning_curve'),
     ...getFilesByType('residual_analysis')
   ];
-  
-  // Get ROC curve visualization specifically
-  const rocCurveFile = files.find(file => 
-    file.file_type === 'roc_curve' || 
-    file.file_type === 'evaluation_curve' ||
-    file.file_url?.includes('roc_curve')
-  );
-  
-  // Find ROC curve in pdp_ice_metadata as well (backup)
-  const rocCurveFromMetadata = experimentResults.pdp_ice_metadata?.find(item => 
-    item.file_type === 'roc_curve' || 
-    (item.file_url && item.file_url.includes('roc_curve'))
-  );
 
+  const modelFile = files.find(file => 
+    file.file_type === 'model' || 
+    file.file_type.includes('model')
+  );
+  
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' ||
+    file.file_type.includes('predictions')
+  );
+  
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
@@ -696,24 +675,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                       bestModelDetails={bestModelDetails}
                       mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
                     />
-
-                    {/* Add ROC Curve visualization for binary classification experiments */}
-                    {task_type?.includes('binary') && (rocCurveFile || rocCurveFromMetadata) && (
-                      <div className="mt-6">
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base">ROC Curve {metrics.auc && `(AUC: ${metrics.auc.toFixed(4)})`}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <img 
-                              src={rocCurveFile?.file_url || rocCurveFromMetadata?.file_url} 
-                              alt="ROC Curve" 
-                              className="w-full rounded-md"
-                            />
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
