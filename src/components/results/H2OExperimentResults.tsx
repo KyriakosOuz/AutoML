@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -354,33 +355,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     );
   }
 
-  // Find prediction and model files in the experiment results
-  const predictionsFile = useMemo(() => {
-    if (!experimentResults?.files) return null;
-    return experimentResults.files.find(file => 
-      file.file_type === 'predictions_csv' ||
-      file.file_type.includes('predictions')
-    );
-  }, [experimentResults]);
-  
-  const modelFile = useMemo(() => {
-    if (!experimentResults?.files) return null;
-    return experimentResults.files.find(file => 
-      file.file_type === 'model' || 
-      file.file_type.includes('model')
-    );
-  }, [experimentResults]);
-
-  // Function to handle downloading predictions CSV
-  const handleDownloadPredictions = async () => {
-    if (predictionsFile) {
-      await downloadFile(
-        predictionsFile.file_url, 
-        `${experimentResults?.experiment_name || 'h2o'}_predictions.csv`
-      );
-    }
-  };
-
   // Extract relevant information from experiment results
   const {
     experiment_name,
@@ -489,13 +463,7 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
 
   // Get primary metric based on task type
   const getPrimaryMetric = () => {
-    if (task_type?.includes('binary_classification')) {
-      // For binary classification, include all metrics
-      return {
-        name: metrics.metric_used || 'auc',
-        value: metrics.auc || 0.6434123133449526
-      };
-    } else if (task_type?.includes('classification')) {
+    if (task_type?.includes('classification')) {
       return {
         name: metrics.metric_used || 'auc',
         value: metrics.metric_value || metrics.auc || metrics.accuracy || metrics.f1_score
@@ -544,6 +512,16 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
+
+  // Function to handle downloading predictions CSV
+  const handleDownloadPredictions = async () => {
+    if (predictionsFile) {
+      await downloadFile(
+        predictionsFile.file_url, 
+        `${experiment_name || 'h2o'}_predictions.csv`
+      );
+    }
+  };
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -691,116 +669,12 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {/* For binary classification, display all metrics */}
-                    {task_type?.includes('binary_classification') ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {/* AUC */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">AUC</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.auc !== undefined ? (metrics.auc * 100).toFixed(2) + '%' : '64.34%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Area Under the ROC Curve
-                          </p>
-                        </div>
-                        
-                        {/* Accuracy */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Accuracy</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.accuracy !== undefined ? (metrics.accuracy * 100).toFixed(2) + '%' : '55.33%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Overall prediction accuracy
-                          </p>
-                        </div>
-                        
-                        {/* F1 Score */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">F1 Score</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.f1_score !== undefined ? (metrics.f1_score * 100).toFixed(2) + '%' : '50.13%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Harmonic mean of precision and recall
-                          </p>
-                        </div>
-                        
-                        {/* Precision */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Precision</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.precision !== undefined ? (metrics.precision * 100).toFixed(2) + '%' : '39.13%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Positive predictive value
-                          </p>
-                        </div>
-                        
-                        {/* Recall */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Recall</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.recall !== undefined ? (metrics.recall * 100).toFixed(2) + '%' : '69.72%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Sensitivity/True Positive Rate
-                          </p>
-                        </div>
-                        
-                        {/* Specificity */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Specificity</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.specificity !== undefined ? (metrics.specificity * 100).toFixed(2) + '%' : '48.49%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            True Negative Rate
-                          </p>
-                        </div>
-                        
-                        {/* AUCPR */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">AUCPR</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.aucpr !== undefined ? (metrics.aucpr * 100).toFixed(2) + '%' : '48.50%'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Area Under the Precision-Recall Curve
-                          </p>
-                        </div>
-                        
-                        {/* Log Loss */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Log Loss</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.logloss !== undefined ? metrics.logloss.toFixed(4) : '0.5910'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Cross-entropy loss, lower values are better
-                          </p>
-                        </div>
-                        
-                        {/* RMSE */}
-                        <div className="bg-slate-100 p-4 rounded-lg">
-                          <p className="text-sm text-muted-foreground">RMSE</p>
-                          <p className="text-2xl font-semibold">
-                            {metrics.rmse !== undefined ? metrics.rmse.toFixed(4) : '0.4483'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Root Mean Squared Error
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <DynamicMetricsDisplay 
-                        metrics={metrics} 
-                        taskType={task_type} 
-                        bestModelDetails={bestModelDetails}
-                        mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
-                      />
-                    )}
+                    <DynamicMetricsDisplay 
+                      metrics={metrics} 
+                      taskType={task_type} 
+                      bestModelDetails={bestModelDetails}
+                      mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
+                    />
                   </div>
                 </CardContent>
               </Card>
