@@ -16,8 +16,18 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
     is_imbalanced, 
     target_column, 
     recommendation, 
-    status_msg 
+    status_msg,
+    class_distribution
   } = classImbalanceData;
+
+  // Format the class distribution for display
+  const formatDistribution = () => {
+    if (!class_distribution) return '';
+    
+    return Object.entries(class_distribution)
+      .map(([className, percentage]) => `Class '${className}': ${(percentage * 100).toFixed(1)}%`)
+      .join(', ');
+  };
 
   // Severely imbalanced - needs balancing techniques
   if (needs_balancing) {
@@ -25,8 +35,15 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
       <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="text-amber-700">
-          <span className="font-semibold">{status_msg || "Class imbalance detected"}</span> in target column '{target_column}'.
-          {recommendation && ` ${recommendation}`}
+          <div className="font-semibold">⚠️ Imbalanced Dataset</div>
+          <div>Target column: '{target_column}'</div>
+          <div className="text-xs mt-1">{formatDistribution()}</div>
+          {recommendation && (
+            <div className="mt-2 font-medium">{recommendation}</div>
+          )}
+          {status_msg && status_msg !== recommendation && (
+            <div className="mt-1 text-sm">{status_msg}</div>
+          )}
         </AlertDescription>
       </Alert>
     );
@@ -38,9 +55,15 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
       <Alert className="mb-4 bg-blue-50 border-blue-200">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-700">
-          <span className="font-semibold">Mild class imbalance</span> in target column '{target_column}'.
-          {status_msg && ` ${status_msg}`}
-          {recommendation && ` ${recommendation}`}
+          <div className="font-semibold">ℹ️ Mildly Imbalanced Dataset</div>
+          <div>Target column: '{target_column}'</div>
+          <div className="text-xs mt-1">{formatDistribution()}</div>
+          {recommendation && (
+            <div className="mt-2 font-medium">{recommendation}</div>
+          )}
+          {status_msg && status_msg !== recommendation && (
+            <div className="mt-1 text-sm">{status_msg}</div>
+          )}
         </AlertDescription>
       </Alert>
     );
@@ -51,7 +74,15 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
     <Alert className="mb-4 bg-green-50 border-green-200">
       <CheckCircle className="h-4 w-4 text-green-600" />
       <AlertDescription className="text-green-700">
-        {status_msg || "Target class distribution looks balanced."}
+        <div className="font-semibold">✅ Balanced Dataset</div>
+        <div>Target column: '{target_column}'</div>
+        <div className="text-xs mt-1">{formatDistribution()}</div>
+        {recommendation && recommendation !== "No balancing needed" && (
+          <div className="mt-2 font-medium">{recommendation}</div>
+        )}
+        {status_msg && status_msg !== recommendation && status_msg !== "Target class distribution looks balanced." && (
+          <div className="mt-1 text-sm">{status_msg}</div>
+        )}
       </AlertDescription>
     </Alert>
   );
