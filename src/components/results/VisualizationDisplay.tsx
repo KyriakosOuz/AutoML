@@ -15,20 +15,6 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   
   // Enhanced filtering to capture ALL visualization types, now including pdp plots
   const visualizationFiles = files.filter(file => {
-    // First, exclude CSV files and model files that shouldn't be in the visualization section
-    const excludedTypes = [
-      'predictions_csv',
-      'trained_model',
-      'model',
-      'leaderboard_csv'
-    ];
-    
-    // Check if file is of an excluded type
-    if (excludedTypes.some(type => file.file_type.toLowerCase().includes(type))) {
-      return false;
-    }
-    
-    // Now include only actual visualization files
     const visualTypes = [
       'distribution', 
       'shap', 
@@ -48,8 +34,8 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'true_vs_predicted',
       'predicted_vs_residuals',
       'residual_analysis',
-      'pdp', // PDP plots
-      'ice', // ICE plots
+      'pdp', // Add PDP plots
+      'ice', // Add ICE plots
       'partial_dependence' // Alternative naming for PDP
     ];
     return visualTypes.some(type => file.file_type.toLowerCase().includes(type));

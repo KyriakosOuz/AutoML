@@ -40,15 +40,9 @@ const ExperimentDetailPage: React.FC = () => {
         metrics: data.metrics ? Object.keys(data.metrics) : [],
         filesCount: data.files?.length,
         fileTypes: data.files?.map(f => f.file_type),
-        // Log visualization files (but not CSV or model files)
-        visualizationFiles: data.files?.filter(f => {
-          const isVisualization = ['pdp_', 'ice_', 'importance', 'confusion_matrix', 'roc_curve', 'shap'].some(type => 
-            f.file_type.includes(type)
-          );
-          const isNotCSV = !f.file_type.includes('csv');
-          const isNotModel = !f.file_type.includes('model');
-          return isVisualization && isNotCSV && isNotModel;
-        }).map(f => f.file_type)
+        // Log PDP and ICE visualization files
+        pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
+        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
       });
     }
   }, [data, experimentId]);
