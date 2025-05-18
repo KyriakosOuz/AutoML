@@ -114,6 +114,25 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [bestModelFromLeaderboard, setBestModelFromLeaderboard] = useState<string | null>(null);
   
+  // Find predictions file from files array
+  const predictionsFile = useMemo(() => {
+    if (!experimentResults || !experimentResults.files) return null;
+    return experimentResults.files.find(file => 
+      file.file_type === 'predictions_csv' || 
+      file.file_url?.includes('predictions')
+    );
+  }, [experimentResults]);
+
+  // Find model file from files array
+  const modelFile = useMemo(() => {
+    if (!experimentResults || !experimentResults.files) return null;
+    return experimentResults.files.find(file => 
+      file.file_type === 'trained_model' || 
+      file.file_type === 'model' ||
+      file.file_url?.includes('model')
+    );
+  }, [experimentResults]);
+  
   // Format metric for display
   const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
     if (value === undefined) return 'N/A';
