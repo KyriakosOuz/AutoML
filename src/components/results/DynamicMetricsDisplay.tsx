@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -133,8 +132,8 @@ const getMetricsForTaskType = (
         result.f1 = combinedMetrics.f1;
       }
     } else if (isBinary) {
-      // For binary classification, show only these four metrics
-      result.accuracy = combinedMetrics.accuracy;
+      // For binary classification, show these metrics
+      if (combinedMetrics.accuracy !== undefined) result.accuracy = combinedMetrics.accuracy;
       
       // Add F1 score if available
       if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
@@ -145,9 +144,23 @@ const getMetricsForTaskType = (
             combinedMetrics['f1-score']);
       }
       
-      // Add precision and recall
+      // Add precision, recall and specificity
       if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+      
+      // Fix: Only add specificity once
+      if (combinedMetrics.specificity !== undefined) result.specificity = combinedMetrics.specificity;
+      
+      // Add AUC if available
+      if (combinedMetrics.auc !== undefined) result.auc = combinedMetrics.auc;
+      
+      // For H2O, include these additional metrics if available
+      if (isH2O) {
+        if (combinedMetrics.mcc !== undefined) result.mcc = combinedMetrics.mcc;
+        if (combinedMetrics.aucpr !== undefined) result.aucpr = combinedMetrics.aucpr;
+        if (combinedMetrics.logloss !== undefined) result.logloss = combinedMetrics.logloss;
+        if (combinedMetrics.mean_per_class_error !== undefined) result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+      }
     } else {
       // Default classification metrics
       result.accuracy = combinedMetrics.accuracy;
@@ -168,6 +181,9 @@ const getMetricsForTaskType = (
       }
       if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+      
+      // Fix: Only add specificity once
+      if (combinedMetrics.specificity !== undefined) result.specificity = combinedMetrics.specificity;
     }
   } else {
     // Regression metrics
