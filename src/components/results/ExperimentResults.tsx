@@ -159,6 +159,17 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
 
+  // Check if we have interpretability plots available
+  const hasInterpretabilityPlots = experimentResults?.files?.some(file => 
+    file.file_type?.includes('pdp_') || file.file_type?.includes('ice_')) || 
+    (experimentResults?.pdp_ice_metadata && experimentResults?.pdp_ice_metadata.length > 0);
+    
+  console.log("[ExperimentResults] Checking for interpretability plots:", { 
+    hasInterpretabilityPlots,
+    filesWithPdpIce: experimentResults?.files?.filter(f => f.file_type?.includes('pdp_') || f.file_type?.includes('ice_')),
+    pdpIceMetadataLength: experimentResults?.pdp_ice_metadata?.length
+  });
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -175,6 +186,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+            {hasInterpretabilityPlots && (
+              <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
+            )}
           </TabsList>
           <TabsContent value="summary">
             <ModelSummary results={experimentResults} />
@@ -185,8 +199,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
-          {experimentResults?.files?.some(file => file.file_type?.includes('pdp_') || file.file_type?.includes('ice_') || 
-                           experimentResults?.pdp_ice_metadata?.length > 0) && (
+          {hasInterpretabilityPlots && (
             <TabsContent value="interpretability" key="interpretability">
               <ModelInterpretabilityPlots experiment={experimentResults} />
             </TabsContent>

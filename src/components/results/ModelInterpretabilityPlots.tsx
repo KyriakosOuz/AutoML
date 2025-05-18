@@ -76,26 +76,39 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   // Use metadata either directly from props or from the experiment object
   const actualPdpIceMetadata = pdpIceMetadata || experiment?.pdp_ice_metadata;
   
-  // Log the raw metadata for debugging
-  console.log('Raw pdpIceMetadata:', actualPdpIceMetadata);
+  // Enhanced debugging logs
+  console.log('ModelInterpretabilityPlots Component Render', {
+    propsReceived: {
+      pdpIceMetadata: !!pdpIceMetadata, 
+      pdpIceMetadataLength: pdpIceMetadata?.length || 0,
+      experiment: !!experiment,
+      taskType
+    },
+    experimentPdpIceMetadata: experiment?.pdp_ice_metadata?.length || 0,
+    actualPdpIceMetadata: actualPdpIceMetadata?.length || 0
+  });
   
   // Process metadata and ensure proper type handling
   const processedMetadata = useMemo(() => {
-    if (!actualPdpIceMetadata || actualPdpIceMetadata.length === 0) return [];
+    if (!actualPdpIceMetadata || actualPdpIceMetadata.length === 0) {
+      console.log('No PDP/ICE metadata to process');
+      return [];
+    }
     
-    return actualPdpIceMetadata.map(item => {
+    console.log(`Processing ${actualPdpIceMetadata.length} metadata items`);
+    
+    return actualPdpIceMetadata.map((item, index) => {
       // Create a new object to avoid modifying the original
       const processed = { ...item };
       
-      // Debug log for individual items
-      console.log('Processing metadata item:', JSON.stringify(item, null, 2));
+      console.log(`Processing metadata item ${index}:`, JSON.stringify(item, null, 2));
       
       // If class is null but we have file_type, try to extract class from file_type
       if ((processed.class === null || processed.class === undefined) && processed.file_type) {
         const extracted = extractFeatureAndClass(processed.file_type);
         if (extracted.class) {
           processed.class = extracted.class;
-          console.log(`Extracted class "${processed.class}" from file_type: ${processed.file_type}`);
+          console.log(`Item ${index}: Extracted class "${processed.class}" from file_type: ${processed.file_type}`);
         }
       }
       
@@ -104,7 +117,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
         const extracted = extractFeatureAndClass(processed.file_type);
         if (extracted.feature) {
           processed.feature = extracted.feature;
-          console.log(`Extracted feature "${processed.feature}" from file_type: ${processed.file_type}`);
+          console.log(`Item ${index}: Extracted feature "${processed.feature}" from file_type: ${processed.file_type}`);
         }
       }
       
@@ -113,7 +126,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   }, [actualPdpIceMetadata]);
   
   // Debug log for processed data
-  console.log('Processed metadata:', processedMetadata);
+  console.log('Processed metadata count:', processedMetadata.length);
   
   // Group plots by type
   const { pdpPlots, icePlots, allPlots } = useMemo(() => {
@@ -145,6 +158,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   
   // No plots available
   if (!actualPdpIceMetadata || actualPdpIceMetadata.length === 0) {
+    console.log('No PDP/ICE plots available, showing empty state');
     return (
       <Card>
         <CardHeader>
@@ -176,6 +190,8 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
     activeTab === 'ice' ? icePlots :
     allPlots;
     
+  console.log(`Rendering plots for tab "${activeTab}": ${plotsToShow.length} plots`);
+  
   return (
     <Card>
       <CardHeader>

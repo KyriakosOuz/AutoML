@@ -89,15 +89,27 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     );
   }
 
+  // Check if we have interpretability plots available
+  const hasInterpretabilityPlots = experimentResults?.files?.some(file => 
+    file.file_type?.includes('pdp_') || file.file_type?.includes('ice_')) || 
+    (experimentResults?.pdp_ice_metadata && experimentResults?.pdp_ice_metadata.length > 0);
+    
+  console.log("[MLJARExperimentResults] Checking for interpretability plots:", {
+    hasInterpretabilityPlots,
+    filesWithPdpIce: experimentResults?.files?.filter(f => 
+      f.file_type?.includes('pdp_') || f.file_type?.includes('ice_')),
+    pdpIceMetadataLength: experimentResults?.pdp_ice_metadata?.length
+  });
+
   return (
     <Tabs defaultValue="metrics" className="w-full">
       <TabsList>
         <TabsTrigger value="metrics">Metrics</TabsTrigger>
-        {experimentResults?.files?.some(file => file.file_type?.includes('pdp_') || file.file_type?.includes('ice_') || 
-                           experimentResults?.pdp_ice_metadata?.length > 0) && (
+        {/* Ensure consistent conditional rendering of interpretability tab */}
+        {hasInterpretabilityPlots && (
           <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
         )}
-        {experimentResults.files && experimentResults.files.length > 0 && (
+        {experimentResults?.files && experimentResults?.files.length > 0 && (
           <TabsTrigger value="files">Files</TabsTrigger>
         )}
       </TabsList>
@@ -109,7 +121,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             <CardDescription>Model performance metrics</CardDescription>
           </CardHeader>
           <CardContent>
-            {experimentResults.training_results && experimentResults.training_results.metrics ? (
+            {experimentResults?.training_results && experimentResults?.training_results.metrics ? (
               <ul>
                 {Object.entries(experimentResults.training_results.metrics).map(([key, value]) => (
                   <li key={key}>
@@ -124,8 +136,8 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         </Card>
       </TabsContent>
 
-      {experimentResults?.files?.some(file => file.file_type?.includes('pdp_') || file.file_type?.includes('ice_') || 
-                           experimentResults?.pdp_ice_metadata?.length > 0) && (
+      {/* Ensure consistent conditional rendering of interpretability content */}
+      {hasInterpretabilityPlots && (
         <TabsContent value="interpretability" key="interpretability">
           <ModelInterpretabilityPlots experiment={experimentResults} />
         </TabsContent>
