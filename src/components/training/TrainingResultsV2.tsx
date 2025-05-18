@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -90,51 +91,6 @@ const getF1Score = (metrics: { f1_score?: number; f1?: number; 'f1-score'?: numb
   return metrics['f1-score'] !== undefined ? metrics['f1-score'] : 
          metrics.f1_score !== undefined ? metrics.f1_score : 
          metrics.f1;
-};
-
-// Helper to get per-class metrics from either naming format
-const getPerClassMetrics = (): Record<string, PerClassMetric> | undefined => {
-  if (!experimentResults || !experimentResults.metrics) return undefined;
-  
-  // Check for the per_class format (nested object)
-  if (experimentResults.metrics.per_class && 
-      Object.keys(experimentResults.metrics.per_class).length > 0) {
-    return experimentResults.metrics.per_class;
-  }
-  
-  // Fallback to legacy per_class_metrics at the top level
-  if (experimentResults.per_class_metrics && 
-      Object.keys(experimentResults.per_class_metrics).length > 0) {
-    return experimentResults.per_class_metrics;
-  }
-  
-  return undefined;
-};
-
-// Ensure uniqueness of metrics for H2O binary classification
-// Add this function to filter out duplicate specificity metrics
-const getUniqueMetrics = (metrics: Record<string, any>, taskType: string | undefined, engine: string | undefined): Record<string, any> => {
-  if (!metrics) return {};
-  
-  // Create a copy of the metrics object
-  const uniqueMetrics = { ...metrics };
-  
-  // For H2O binary classification, ensure specificity is only included once
-  if (engine === 'h2o' && taskType === 'binary_classification') {
-    // Check if there are multiple occurrences of specificity-related metrics
-    const specificityKeys = Object.keys(uniqueMetrics).filter(k => 
-      k.toLowerCase().includes('specific') || k === 'tnr');
-    
-    // If more than one, keep only the first one
-    if (specificityKeys.length > 1) {
-      // Keep only the first occurrence
-      for (let i = 1; i < specificityKeys.length; i++) {
-        delete uniqueMetrics[specificityKeys[i]];
-      }
-    }
-  }
-  
-  return uniqueMetrics;
 };
 
 const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onReset }) => {
@@ -270,9 +226,6 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
     automl_engine,
     model_display_name
   } = results;
-  
-  // Filter metrics to ensure uniqueness for H2O binary classification
-  const uniqueMetrics = getUniqueMetrics(metrics, task_type, automl_engine);
   
   // Get unique downloadable files (model and report)
   const downloadableFiles = Array.from(new Set(
@@ -432,10 +385,10 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
                     // Handle both formats for f1-score
                     let metricValue;
                     if (metricName === 'f1-score') {
-                      metricValue = uniqueMetrics['f1-score'] !== undefined ? uniqueMetrics['f1-score'] :
-                                    uniqueMetrics.f1_score !== undefined ? uniqueMetrics.f1_score : undefined;
+                      metricValue = metrics['f1-score'] !== undefined ? metrics['f1-score'] :
+                                    metrics.f1_score !== undefined ? metrics.f1_score : undefined;
                     } else {
-                      metricValue = uniqueMetrics[metricName];
+                      metricValue = metrics[metricName];
                     }
                     
                     if (metricValue === undefined) return null;
@@ -464,7 +417,7 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
             </div>
             
             {/* Use the enhanced MetricsGrid component */}
-            <MetricsGrid metrics={uniqueMetrics} taskType={task_type} />
+            <MetricsGrid metrics={metrics} taskType={task_type} />
             
             {/* Add Per-Class Metrics for Multiclass Classification */}
             {isMulticlass && perClassMetrics && renderPerClassMetrics()}
@@ -488,14 +441,14 @@ const TrainingResultsV2: React.FC<TrainingResultsV2Props> = ({ experimentId, onR
               </div>
             )}
             
-            {uniqueMetrics.classification_report && (
+            {metrics.classification_report && (
               <div className="mt-6">
                 <h3 className="text-base font-semibold mb-2">Classification Report</h3>
                 <div className="bg-muted/40 p-4 rounded-md">
                   <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto">
-                    {typeof uniqueMetrics.classification_report === 'string' 
-                      ? uniqueMetrics.classification_report 
-                      : JSON.stringify(uniqueMetrics.classification_report, null, 2)}
+                    {typeof metrics.classification_report === 'string' 
+                      ? metrics.classification_report 
+                      : JSON.stringify(metrics.classification_report, null, 2)}
                   </pre>
                 </div>
               </div>
