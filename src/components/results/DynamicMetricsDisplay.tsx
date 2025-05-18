@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -227,10 +228,10 @@ const getMetricsForTaskType = (
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
     }
   } else if (isRegression) {
-    // For H2O regression, show the metrics in a specific order with RMSE as main
+    // For H2O regression, show the metrics in a specific order with Mean Residual Deviance as main
     if (isH2O) {
-      // Set RMSE as the default main metric for regression if not specified
-      const regressionMainMetric = mainMetric || 'rmse';
+      // Set Mean Residual Deviance as the default main metric for regression if not specified
+      const regressionMainMetric = mainMetric || 'mean_residual_deviance';
       
       // Add the main metric first
       if (combinedMetrics[regressionMainMetric] !== undefined) {
@@ -243,7 +244,7 @@ const getMetricsForTaskType = (
       if (regressionMainMetric !== 'rmse' && combinedMetrics.rmse !== undefined) 
         result.rmse = combinedMetrics.rmse;
       if (combinedMetrics.rmsle !== undefined) result.rmsle = combinedMetrics.rmsle;
-      if (combinedMetrics.mean_residual_deviance !== undefined) 
+      if (regressionMainMetric !== 'mean_residual_deviance' && combinedMetrics.mean_residual_deviance !== undefined) 
         result.mean_residual_deviance = combinedMetrics.mean_residual_deviance;
       if (combinedMetrics.r2 !== undefined) result.r2 = combinedMetrics.r2;
     } else {
@@ -388,7 +389,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
   metrics, 
   taskType,
   bestModelDetails,
-  mainMetric = taskType.includes('regression') ? 'rmse' : 'logloss' // Default to rmse for regression
+  mainMetric = taskType.includes('regression') ? 'mean_residual_deviance' : 'logloss' // Changed default for regression to mean_residual_deviance
 }) => {
   const isClassification = taskType.includes('classification');
   const isMulticlass = taskType.includes('multiclass');
@@ -408,14 +409,14 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
       {/* For regression, display a grid similar to multiclass */}
       {isRegression && isH2O && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          {['mae', 'mse', 'rmse', 'rmsle', 'mean_residual_deviance', 'r2'].map((metricName) => {
+          {['mean_residual_deviance', 'mae', 'mse', 'rmse', 'rmsle', 'r2'].map((metricName) => {
             if (metrics[metricName] === undefined && (!bestModelDetails || bestModelDetails[metricName] === undefined)) return null;
             
             const metricValue = metrics[metricName] !== undefined ? metrics[metricName] : 
                               bestModelDetails ? bestModelDetails[metricName] : undefined;
             if (metricValue === undefined) return null;
             
-            const isMainMetric = metricName === (mainMetric || 'rmse');
+            const isMainMetric = metricName === (mainMetric || 'mean_residual_deviance');
             const description = getMetricDescription(metricName);
             
             // Create metric descriptions based on the image reference
