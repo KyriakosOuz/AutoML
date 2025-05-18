@@ -59,11 +59,23 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
     return recommendation;
   };
 
-  // Determine the emoji based on balance status
-  const getStatusEmoji = () => {
-    if (needs_balancing) return "⚠️";
-    if (is_imbalanced) return "ℹ️";
-    return "✅";
+  // Determine if we should show the status message
+  const shouldShowStatusMsg = () => {
+    if (!status_msg || !recommendation) return false;
+    if (status_msg === recommendation) return false;
+    
+    // Don't show contradictory messages
+    if (recommendation.includes("No balancing needed") && 
+        status_msg.includes("imbalance detected")) {
+      return false;
+    }
+    
+    // Don't show redundant balance messages
+    if (status_msg === "Target class distribution looks balanced.") {
+      return false;
+    }
+    
+    return true;
   };
 
   // Severely imbalanced - needs balancing techniques
@@ -72,11 +84,11 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
       <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="text-amber-700">
-          <div className="font-semibold">{getStatusEmoji()} {getHeadline()}</div>
+          <div className="font-semibold">{getHeadline()}</div>
           <div>Target column: '{target_column}'</div>
           <div className="text-xs mt-1">{formatDistribution()}</div>
           <div className="mt-2 font-medium">{getUserFriendlyRecommendation()}</div>
-          {status_msg && recommendation && status_msg !== recommendation && (
+          {shouldShowStatusMsg() && (
             <div className="mt-1 text-sm">{status_msg}</div>
           )}
         </AlertDescription>
@@ -90,11 +102,11 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
       <Alert className="mb-4 bg-blue-50 border-blue-200">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-700">
-          <div className="font-semibold">{getStatusEmoji()} {getHeadline()}</div>
+          <div className="font-semibold">{getHeadline()}</div>
           <div>Target column: '{target_column}'</div>
           <div className="text-xs mt-1">{formatDistribution()}</div>
           <div className="mt-2 font-medium">{getUserFriendlyRecommendation()}</div>
-          {status_msg && recommendation && status_msg !== recommendation && (
+          {shouldShowStatusMsg() && (
             <div className="mt-1 text-sm">{status_msg}</div>
           )}
         </AlertDescription>
@@ -107,11 +119,11 @@ const ClassImbalanceAlert: React.FC<ClassImbalanceAlertProps> = ({ classImbalanc
     <Alert className="mb-4 bg-green-50 border-green-200">
       <CheckCircle className="h-4 w-4 text-green-600" />
       <AlertDescription className="text-green-700">
-        <div className="font-semibold">{getStatusEmoji()} {getHeadline()}</div>
+        <div className="font-semibold">{getHeadline()}</div>
         <div>Target column: '{target_column}'</div>
         <div className="text-xs mt-1">{formatDistribution()}</div>
         <div className="mt-2 font-medium">{getUserFriendlyRecommendation()}</div>
-        {status_msg && recommendation && status_msg !== recommendation && status_msg !== "Target class distribution looks balanced." && (
+        {shouldShowStatusMsg() && (
           <div className="mt-1 text-sm">{status_msg}</div>
         )}
       </AlertDescription>
