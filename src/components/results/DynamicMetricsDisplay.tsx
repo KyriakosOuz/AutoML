@@ -62,7 +62,7 @@ const formatMetricName = (key: string): string => {
     'mse': 'MSE',
     'mae': 'MAE',
     'r2': 'R² Score',
-    'specificity': 'Specificity',
+    'specificity': 'Specificity', 
     'mcc': 'MCC',
     'rmsle': 'RMSLE',
     'mean_residual_deviance': 'Mean Residual Deviance',
@@ -190,21 +190,47 @@ const getMetricsForTaskType = (
         result.f1 = combinedMetrics.f1;
       }
     } else if (isBinary) {
-      // For binary classification, show only these four metrics
-      result.accuracy = combinedMetrics.accuracy;
-      
-      // Add F1 score if available
-      if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
-        result.f1_score = combinedMetrics.f1_score !== undefined ? 
-          combinedMetrics.f1_score : 
-          (combinedMetrics.f1 !== undefined ? 
-            combinedMetrics.f1 : 
-            combinedMetrics['f1-score']);
+      // For binary classification, include all available metrics for H2O
+      if (isH2O) {
+        // Include all metrics available for H2O binary classification
+        if (combinedMetrics.auc !== undefined) result.auc = combinedMetrics.auc;
+        if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;
+        if (combinedMetrics.rmse !== undefined) result.rmse = combinedMetrics.rmse;
+        if (combinedMetrics.aucpr !== undefined) result.aucpr = combinedMetrics.aucpr;
+        if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
+        if (combinedMetrics.logloss !== undefined) result.logloss = combinedMetrics.logloss;
+        if (combinedMetrics.accuracy !== undefined) result.accuracy = combinedMetrics.accuracy;
+        if (combinedMetrics.specificity !== undefined) result.specificity = combinedMetrics.specificity;
+        if (combinedMetrics.mean_per_class_error !== undefined) result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+        
+        // Add F1 score if available
+        if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
+          result.f1_score = combinedMetrics.f1_score !== undefined ? 
+            combinedMetrics.f1_score : 
+            (combinedMetrics.f1 !== undefined ? 
+              combinedMetrics.f1 : 
+              combinedMetrics['f1-score']);
+        }
+        
+        // Add precision
+        if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+      } else {
+        // Standard binary classification metrics
+        result.accuracy = combinedMetrics.accuracy;
+        
+        // Add F1 score if available
+        if (combinedMetrics.f1_score !== undefined || combinedMetrics.f1 !== undefined || combinedMetrics['f1-score'] !== undefined) {
+          result.f1_score = combinedMetrics.f1_score !== undefined ? 
+            combinedMetrics.f1_score : 
+            (combinedMetrics.f1 !== undefined ? 
+              combinedMetrics.f1 : 
+              combinedMetrics['f1-score']);
+        }
+        
+        // Add precision and recall
+        if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
+        if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
       }
-      
-      // Add precision and recall
-      if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
-      if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
     } else {
       // Default classification metrics
       result.accuracy = combinedMetrics.accuracy;
