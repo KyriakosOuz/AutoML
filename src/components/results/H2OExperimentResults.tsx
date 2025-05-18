@@ -116,8 +116,22 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const [bestModelFromLeaderboard, setBestModelFromLeaderboard] = useState<string | null>(null);
   
   // Format metric for display
-  const formatMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
-    if (value === undefined) return 'N/A';
+  const formatMetricValue = (value: number | undefined | any, isPercentage: boolean = true) => {
+    if (value === undefined || value === null) return 'N/A';
+    
+    // Handle array values (like mean_per_class_error)
+    if (Array.isArray(value)) {
+      if (Array.isArray(value[0])) {
+        // Handle nested arrays - average the values
+        const flatValues = value[0];
+        const avgValue = flatValues.reduce((sum, val) => sum + val, 0) / flatValues.length;
+        return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
+      }
+      // Handle simple arrays - average the values
+      const avgValue = value.reduce((sum, val) => sum + val, 0) / value.length;
+      return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
+    }
+    
     if (isPercentage) {
       return `${(value * 100).toFixed(2)}%`;
     }
@@ -126,10 +140,28 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   
   // Helper function to determine if metric should be shown as percentage
   const isPercentageMetric = (metricName: string): boolean => {
-    return ['accuracy', 'f1', 'precision', 'recall', 'auc'].some(m => 
+    return ['accuracy', 'f1', 'precision', 'recall', 'auc', 'aucpr', 'specificity', 'mean_per_class_error'].some(m => 
       metricName.toLowerCase().includes(m)
     );
   };
+  
+  // Get file objects from experiment results
+  const modelFile = useMemo(() => {
+    if (!experimentResults?.files) return null;
+    return experimentResults.files.find(file => 
+      file.file_type === 'model' || 
+      file.file_type.includes('model') || 
+      file.file_type === 'trained_model'
+    );
+  }, [experimentResults]);
+
+  const predictionsFile = useMemo(() => {
+    if (!experimentResults?.files) return null;
+    return experimentResults.files.find(file => 
+      file.file_type === 'predictions_csv' ||
+      file.file_type.includes('predictions')
+    );
+  }, [experimentResults]);
   
   // Updated: Process leaderboard data for the H2OLeaderboardTable component
   const leaderboardData = useMemo(() => {
@@ -498,16 +530,6 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     ...getFilesByType('learning_curve'),
     ...getFilesByType('residual_analysis')
   ];
-
-  const modelFile = files.find(file => 
-    file.file_type === 'model' || 
-    file.file_type.includes('model')
-  );
-  
-  const predictionsFile = files.find(file => 
-    file.file_type === 'predictions_csv' ||
-    file.file_type.includes('predictions')
-  );
   
   // Format created_at date for display
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
@@ -522,6 +544,9 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
       );
     }
   };
+
+  // Determine if task is binary classification to show appropriate metrics
+  const isBinaryClassification = task_type?.includes('binary');
 
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
@@ -668,14 +693,145 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
                   <CardTitle className="text-base">Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <DynamicMetricsDisplay 
-                      metrics={metrics} 
-                      taskType={task_type} 
-                      bestModelDetails={bestModelDetails}
-                      mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
-                    />
-                  </div>
+                  {isBinaryClassification ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Main metrics for binary classification */}
+                      <div className="col-span-3 grid grid-cols-3 gap-4 mb-2">
+                        {/* AUC */}
+                        <div className="bg-primary/5 rounded-lg p-3 flex flex-col">
+                          <span className="text-sm text-muted-foreground">AUC</span>
+                          <span className="text-lg font-semibold">
+                            {formatMetricValue(metrics.auc, true)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Area Under ROC Curve
+                          </span>
+                        </div>
+                        
+                        {/* Accuracy */}
+                        <div className="bg-primary/5 rounded-lg p-3 flex flex-col">
+                          <span className="text-sm text-muted-foreground">Accuracy</span>
+                          <span className="text-lg font-semibold">
+                            {formatMetricValue(metrics.accuracy, true)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Overall correctness
+                          </span>
+                        </div>
+                        
+                        {/* F1 Score */}
+                        <div className="bg-primary/5 rounded-lg p-3 flex flex-col">
+                          <span className="text-sm text-muted-foreground">F1 Score</span>
+                          <span className="text-lg font-semibold">
+                            {formatMetricValue(metrics.f1_score, true)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Harmonic mean of precision & recall
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Secondary metrics - first row */}
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Precision</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.precision, true)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          True positives / predicted positives
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Recall</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.recall, true)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          True positives / actual positives
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Specificity</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.specificity, true)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          True negatives / actual negatives
+                        </span>
+                      </div>
+                      
+                      {/* Secondary metrics - second row */}
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">AUCPR</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.aucpr, true)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Area under precision-recall curve
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Log Loss</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.logloss, false)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Lower is better
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">RMSE</span>
+                        <span className="text-base font-medium">
+                          {formatMetricValue(metrics.rmse, false)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Root mean squared error
+                        </span>
+                      </div>
+                      
+                      {/* Mean Per Class Error */}
+                      {metrics.mean_per_class_error && (
+                        <div className="col-span-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-3 mt-2">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">Mean Per Class Error</span>
+                            <span className="text-sm font-medium">
+                              {Array.isArray(metrics.mean_per_class_error[0]) 
+                                ? formatMetricValue(metrics.mean_per_class_error[0], true)
+                                : formatMetricValue(metrics.mean_per_class_error, true)
+                              }
+                            </span>
+                          </div>
+                          
+                          {Array.isArray(metrics.mean_per_class_error[0]) && (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Class 0 Error:</span>
+                                <span>{formatMetricValue(metrics.mean_per_class_error[0][0], true)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Class 1 Error:</span>
+                                <span>{formatMetricValue(metrics.mean_per_class_error[0][1], true)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // For non-binary classification, use the original DynamicMetricsDisplay
+                    <div className="space-y-4">
+                      <DynamicMetricsDisplay 
+                        metrics={metrics} 
+                        taskType={task_type} 
+                        bestModelDetails={bestModelDetails}
+                        mainMetric="mean_per_class_error" // Changed from "logloss" to "mean_per_class_error"
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
