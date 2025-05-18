@@ -662,7 +662,13 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                           </Badge>
                         </TableCell>
                         <TableCell>{plot.feature || '-'}</TableCell>
-                        <TableCell>{plot.class || (plot.class_id !== undefined ? plot.class_id : '-')}</TableCell>
+                        <TableCell>
+                          {plot.class !== undefined && plot.class !== null
+                            ? plot.class
+                            : plot.class_id !== undefined
+                            ? plot.class_id
+                            : '-'}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
                             <a 
