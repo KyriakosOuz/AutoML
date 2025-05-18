@@ -42,7 +42,9 @@ const ExperimentDetailPage: React.FC = () => {
         fileTypes: data.files?.map(f => f.file_type),
         // Log PDP and ICE visualization files
         pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
-        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
+        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type),
+        // Log visualizations_by_type if available
+        visualizationsByType: data.visualizations_by_type ? Object.keys(data.visualizations_by_type) : 'none'
       });
     }
   }, [data, experimentId]);
