@@ -19,11 +19,9 @@ import {
   Loader,
   RefreshCw,
   Check,
-  Link,
-  Info
+  Link
 } from 'lucide-react';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
-import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 
 const POLL_INTERVAL = 2000; // 2 seconds
 const MAX_RETRY_ATTEMPTS = 3;
@@ -285,18 +283,6 @@ const ExperimentResultsPage: React.FC = () => {
       file.file_type !== 'model' && !file.file_type.includes('label_encoder')
     );
 
-    // Check if we have interpretability plots available (either in files or pdp_ice_metadata)
-    const hasInterpretabilityPlots = files?.some(file => 
-      file.file_type?.includes('pdp_') || file.file_type?.includes('ice_')
-    ) || (results.pdp_ice_metadata && results.pdp_ice_metadata.length > 0);
-
-    // Log information about interpretability plots for debugging
-    console.log("[ExperimentResultsPage] Checking for interpretability plots:", { 
-      hasInterpretabilityPlots,
-      filesWithPdpIce: files?.filter(f => f.file_type?.includes('pdp_') || f.file_type?.includes('ice_')),
-      pdpIceMetadataLength: results.pdp_ice_metadata?.length
-    });
-
     return (
       <div className="container py-10">
         <Card>
@@ -331,12 +317,9 @@ const ExperimentResultsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="metrics">Metrics</TabsTrigger>
                 <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
-                {hasInterpretabilityPlots && (
-                  <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
-                )}
                 <TabsTrigger value="download">Download</TabsTrigger>
               </TabsList>
               
@@ -473,43 +456,6 @@ const ExperimentResultsPage: React.FC = () => {
                   </div>
                 )}
               </TabsContent>
-              
-              {hasInterpretabilityPlots && (
-                <TabsContent value="interpretability">
-                  <div className="mt-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle>Model Interpretability</CardTitle>
-                          <CardDescription>
-                            Understand how features affect model predictions
-                          </CardDescription>
-                        </div>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="rounded-full bg-primary/10 p-2">
-                                <Info className="h-4 w-4 text-primary" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-sm">
-                              <div className="space-y-2">
-                                <p><strong>PDP Plots</strong> (Partial Dependency Plots) show the marginal effect of a feature on the predicted outcome.</p>
-                                <p><strong>ICE Plots</strong> (Individual Conditional Expectation) show how the prediction changes for individual instances.</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="w-full">
-                          <ModelInterpretabilityPlots experiment={results} />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-              )}
               
               <TabsContent value="download">
                 <div className="py-6">

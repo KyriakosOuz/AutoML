@@ -33,15 +33,6 @@ export interface TrainingFile {
   created_at: string;
 }
 
-// Interface for PDP/ICE plot metadata item
-export interface PdpIceMetadataItem {
-  class: string | null;       // Explicitly allow null
-  class_id?: number | string; // Add optional class_id
-  feature: string | null;     // Explicitly allow null
-  file_url: string;
-  file_type: string;
-}
-
 // New interface for visualization by type
 export interface VisualizationsByType {
   predictions?: TrainingFile[];
@@ -119,8 +110,6 @@ export interface ExperimentResults {
   per_class_metrics?: Record<string, PerClassMetric>;
   // New property for structured visualizations
   visualizations_by_type?: VisualizationsByType;
-  // Add the missing property for PDP/ICE plot metadata
-  pdp_ice_metadata?: PdpIceMetadataItem[];
 }
 
 export interface ExperimentStatusResponse {
