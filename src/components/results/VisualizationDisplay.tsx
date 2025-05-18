@@ -1,11 +1,10 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExperimentResults } from '@/types/training';
 import { Download, ImageIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface VisualizationDisplayProps {
   results: ExperimentResults;
@@ -13,7 +12,6 @@ interface VisualizationDisplayProps {
 
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
-  const [activeTab, setActiveTab] = useState<string>("all");
   
   // Enhanced filtering to capture ALL visualization types, now including pdp plots
   // and excluding model/CSV files
@@ -60,57 +58,6 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   console.log("[VisualizationDisplay] Found visualization files:", 
     visualizationFiles.map(f => ({ type: f.file_type, url: f.file_url }))
   );
-  
-  // Create categorized visualizations for filtering
-  const pdpPlots = visualizationFiles.filter(file => 
-    file.file_type.toLowerCase().includes('pdp') || 
-    file.file_type.toLowerCase().includes('partial_dependence')
-  );
-  
-  const icePlots = visualizationFiles.filter(file => 
-    file.file_type.toLowerCase().includes('ice')
-  );
-  
-  const importancePlots = visualizationFiles.filter(file => 
-    file.file_type.toLowerCase().includes('importance') || 
-    file.file_type.toLowerCase().includes('variable_importance')
-  );
-  
-  const otherPlots = visualizationFiles.filter(file => 
-    !file.file_type.toLowerCase().includes('pdp') && 
-    !file.file_type.toLowerCase().includes('partial_dependence') &&
-    !file.file_type.toLowerCase().includes('ice') &&
-    !file.file_type.toLowerCase().includes('importance') &&
-    !file.file_type.toLowerCase().includes('variable_importance')
-  );
-
-  // Function to get currently filtered visualizations based on active tab
-  const getFilteredVisualizations = () => {
-    switch (activeTab) {
-      case 'pdp':
-        return pdpPlots;
-      case 'ice':
-        return icePlots;
-      case 'importance':
-        return importancePlots;
-      case 'other':
-        return otherPlots;
-      case 'all':
-      default:
-        return visualizationFiles;
-    }
-  };
-  
-  const filteredVisualizations = getFilteredVisualizations();
-  
-  // Calculate counts for tab labels
-  const counts = {
-    all: visualizationFiles.length,
-    pdp: pdpPlots.length,
-    ice: icePlots.length, 
-    importance: importancePlots.length,
-    other: otherPlots.length
-  };
 
   if (visualizationFiles.length === 0) {
     return (
@@ -125,80 +72,49 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   }
 
   return (
-    <div>
-      {/* Tabs for filtering */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-        <TabsList className="w-full mb-2">
-          <TabsTrigger value="all" className="flex-1">
-            All ({counts.all})
-          </TabsTrigger>
-          {counts.pdp > 0 && (
-            <TabsTrigger value="pdp" className="flex-1">
-              PDP Plots ({counts.pdp})
-            </TabsTrigger>
-          )}
-          {counts.ice > 0 && (
-            <TabsTrigger value="ice" className="flex-1">
-              ICE Plots ({counts.ice})
-            </TabsTrigger>
-          )}
-          {counts.importance > 0 && (
-            <TabsTrigger value="importance" className="flex-1">
-              Importance ({counts.importance})
-            </TabsTrigger>
-          )}
-          {counts.other > 0 && (
-            <TabsTrigger value="other" className="flex-1">
-              Other ({counts.other})
-            </TabsTrigger>
-          )}
-        </TabsList>
-      </Tabs>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredVisualizations.map((file, index) => (
-          <Dialog key={index}>
-            <DialogTrigger asChild>
-              <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                <CardContent className="p-4">
-                  <div className="aspect-video bg-muted flex items-center justify-center rounded-md relative overflow-hidden">
-                    <div 
-                      className="absolute inset-0 bg-contain bg-center bg-no-repeat"
-                      style={{ backgroundImage: `url(${file.file_url})` }}
-                    />
-                    <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
-                  </div>
-                  <div className="mt-2 text-center">
-                    <p className="text-sm font-medium capitalize">
-                      {formatVisualizationName(file.file_type)}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <div className="p-1">
-                <img 
-                  src={file.file_url} 
-                  alt={file.file_type} 
-                  className="w-full rounded-md"
-                />
-                <div className="mt-2 flex justify-between items-center">
-                  <h3 className="font-medium capitalize">
-                    {formatVisualizationName(file.file_type)}
-                  </h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </a>
-                  </Button>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {visualizationFiles.map((file, index) => (
+        <Dialog key={index}>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+              <CardContent className="p-4">
+                <div className="aspect-video bg-muted flex items-center justify-center rounded-md relative overflow-hidden">
+                  <div 
+                    className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+                    style={{ backgroundImage: `url(${file.file_url})` }}
+                  />
+                  <div className="absolute inset-0 bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors" />
                 </div>
+                <div className="mt-2 text-center">
+                  <p className="text-sm font-medium capitalize">
+                    {formatVisualizationName(file.file_type)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl">
+            <div className="p-1">
+              <img 
+                src={file.file_url} 
+                alt={file.file_type} 
+                className="w-full rounded-md"
+              />
+              <div className="mt-2 flex justify-between items-center">
+                <h3 className="font-medium capitalize">
+                  {formatVisualizationName(file.file_type)}
+                </h3>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </a>
+                </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        ))}
-      </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ))}
     </div>
   );
 };
