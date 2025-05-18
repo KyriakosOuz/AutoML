@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,10 +45,11 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   const plotsData = useMemo(() => {
     // Extract metadata from backend pdp_ice_metadata if available
     const extractMetadataFromBackend = () => {
-      const pdpIceMetadata = files.find(file => file.pdp_ice_metadata)?.pdp_ice_metadata || [];
+      // NEW: Receive pdp_ice_metadata from the full experiment object instead of from files
+      const pdpIceMetadata = (Array.isArray((files as any).pdp_ice_metadata) ? (files as any).pdp_ice_metadata : []) || [];
       
       if (pdpIceMetadata.length > 0) {
-        console.log("Using pdp_ice_metadata from backend:", pdpIceMetadata);
+        console.log("✅ Using pdp_ice_metadata from backend:", pdpIceMetadata);
         
         return pdpIceMetadata.map((metadata: any) => {
           // Determine plot type from file_type
