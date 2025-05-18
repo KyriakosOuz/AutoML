@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +22,7 @@ import {
 interface PlotMetadata {
   plot_type: string;
   feature: string;
-  class_id: number;
+  class_id?: number | string; // Allow both number and string class IDs
   file?: string;
   file_url: string;
   related_feature_importance?: string;
@@ -40,16 +41,37 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Log files when component renders to help with debugging
+  console.log("[ModelInterpretabilityPlots] Files received:", files);
+
+  // Check if files include pdp_ice_metadata for more detailed metadata
+  const hasPdpIceMetadata = files.some(file => file.pdp_ice_metadata);
+  console.log("[ModelInterpretabilityPlots] Has PDP/ICE metadata:", hasPdpIceMetadata);
+
   // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
     // Extract feature information from file_type names
     const extractMetadata = (file: any): PlotMetadata | null => {
-      // For files that already have metadata from the backend
+      // For structured metadata that's directly available from backend (pdp_ice_metadata)
+      if (file.class !== undefined && file.feature !== undefined && file.file_url && file.file_type) {
+        console.log("[ModelInterpretabilityPlots] Using direct metadata for:", file.file_type);
+        return {
+          plot_type: file.file_type.startsWith('pdp_') ? 'pdp' : 
+                    file.file_type.startsWith('ice_') ? 'ice' : 'other',
+          feature: file.feature,
+          class_id: file.class, // Keep this as a string - don't parse to int
+          file_url: file.file_url,
+          related_feature_importance: null
+        };
+      }
+      
+      // For files that already have pre-extracted metadata from the backend
       if (file.feature && file.class_id !== undefined && file.plot_type) {
+        console.log("[ModelInterpretabilityPlots] Using pre-extracted metadata for:", file.plot_type, file.feature, file.class_id);
         return {
           plot_type: file.plot_type,
           feature: file.feature,
-          class_id: file.class_id,
+          class_id: file.class_id, // Keep as is, don't parse
           file_url: file.file_url,
           related_feature_importance: file.related_feature_importance
         };
@@ -58,28 +80,42 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       // For files that need metadata extraction from file_type
       const fileType = file.file_type || '';
       
-      // Handle PDP plots (format: pdp_FeatureName_ClassID)
+      // Handle PDP plots (format: pdp_FeatureName_ClassID/ClassName)
       if (fileType.startsWith('pdp_')) {
         const parts = fileType.split('_');
         if (parts.length >= 3) {
+          // Extract feature and class name
+          const feature = parts[1];
+          const className = parts.slice(2).join('_'); // Join remaining parts to handle class names with underscores
+          
+          console.log("[ModelInterpretabilityPlots] Extracted from PDP file_type:", 
+            { fileType, feature, className });
+            
           return {
             plot_type: 'pdp',
-            feature: parts[1],
-            class_id: parseInt(parts[2], 10),
+            feature: feature,
+            class_id: className, // Keep class name as string
             file: fileType,
             file_url: file.file_url
           };
         }
       }
       
-      // Handle ICE plots (format: ice_FeatureName_ClassID)
+      // Handle ICE plots (format: ice_FeatureName_ClassID/ClassName)
       if (fileType.startsWith('ice_')) {
         const parts = fileType.split('_');
         if (parts.length >= 3) {
+          // Extract feature and class name
+          const feature = parts[1];
+          const className = parts.slice(2).join('_'); // Join remaining parts to handle class names with underscores
+          
+          console.log("[ModelInterpretabilityPlots] Extracted from ICE file_type:", 
+            { fileType, feature, className });
+            
           return {
             plot_type: 'ice',
-            feature: parts[1],
-            class_id: parseInt(parts[2], 10),
+            feature: feature,
+            class_id: className, // Keep class name as string
             file: fileType,
             file_url: file.file_url
           };
@@ -88,6 +124,48 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       
       return null;
     };
+    
+    // Check for pdp_ice_metadata structure which comes directly from backend
+    if (files.length && files[0].pdp_ice_metadata) {
+      console.log("[ModelInterpretabilityPlots] Using pdp_ice_metadata array");
+      const pdpIcePlots = files[0].pdp_ice_metadata
+        .map(metadata => extractMetadata(metadata))
+        .filter(Boolean) as PlotMetadata[];
+      
+      // Split by plot type
+      const pdpPlots = pdpIcePlots.filter(plot => plot.plot_type === 'pdp');
+      const icePlots = pdpIcePlots.filter(plot => plot.plot_type === 'ice');
+      
+      // Get unique features
+      const allFeatures = [...pdpPlots, ...icePlots]
+        .map(plot => plot.feature)
+        .filter(Boolean)
+        .filter((value, index, self) => value && self.indexOf(value) === index)
+        .sort();
+      
+      // Find feature importance plot if available
+      const featureImportancePlot = pdpIcePlots.find(plot => 
+        plot.plot_type === 'variable_importance' || 
+        plot.file?.includes('importance')
+      );
+      
+      if (featureImportancePlot) {
+        // Link PDP/ICE plots to feature importance
+        [...pdpPlots, ...icePlots].forEach(plot => {
+          plot.related_feature_importance = featureImportancePlot.file_url;
+        });
+      }
+      
+      return {
+        pdpPlots,
+        icePlots,
+        features: allFeatures,
+        featureImportancePlot
+      };
+    }
+    
+    // Traditional file array processing if no pdp_ice_metadata
+    console.log("[ModelInterpretabilityPlots] Processing traditional file array");
     
     // Extract metadata from all files
     const allMetadata = files
@@ -101,7 +179,8 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
     // Get unique features across both plot types
     const allFeatures = [...pdpPlots, ...icePlots]
       .map(plot => plot.feature)
-      .filter((value, index, self) => self.indexOf(value) === index)
+      .filter(Boolean)
+      .filter((value, index, self) => value && self.indexOf(value) === index)
       .sort();
     
     // Find feature importance plot
@@ -124,6 +203,13 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       featureImportancePlot
     };
   }, [files]);
+
+  console.log("[ModelInterpretabilityPlots] Processed plots data:", {
+    pdpCount: plotsData.pdpPlots.length, 
+    iceCount: plotsData.icePlots.length,
+    features: plotsData.features,
+    hasFeatureImportance: !!plotsData.featureImportancePlot
+  });
 
   // Set initial active feature if available
   React.useEffect(() => {
@@ -155,8 +241,10 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
         if (a.plot_type < b.plot_type) return -1;
         if (a.plot_type > b.plot_type) return 1;
         
-        // Then by class_id
-        return a.class_id - b.class_id;
+        // Then by class_id (as string)
+        const classA = String(a.class_id || '');
+        const classB = String(b.class_id || '');
+        return classA.localeCompare(classB);
       });
   }, [plotsData.pdpPlots, plotsData.icePlots]);
 
@@ -441,7 +529,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                                         className="w-full h-full object-contain"
                                       />
                                       <div className="absolute bottom-2 right-2">
-                                        <Badge className="bg-primary">Class {plot.class_id}</Badge>
+                                        <Badge className="bg-primary">{plot.class_id}</Badge>
                                       </div>
                                       <div className="absolute top-2 right-2">
                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full">
@@ -532,7 +620,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                                         className="w-full h-full object-contain" 
                                       />
                                       <div className="absolute bottom-2 right-2">
-                                        <Badge className="bg-primary">Class {plot.class_id}</Badge>
+                                        <Badge className="bg-primary">{plot.class_id}</Badge>
                                       </div>
                                       <div className="absolute top-2 right-2">
                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full">
@@ -694,3 +782,4 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
 };
 
 export default ModelInterpretabilityPlots;
+

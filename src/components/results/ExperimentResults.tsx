@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
+import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -50,6 +52,42 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                                (experimentResults?.automl_engine ? 'automl' : 'custom');
                                
   console.log("[ExperimentResults] Using display training type:", displayedTrainingType);
+
+  // Determine if we have interpretability plots available
+  const hasInterpretabilityPlots = React.useMemo(() => {
+    if (!experimentResults) return false;
+    
+    // Check for pdp_ice_metadata structure from backend
+    if (experimentResults.pdp_ice_metadata && experimentResults.pdp_ice_metadata.length > 0) {
+      console.log("[ExperimentResults] Found pdp_ice_metadata with", experimentResults.pdp_ice_metadata.length, "items");
+      return true;
+    }
+    
+    // Check for PDP/ICE plots in files array
+    if (experimentResults.files && experimentResults.files.length > 0) {
+      const hasPdpIce = experimentResults.files.some(file => 
+        file.file_type?.startsWith('pdp_') || file.file_type?.startsWith('ice_')
+      );
+      console.log("[ExperimentResults] Checked files for PDP/ICE:", hasPdpIce);
+      return hasPdpIce;
+    }
+    
+    // Check if visualizations_by_type contains interpretability data
+    if (experimentResults.visualizations_by_type) {
+      const visTypes = experimentResults.visualizations_by_type;
+      // Create an array of relevant types and check if any are present and non-empty
+      const relevantTypes = ['explainability', 'feature_importance', 'pdp', 'ice', 'shap'];
+      const hasVisualizations = relevantTypes.some(type => 
+        visTypes[type] && Array.isArray(visTypes[type]) && visTypes[type]!.length > 0
+      );
+      console.log("[ExperimentResults] Checked visualizations_by_type for relevant types:", hasVisualizations);
+      return hasVisualizations;
+    }
+
+    return false;
+  }, [experimentResults]);
+
+  console.log("[ExperimentResults] Has interpretability plots:", hasInterpretabilityPlots);
 
   if (isLoading) {
     return (
@@ -174,6 +212,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+            {hasInterpretabilityPlots && (
+              <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
+            )}
           </TabsList>
           <TabsContent value="summary">
             <ModelSummary results={experimentResults} />
@@ -184,6 +225,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
+          {hasInterpretabilityPlots && (
+            <TabsContent value="interpretability">
+              <ModelInterpretabilityPlots 
+                files={experimentResults.pdp_ice_metadata ? 
+                  [experimentResults] : // Pass the whole result object if it has pdp_ice_metadata
+                  experimentResults.files || []} // Otherwise pass the files array
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-between">
@@ -205,3 +255,4 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
+
