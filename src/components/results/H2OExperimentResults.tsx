@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -31,6 +32,17 @@ import DynamicMetricsDisplay from './DynamicMetricsDisplay';
 import MetricsGrid from '../training/charts/MetricsGrid';
 import ModelInterpretabilityPlots from './ModelInterpretabilityPlots';
 import { downloadFile } from '../training/prediction/utils/downloadUtils';
+
+// Add back the missing interface definition
+interface H2OExperimentResultsProps {
+  experimentId: string | null;
+  status: ExperimentStatus;
+  experimentResults: ExperimentResults | null;
+  isLoading: boolean;
+  error: string | null;
+  onReset?: () => void;
+  onRefresh?: () => void;
+}
 
 // Helper function to format task type
 const formatTaskType = (type: string = '') => {
