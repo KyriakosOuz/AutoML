@@ -11,6 +11,7 @@ import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
+import RocCurveChart from '@/components/training/charts/RocCurveChart';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -53,6 +54,76 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                                
   console.log("[ExperimentResults] Using display training type:", displayedTrainingType);
 
+  // Find ROC curve image in files if available
+  const findVisualizationByType = (type: string) => {
+    if (!experimentResults?.files || experimentResults.files.length === 0) return null;
+    return experimentResults.files.find(file => file.file_type === type || file.file_type.includes(type));
+  };
+  
+  const rocCurveFile = findVisualizationByType('evaluation_curve');
+  const rocCurveImageUrl = rocCurveFile?.file_url;
+  
+  // Group visualizations by type for better organization
+  const groupedVisualizations = React.useMemo(() => {
+    if (!experimentResults?.files || experimentResults.files.length === 0) return {};
+    
+    const visualTypes: Record<string, {title: string, files: typeof experimentResults.files}> = {
+      'confusion_matrix': {
+        title: 'Confusion Matrix',
+        files: []
+      },
+      'evaluation_curve': {
+        title: 'Evaluation Curves',
+        files: []
+      },
+      'calibration_curve': {
+        title: 'Calibration',
+        files: []
+      },
+      'cumulative_gains': {
+        title: 'Cumulative Gains',
+        files: []
+      },
+      'ks_statistic': {
+        title: 'KS Statistic',
+        files: []
+      },
+      'lift_curve': {
+        title: 'Lift Curve',
+        files: []
+      },
+      'learning_curve': {
+        title: 'Learning Curve',
+        files: []
+      },
+      'feature_importance': {
+        title: 'Feature Importance',
+        files: []
+      }
+    };
+    
+    // Filter out model and label_encoder files
+    const visualizationFiles = experimentResults.files.filter(file => 
+      file.file_type !== 'model' && 
+      !file.file_type.includes('label_encoder')
+    );
+    
+    // Group files by type
+    visualizationFiles.forEach(file => {
+      for (const type in visualTypes) {
+        if (file.file_type.includes(type)) {
+          visualTypes[type].files.push(file);
+          return;
+        }
+      }
+    });
+    
+    // Remove empty categories
+    return Object.fromEntries(
+      Object.entries(visualTypes).filter(([_, value]) => value.files.length > 0)
+    );
+  }, [experimentResults?.files]);
+
   // Determine if we have interpretability plots available
   const hasInterpretabilityPlots = React.useMemo(() => {
     if (!experimentResults) return false;
@@ -88,6 +159,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }, [experimentResults]);
 
   console.log("[ExperimentResults] Has interpretability plots:", hasInterpretabilityPlots);
+  console.log("[ExperimentResults] Grouped visualizations:", groupedVisualizations);
 
   if (isLoading) {
     return (
@@ -218,12 +290,59 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           </TabsList>
           <TabsContent value="summary">
             <ModelSummary results={experimentResults} />
+            
+            {/* Add ROC curve to summary if available */}
+            {experimentResults.metrics?.auc && (
+              <div className="mt-6">
+                <RocCurveChart 
+                  auc={experimentResults.metrics.auc}
+                  imageUrl={rocCurveImageUrl}
+                />
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="metrics">
             <MetricsDisplay results={experimentResults} />
           </TabsContent>
           <TabsContent value="visualizations">
-            <VisualizationDisplay results={experimentResults} />
+            {Object.keys(groupedVisualizations).length > 0 ? (
+              <div className="space-y-6">
+                {Object.entries(groupedVisualizations).map(([type, visualGroup]) => (
+                  <div key={type} className="border rounded-lg p-4">
+                    <h3 className="text-lg font-medium mb-4">{visualGroup.title}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {visualGroup.files.map((file, index) => (
+                        <Card key={index} className="overflow-hidden">
+                          <CardHeader className="py-2">
+                            <CardTitle className="text-sm font-medium">
+                              {file.file_type
+                                .replace(/_/g, ' ')
+                                .replace(/curve/gi, 'Curve')
+                                .replace(/matrix/gi, 'Matrix')
+                                .replace(/normalized/gi, 'Normalized')
+                                .replace(/statistic/gi, 'Statistic')
+                                .replace(/learning curves/gi, 'Learning Curves')
+                                .split(' ')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(' ')}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <img 
+                              src={file.file_url} 
+                              alt={file.file_type} 
+                              className="w-full h-auto rounded-md"
+                            />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <VisualizationDisplay results={experimentResults} />
+            )}
           </TabsContent>
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
