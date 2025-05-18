@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -731,6 +732,7 @@ const ExperimentsTab: React.FC = () => {
                   const isH2OExperiment = experiment.automl_engine?.toLowerCase() === 'h2o';
                   const isMLJARExperiment = experiment.automl_engine?.toLowerCase() === 'mljar';
                   const isBinaryClassification = experiment.task_type === 'binary_classification';
+                  const isMulticlassClassification = experiment.task_type === 'multiclass_classification';
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -757,8 +759,16 @@ const ExperimentsTab: React.FC = () => {
                               <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
                               <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
+                          ) : isH2OExperiment && isMulticlassClassification ? (
+                            // H2O multiclass classification metrics - showing available metrics
+                            <>
+                              <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
+                              <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
+                              <div>Log Loss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
+                              <div>Mean Per-Class Error: {renderMetricValue(experiment.metrics?.mean_per_class_error)}</div>
+                            </>
                           ) : isH2OExperiment && isBinaryClassification ? (
-                            // UPDATED: H2O binary classification metrics - showing only 4 specific metrics
+                            // H2O binary classification metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
@@ -766,7 +776,7 @@ const ExperimentsTab: React.FC = () => {
                               <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>
                           ) : isMLJARExperiment && isBinaryClassification ? (
-                            // MLJAR binary classification specific metrics - UPDATED to show only 4 metrics
+                            // MLJAR binary classification specific metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
