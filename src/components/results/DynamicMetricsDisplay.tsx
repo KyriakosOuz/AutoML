@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -408,11 +409,40 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
       {/* For regression, display a grid similar to multiclass */}
       {isRegression && isH2O && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          {['rmse', 'mae', 'mse', 'rmsle', 'mean_residual_deviance', 'r2'].map((metricName) => {
-            if (metrics[metricName] === undefined) return null;
+          {['mae', 'mse', 'rmse', 'rmsle', 'mean_residual_deviance', 'r2'].map((metricName) => {
+            if (metrics[metricName] === undefined && (!bestModelDetails || bestModelDetails[metricName] === undefined)) return null;
+            
+            const metricValue = metrics[metricName] !== undefined ? metrics[metricName] : 
+                              bestModelDetails ? bestModelDetails[metricName] : undefined;
+            if (metricValue === undefined) return null;
             
             const isMainMetric = metricName === (mainMetric || 'rmse');
             const description = getMetricDescription(metricName);
+            
+            // Create metric descriptions based on the image reference
+            let metricDescription;
+            switch (metricName) {
+              case 'mae':
+                metricDescription = 'Mean Absolute Error';
+                break;
+              case 'mse':
+                metricDescription = 'Mean Squared Error';
+                break;
+              case 'rmse':
+                metricDescription = 'Root Mean Squared Error';
+                break;
+              case 'rmsle':
+                metricDescription = 'Root Mean Squared Logarithmic Error';
+                break;
+              case 'mean_residual_deviance':
+                metricDescription = 'Mean of residual deviance, lower values are better';
+                break;
+              case 'r2':
+                metricDescription = 'Coefficient of determination';
+                break;
+              default:
+                metricDescription = description;
+            }
             
             return (
               <div 
@@ -428,11 +458,11 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
                   )}
                 </p>
                 <p className={`text-2xl font-semibold ${isMainMetric ? 'text-primary' : ''}`}>
-                  {formatMetricValue(metrics[metricName])}
+                  {formatMetricValue(metricValue)}
                 </p>
-                {description && (
+                {metricDescription && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {description}
+                    {metricDescription}
                   </p>
                 )}
               </div>
