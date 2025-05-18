@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -65,11 +64,68 @@ const formatMetricName = (key: string): string => {
     'r2': 'R² Score',
     'specificity': 'Specificity',
     'mcc': 'MCC',
+    'rmsle': 'RMSLE',
+    'mean_residual_deviance': 'Mean Residual Deviance',
   };
 
   return metricNameMap[key] || key.replace(/_/g, ' ').split(' ').map(
     word => word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
+};
+
+// Helper function to determine if a metric should be displayed as a percentage
+const isPercentageMetric = (metricName: string): boolean => {
+  return ['accuracy', 'f1', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'aucpr', 'specificity', 'mean_per_class_error'].includes(metricName.toLowerCase());
+};
+
+// Component to display a confusion matrix
+interface ConfusionMatrixProps {
+  confusionMatrix?: number[][];
+  labels?: string[];
+}
+
+const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ confusionMatrix, labels }) => {
+  if (!confusionMatrix || confusionMatrix.length === 0) return null;
+  
+  // Generate default labels if not provided
+  const matrixLabels = labels || Array.from({ length: confusionMatrix.length }, (_, i) => `Class ${i}`);
+  
+  return (
+    <Card className="mt-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Confusion Matrix</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Actual / Predicted</TableHead>
+                {matrixLabels.map((label, idx) => (
+                  <TableHead key={idx}>{label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {confusionMatrix.map((row, rowIdx) => (
+                <TableRow key={rowIdx}>
+                  <TableCell className="font-medium">{matrixLabels[rowIdx]}</TableCell>
+                  {row.map((cell, cellIdx) => (
+                    <TableCell 
+                      key={cellIdx} 
+                      className={rowIdx === cellIdx ? "font-bold bg-primary/10" : ""}
+                    >
+                      {cell}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
 
 // Determine which metrics to show based on task type
@@ -83,6 +139,7 @@ const getMetricsForTaskType = (
   const isBinary = taskType.includes('binary');
   const isMulticlass = taskType.includes('multiclass');
   const isH2O = metrics?.automl_engine === 'h2o' || bestModelDetails?.automl_engine === 'h2o';
+  const isRegression = taskType.includes('regression');
   const result: Record<string, number | number[] | number[][] | undefined> = {};
   
   // Combine metrics from both sources, prioritizing bestModelDetails
@@ -170,69 +227,19 @@ const getMetricsForTaskType = (
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
     }
   } else {
-    // Regression metrics
+    // Regression metrics - Adding all H2O regression metrics
     result.mae = combinedMetrics.mae;
     result.rmse = combinedMetrics.rmse;
     result.mse = combinedMetrics.mse;
     result.r2 = combinedMetrics.r2;
+    
+    // Add additional H2O regression metrics
+    if (combinedMetrics.rmsle !== undefined) result.rmsle = combinedMetrics.rmsle;
+    if (combinedMetrics.mean_residual_deviance !== undefined) 
+      result.mean_residual_deviance = combinedMetrics.mean_residual_deviance;
   }
   
   return result;
-};
-
-// Helper function to determine if a metric should be displayed as a percentage
-const isPercentageMetric = (metricName: string): boolean => {
-  return ['accuracy', 'f1', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'aucpr', 'specificity', 'mean_per_class_error'].includes(metricName.toLowerCase());
-};
-
-// Component to display a confusion matrix
-interface ConfusionMatrixProps {
-  confusionMatrix?: number[][];
-  labels?: string[];
-}
-
-const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ confusionMatrix, labels }) => {
-  if (!confusionMatrix || confusionMatrix.length === 0) return null;
-  
-  // Generate default labels if not provided
-  const matrixLabels = labels || Array.from({ length: confusionMatrix.length }, (_, i) => `Class ${i}`);
-  
-  return (
-    <Card className="mt-6">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Confusion Matrix</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Actual / Predicted</TableHead>
-                {matrixLabels.map((label, idx) => (
-                  <TableHead key={idx}>{label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {confusionMatrix.map((row, rowIdx) => (
-                <TableRow key={rowIdx}>
-                  <TableCell className="font-medium">{matrixLabels[rowIdx]}</TableCell>
-                  {row.map((cell, cellIdx) => (
-                    <TableCell 
-                      key={cellIdx} 
-                      className={rowIdx === cellIdx ? "font-bold bg-primary/10" : ""}
-                    >
-                      {cell}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
 };
 
 // Get descriptions for metrics
@@ -253,6 +260,8 @@ const getMetricDescription = (metricName: string): string => {
     'specificity': 'True Negative Rate',
     'mcc': 'Matthews Correlation Coefficient',
     'mean_per_class_error': 'Mean Per-Class Error (average classification error across all classes)',
+    'rmsle': 'Root Mean Squared Logarithmic Error',
+    'mean_residual_deviance': 'Mean of residual deviance, lower values are better',
   };
   
   return descriptions[metricName.toLowerCase()] || '';

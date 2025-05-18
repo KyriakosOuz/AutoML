@@ -471,7 +471,8 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     } else {
       return {
         name: metrics.metric_used || 'rmse',
-        value: metrics.metric_value || metrics.rmse || metrics.mse || metrics.mae || metrics.r2
+        value: metrics.metric_value || metrics.rmse || metrics.mse || metrics.mae || 
+          metrics.mean_residual_deviance || metrics.r2
       };
     }
   };
