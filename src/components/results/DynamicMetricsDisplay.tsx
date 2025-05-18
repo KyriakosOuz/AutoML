@@ -226,17 +226,38 @@ const getMetricsForTaskType = (
       if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
     }
-  } else {
-    // Regression metrics - Adding all H2O regression metrics
-    result.mae = combinedMetrics.mae;
-    result.rmse = combinedMetrics.rmse;
-    result.mse = combinedMetrics.mse;
-    result.r2 = combinedMetrics.r2;
-    
-    // Add additional H2O regression metrics
-    if (combinedMetrics.rmsle !== undefined) result.rmsle = combinedMetrics.rmsle;
-    if (combinedMetrics.mean_residual_deviance !== undefined) 
-      result.mean_residual_deviance = combinedMetrics.mean_residual_deviance;
+  } else if (isRegression) {
+    // For H2O regression, show the metrics in a specific order with RMSE as main
+    if (isH2O) {
+      // Set RMSE as the default main metric for regression if not specified
+      const regressionMainMetric = mainMetric || 'rmse';
+      
+      // Add the main metric first
+      if (combinedMetrics[regressionMainMetric] !== undefined) {
+        result[regressionMainMetric] = combinedMetrics[regressionMainMetric];
+      }
+      
+      // Add other H2O regression metrics in order
+      if (combinedMetrics.mae !== undefined) result.mae = combinedMetrics.mae;
+      if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;
+      if (regressionMainMetric !== 'rmse' && combinedMetrics.rmse !== undefined) 
+        result.rmse = combinedMetrics.rmse;
+      if (combinedMetrics.rmsle !== undefined) result.rmsle = combinedMetrics.rmsle;
+      if (combinedMetrics.mean_residual_deviance !== undefined) 
+        result.mean_residual_deviance = combinedMetrics.mean_residual_deviance;
+      if (combinedMetrics.r2 !== undefined) result.r2 = combinedMetrics.r2;
+    } else {
+      // Standard regression metrics
+      result.mae = combinedMetrics.mae;
+      result.rmse = combinedMetrics.rmse;
+      result.mse = combinedMetrics.mse;
+      result.r2 = combinedMetrics.r2;
+      
+      // Add additional regression metrics if available
+      if (combinedMetrics.rmsle !== undefined) result.rmsle = combinedMetrics.rmsle;
+      if (combinedMetrics.mean_residual_deviance !== undefined) 
+        result.mean_residual_deviance = combinedMetrics.mean_residual_deviance;
+    }
   }
   
   return result;
@@ -367,10 +388,13 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
   metrics, 
   taskType,
   bestModelDetails,
-  mainMetric = 'logloss' // Default main metric is logloss for H2O multiclass
+  mainMetric = taskType.includes('regression') ? 'rmse' : 'logloss' // Default to rmse for regression
 }) => {
   const isClassification = taskType.includes('classification');
   const isMulticlass = taskType.includes('multiclass');
+  const isRegression = taskType.includes('regression');
+  const isH2O = metrics?.automl_engine === 'h2o' || bestModelDetails?.automl_engine === 'h2o';
+  
   const taskSpecificMetrics = getMetricsForTaskType(taskType, metrics, bestModelDetails, mainMetric);
   
   // Get confusion matrix if available
@@ -381,9 +405,49 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
   
   return (
     <div className="space-y-6">
+      {/* For regression, display a grid similar to multiclass */}
+      {isRegression && isH2O && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          {['rmse', 'mae', 'mse', 'rmsle', 'mean_residual_deviance', 'r2'].map((metricName) => {
+            if (metrics[metricName] === undefined) return null;
+            
+            const isMainMetric = metricName === (mainMetric || 'rmse');
+            const description = getMetricDescription(metricName);
+            
+            return (
+              <div 
+                key={metricName} 
+                className={`bg-muted/30 p-4 rounded-lg ${isMainMetric ? 'border-primary border-2' : ''}`}
+              >
+                <p className="text-sm text-muted-foreground flex items-center justify-between">
+                  {formatMetricName(metricName)}
+                  {isMainMetric && (
+                    <Badge variant="outline" className="bg-primary text-primary-foreground text-xs">
+                      Main
+                    </Badge>
+                  )}
+                </p>
+                <p className={`text-2xl font-semibold ${isMainMetric ? 'text-primary' : ''}`}>
+                  {formatMetricValue(metrics[metricName])}
+                </p>
+                {description && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {description}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Main metrics grid for all metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {Object.entries(taskSpecificMetrics).map(([key, value]) => {
           if (value === undefined) return null;
+          
+          // Skip metrics that are already shown in the top grid for H2O regression
+          if (isRegression && isH2O) return null;
           
           // Format the metric value accounting for arrays
           let displayValue: string | number;
