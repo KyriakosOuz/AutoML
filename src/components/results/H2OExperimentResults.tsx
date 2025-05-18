@@ -31,7 +31,6 @@ import DynamicMetricsDisplay from './DynamicMetricsDisplay';
 import MetricsGrid from '../training/charts/MetricsGrid';
 import ModelInterpretabilityPlots from './ModelInterpretabilityPlots';
 import { downloadFile } from '../training/prediction/utils/downloadUtils';
-import RocCurveChart from '../training/charts/RocCurveChart';
 
 // Add back the missing interface definition
 interface H2OExperimentResultsProps {
@@ -519,25 +518,14 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
     );
   };
 
-  // Get ROC curve files specifically
-  const rocCurveFiles = getFilesByType('roc_curve').concat(
-    getFilesByType('evaluation_curve').filter(file => 
-      file.file_name?.toLowerCase().includes('roc') || 
-      file.file_url?.toLowerCase().includes('roc')
-    )
-  );
-
   const visualizationFiles = [
     ...getFilesByType('confusion_matrix'),
-    ...rocCurveFiles,
+    ...getFilesByType('roc_curve'),
     ...getFilesByType('variable_importance'),
     ...getFilesByType('shap'),
     ...getFilesByType('partial_dependence'),
     ...getFilesByType('importance'),
-    ...getFilesByType('evaluation_curve').filter(file => 
-      !file.file_name?.toLowerCase().includes('roc') && 
-      !file.file_url?.toLowerCase().includes('roc')
-    ),
+    ...getFilesByType('evaluation_curve'),
     ...getFilesByType('learning_curve'),
     ...getFilesByType('residual_analysis')
   ];
@@ -889,72 +877,46 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
             <TabsContent value="charts" className="p-6">
               {visualizationFiles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Dedicated ROC Curve Section - Display first available ROC curve prominently */}
-                  {rocCurveFiles.length > 0 && (
-                    <div className="md:col-span-2">
-                      <Card className="shadow-sm">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">ROC Curve</CardTitle>
-                          <CardDescription>
-                            Area Under Curve (AUC): {formatMetricValue(metrics.auc, false)}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <RocCurveChart 
-                            imageUrl={rocCurveFiles[0]?.file_url}
-                            auc={metrics.auc}
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Other visualization files */}
-                  {visualizationFiles
-                    .filter(file => !(file.file_type.includes('roc_curve') || 
-                                     (file.file_type.includes('evaluation_curve') && 
-                                      (file.file_name?.toLowerCase().includes('roc') || 
-                                       file.file_url?.toLowerCase().includes('roc')))))
-                    .map((file, index) => (
-                      <Dialog key={index}>
-                        <DialogTrigger asChild>
-                          <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-base">
-                                {formatVisualizationName(file.file_type)}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-3">
-                              <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                                <div 
-                                  className="absolute inset-0 bg-cover bg-center"
-                                  style={{ backgroundImage: `url(${file.file_url})` }}
-                                />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
-                          </DialogHeader>
-                          <div className="p-1">
-                            <img 
-                              src={file.file_url} 
-                              alt={file.file_type} 
-                              className="w-full rounded-md"
-                            />
-                            <div className="mt-4 flex justify-end">
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download Image
-                                </a>
-                              </Button>
+                  {visualizationFiles.map((file, index) => (
+                    <Dialog key={index}>
+                      <DialogTrigger asChild>
+                        <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">
+                              {formatVisualizationName(file.file_type)}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-3">
+                            <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                              <div 
+                                className="absolute inset-0 bg-cover bg-center"
+                                style={{ backgroundImage: `url(${file.file_url})` }}
+                              />
                             </div>
+                          </CardContent>
+                        </Card>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
+                        </DialogHeader>
+                        <div className="p-1">
+                          <img 
+                            src={file.file_url} 
+                            alt={file.file_type} 
+                            className="w-full rounded-md"
+                          />
+                          <div className="mt-4 flex justify-end">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Image
+                              </a>
+                            </Button>
                           </div>
-                        </DialogContent>
-                      </Dialog>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   ))}
                 </div>
               ) : (
