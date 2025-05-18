@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -447,7 +446,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
             return (
               <div 
                 key={metricName} 
-                className={`bg-muted/30 p-4 rounded-lg ${isMainMetric ? 'border-primary border-2' : ''}`}
+                className={`bg-muted p-4 rounded-lg ${isMainMetric ? 'border-primary border-2' : ''}`}
               >
                 <p className="text-sm text-muted-foreground flex items-center justify-between">
                   {formatMetricName(metricName)}
