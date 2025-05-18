@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -10,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Sparkles, InfoIcon } from 'lucide-react';
+import { AlertCircle, Sparkles, InfoIcon, RefreshCw } from 'lucide-react';
 
 import { datasetApi } from '@/lib/api';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -62,57 +63,58 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
 
   const isClassification = taskType === 'binary_classification' || taskType === 'multiclass_classification';
 
-  // Effect to check for class imbalance when the component mounts - FIX: Added dependencies and check to prevent infinite calls
-  useEffect(() => {
-    // Check if we already have class imbalance data to prevent unnecessary API calls
-    if (!datasetId || !isClassification || isCheckingImbalance || classImbalanceData) {
-      console.log('PreprocessingCard: Skipping class imbalance check:', { 
-        hasDatasetId: !!datasetId, 
-        isClassification, 
-        isCheckingImbalance, 
-        hasExistingData: !!classImbalanceData 
-      });
-      return;
-    }
-
-    const checkClassImbalance = async () => {
-      try {
-        setIsCheckingImbalance(true);
-        console.log('PreprocessingCard: Checking class imbalance for dataset:', datasetId);
-        
-        const response = await datasetApi.checkClassImbalance(datasetId);
-        console.log('PreprocessingCard: Class imbalance response:', response);
-        
-        const imbalanceData = response.data || response;
-        
-        // Update the class imbalance data in the context
-        setClassImbalanceData(imbalanceData);
-        
-        // If imbalance is detected and there's a recommendation, update the balance strategy
-        if (imbalanceData.needs_balancing && imbalanceData.recommendation) {
-          const lowerCaseRec = imbalanceData.recommendation.toLowerCase();
-          
-          if (lowerCaseRec.includes('smote')) {
-            setBalanceStrategy('oversample');
-            setBalanceMethod('smote');
-          } else if (lowerCaseRec.includes('oversample')) {
-            setBalanceStrategy('oversample');
-            setBalanceMethod('random');
-          } else if (lowerCaseRec.includes('undersample')) {
-            setBalanceStrategy('undersample');
-            setBalanceMethod('random');
-          }
-        }
-      } catch (error) {
-        console.error('PreprocessingCard: Error checking class imbalance:', error);
-        setDebugInfo('Failed to check class imbalance: ' + (error instanceof Error ? error.message : String(error)));
-      } finally {
-        setIsCheckingImbalance(false);
+  // Function to check class imbalance - extracted to be reusable
+  const checkClassImbalance = async (forceRefresh = false) => {
+    if (!datasetId || !isClassification) return;
+    
+    try {
+      setIsCheckingImbalance(true);
+      
+      // If we're forcing a refresh, clear the existing data first
+      if (forceRefresh) {
+        setClassImbalanceData(null);
       }
-    };
+      
+      console.log('PreprocessingCard: Checking class imbalance for dataset:', datasetId);
+      
+      const response = await datasetApi.checkClassImbalance(datasetId);
+      console.log('PreprocessingCard: Class imbalance response:', response);
+      
+      const imbalanceData = response.data || response;
+      
+      // Update the class imbalance data in the context
+      setClassImbalanceData(imbalanceData);
+      
+      // If imbalance is detected and there's a recommendation, update the balance strategy
+      if (imbalanceData.needs_balancing && imbalanceData.recommendation) {
+        const lowerCaseRec = imbalanceData.recommendation.toLowerCase();
+        
+        if (lowerCaseRec.includes('smote')) {
+          setBalanceStrategy('oversample');
+          setBalanceMethod('smote');
+        } else if (lowerCaseRec.includes('oversample')) {
+          setBalanceStrategy('oversample');
+          setBalanceMethod('random');
+        } else if (lowerCaseRec.includes('undersample')) {
+          setBalanceStrategy('undersample');
+          setBalanceMethod('random');
+        }
+      }
+    } catch (error) {
+      console.error('PreprocessingCard: Error checking class imbalance:', error);
+      setDebugInfo('Failed to check class imbalance: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsCheckingImbalance(false);
+    }
+  };
 
-    checkClassImbalance();
-  }, [datasetId, isClassification, setClassImbalanceData, classImbalanceData]); // Added classImbalanceData as dependency
+  // Effect to check for class imbalance when the component mounts
+  useEffect(() => {
+    // Only check if we don't have data yet or if we're forcing a refresh
+    if (!classImbalanceData && !isCheckingImbalance && datasetId && isClassification) {
+      checkClassImbalance();
+    }
+  }, [datasetId, isClassification, classImbalanceData, isCheckingImbalance]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -200,17 +202,43 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
           </Alert>
         )}
         
-        {/* Class Imbalance Alert - Only for classification tasks */}
-        {isClassification && classImbalanceData && !isCheckingImbalance && (
-          <>
-            <ClassImbalanceAlert classImbalanceData={classImbalanceData} />
-            {/* Display chart for class distribution */}
-            <ClassDistributionChart 
-              classData={classImbalanceData.class_distribution} 
-              targetColumn={classImbalanceData.target_column} 
-            />
+        {/* Class Imbalance Alert with refresh button */}
+        {isClassification && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium">Class Distribution Analysis</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => checkClassImbalance(true)}
+                disabled={isCheckingImbalance}
+                className="text-xs flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Refresh Analysis
+              </Button>
+            </div>
+            
+            {classImbalanceData && !isCheckingImbalance ? (
+              <>
+                <ClassImbalanceAlert classImbalanceData={classImbalanceData} />
+                {/* Display chart for class distribution */}
+                <ClassDistributionChart 
+                  classData={classImbalanceData.class_distribution} 
+                  targetColumn={classImbalanceData.target_column} 
+                />
+              </>
+            ) : !isCheckingImbalance && (
+              <Alert className="mb-4 bg-blue-50 border-blue-200">
+                <InfoIcon className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  No class distribution data available. Click "Refresh Analysis" to check for class imbalance.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Separator className="my-6" />
-          </>
+          </div>
         )}
         
         <div className="space-y-6">

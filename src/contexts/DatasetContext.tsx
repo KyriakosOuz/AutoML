@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 // Types
@@ -67,6 +66,7 @@ export interface DatasetContextProps {
   setClassImbalanceData: (data: ClassImbalanceData | null) => void;
   
   resetState: () => void;
+  resetClassImbalanceData: () => void; // New function to reset only class imbalance data
   updateState: (newState: Partial<DatasetContextState>) => void;
 }
 
@@ -213,8 +213,10 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     // No need to explicitly update localStorage here as the effect above will handle it
   };
   
-  const setClassImbalanceData = (classImbalanceData: ClassImbalanceData | null) => 
+  const setClassImbalanceData = (classImbalanceData: ClassImbalanceData | null) => {
+    console.log('Setting class imbalance data:', classImbalanceData);
     setState(prev => ({ ...prev, classImbalanceData }));
+  };
   
   const resetState = () => {
     console.log('Resetting dataset state to initial state');
@@ -223,6 +225,23 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
       localStorage.removeItem('datasetState');
     } catch (error) {
       console.error('Failed to clear localStorage:', error);
+    }
+  };
+  
+  // New function to reset only class imbalance data
+  const resetClassImbalanceData = () => {
+    console.log('Resetting only class imbalance data');
+    setState(prev => ({ ...prev, classImbalanceData: null }));
+    
+    // Update localStorage to reflect this change immediately
+    try {
+      const currentState = JSON.parse(localStorage.getItem('datasetState') || '{}');
+      localStorage.setItem('datasetState', JSON.stringify({
+        ...currentState,
+        classImbalanceData: null
+      }));
+    } catch (error) {
+      console.error('Failed to update localStorage when resetting class imbalance data:', error);
     }
   };
   
@@ -268,6 +287,7 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProcessingButtonClicked,
     setClassImbalanceData,
     resetState,
+    resetClassImbalanceData, // Add the new function
     updateState,
   };
   
