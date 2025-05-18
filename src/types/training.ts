@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -36,10 +35,11 @@ export interface TrainingFile {
 
 // Interface for PDP/ICE plot metadata item
 export interface PdpIceMetadataItem {
-  file_type: string;
-  feature: string;
-  class?: string;
+  class: string | null;       // Explicitly allow null
+  class_id?: number | string; // Add optional class_id
+  feature: string | null;     // Explicitly allow null
   file_url: string;
+  file_type: string;
 }
 
 // New interface for visualization by type
