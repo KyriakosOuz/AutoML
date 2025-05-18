@@ -30,16 +30,7 @@ import H2OLeaderboardTable from './H2OLeaderboardTable';
 import DynamicMetricsDisplay from './DynamicMetricsDisplay';
 import MetricsGrid from '../training/charts/MetricsGrid';
 import ModelInterpretabilityPlots from './ModelInterpretabilityPlots';
-
-interface H2OExperimentResultsProps {
-  experimentId: string | null;
-  status: ExperimentStatus;
-  experimentResults: ExperimentResults | null;
-  isLoading: boolean;
-  error: string | null;
-  onReset?: () => void;
-  onRefresh?: () => void;
-}
+import { downloadFile } from '../training/prediction/utils/downloadUtils';
 
 // Helper function to format task type
 const formatTaskType = (type: string = '') => {
@@ -509,6 +500,16 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
   const formattedCreatedAt = created_at ? formatDateForGreece(new Date(created_at), 'PP p') : 'N/A';
   const formattedCompletedAt = completed_at ? formatDateForGreece(new Date(completed_at), 'PP p') : 'N/A';
 
+  // Function to handle downloading predictions CSV
+  const handleDownloadPredictions = async () => {
+    if (predictionsFile) {
+      await downloadFile(
+        predictionsFile.file_url, 
+        `${experiment_name || 'h2o'}_predictions.csv`
+      );
+    }
+  };
+
   return (
     <Card className="w-full mt-6 border border-primary/20 rounded-lg shadow-md">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
@@ -767,10 +768,30 @@ const H2OExperimentResults: React.FC<H2OExperimentResultsProps> = ({
           
           <TabsContent value="predictions" className="p-6">
             <div className="grid grid-cols-1 gap-6">
-              {/* Predictions Card - Now full width */}
+              {/* Predictions Card - Now with download button */}
               <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Predictions</CardTitle>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Predictions</CardTitle>
+                    {task_type === 'regression' && (
+                      <CardDescription>
+                        Predicted values for the test dataset
+                      </CardDescription>
+                    )}
+                  </div>
+                  
+                  {/* Add download button for predictions */}
+                  {predictionsFile && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDownloadPredictions}
+                      className="ml-auto"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download CSV
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {predictionsFile ? (
