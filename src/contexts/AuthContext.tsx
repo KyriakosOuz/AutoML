@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -141,6 +142,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Validate password length (ensuring consistent validation with SettingsPage)
+      if (password.length < 6) {
+        toast({
+          title: 'Password too short',
+          description: 'Your password must be at least 6 characters long.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       // Get CAPTCHA token
       const captchaToken = getCaptchaToken();
       // Commenting out the CAPTCHA validation check

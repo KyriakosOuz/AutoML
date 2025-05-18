@@ -60,10 +60,10 @@ const SettingsPage = () => {
       return;
     }
     
-    if (newPassword.length < 8) {
+    if (newPassword.length < 6) {
       toast({
         title: "Password too short",
-        description: "Your password must be at least 8 characters long.",
+        description: "Your password must be at least 6 characters long.",
         variant: "destructive",
       });
       return;
