@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, AlertTriangle } from 'lucide-react';
-import { PdpIceMetadataItem } from '@/types/training';
+import { PdpIceMetadataItem, ExperimentResults } from '@/types/training';
 
 interface ModelInterpretabilityPlotsProps {
   pdpIceMetadata?: PdpIceMetadataItem[];
   taskType?: string;
+  // Add support for passing the entire experiment object
+  experiment?: ExperimentResults;
 }
 
 const formatFileType = (fileType: string): string => {
@@ -65,19 +67,23 @@ const getPlotType = (fileType: string): 'pdp' | 'ice' | 'other' => {
 };
 
 const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({ 
-  pdpIceMetadata = [],
-  taskType 
+  pdpIceMetadata,
+  taskType,
+  experiment 
 }) => {
   const [activeTab, setActiveTab] = useState<string>('all');
   
+  // Use metadata either directly from props or from the experiment object
+  const actualPdpIceMetadata = pdpIceMetadata || experiment?.pdp_ice_metadata;
+  
   // Log the raw metadata for debugging
-  console.log('Raw pdpIceMetadata:', pdpIceMetadata);
+  console.log('Raw pdpIceMetadata:', actualPdpIceMetadata);
   
   // Process metadata and ensure proper type handling
   const processedMetadata = useMemo(() => {
-    if (!pdpIceMetadata || pdpIceMetadata.length === 0) return [];
+    if (!actualPdpIceMetadata || actualPdpIceMetadata.length === 0) return [];
     
-    return pdpIceMetadata.map(item => {
+    return actualPdpIceMetadata.map(item => {
       // Create a new object to avoid modifying the original
       const processed = { ...item };
       
@@ -104,7 +110,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
       
       return processed;
     });
-  }, [pdpIceMetadata]);
+  }, [actualPdpIceMetadata]);
   
   // Debug log for processed data
   console.log('Processed metadata:', processedMetadata);
@@ -138,7 +144,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
   }, [processedMetadata]);
   
   // No plots available
-  if (!pdpIceMetadata || pdpIceMetadata.length === 0) {
+  if (!actualPdpIceMetadata || actualPdpIceMetadata.length === 0) {
     return (
       <Card>
         <CardHeader>
