@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,7 +6,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, ZoomIn, FileText, Link as LinkIcon, Info, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
@@ -21,7 +22,8 @@ import {
 interface PlotMetadata {
   plot_type: string;
   feature: string;
-  class_id: number;
+  class_id?: number;
+  class?: string;
   file?: string;
   file_url: string;
   related_feature_importance?: string;
@@ -42,57 +44,88 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
 
   // Enhanced extraction of PDP, ICE plots and their metadata
   const plotsData = useMemo(() => {
-    // Extract feature information from file_type names
-    const extractMetadata = (file: any): PlotMetadata | null => {
-      // For files that already have metadata from the backend
-      if (file.feature && file.class_id !== undefined && file.plot_type) {
-        return {
-          plot_type: file.plot_type,
-          feature: file.feature,
-          class_id: file.class_id,
-          file_url: file.file_url,
-          related_feature_importance: file.related_feature_importance
-        };
-      }
-
-      // For files that need metadata extraction from file_type
-      const fileType = file.file_type || '';
+    // Extract metadata from backend pdp_ice_metadata if available
+    const extractMetadataFromBackend = () => {
+      const pdpIceMetadata = files.find(file => file.pdp_ice_metadata)?.pdp_ice_metadata || [];
       
-      // Handle PDP plots (format: pdp_FeatureName_ClassID)
-      if (fileType.startsWith('pdp_')) {
-        const parts = fileType.split('_');
-        if (parts.length >= 3) {
+      if (pdpIceMetadata.length > 0) {
+        console.log("Using pdp_ice_metadata from backend:", pdpIceMetadata);
+        
+        return pdpIceMetadata.map((metadata: any) => {
+          // Determine plot type from file_type
+          const plotType = metadata.file_type?.startsWith('ice') ? 'ice' : 'pdp';
+          
           return {
-            plot_type: 'pdp',
-            feature: parts[1],
-            class_id: parseInt(parts[2], 10),
-            file: fileType,
-            file_url: file.file_url
+            plot_type: plotType,
+            feature: metadata.feature || '-',
+            class: metadata.class || '-',
+            file_url: metadata.file_url,
+            file_type: metadata.file_type
           };
-        }
+        });
       }
-      
-      // Handle ICE plots (format: ice_FeatureName_ClassID)
-      if (fileType.startsWith('ice_')) {
-        const parts = fileType.split('_');
-        if (parts.length >= 3) {
-          return {
-            plot_type: 'ice',
-            feature: parts[1],
-            class_id: parseInt(parts[2], 10),
-            file: fileType,
-            file_url: file.file_url
-          };
-        }
-      }
-      
       return null;
     };
     
-    // Extract metadata from all files
-    const allMetadata = files
-      .map(extractMetadata)
-      .filter(Boolean) as PlotMetadata[];
+    // Legacy extraction from file_type names
+    const extractMetadataFromFiles = () => {
+      // Extract feature information from file_type names
+      const extractMetadata = (file: any): PlotMetadata | null => {
+        // For files that already have metadata from the backend
+        if (file.feature && file.class_id !== undefined && file.plot_type) {
+          return {
+            plot_type: file.plot_type,
+            feature: file.feature,
+            class_id: file.class_id,
+            file_url: file.file_url,
+            related_feature_importance: file.related_feature_importance
+          };
+        }
+
+        // For files that need metadata extraction from file_type
+        const fileType = file.file_type || '';
+        
+        // Handle PDP plots (format: pdp_FeatureName_ClassID)
+        if (fileType.startsWith('pdp_')) {
+          const parts = fileType.split('_');
+          if (parts.length >= 3) {
+            return {
+              plot_type: 'pdp',
+              feature: parts[1],
+              class_id: parseInt(parts[2], 10),
+              file: fileType,
+              file_url: file.file_url
+            };
+          }
+        }
+        
+        // Handle ICE plots (format: ice_FeatureName_ClassID)
+        if (fileType.startsWith('ice_')) {
+          const parts = fileType.split('_');
+          if (parts.length >= 3) {
+            return {
+              plot_type: 'ice',
+              feature: parts[1],
+              class_id: parseInt(parts[2], 10),
+              file: fileType,
+              file_url: file.file_url
+            };
+          }
+        }
+        
+        return null;
+      };
+      
+      // Extract metadata from all files
+      const allMetadata = files
+        .map(extractMetadata)
+        .filter(Boolean) as PlotMetadata[];
+      
+      return allMetadata;
+    };
+    
+    // Try to get metadata from backend first, fallback to parsing from file_type
+    const allMetadata = extractMetadataFromBackend() || extractMetadataFromFiles();
     
     // Split by plot type
     const pdpPlots = allMetadata.filter(plot => plot.plot_type === 'pdp');
@@ -101,6 +134,7 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
     // Get unique features across both plot types
     const allFeatures = [...pdpPlots, ...icePlots]
       .map(plot => plot.feature)
+      .filter(Boolean)
       .filter((value, index, self) => self.indexOf(value) === index)
       .sort();
     
@@ -155,8 +189,18 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
         if (a.plot_type < b.plot_type) return -1;
         if (a.plot_type > b.plot_type) return 1;
         
-        // Then by class_id
-        return a.class_id - b.class_id;
+        // Then by class (if available)
+        if (a.class && b.class) {
+          if (a.class < b.class) return -1;
+          if (a.class > b.class) return 1;
+        }
+        
+        // Fallback to class_id (if available)
+        if (a.class_id !== undefined && b.class_id !== undefined) {
+          return a.class_id - b.class_id;
+        }
+        
+        return 0;
       });
   }, [plotsData.pdpPlots, plotsData.icePlots]);
 
@@ -614,22 +658,24 @@ const ModelInterpretabilityPlots: React.FC<ModelInterpretabilityPlotsProps> = ({
                             {plot.plot_type === 'pdp' ? 'PDP' : 'ICE'}
                           </Badge>
                         </TableCell>
-                        <TableCell>{plot.feature}</TableCell>
-                        <TableCell>{plot.class_id}</TableCell>
+                        <TableCell>{plot.feature || '-'}</TableCell>
+                        <TableCell>{plot.class || (plot.class_id !== undefined ? plot.class_id : '-')}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
                             <a 
                               href={plot.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
+                              title="View"
                             >
-                              <ZoomIn className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </a>
                           </Button>
                           <Button variant="ghost" size="sm" asChild>
                             <a 
                               href={plot.file_url}
                               download
+                              title="Download"
                             >
                               <Download className="h-4 w-4" />
                             </a>
