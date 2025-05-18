@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -433,8 +432,27 @@ const ExperimentsTab: React.FC = () => {
     return undefined;
   };
 
-  const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
+  // Updated function to handle both single numbers and array values
+  const renderMetricValue = (value: number | undefined | number[][], isPercentage: boolean = true) => {
     if (typeof value === 'undefined') return 'N/A';
+    
+    // Handle mean_per_class_error which is a number[][] in H2O responses
+    if (Array.isArray(value)) {
+      // For mean_per_class_error, calculate average if it's an array
+      // This is a simplified approach - in production you might want more sophisticated handling
+      if (value.length === 0) return 'N/A';
+      
+      // If it's a flat array, average its values
+      if (!Array.isArray(value[0])) {
+        const avgValue = (value as number[]).reduce((sum, val) => sum + val, 0) / value.length;
+        return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
+      }
+      
+      // For 2D arrays, return a simplified representation
+      return isPercentage ? `${(value[0][0] * 100).toFixed(2)}%` : value[0][0].toFixed(4);
+    }
+    
+    // Handle regular number values
     return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
