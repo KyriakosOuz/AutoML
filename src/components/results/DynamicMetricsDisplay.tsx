@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -282,7 +281,7 @@ const getMetricDescription = (metricName: string): string => {
     'specificity': 'True Negative Rate',
     'mcc': 'Matthews Correlation Coefficient',
     'mean_per_class_error': 'Mean Per-Class Error (average classification error across all classes)',
-    'rmsle': 'Root Mean Squared Logarithmic Error',
+    'rmsle': 'RMSLE',
     'mean_residual_deviance': 'Mean of residual deviance, lower values are better',
   };
   
@@ -447,7 +446,7 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
             return (
               <div 
                 key={metricName} 
-                className={`bg-muted p-4 rounded-lg ${isMainMetric ? 'border-primary border-2' : ''}`}
+                className={`bg-slate-100 p-4 rounded-lg ${isMainMetric ? 'border-primary border-2' : ''}`}
               >
                 <p className="text-sm text-muted-foreground flex items-center justify-between">
                   {formatMetricName(metricName)}
