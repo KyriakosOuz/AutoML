@@ -255,4 +255,3 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 };
 
 export default ExperimentResults;
-

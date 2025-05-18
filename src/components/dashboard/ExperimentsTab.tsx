@@ -41,7 +41,7 @@ interface ExperimentMetrics {
   accuracy?: number;
   f1_score?: number;
   f1?: number;
-  'f1-score'?: number; // Add support for hyphenated format
+  'f1-score'?: number; 
   precision?: number;
   recall?: number;
   confusion_matrix?: number[][];
@@ -54,7 +54,7 @@ interface ExperimentMetrics {
   auc?: number;
   logloss?: number;
   aucpr?: number;
-  mean_per_class_error?: number[][];
+  mean_per_class_error?: number | number[][]; // Updated to accept both number and number[][]
   // Add missing properties that were causing TypeScript errors
   specificity?: number;
   mcc?: number;
@@ -432,8 +432,26 @@ const ExperimentsTab: React.FC = () => {
     return undefined;
   };
 
-  const renderMetricValue = (value: number | undefined, isPercentage: boolean = true) => {
+  // Updated renderMetricValue function to handle arrays and non-percentage metrics
+  const renderMetricValue = (value: number | number[] | number[][] | undefined, isPercentage: boolean = true) => {
     if (typeof value === 'undefined') return 'N/A';
+    
+    // Handle array values by taking the first value or averaging
+    if (Array.isArray(value)) {
+      // For nested arrays like mean_per_class_error sometimes is, flatten and average
+      if (Array.isArray(value[0])) {
+        // Flatten the nested array and calculate the average
+        const flatValues = (value as number[][]).flat();
+        const avgValue = flatValues.reduce((acc, val) => acc + val, 0) / flatValues.length;
+        return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
+      }
+      
+      // For simple arrays, calculate average
+      const avgValue = (value as number[]).reduce((acc, val) => acc + val, 0) / value.length;
+      return isPercentage ? `${(avgValue * 100).toFixed(2)}%` : avgValue.toFixed(4);
+    }
+    
+    // For simple number values
     return isPercentage ? `${(value * 100).toFixed(2)}%` : value.toFixed(4);
   };
 
@@ -731,6 +749,7 @@ const ExperimentsTab: React.FC = () => {
                   const isH2OExperiment = experiment.automl_engine?.toLowerCase() === 'h2o';
                   const isMLJARExperiment = experiment.automl_engine?.toLowerCase() === 'mljar';
                   const isBinaryClassification = experiment.task_type === 'binary_classification';
+                  const isMulticlassClassification = experiment.task_type === 'multiclass_classification';
                   
                   return (
                     <TableRow key={experiment.id}>
@@ -758,15 +777,23 @@ const ExperimentsTab: React.FC = () => {
                               <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
                             </>
                           ) : isH2OExperiment && isBinaryClassification ? (
-                            // UPDATED: H2O binary classification metrics - showing only 4 specific metrics
+                            // H2O binary classification metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>
                               <div>Precision: {renderMetricValue(experiment.metrics?.precision)}</div>
                               <div>Recall: {renderMetricValue(experiment.metrics?.recall)}</div>
                             </>
+                          ) : isH2OExperiment && isMulticlassClassification ? (
+                            // H2O multiclass metrics - display the metrics that are actually available
+                            <>
+                              <div>MSE: {renderMetricValue(experiment.metrics?.mse, false)}</div>
+                              <div>RMSE: {renderMetricValue(experiment.metrics?.rmse, false)}</div>
+                              <div>Log Loss: {renderMetricValue(experiment.metrics?.logloss, false)}</div>
+                              <div>MPCE: {renderMetricValue(experiment.metrics?.mean_per_class_error)}</div>
+                            </>
                           ) : isMLJARExperiment && isBinaryClassification ? (
-                            // MLJAR binary classification specific metrics - UPDATED to show only 4 metrics
+                            // MLJAR binary classification specific metrics
                             <>
                               <div>Accuracy: {renderMetricValue(experiment.metrics?.accuracy)}</div>
                               <div>F1 Score: {renderMetricValue(getF1Score(experiment.metrics))}</div>

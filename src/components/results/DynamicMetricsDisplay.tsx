@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,8 +23,26 @@ interface DynamicMetricsDisplayProps {
 }
 
 // Helper function for formatting metric values
-const formatMetricValue = (value: number | undefined, decimals: number = 3): string => {
+const formatMetricValue = (value: number | number[] | number[][] | undefined, decimals: number = 3): string => {
   if (value === undefined) return 'N/A';
+  
+  // Handle array values
+  if (Array.isArray(value)) {
+    // For nested arrays, flatten and average
+    if (Array.isArray(value[0])) {
+      const flatValues = (value as number[][]).flat();
+      return flatValues.length > 0 
+        ? (flatValues.reduce((acc, val) => acc + val, 0) / flatValues.length).toFixed(decimals) 
+        : 'N/A';
+    }
+    
+    // For simple arrays, calculate average
+    return (value as number[]).length > 0 
+      ? ((value as number[]).reduce((acc, val) => acc + val, 0) / (value as number[]).length).toFixed(decimals) 
+      : 'N/A';
+  }
+  
+  // For simple number values
   return value.toFixed(decimals);
 };
 
@@ -33,7 +52,7 @@ const formatMetricName = (key: string): string => {
     'auc': 'AUC',
     'logloss': 'Log Loss',
     'aucpr': 'AUC PR',
-    'mean_per_class_error': 'Mean Per Class Error',
+    'mean_per_class_error': 'MPCE', // Changed to MPCE as requested
     'accuracy': 'Accuracy',
     'f1': 'F1 Score',
     'f1_score': 'F1 Score',
@@ -59,24 +78,36 @@ const getMetricsForTaskType = (
   metrics: Record<string, any>,
   bestModelDetails?: Record<string, any>,
   mainMetric?: string
-): Record<string, number | undefined> => {
+): Record<string, number | number[] | number[][] | undefined> => {
   const isClassification = taskType.includes('classification');
   const isBinary = taskType.includes('binary');
   const isMulticlass = taskType.includes('multiclass');
-  const result: Record<string, number | undefined> = {};
+  const isH2O = metrics?.automl_engine === 'h2o' || bestModelDetails?.automl_engine === 'h2o';
+  const result: Record<string, number | number[] | number[][] | undefined> = {};
   
   // Combine metrics from both sources, prioritizing bestModelDetails
   const combinedMetrics = { ...metrics };
   if (bestModelDetails) {
     Object.entries(bestModelDetails).forEach(([key, value]) => {
-      if (typeof value === 'number') {
+      if (typeof value === 'number' || Array.isArray(value)) {
         combinedMetrics[key] = value;
       }
     });
   }
   
   if (isClassification) {
-    if (isMulticlass) {
+    if (isMulticlass && isH2O) {
+      // H2O multiclass classification - use the metrics that are actually available
+      if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;
+      if (combinedMetrics.rmse !== undefined) result.rmse = combinedMetrics.rmse;
+      if (combinedMetrics.logloss !== undefined) result.logloss = combinedMetrics.logloss;
+      if (combinedMetrics.mean_per_class_error !== undefined) result.mean_per_class_error = combinedMetrics.mean_per_class_error;
+      
+      // If there's a main metric specified, make sure it's included
+      if (mainMetric && combinedMetrics[mainMetric] !== undefined) {
+        result[mainMetric] = combinedMetrics[mainMetric];
+      }
+    } else if (isMulticlass) {
       // For multiclass classification, always include the main metric (logloss) if available
       if (mainMetric && combinedMetrics[mainMetric] !== undefined) {
         result[mainMetric] = combinedMetrics[mainMetric];
@@ -88,7 +119,7 @@ const getMetricsForTaskType = (
       if (combinedMetrics.rmse !== undefined) result.rmse = combinedMetrics.rmse;
       if (combinedMetrics.mse !== undefined) result.mse = combinedMetrics.mse;
       
-      // Also include these standard metrics
+      // Also include these standard metrics if available
       if (combinedMetrics.accuracy !== undefined) result.accuracy = combinedMetrics.accuracy;
       if (combinedMetrics.precision !== undefined) result.precision = combinedMetrics.precision;
       if (combinedMetrics.recall !== undefined) result.recall = combinedMetrics.recall;
@@ -151,7 +182,7 @@ const getMetricsForTaskType = (
 
 // Helper function to determine if a metric should be displayed as a percentage
 const isPercentageMetric = (metricName: string): boolean => {
-  return ['accuracy', 'f1', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'aucpr', 'specificity'].includes(metricName.toLowerCase());
+  return ['accuracy', 'f1', 'f1_score', 'f1-score', 'precision', 'recall', 'auc', 'aucpr', 'specificity', 'mean_per_class_error'].includes(metricName.toLowerCase());
 };
 
 // Component to display a confusion matrix
@@ -221,7 +252,7 @@ const getMetricDescription = (metricName: string): string => {
     'r2': 'Coefficient of determination',
     'specificity': 'True Negative Rate',
     'mcc': 'Matthews Correlation Coefficient',
-    'mean_per_class_error': 'Average classification error across all classes',
+    'mean_per_class_error': 'Mean Per-Class Error (average classification error across all classes)',
   };
   
   return descriptions[metricName.toLowerCase()] || '';
@@ -345,16 +376,30 @@ const DynamicMetricsDisplay: React.FC<DynamicMetricsDisplayProps> = ({
         {Object.entries(taskSpecificMetrics).map(([key, value]) => {
           if (value === undefined) return null;
           
+          // Format the metric value accounting for arrays
+          let displayValue: string | number;
+          
+          if (Array.isArray(value)) {
+            // For array values, use our formatting helper
+            displayValue = formatMetricValue(value);
+          } else {
+            // For regular values, just use the value directly
+            displayValue = value;
+          }
+          
           // Get description and percentage formatting
           const isPercent = isPercentageMetric(key);
           const description = getMetricDescription(key);
           const isMainMetric = key === mainMetric;
           
+          // For mean_per_class_error, ensure it's displayed as MPCE
+          const displayName = key === 'mean_per_class_error' ? 'MPCE' : formatMetricName(key);
+          
           return (
             <MetricCard
               key={key}
-              title={formatMetricName(key)}
-              value={value}
+              title={displayName}
+              value={displayValue}
               description={description}
               isPercentage={isPercent}
               isMain={isMainMetric}

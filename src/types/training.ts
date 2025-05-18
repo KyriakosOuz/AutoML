@@ -62,7 +62,7 @@ export interface TrainingResults {
   f1_score?: number[];
   aucpr?: number;
   logloss?: number;
-  mean_per_class_error?: number[][];
+  mean_per_class_error?: number | number[][]; // Updated to accept both number and number[][]
 }
 
 // Define the interface for per-class metrics
