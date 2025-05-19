@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/utils';
 import { trainingApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import { getWorkingAPIUrl } from '@/lib/constants';
 
 interface TuneModelModalProps {
   experimentId: string;
@@ -155,8 +157,11 @@ const TuneModelModal: React.FC<TuneModelModalProps> = ({
     
     try {
       const headers = await getAuthHeaders();
+      const apiUrl = await getWorkingAPIUrl();
       
-      const response = await fetch(`http://localhost:8000/experiments/tune-model/`, {
+      console.log("[TuneModel] Calling:", `${apiUrl}/experiments/tune-model/`);
+      
+      const response = await fetch(`${apiUrl}/experiments/tune-model/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
