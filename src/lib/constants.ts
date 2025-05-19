@@ -1,4 +1,22 @@
+export const API_BASE_PATH = "/api";
 
+// 🌐 Dynamic API base URL
+export const API_BASE_URL = (() => {
+  const productionURL = "https://automl.iee.ihu.gr" + API_BASE_PATH;
+  const localURL = "http://localhost:8000" + API_BASE_PATH;
+
+  // Highest priority: VITE_API_URL from env
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (typeof window !== "undefined") {
+    // Default to production when in browser
+    return productionURL;
+  }
+
+  return localURL;
+})();
 
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
@@ -85,58 +103,7 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Updated to use automl.iee.ihu.gr as primary URL with localhost fallback
-export const API_BASE_URL = (() => {
-  const productionURL = "https://automl.iee.ihu.gr";
-  const localURL = "http://localhost:8000";
-  
-  // First check environment variable (highest priority)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  
-  // Then try to use the production URL
-  if (typeof window !== 'undefined') {
-    // Check if the production URL is reachable
-    return productionURL;
-  }
-
-  // Fallback to local URL
-  return localURL;
-})();
-
-// Function to check if API is available and switch to fallback if needed
+// Simplified API URL function 
 export const getWorkingAPIUrl = async (): Promise<string> => {
-  const productionURL = "https://automl.iee.ihu.gr";
-  const localURL = "http://localhost:8000";
-
-  // First check environment variable (highest priority)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  
-  // Try to ping the production URL
-  try {
-    const controller = new AbortController();
-    // Timeout after 3 seconds
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
-    const response = await fetch(`${productionURL}/health-check`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      console.log('Using production API URL:', productionURL);
-      return productionURL;
-    }
-  } catch (error) {
-    console.warn('Production API unreachable, falling back to local:', error);
-  }
-  
-  console.log('Using local API URL:', localURL);
-  return localURL;
+  return API_BASE_URL;
 };
-
