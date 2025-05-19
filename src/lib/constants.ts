@@ -2,20 +2,16 @@ export const API_BASE_PATH = "/api";
 
 // 🌐 Dynamic API base URL
 export const API_BASE_URL = (() => {
-  const productionURL = "https://automl.iee.ihu.gr" + API_BASE_PATH;
-  const localURL = "http://localhost:8000" + API_BASE_PATH;
+  const viteUrl = import.meta.env.VITE_API_URL;
+  if (viteUrl) return viteUrl.endsWith("/") ? viteUrl.slice(0, -1) : viteUrl;
 
-  // Highest priority: VITE_API_URL from env
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  // In browser context: return based on location
+  if (typeof window !== "undefined" && window.location.hostname.includes("localhost")) {
+    return "http://localhost:8000" + API_BASE_PATH;
   }
 
-  if (typeof window !== "undefined") {
-    // Default to production when in browser
-    return productionURL;
-  }
-
-  return localURL;
+  // Default to production
+  return "https://automl.iee.ihu.gr" + API_BASE_PATH;
 })();
 
 export const ALLOWED_ALGORITHMS = {
