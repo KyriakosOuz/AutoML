@@ -1,6 +1,5 @@
 
 
-
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
