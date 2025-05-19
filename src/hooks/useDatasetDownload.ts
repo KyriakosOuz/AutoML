@@ -24,9 +24,7 @@ export const useDatasetDownload = () => {
       }
 
       // Fetch the file content using the download URL
-      // Make download URL relative if it's not already an absolute URL
-      const fileUrl = downloadUrl.startsWith('http') ? downloadUrl : downloadUrl;
-      const fileResponse = await fetch(fileUrl);
+      const fileResponse = await fetch(downloadUrl);
       const blob = await fileResponse.blob();
       
       // Create a blob URL and trigger download

@@ -1,3 +1,5 @@
+
+
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
@@ -83,37 +85,43 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Updated to use relative path for API
+// Updated to use automl.iee.ihu.gr as primary URL with localhost fallback
 export const API_BASE_URL = (() => {
-  // Always use relative path for API calls in browser environment
-  const apiBasePath = "/api";
+  const productionURL = "https://automl.iee.ihu.gr";
+  const localURL = "http://localhost:8000";
   
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Return the relative path
-  return apiBasePath;
+  // Then try to use the production URL
+  if (typeof window !== 'undefined') {
+    // Check if the production URL is reachable
+    return productionURL;
+  }
+
+  // Fallback to local URL
+  return localURL;
 })();
 
-// Updated getWorkingAPIUrl to use relative path
+// Function to check if API is available and switch to fallback if needed
 export const getWorkingAPIUrl = async (): Promise<string> => {
-  // Always use relative path for API calls in browser environment
-  const apiBasePath = "/api";
+  const productionURL = "https://automl.iee.ihu.gr";
+  const localURL = "http://localhost:8000";
 
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Try to ping the API to check if it's available
+  // Try to ping the production URL
   try {
     const controller = new AbortController();
     // Timeout after 3 seconds
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
-    const response = await fetch(`${apiBasePath}/health-check`, {
+    const response = await fetch(`${productionURL}/health-check`, {
       method: 'GET',
       signal: controller.signal
     });
@@ -121,15 +129,14 @@ export const getWorkingAPIUrl = async (): Promise<string> => {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      console.log('API is available at:', apiBasePath);
-      return apiBasePath;
+      console.log('Using production API URL:', productionURL);
+      return productionURL;
     }
   } catch (error) {
-    console.warn('API health check failed, still using relative path:', error);
+    console.warn('Production API unreachable, falling back to local:', error);
   }
   
-  // Even if health check fails, we still use the relative path
-  // This is the safest approach for deployment
-  console.log('Using API base URL:', apiBasePath);
-  return apiBasePath;
+  console.log('Using local API URL:', localURL);
+  return localURL;
 };
+
