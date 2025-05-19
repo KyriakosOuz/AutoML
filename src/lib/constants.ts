@@ -86,7 +86,7 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
 // Updated to use /api prefix
 export const API_BASE_URL = (() => {
   const productionURL = "/api";
-  const localURL = "http://localhost:8000";
+  const localURL = "http://localhost:8000/api"; // Added /api prefix to local URL
   
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
@@ -103,10 +103,10 @@ export const API_BASE_URL = (() => {
   return localURL;
 })();
 
-// Updated getWorkingAPIUrl to also use /api prefix
+// Updated getWorkingAPIUrl to use /api prefix for both environments
 export const getWorkingAPIUrl = async (): Promise<string> => {
   const productionURL = "/api";
-  const localURL = "http://localhost:8000";
+  const localURL = "http://localhost:8000/api"; // Added /api prefix to local URL
 
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
