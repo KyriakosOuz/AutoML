@@ -43,6 +43,7 @@ const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
   // Debug the filtered visualization files
   useEffect(() => {
     console.log('MLJARVisualizations - Filtered Files:', visualizationFiles);
+    console.log('MLJARVisualizations - File Types:', visualizationFiles.map(f => f.file_type));
   }, [visualizationFiles]);
 
   if (visualizationFiles.length === 0) {
@@ -63,6 +64,12 @@ const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
 
   // Improved chart title determination with more mapping options
   const getChartTitle = (file: TrainingFile): string => {
+    // Check if this is a normalized confusion matrix
+    if (file.file_type === 'confusion_matrix' && 
+        file.file_url.toLowerCase().includes('normalized')) {
+      return "Normalized Confusion Matrix";
+    }
+    
     // First check curve_subtype for specific curve types
     if (file.curve_subtype) {
       const subtypeMap: Record<string, string> = {
@@ -77,15 +84,19 @@ const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
       return subtypeMap[file.curve_subtype] || formatFileType(file.curve_subtype);
     }
     
-    // Check for known file_type patterns
+    // Check for known file_type patterns - enhanced with all MLJAR file types
     const fileTypeMap: Record<string, string> = {
       confusion_matrix: "Confusion Matrix",
       calibration_curve: "Calibration Curve",
+      calibration_curve_curve: "Calibration Curve", // Added for MLJAR
       cumulative_gains: "Cumulative Gains Curve",
+      cumulative_gains_curve: "Cumulative Gains Curve", // Added for MLJAR
       lift_curve: "Lift Curve",
       learning_curve: "Learning Curve",
+      learning_curves: "Learning Curve", // Added for MLJAR filename pattern
       ks_statistic: "KS Statistic",
-      feature_importance: "Feature Importance"
+      feature_importance: "Feature Importance",
+      evaluation_curve: "Evaluation Curve" // Added for MLJAR
     };
     
     // Try to match known file types
@@ -94,6 +105,9 @@ const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
         return value;
       }
     }
+    
+    // Debug unknown file types
+    console.log('MLJARVisualizations - Unknown file type:', file.file_type, file.file_url);
     
     // Default to formatted file_type
     return formatFileType(file.file_type);
@@ -108,6 +122,11 @@ const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
     groups[title].push(file);
     return groups;
   }, {});
+
+  // Log the grouped visualizations for debugging
+  useEffect(() => {
+    console.log('MLJARVisualizations - Grouped Visualizations:', groupedVisualizations);
+  }, [groupedVisualizations]);
 
   // Handle image download
   const handleDownload = (url: string, fileName: string) => {
