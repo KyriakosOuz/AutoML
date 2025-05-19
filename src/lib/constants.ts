@@ -1,5 +1,3 @@
-
-
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
@@ -85,9 +83,9 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Updated to use automl.iee.ihu.gr as primary URL with localhost fallback
+// Updated to use /api prefix
 export const API_BASE_URL = (() => {
-  const productionURL = "https://automl.iee.ihu.gr";
+  const productionURL = "/api";
   const localURL = "http://localhost:8000";
   
   // First check environment variable (highest priority)
@@ -97,7 +95,7 @@ export const API_BASE_URL = (() => {
   
   // Then try to use the production URL
   if (typeof window !== 'undefined') {
-    // Check if the production URL is reachable
+    // Use production URL by default
     return productionURL;
   }
 
@@ -105,9 +103,9 @@ export const API_BASE_URL = (() => {
   return localURL;
 })();
 
-// Function to check if API is available and switch to fallback if needed
+// Updated getWorkingAPIUrl to also use /api prefix
 export const getWorkingAPIUrl = async (): Promise<string> => {
-  const productionURL = "https://automl.iee.ihu.gr";
+  const productionURL = "/api";
   const localURL = "http://localhost:8000";
 
   // First check environment variable (highest priority)
@@ -139,4 +137,3 @@ export const getWorkingAPIUrl = async (): Promise<string> => {
   console.log('Using local API URL:', localURL);
   return localURL;
 };
-
