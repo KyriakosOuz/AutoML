@@ -1,17 +1,22 @@
+
 export const API_BASE_PATH = "/api";
+
+// Set this to true when working with the production API
+// Set to false when working with localhost development
+export const USE_PRODUCTION_API = false;
 
 // 🌐 Dynamic API base URL
 export const API_BASE_URL = (() => {
+  // First check for environment variable
   const viteUrl = import.meta.env.VITE_API_URL;
   if (viteUrl) return viteUrl.endsWith("/") ? viteUrl.slice(0, -1) : viteUrl;
 
-  // In browser context: return based on location
-  if (typeof window !== "undefined" && window.location.hostname.includes("localhost")) {
+  // Use the flag to determine which URL to use
+  if (USE_PRODUCTION_API) {
+    return "https://automl.iee.ihu.gr" + API_BASE_PATH;
+  } else {
     return "http://localhost:8000" + API_BASE_PATH;
   }
-
-  // Default to production
-  return "https://automl.iee.ihu.gr" + API_BASE_PATH;
 })();
 
 export const ALLOWED_ALGORITHMS = {
