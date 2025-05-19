@@ -34,6 +34,19 @@ export interface TrainingFile {
   created_at: string;
 }
 
+// Visualization file with additional metadata
+export interface VisualizationFile {
+  file_url: string;
+  curve_subtype?: string;
+  created_at?: string;
+  visualization_group?: string;
+}
+
+// Interface for grouped visualizations
+export interface VisualizationsGrouped {
+  [groupName: string]: VisualizationFile[];
+}
+
 // New interface for visualization by type
 export interface VisualizationsByType {
   predictions?: TrainingFile[];
@@ -123,6 +136,8 @@ export interface ExperimentResults {
   visualizations_by_type?: VisualizationsByType;
   // New property for PDP/ICE metadata from H2O
   pdp_ice_metadata?: PDPICEMetadata[];
+  // New property for grouped visualizations
+  visualizations_grouped?: VisualizationsGrouped;
 }
 
 export interface ExperimentStatusResponse {
