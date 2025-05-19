@@ -83,43 +83,37 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Updated to use /api prefix
+// Updated to use relative path for API
 export const API_BASE_URL = (() => {
-  const productionURL = "/api";
-  const localURL = "http://localhost:8000/api"; // Added /api prefix to local URL
+  // Always use relative path for API calls in browser environment
+  const apiBasePath = "/api";
   
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Then try to use the production URL
-  if (typeof window !== 'undefined') {
-    // Use production URL by default
-    return productionURL;
-  }
-
-  // Fallback to local URL
-  return localURL;
+  // Return the relative path
+  return apiBasePath;
 })();
 
-// Updated getWorkingAPIUrl to use /api prefix for both environments
+// Updated getWorkingAPIUrl to use relative path
 export const getWorkingAPIUrl = async (): Promise<string> => {
-  const productionURL = "/api";
-  const localURL = "http://localhost:8000/api"; // Added /api prefix to local URL
+  // Always use relative path for API calls in browser environment
+  const apiBasePath = "/api";
 
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Try to ping the production URL
+  // Try to ping the API to check if it's available
   try {
     const controller = new AbortController();
     // Timeout after 3 seconds
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
-    const response = await fetch(`${productionURL}/health-check`, {
+    const response = await fetch(`${apiBasePath}/health-check`, {
       method: 'GET',
       signal: controller.signal
     });
@@ -127,13 +121,15 @@ export const getWorkingAPIUrl = async (): Promise<string> => {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      console.log('Using production API URL:', productionURL);
-      return productionURL;
+      console.log('API is available at:', apiBasePath);
+      return apiBasePath;
     }
   } catch (error) {
-    console.warn('Production API unreachable, falling back to local:', error);
+    console.warn('API health check failed, still using relative path:', error);
   }
   
-  console.log('Using local API URL:', localURL);
-  return localURL;
+  // Even if health check fails, we still use the relative path
+  // This is the safest approach for deployment
+  console.log('Using API base URL:', apiBasePath);
+  return apiBasePath;
 };

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +15,18 @@ interface RocCurveChartProps {
 }
 
 const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc, imageUrl }) => {
+  // Handle case when imageUrl is provided but might need prefix adjustment
+  let displayImageUrl = imageUrl;
+  if (imageUrl && imageUrl.startsWith('http')) {
+    // Keep absolute URLs as is
+    displayImageUrl = imageUrl;
+  } else if (imageUrl) {
+    // For relative URLs, ensure they work with our base path
+    displayImageUrl = imageUrl;
+  }
+
   // If an image URL is provided, render the image directly
-  if (imageUrl) {
+  if (displayImageUrl) {
     return (
       <Card>
         <CardHeader>
@@ -25,7 +34,7 @@ const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc, imageUrl }
         </CardHeader>
         <CardContent className="h-[300px] flex justify-center items-center">
           <img 
-            src={imageUrl} 
+            src={displayImageUrl} 
             alt="ROC Curve" 
             className="max-h-[280px] object-contain"
           />
