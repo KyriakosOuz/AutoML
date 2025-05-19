@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,6 @@ import { AlertTriangle, RotateCcw, RefreshCw, AlertCircle } from 'lucide-react';
 import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/types/training';
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
-import MLJARGroupedVisualizations from '@/components/results/MLJARGroupedVisualizations';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
@@ -56,6 +56,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
 
   // Determine if we have interpretability plots available
   const hasInterpretabilityPlots = React.useMemo(() => {
+    if (!experimentResults) return false;
+    
     // Check for pdp_ice_metadata structure from backend
     if (experimentResults.pdp_ice_metadata && experimentResults.pdp_ice_metadata.length > 0) {
       console.log("[ExperimentResults] Found pdp_ice_metadata with", experimentResults.pdp_ice_metadata.length, "items");
@@ -87,22 +89,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }, [experimentResults]);
 
   console.log("[ExperimentResults] Has interpretability plots:", hasInterpretabilityPlots);
-
-  // Check if this is an MLJAR experiment with grouped visualizations
-  const isMljarWithGroupedVisualizations = React.useMemo(() => {
-    if (!experimentResults) return false;
-    
-    const isMLJAR = experimentResults.automl_engine?.toLowerCase() === 'mljar';
-    const hasGroupedVisualizations = experimentResults.visualizations_grouped && 
-      Object.keys(experimentResults.visualizations_grouped).length > 0;
-    
-    console.log("[ExperimentResults] MLJAR with grouped visualizations:", 
-      isMLJAR && hasGroupedVisualizations, 
-      { isMLJAR, hasGroupedVisualizations }
-    );
-    
-    return isMLJAR && hasGroupedVisualizations;
-  }, [experimentResults]);
 
   // Find ROC curve file if available
   const rocCurveFile = experimentResults?.files?.find(file => 
@@ -256,13 +242,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <MetricsDisplay results={experimentResults} />
           </TabsContent>
           <TabsContent value="visualizations">
-            {isMljarWithGroupedVisualizations ? (
-              <MLJARGroupedVisualizations 
-                visualizations_grouped={experimentResults.visualizations_grouped} 
-              />
-            ) : (
-              <VisualizationDisplay results={experimentResults} />
-            )}
+            <VisualizationDisplay results={experimentResults} />
           </TabsContent>
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
