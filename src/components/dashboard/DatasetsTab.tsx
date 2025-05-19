@@ -123,7 +123,8 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  const getDownloadUrl = (dataset: Dataset, stage: string) => {
+  const getDownloadUrl = async (dataset: Dataset, stage: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     return `${apiUrl}/dataset-management/download/${dataset.id}?stage=${stage}`;
   };
 
