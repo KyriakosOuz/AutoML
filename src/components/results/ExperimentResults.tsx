@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +12,6 @@ import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
-import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
-import H2OExperimentResults from '@/components/results/H2OExperimentResults';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -45,68 +44,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     hasError: !!error,
     resultTrainingType: experimentResults?.training_type,
     resultAutomlEngine: experimentResults?.automl_engine,
-    modelDisplayName: experimentResults?.model_display_name,
-    hasVisualizationsGrouped: !!experimentResults?.visualizations_grouped
+    modelDisplayName: experimentResults?.model_display_name
   });
-  
-  // Determine if we should use the specialized MLJAR results component
-  const useMLJARResults = React.useMemo(() => {
-    if (!experimentResults) return false;
-    
-    // Check if it's explicitly a MLJAR experiment
-    if (experimentResults.automl_engine === 'mljar') {
-      console.log("[ExperimentResults] Using MLJAR results component based on automl_engine");
-      return true;
-    }
-    
-    // Also use MLJAR view if we have visualizations_grouped data structure
-    if (experimentResults.visualizations_grouped && 
-        Object.keys(experimentResults.visualizations_grouped).length > 0) {
-      console.log("[ExperimentResults] Using MLJAR results component based on visualizations_grouped");
-      return true;
-    }
-    
-    return false;
-  }, [experimentResults]);
-  
-  // Determine if we should use the specialized H2O results component
-  const useH2OResults = React.useMemo(() => {
-    if (!experimentResults) return false;
-    
-    return experimentResults.automl_engine === 'h2o' || 
-           experimentResults.automl_engine === 'h2o_automl';
-  }, [experimentResults]);
-  
-  // If we should use a specialized component, render it
-  if (!isLoading && experimentResults) {
-    if (useMLJARResults) {
-      return (
-        <MLJARExperimentResults
-          experimentId={experimentId}
-          status={status}
-          experimentResults={experimentResults}
-          isLoading={isLoading}
-          error={error}
-          onReset={onReset}
-          onRefresh={onRefresh}
-        />
-      );
-    }
-    
-    if (useH2OResults) {
-      return (
-        <H2OExperimentResults
-          experimentId={experimentId}
-          status={status}
-          experimentResults={experimentResults}
-          isLoading={isLoading}
-          error={error}
-          onReset={onReset}
-          onRefresh={onRefresh}
-        />
-      );
-    }
-  }
   
   // Determine the actual training type to display in UI - improved logic
   const displayedTrainingType = trainingType || 
