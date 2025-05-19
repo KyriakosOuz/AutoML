@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -484,6 +485,25 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const leaderboardFile = files.find(file => 
     file.file_type === 'leaderboard_csv' ||
     file.file_type.includes('leaderboard')
+  );
+
+  // Find the predictions file
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' || 
+    file.file_type.includes('predictions')
+  );
+
+  // Find the model metadata file
+  const modelMetadataFile = files.find(file => 
+    file.file_type === 'model_metadata' || 
+    file.file_type === 'metadata_json' ||
+    file.file_type.includes('metadata')
+  );
+
+  // Find the README file
+  const readmeFile = files.find(file => 
+    file.file_type === 'readme' || 
+    file.file_type.includes('readme')
   );
 
   // Helper to render per-class metrics if present - Updated to handle both formats and include all classes
@@ -1344,3 +1364,4 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
+
