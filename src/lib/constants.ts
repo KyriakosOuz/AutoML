@@ -1,3 +1,5 @@
+
+
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
     "Logistic Regression", "Decision Tree", "Random Forest", "XGBoost",
@@ -83,36 +85,34 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// ✅ Automatically sets API base URL depending on environment
+// Updated to use automl.iee.ihu.gr as primary URL with localhost fallback
 export const API_BASE_URL = (() => {
-  const productionURL = "/api"; // Used by NGINX
-  const localURL = "http://localhost:8000/api";
-
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
-  // ✅ Detect local dev mode
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return localURL;
-  }
-
-  return productionURL;
-})();
-
-// Updated getWorkingAPIUrl to also use updated detection logic
-export const getWorkingAPIUrl = async (): Promise<string> => {
-  const productionURL = "/api"; // for nginx proxy
-  const localURL = "http://localhost:8000/api";
-
+  const productionURL = "https://automl.iee.ihu.gr";
+  const localURL = "http://localhost:8000";
+  
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // ✅ Detect local dev mode
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return localURL;
+  // Then try to use the production URL
+  if (typeof window !== 'undefined') {
+    // Check if the production URL is reachable
+    return productionURL;
+  }
+
+  // Fallback to local URL
+  return localURL;
+})();
+
+// Function to check if API is available and switch to fallback if needed
+export const getWorkingAPIUrl = async (): Promise<string> => {
+  const productionURL = "https://automl.iee.ihu.gr";
+  const localURL = "http://localhost:8000";
+
+  // First check environment variable (highest priority)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
   
   // Try to ping the production URL
@@ -139,3 +139,4 @@ export const getWorkingAPIUrl = async (): Promise<string> => {
   console.log('Using local API URL:', localURL);
   return localURL;
 };
+
