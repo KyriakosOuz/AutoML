@@ -1,4 +1,3 @@
-
 export const API_BASE_PATH = "/api";
 
 // Set this to true when working with the production API

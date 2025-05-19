@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { getWorkingAPIUrl } from '@/lib/constants';
@@ -63,6 +64,19 @@ const DatasetsTab: React.FC = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { toast } = useToast();
   const { downloadDataset } = useDatasetDownload();
+
+  // Confirm API URL on component mount
+  useEffect(() => {
+    const confirmApiUrl = async () => {
+      const apiUrl = await getWorkingAPIUrl();
+      console.log("🔄 DatasetsTab confirmed API URL:", apiUrl);
+      if (!apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1")) {
+        console.warn("⚠️ Not using localhost development URL!");
+      }
+    };
+    
+    confirmApiUrl();
+  }, []);
 
   const { data: datasetsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['datasets'],

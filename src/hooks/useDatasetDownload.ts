@@ -28,6 +28,11 @@ export const useDatasetDownload = () => {
         throw new Error('No download URL received');
       }
 
+      // Check if the download URL is using localhost
+      if (apiUrl.includes('localhost') && !downloadUrl.includes('localhost')) {
+        console.warn("⚠️ Warning: API is on localhost but download URL is not:", downloadUrl);
+      }
+
       // Fetch the file content using the download URL
       console.log("[Download] Fetching file from:", downloadUrl);
       const fileResponse = await fetch(downloadUrl);
