@@ -83,30 +83,30 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Updated to use /api prefix
+// ✅ Automatically sets API base URL depending on environment
 export const API_BASE_URL = (() => {
-  const productionURL = "/api";
-  const localURL = "http://localhost:8000";
+  const productionURL = "/api"; // for nginx proxy
+  const localURL = "http://localhost:8000/api";
   
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Then try to use the production URL
+  // Then use appropriate URL based on environment
   if (typeof window !== 'undefined') {
-    // Use production URL by default
+    // Default to productionURL (relative path) for deployed environments
     return productionURL;
   }
 
-  // Fallback to local URL
+  // Fallback to local URL for SSR or other environments
   return localURL;
 })();
 
 // Updated getWorkingAPIUrl to also use /api prefix
 export const getWorkingAPIUrl = async (): Promise<string> => {
-  const productionURL = "/api";
-  const localURL = "http://localhost:8000";
+  const productionURL = "/api"; // for nginx proxy
+  const localURL = "http://localhost:8000/api";
 
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {

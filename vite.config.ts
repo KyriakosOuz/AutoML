@@ -6,11 +6,18 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/",  // ✅ Added to fix incorrect /app/ paths
+  base: "/",  // Ensures correct asset paths for both local and production
 
   server: {
-    host: "::",
-    port: 8080,
+    host: "::", // Keep the original host setting
+    port: 8080, // Keep the original port setting
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000", // FastAPI backend
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '') // Remove /api prefix when forwarding
+      },
+    },
   },
   plugins: [
     react(),
