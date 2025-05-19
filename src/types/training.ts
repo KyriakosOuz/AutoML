@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -32,6 +31,7 @@ export interface TrainingFile {
   file_url: string;
   file_name?: string;
   created_at: string;
+  curve_subtype?: string;  // Added curve_subtype field
 }
 
 // New interface for visualization by type

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
+import MLJARVisualizations from './MLJARVisualizations';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -202,6 +202,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const experimentTitle = experimentResults?.model_display_name || 
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
+  
+  // Check if this is a MLJAR experiment
+  const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
+  
+  // Find MLJAR visualization files
+  const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
+    experimentResults.files.filter(file => 
+      file.file_url.toLowerCase().endsWith('.png')
+    ) : [];
 
   return (
     <Card className="w-full">
@@ -219,6 +228,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+            {isMljarExperiment && mljarVisualFiles.length > 0 && (
+              <TabsTrigger value="mljar-charts">Charts</TabsTrigger>
+            )}
             {hasInterpretabilityPlots && (
               <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
             )}
@@ -244,6 +256,11 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
+          {isMljarExperiment && mljarVisualFiles.length > 0 && (
+            <TabsContent value="mljar-charts">
+              <MLJARVisualizations files={mljarVisualFiles} />
+            </TabsContent>
+          )}
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
               <ModelInterpretabilityPlots 
