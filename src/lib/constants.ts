@@ -85,25 +85,22 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
 
 // ✅ Automatically sets API base URL depending on environment
 export const API_BASE_URL = (() => {
-  const productionURL = "/api"; // for nginx proxy
+  const productionURL = "/api"; // Used by NGINX
   const localURL = "http://localhost:8000/api";
-  
-  // First check environment variable (highest priority)
+
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  
-  // Then use appropriate URL based on environment
-  if (typeof window !== 'undefined') {
-    // Default to productionURL (relative path) for deployed environments
-    return productionURL;
+
+  // ✅ Detect local dev mode
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return localURL;
   }
 
-  // Fallback to local URL for SSR or other environments
-  return localURL;
+  return productionURL;
 })();
 
-// Updated getWorkingAPIUrl to also use /api prefix
+// Updated getWorkingAPIUrl to also use updated detection logic
 export const getWorkingAPIUrl = async (): Promise<string> => {
   const productionURL = "/api"; // for nginx proxy
   const localURL = "http://localhost:8000/api";
@@ -111,6 +108,11 @@ export const getWorkingAPIUrl = async (): Promise<string> => {
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
+  }
+  
+  // ✅ Detect local dev mode
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return localURL;
   }
   
   // Try to ping the production URL
