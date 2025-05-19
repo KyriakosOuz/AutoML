@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +5,7 @@ import {
   ExperimentResults,
   TaskType 
 } from '@/types/training';
+import { API_BASE_URL, getWorkingAPIUrl } from './constants';
 
 // Define the Dataset type
 export interface Dataset {
@@ -37,8 +37,6 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Updated getAuthHeaders function that returns a regular object, not a Promise
 const getAuthHeaders = () => {
@@ -115,6 +113,7 @@ const handleApiResponse = async (response: Response) => {
 
 export const datasetApi = {
   uploadDataset: async (file: File, customMissingSymbol?: string): Promise<Dataset | ApiResponse<Dataset>> => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('file', file);
     
@@ -124,7 +123,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/dataset-overview/`, {
+    const response = await fetch(`${apiUrl}/dataset/dataset-overview/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -136,13 +135,14 @@ export const datasetApi = {
   },
 
   previewDataset: async (datasetId: string, stage: string = 'raw') => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('stage', stage);
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/preview-data/`, {
+    const response = await fetch(`${apiUrl}/dataset/preview-data/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -154,6 +154,7 @@ export const datasetApi = {
   },
 
   handleMissingValues: async (datasetId: string, strategy: string, customMissingSymbol?: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('Calling handleMissingValues with:', { datasetId, strategy, customMissingSymbol });
     
     const formData = new FormData();
@@ -166,7 +167,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/handle-dataset/`, {
+    const response = await fetch(`${apiUrl}/dataset/handle-dataset/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -178,13 +179,14 @@ export const datasetApi = {
   },
 
   detectTaskType: async (datasetId: string, targetColumn: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('target_column', targetColumn);
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/detect-task-type/`, {
+    const response = await fetch(`${apiUrl}/dataset/detect-task-type/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -196,13 +198,14 @@ export const datasetApi = {
   },
 
   featureImportancePreview: async (datasetId: string, targetColumn: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('target_column', targetColumn);
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/feature-importance-preview/`, {
+    const response = await fetch(`${apiUrl}/dataset/feature-importance-preview/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -228,6 +231,7 @@ export const datasetApi = {
   },
 
   saveDataset: async (datasetId: string, targetColumn: string, columnsToKeep: string[]) => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('target_column', targetColumn);
@@ -235,7 +239,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/save-dataset/`, {
+    const response = await fetch(`${apiUrl}/dataset/save-dataset/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -247,6 +251,7 @@ export const datasetApi = {
   },
 
   preprocessDataset: async (datasetId: string, normalizationMethod: string, balanceStrategy: string, balanceMethod?: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     formData.append('normalization_method', normalizationMethod);
@@ -259,7 +264,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/data-preprocess/`, {
+    const response = await fetch(`${apiUrl}/dataset/data-preprocess/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -270,7 +275,8 @@ export const datasetApi = {
     return await handleApiResponse(response);
   },
   getFeatureImportance: async (datasetId: string) => {
-    const response = await fetch(`${API_URL}/datasets/${datasetId}/feature_importance`, {
+    const apiUrl = await getWorkingAPIUrl();
+    const response = await fetch(`${apiUrl}/datasets/${datasetId}/feature_importance`, {
       headers: getAuthHeaders(),
     });
     
@@ -282,12 +288,13 @@ export const datasetApi = {
   },
 
   checkClassImbalance: async (datasetId: string) => {
+    const apiUrl = await getWorkingAPIUrl();
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_URL}/dataset/check-class-imbalance/`, {
+    const response = await fetch(`${apiUrl}/dataset/check-class-imbalance/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -302,8 +309,9 @@ export const datasetApi = {
 export const trainingApi = {
   getAvailableAlgorithms: async (taskType: string) => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       // Ensure we're passing the task_type as a query parameter
-      const response = await fetch(`${API_URL}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
+      const response = await fetch(`${apiUrl}/algorithms/get-algorithms/?task_type=${encodeURIComponent(taskType)}`, {
         headers: getAuthHeaders(),
       });
       
@@ -317,8 +325,9 @@ export const trainingApi = {
 
   checkStatus: async (experimentId: string) => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       console.log('[API] Checking status for experiment:', experimentId);
-      const response = await fetch(`${API_URL}/training/check-status/${experimentId}`, {
+      const response = await fetch(`${apiUrl}/training/check-status/${experimentId}`, {
         headers: getAuthHeaders(),
       });
       
@@ -378,6 +387,7 @@ export const trainingApi = {
     experimentName?: string | null // Add the experimentName parameter as optional
   ) => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       const formData = new FormData();
       formData.append('dataset_id', datasetId);
       formData.append('task_type', taskType);
@@ -391,7 +401,7 @@ export const trainingApi = {
         formData.append('experiment_name', experimentName);
       }
       
-      const response = await fetch(`${API_URL}/training/automl/`, {
+      const response = await fetch(`${apiUrl}/training/automl/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
@@ -455,6 +465,7 @@ export const trainingApi = {
 
   customTrain: async (formData: FormData) => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       console.log('[API] Starting custom training with params:', {
         dataset_id: formData.get('dataset_id'),
         algorithm: formData.get('algorithm'),
@@ -462,7 +473,7 @@ export const trainingApi = {
       });
       
       const token = getAuthToken();
-      const response = await fetch(`${API_URL}/training/custom-train/`, {
+      const response = await fetch(`${apiUrl}/training/custom-train/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -531,8 +542,9 @@ export const trainingApi = {
 
   getAvailableHyperparameters: async (algorithm: string) => {
     try {
-      // Use a fixed localhost URL for hyperparameters
-      const response = await fetch(`http://localhost:8000/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
+      const apiUrl = await getWorkingAPIUrl();
+      // Use the selected API URL for hyperparameters
+      const response = await fetch(`${apiUrl}/algorithms/get-hyperparameters/?algorithm=${encodeURIComponent(algorithm)}`, {
         headers: getAuthHeaders(),
       });
       
@@ -546,8 +558,9 @@ export const trainingApi = {
 
   getExperimentResults: async (experimentId: string) => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       console.log('[API] Fetching results for experiment:', experimentId);
-      const response = await fetch(`${API_URL}/experiments/experiment-results/${experimentId}`, {
+      const response = await fetch(`${apiUrl}/experiments/experiment-results/${experimentId}`, {
         headers: getAuthHeaders()
       });
       
@@ -636,9 +649,10 @@ export const trainingApi = {
 
   getLastExperiment: async () => {
     try {
+      const apiUrl = await getWorkingAPIUrl();
       console.log('[API] Fetching most recent experiment');
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_URL}/experiments/last-experiment/`, {
+      const response = await fetch(`${apiUrl}/experiments/last-experiment/`, {
         headers
       });
       
