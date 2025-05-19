@@ -1,5 +1,5 @@
 
-import { API_BASE_URL } from '@/lib/constants';
+import { getWorkingAPIUrl } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { ApiResponse } from '@/types/api';
@@ -12,8 +12,12 @@ export const useDatasetDownload = () => {
   const downloadDataset = async (datasetId: string, stage: string, fileName?: string) => {
     try {
       const headers = await getAuthHeaders();
-      console.log("[Download] Calling:", `${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`);
-      const response = await fetch(`${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`, {
+      const apiUrl = await getWorkingAPIUrl();
+      
+      console.log("🌍 API base:", apiUrl);
+      console.log("[Download] Calling:", `${apiUrl}/dataset-management/download/${datasetId}?stage=${stage}`);
+      
+      const response = await fetch(`${apiUrl}/dataset-management/download/${datasetId}?stage=${stage}`, {
         headers
       });
       
