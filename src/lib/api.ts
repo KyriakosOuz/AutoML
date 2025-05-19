@@ -1,3 +1,4 @@
+
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -123,6 +124,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[Upload] Calling:", `${apiUrl}/dataset/dataset-overview/`);
     const response = await fetch(`${apiUrl}/dataset/dataset-overview/`, {
       method: 'POST',
       headers: {
@@ -142,6 +144,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[Preview] Calling:", `${apiUrl}/dataset/preview-data/`);
     const response = await fetch(`${apiUrl}/dataset/preview-data/`, {
       method: 'POST',
       headers: {
@@ -155,7 +158,8 @@ export const datasetApi = {
 
   handleMissingValues: async (datasetId: string, strategy: string, customMissingSymbol?: string) => {
     const apiUrl = await getWorkingAPIUrl();
-    console.log('Calling handleMissingValues with:', { datasetId, strategy, customMissingSymbol });
+    console.log('[API] Calling handleMissingValues with:', { datasetId, strategy, customMissingSymbol });
+    console.log("[MissingValues] Calling:", `${apiUrl}/dataset/handle-dataset/`);
     
     const formData = new FormData();
     formData.append('dataset_id', datasetId);
@@ -186,6 +190,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[TaskType] Calling:", `${apiUrl}/dataset/detect-task-type/`);
     const response = await fetch(`${apiUrl}/dataset/detect-task-type/`, {
       method: 'POST',
       headers: {
@@ -205,6 +210,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[FeatureImportance] Calling:", `${apiUrl}/dataset/feature-importance-preview/`);
     const response = await fetch(`${apiUrl}/dataset/feature-importance-preview/`, {
       method: 'POST',
       headers: {
@@ -239,6 +245,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[SaveDataset] Calling:", `${apiUrl}/dataset/save-dataset/`);
     const response = await fetch(`${apiUrl}/dataset/save-dataset/`, {
       method: 'POST',
       headers: {
@@ -264,6 +271,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[Preprocess] Calling:", `${apiUrl}/dataset/data-preprocess/`);
     const response = await fetch(`${apiUrl}/dataset/data-preprocess/`, {
       method: 'POST',
       headers: {
@@ -276,6 +284,7 @@ export const datasetApi = {
   },
   getFeatureImportance: async (datasetId: string) => {
     const apiUrl = await getWorkingAPIUrl();
+    console.log("[GetFeatureImportance] Calling:", `${apiUrl}/datasets/${datasetId}/feature_importance`);
     const response = await fetch(`${apiUrl}/datasets/${datasetId}/feature_importance`, {
       headers: getAuthHeaders(),
     });
@@ -294,6 +303,7 @@ export const datasetApi = {
     
     const token = getAuthToken();
     
+    console.log("[CheckClassImbalance] Calling:", `${apiUrl}/dataset/check-class-imbalance/`);
     const response = await fetch(`${apiUrl}/dataset/check-class-imbalance/`, {
       method: 'POST',
       headers: {

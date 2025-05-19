@@ -12,6 +12,7 @@ export const useDatasetDownload = () => {
   const downloadDataset = async (datasetId: string, stage: string, fileName?: string) => {
     try {
       const headers = await getAuthHeaders();
+      console.log("[Download] Calling:", `${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`);
       const response = await fetch(`${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`, {
         headers
       });
@@ -24,6 +25,7 @@ export const useDatasetDownload = () => {
       }
 
       // Fetch the file content using the download URL
+      console.log("[Download] Fetching file from:", downloadUrl);
       const fileResponse = await fetch(downloadUrl);
       const blob = await fileResponse.blob();
       
