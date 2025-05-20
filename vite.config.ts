@@ -13,13 +13,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react({
-      plugins: [
-        ["@swc/plugin-emotion", {}]
-      ],
-      // Add the keyframes for the indeterminate progress animation
-      jsxImportSource: "@emotion/react"
-    }),
+    react(),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
