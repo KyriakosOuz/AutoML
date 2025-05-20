@@ -9,13 +9,16 @@ import { useToast } from '@/hooks/use-toast';
 const DatasetPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const datasetId = searchParams.get('id');
-  const { updateState } = useDataset();
+  const { updateState, datasetId: currentDatasetId } = useDataset();
   const { toast } = useToast();
 
   // If a dataset ID is provided in the URL, load that dataset
   useEffect(() => {
     const loadDataset = async () => {
       if (!datasetId) return;
+
+      // Prevent re-loading if already in context
+      if (datasetId === currentDatasetId) return;
 
       try {
         // Fetch dataset preview
@@ -67,7 +70,7 @@ const DatasetPage: React.FC = () => {
     };
     
     loadDataset();
-  }, [datasetId, updateState, toast]);
+  }, [datasetId, updateState, toast, currentDatasetId]);
 
   return <DatasetPageContent />;
 };
