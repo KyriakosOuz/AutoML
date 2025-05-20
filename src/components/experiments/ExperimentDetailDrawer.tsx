@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -151,16 +150,14 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     // Fallback to the traditional filtering
     return (results.files || [])
       .filter(file => {
-        // Check if file type matches any visualization type
-        const isVisualization = visualTypes.some(type => 
-          file.file_type?.toLowerCase().includes(type)
-        );
+        const type = file.file_type?.toLowerCase() || '';
+        const name = file.file_name?.toLowerCase() || file.file_url?.toLowerCase() || '';
         
-        // Make sure it's not a model or CSV file
-        const isExcluded = excludeTypes.some(type => 
-          file.file_type?.toLowerCase().includes(type) || 
-          file.file_name?.toLowerCase().includes(type)
-        );
+        // Check if file type matches any visualization type
+        const isVisualization = visualTypes.some(v => type.includes(v));
+        
+        // Make sure it's not a model or CSV file - using exact match for exclude types
+        const isExcluded = excludeTypes.some(ex => type === ex || name.includes(ex));
         
         return isVisualization && !isExcluded;
       })
