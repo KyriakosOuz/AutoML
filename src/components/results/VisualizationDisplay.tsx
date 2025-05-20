@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -45,7 +46,9 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
     
     // Exclude model and CSV files
     const excludeTypes = [
-      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
+      'metadata', 'metadata_json', 'model_metadata', // Explicitly exclude metadata
+      'readme' // Explicitly exclude readme
     ];
     
     // Check if filename has specific visualization patterns (for MLJAR)
@@ -53,7 +56,9 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       file.file_name.includes('learning_curves') ||
       file.file_name.includes('roc_curve') ||
       file.file_name.includes('precision_recall_curve') ||
-      file.file_url.toLowerCase().endsWith('.png')
+      (file.file_url.toLowerCase().endsWith('.png') && 
+       !file.file_name?.toLowerCase().includes('readme') && 
+       !file.file_name?.toLowerCase().includes('metadata'))
     );
     
     const isVisualization = 

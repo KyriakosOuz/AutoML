@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -329,12 +328,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // New implementation focused on visualizations_by_type with clear structure
-  // Helper function to determine if an item is a PNG image
-  const isPngImage = (url: string): boolean => {
-    return url.toLowerCase().endsWith('.png');
-  };
-  
   // Process visualization types based on the new requirements
   const processVisualizations = () => {
     // First check if we have visualizations_by_type
@@ -386,6 +379,14 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     
     // Enhanced filter to capture all visualization types
     const visualizationFiles = files.filter(file => {
+      // Explicitly exclude README and Model Metadata files
+      if (file.file_type?.toLowerCase().includes('readme') || 
+          file.file_name?.toLowerCase().includes('readme') ||
+          file.file_type?.toLowerCase().includes('metadata') ||
+          file.file_name?.toLowerCase().includes('metadata')) {
+        return false;
+      }
+      
       return file.file_type.includes('confusion_matrix') ||
              file.file_type.includes('evaluation_curve') ||
              file.file_type.includes('precision_recall') ||
@@ -397,7 +398,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
              file.file_type.includes('calibration_curve') ||
              file.file_type.includes('cumulative_gains') ||
              file.file_type.includes('ks_statistic') ||
-             file.file_type.includes('lift_curve');
+             file.file_type.includes('lift_curve') ||
+             (file.file_url?.endsWith('.png') && 
+              !file.file_type?.includes('metadata') && 
+              !file.file_type?.includes('readme'));
     });
 
     // Group visualization files by type for better organization
@@ -406,20 +410,26 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       
       if (file.file_type.includes('confusion_matrix')) {
         category = 'confusion_matrix';
-      } else if (file.file_type.includes('roc_curve') || file.file_type.includes('precision_recall')) {
+      } else if (
+        file.file_type.includes('roc_curve') || 
+        file.file_type.includes('precision_recall') || 
+        file.curve_subtype === 'roc' || 
+        file.curve_subtype === 'precision_recall' || 
+        file.curve_subtype === 'calibration'
+      ) {
         category = 'evaluation';
       } else if (file.file_type.includes('learning_curve')) {
         category = 'learning_curve';
       } else if (file.file_type.includes('feature_importance')) {
         category = 'feature_importance';
       } else if (file.file_type.includes('calibration_curve')) {
-        category = 'calibration_curve';
-      } else if (file.file_type.includes('cumulative_gains')) {
-        category = 'cumulative_gains_curve';
+        category = 'evaluation';
       } else if (file.file_type.includes('ks_statistic')) {
         category = 'ks_statistic';
       } else if (file.file_type.includes('lift_curve')) {
         category = 'lift_curve';
+      } else if (file.file_type.includes('cumulative_gains')) {
+        category = 'cumulative_gains_curve';
       }
       
       if (!groups[category]) {
@@ -434,7 +444,31 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       return groups;
     }, {});
     
+    // Add any files with PNGs that were not captured in previous groups
+    // but make sure to exclude readme and metadata files
+    const alreadyIncluded = new Set(Object.values(groupedVisualizations).flat().map(f => f.file_id));
+    const unmatched = files.filter(f => 
+      f.file_url?.endsWith('.png') && 
+      !alreadyIncluded.has(f.file_id) &&
+      !f.file_type?.toLowerCase().includes('readme') &&
+      !f.file_name?.toLowerCase().includes('readme') &&
+      !f.file_type?.toLowerCase().includes('metadata') &&
+      !f.file_name?.toLowerCase().includes('metadata')
+    );
+
+    if (unmatched.length > 0) {
+      groupedVisualizations.other = unmatched.map(f => ({
+        ...f,
+        title: formatVisualizationName(f.file_type)
+      }));
+    }
+    
     return groupedVisualizations;
+  };
+  
+  // Helper function to determine if an item is a PNG image
+  const isPngImage = (url: string): boolean => {
+    return url.toLowerCase().endsWith('.png');
   };
   
   // Process visualizations using either the new visualizations_by_type or legacy approach
@@ -1364,4 +1398,3 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
-
