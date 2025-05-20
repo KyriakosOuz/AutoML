@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -155,6 +156,23 @@ const getDatasetTaskType = (datasetName: string): string => {
   return taskTypes[datasetName] || '';
 };
 
+// New function to sort datasets in a consistent order
+const sortPublicDatasets = (datasets: PublicDataset[]): PublicDataset[] => {
+  // Define the priority order for task types
+  const taskTypePriority: Record<string, number> = {
+    'binary_classification': 1,
+    'multiclass_classification': 2,
+    'regression': 3
+  };
+  
+  // Sort the datasets by task type priority
+  return [...datasets].sort((a, b) => {
+    const priorityA = taskTypePriority[a.task_type] || 999; // Default high value for unknown
+    const priorityB = taskTypePriority[b.task_type] || 999;
+    return priorityA - priorityB;
+  });
+};
+
 const PublicDatasetSection: React.FC = () => {
   const { toast } = useToast();
   const { resetState } = useDataset();
@@ -201,7 +219,8 @@ const PublicDatasetSection: React.FC = () => {
         };
       });
       
-      return publicDatasets;
+      // Sort the datasets in consistent order before returning
+      return sortPublicDatasets(publicDatasets);
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
