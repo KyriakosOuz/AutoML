@@ -97,6 +97,16 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
     (file.file_url?.includes('roc_curve') || file.file_type?.includes('roc_curve') || file.curve_subtype === 'roc')
   );
 
+  // Check if we have MLJAR predictions data
+  const mljarPredictionsData = React.useMemo(() => {
+    if (experimentResults?.automl_engine === 'mljar' && 
+        experimentResults.predictions && 
+        Array.isArray(experimentResults.predictions)) {
+      return experimentResults.predictions;
+    }
+    return null;
+  }, [experimentResults]);
+
   if (isLoading) {
     return (
       <Card>
@@ -176,12 +186,34 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
   
-  // Check if this is a MLJAR experiment
+  // Determine if this is a MLJAR experiment
   const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
   
   // Use our shared utility function to find MLJAR visualization files
   const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
     filterVisualizationFiles(experimentResults.files) : [];
+  
+  // Add predictions data to MLJAR files if available
+  if (mljarPredictionsData && mljarVisualFiles.length > 0) {
+    // Find if we already have a predictions file
+    const predictionFileIndex = mljarVisualFiles.findIndex(f => 
+      f.file_type === 'predictions' || 
+      f.file_name?.includes('predictions')
+    );
+    
+    if (predictionFileIndex >= 0) {
+      // Add predictions data to existing file
+      mljarVisualFiles[predictionFileIndex].predictions = mljarPredictionsData;
+    } else {
+      // Create a virtual file for predictions if none exists
+      mljarVisualFiles.push({
+        file_type: 'predictions',
+        file_name: 'Model Predictions',
+        file_url: '#',
+        predictions: mljarPredictionsData
+      });
+    }
+  }
 
   // Log found MLJAR visualization files
   console.log("[ExperimentResults] Found MLJAR visualization files:", 
