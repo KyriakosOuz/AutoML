@@ -129,8 +129,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     ];
     
     const excludeTypes = [
-      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
-      'readme', 'documentation', 'model_metadata'
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
     ];
     
     // Check if the results have visualizations_by_type field for better categorization
@@ -150,14 +149,16 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     // Fallback to the traditional filtering
     return (results.files || [])
       .filter(file => {
-        const type = file.file_type?.toLowerCase() || '';
-        const name = file.file_name?.toLowerCase() || file.file_url?.toLowerCase() || '';
-        
         // Check if file type matches any visualization type
-        const isVisualization = visualTypes.some(v => type.includes(v));
+        const isVisualization = visualTypes.some(type => 
+          file.file_type?.toLowerCase().includes(type)
+        );
         
-        // Make sure it's not a model or CSV file - using exact match for exclude types
-        const isExcluded = excludeTypes.some(ex => type === ex || name.includes(ex));
+        // Make sure it's not a model or CSV file
+        const isExcluded = excludeTypes.some(type => 
+          file.file_type?.toLowerCase().includes(type) || 
+          file.file_name?.toLowerCase().includes(type)
+        );
         
         return isVisualization && !isExcluded;
       })
