@@ -13,13 +13,28 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react(),
+    react({
+      plugins: [
+        ["@swc/plugin-emotion", {}]
+      ],
+      // Add the keyframes for the indeterminate progress animation
+      jsxImportSource: "@emotion/react"
+    }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  css: {
+    postcss: {
+      plugins: [
+        require('tailwindcss/nesting'),
+        require('tailwindcss'),
+        require('autoprefixer'),
+      ],
     },
   },
 }));
