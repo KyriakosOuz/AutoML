@@ -27,7 +27,8 @@ import {
   Trash2, 
   AlertCircle,
   DownloadCloud,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 import {
   Alert,
@@ -61,6 +62,7 @@ const DatasetsTab: React.FC = () => {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const { downloadDataset } = useDatasetDownload();
 
@@ -229,6 +231,27 @@ const DatasetsTab: React.FC = () => {
     setPreviewStage(null);
   };
 
+  // Handle manual refresh with loading state
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast({
+        title: "Datasets Refreshed",
+        description: "The dataset list has been updated",
+      });
+    } catch (error) {
+      console.error('Error refreshing datasets:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh datasets. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Show only user-owned datasets
   const datasets = userDatasets.slice(0, 100) || [];
 
@@ -236,8 +259,24 @@ const DatasetsTab: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Available Datasets</h2>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-          Refresh
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh} 
+          disabled={isLoading || isRefreshing}
+          className="gap-2"
+        >
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </>
+          )}
         </Button>
       </div>
       
