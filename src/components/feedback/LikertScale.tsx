@@ -11,27 +11,26 @@ interface LikertScaleProps {
 }
 
 const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = false }) => {
-  const labels = reversed 
-    ? ['Strongly agree', 'Agree', 'Neutral', 'Disagree', 'Strongly disagree']
-    : ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'];
+  // Always display labels in standard order (strongly disagree to strongly agree)
+  const labels = ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'];
   
-  const values = reversed 
-    ? ['5', '4', '3', '2', '1'] 
-    : ['1', '2', '3', '4', '5'];
+  // Always use values 1-5 for the radio buttons
+  const values = ['1', '2', '3', '4', '5'];
 
-  // Color classes based on position (red to green or green to red)
+  // Color classes based on the semantic meaning of the response
   const getColorClass = (index: number): string => {
+    // For reversed questions, the meaning is flipped but the display stays the same
     if (reversed) {
-      // For reversed questions: red (strongly agree) to green (strongly disagree)
+      // Reversed questions: green (strongly disagree) to red (strongly agree)
       return [
-        "text-red-600 group-hover:bg-red-50", 
-        "text-orange-600 group-hover:bg-orange-50", 
-        "text-gray-600 group-hover:bg-gray-50", 
+        "text-green-600 group-hover:bg-green-50", 
         "text-emerald-600 group-hover:bg-emerald-50", 
-        "text-green-600 group-hover:bg-green-50"
+        "text-gray-600 group-hover:bg-gray-50", 
+        "text-orange-600 group-hover:bg-orange-50", 
+        "text-red-600 group-hover:bg-red-50"
       ][index];
     } else {
-      // For normal questions: red (strongly disagree) to green (strongly agree)
+      // Normal questions: red (strongly disagree) to green (strongly agree)
       return [
         "text-red-600 group-hover:bg-red-50", 
         "text-orange-600 group-hover:bg-orange-50", 
@@ -42,17 +41,19 @@ const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = f
     }
   };
 
-  // Background color for selected item
+  // Background color for selected item with semantic meaning
   const getSelectedBg = (index: number): string => {
     if (reversed) {
+      // Reversed questions: green (strongly disagree) to red (strongly agree)
       return [
-        "bg-red-100", 
-        "bg-orange-100", 
-        "bg-gray-100", 
+        "bg-green-100", 
         "bg-emerald-100", 
-        "bg-green-100"
+        "bg-gray-100", 
+        "bg-orange-100", 
+        "bg-red-100"
       ][index];
     } else {
+      // Normal questions: red (strongly disagree) to green (strongly agree)
       return [
         "bg-red-100", 
         "bg-orange-100", 
