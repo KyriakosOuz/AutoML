@@ -14,6 +14,7 @@ import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 interface ExperimentWithDataset {
   experiment_id?: string;
   experiment_name?: string;
+  id?: string; // Added to match with experiments in ExperimentsTab
   status?: ExperimentStatus;
   training_type?: string;
   automl_engine?: string;
