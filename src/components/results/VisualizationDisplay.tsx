@@ -44,11 +44,11 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'cumulative_gains'
     ];
     
-    // Exclude model and CSV files
+    // Updated: Explicitly exclude model, CSV files, readme and model_metadata
     const excludeTypes = [
       'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
       'metadata', 'metadata_json', 'model_metadata', // Explicitly exclude metadata
-      'readme' // Explicitly exclude readme
+      'readme', 'documentation' // Explicitly exclude readme and documentation
     ];
     
     // Check if filename has specific visualization patterns (for MLJAR)
