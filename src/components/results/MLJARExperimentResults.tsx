@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -59,25 +58,17 @@ const formatTaskType = (type: string = '') => {
 };
 
 // Enhanced helper function to format visualization names for MLJAR
-const formatVisualizationName = (fileType: string, curveSubtype?: string): string => {
+const formatVisualizationName = (fileType: string): string => {
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
-  } else if (fileType.includes('evaluation_curve') || fileType === 'evaluation') {
-    if (curveSubtype === 'roc' || fileType.includes('roc_curve')) {
-      return 'ROC Curve';
-    } else if (curveSubtype === 'precision_recall' || fileType.includes('precision_recall')) {
+  } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
+    if (fileType.includes('precision_recall')) {
       return 'Precision-Recall Curve';
-    } else if (curveSubtype === 'calibration' || fileType.includes('calibration')) {
-      return 'Calibration Curve';
     }
-    return 'Evaluation Curve';
-  } else if (fileType === 'ks_statistic' || fileType.includes('ks_statistic')) {
-    return 'KS Statistic';
-  } else if (fileType === 'lift_curve' || fileType.includes('lift_curve')) {
-    return 'Lift Curve';
-  } else if (fileType === 'cumulative_gains_curve' || fileType.includes('cumulative_gains')) {
-    return 'Cumulative Gains Curve';
-  } else if (fileType === 'learning_curve' || fileType.includes('learning_curve')) {
+    return 'ROC Curve';
+  } else if (fileType.includes('precision_recall')) {
+    return 'Precision-Recall Curve';
+  } else if (fileType.includes('learning_curve')) {
     return 'Learning Curve';
   } else if (fileType.includes('feature_importance')) {
     return 'Feature Importance';
@@ -116,15 +107,12 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
         hasPerClassMetrics: experimentResults.metrics?.per_class ? 
           Object.keys(experimentResults.metrics.per_class).length : 
           (experimentResults.per_class_metrics ? Object.keys(experimentResults.per_class_metrics).length : 0),
-        hasVisualizationsByType: !!experimentResults.visualizations_by_type,
-        visualizationTypes: experimentResults.visualizations_by_type ? 
-          Object.keys(experimentResults.visualizations_by_type) : [],
         visualFiles: experimentResults.files ? 
           experimentResults.files.filter(f => 
             f.file_type.includes('confusion_matrix') || 
             f.file_type.includes('evaluation_curve') || 
-            f.file_type.includes('precision_recall_curve') ||
-            f.file_type.includes('learning_curve')
+            f.file_type.includes('learning_curve') ||
+            f.file_type.includes('precision_recall_curve')
           ).map(f => f.file_type) : [],
         allFiles: experimentResults.files ? experimentResults.files.map(f => f.file_type) : []
       });
@@ -303,8 +291,7 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     hyperparameters = {},
     automl_engine,
     model_display_name,
-    model_file_url,
-    visualizations_by_type = {} // Add this to extract the visualizations_by_type field
+    model_file_url
   } = experimentResults;
 
   // Use model_display_name as the primary source for best model label
@@ -329,120 +316,44 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 
   const primaryMetric = getPrimaryMetric();
   
-  // New implementation focused on visualizations_by_type with clear structure
-  // Helper function to determine if an item is a PNG image
-  const isPngImage = (url: string): boolean => {
-    return url.toLowerCase().endsWith('.png');
-  };
-  
-  // Process visualization types based on the new requirements
-  const processVisualizations = () => {
-    // First check if we have visualizations_by_type
-    if (visualizations_by_type && Object.keys(visualizations_by_type).length > 0) {
-      console.log("[MLJARExperimentResults] Using visualizations_by_type:", 
-        Object.keys(visualizations_by_type));
-      
-      // Create a structured organization of visualizations by category
-      const visualizationsData: Record<string, any[]> = {};
-      
-      // Process evaluation curves - handle ROC, Precision-Recall, and Calibration curves
-      if (visualizations_by_type.evaluation) {
-        visualizationsData.evaluation = visualizations_by_type.evaluation
-          .filter((item: any) => item.file_url && isPngImage(item.file_url))
-          .map((item: any) => ({
-            ...item,
-            title: formatVisualizationName('evaluation', item.curve_subtype)
-          }));
-      }
-      
-      // Process confusion matrices
-      if (visualizations_by_type.confusion_matrix) {
-        visualizationsData.confusion_matrix = visualizations_by_type.confusion_matrix
-          .filter((item: any) => item.file_url && isPngImage(item.file_url))
-          .map((item: any) => ({
-            ...item,
-            title: item.is_normalized ? 'Normalized Confusion Matrix' : 'Confusion Matrix'
-          }));
-      }
-      
-      // Process other visualization types explicitly requested
-      const otherTypes = ['ks_statistic', 'lift_curve', 'cumulative_gains_curve', 'learning_curve'];
-      otherTypes.forEach(type => {
-        if (visualizations_by_type[type]) {
-          visualizationsData[type] = visualizations_by_type[type]
-            .filter((item: any) => item.file_url && isPngImage(item.file_url))
-            .map((item: any) => ({
-              ...item,
-              title: formatVisualizationName(type)
-            }));
-        }
-      });
-      
-      return visualizationsData;
-    }
-    
-    // Fallback to legacy file-based visualizations if visualizations_by_type isn't available
-    console.log("[MLJARExperimentResults] Falling back to legacy file processing");
-    
-    // Enhanced filter to capture all visualization types
-    const visualizationFiles = files.filter(file => {
-      return file.file_type.includes('confusion_matrix') ||
-             file.file_type.includes('evaluation_curve') ||
-             file.file_type.includes('precision_recall') ||
-             file.file_type.includes('learning_curve') ||
-             file.file_type.includes('feature_importance') ||
-             file.file_type.includes('true_vs_predicted') ||
-             file.file_type.includes('predicted_vs_residuals') ||
-             file.file_type.includes('roc_curve') ||
-             file.file_type.includes('calibration_curve') ||
-             file.file_type.includes('cumulative_gains') ||
-             file.file_type.includes('ks_statistic') ||
-             file.file_type.includes('lift_curve');
-    });
+  // Enhanced filter to capture all visualization types
+  // This new implementation ensures we catch all visualization types from the files array
+  const visualizationFiles = files.filter(file => {
+    return file.file_type.includes('confusion_matrix') ||
+           file.file_type.includes('evaluation_curve') ||
+           file.file_type.includes('precision_recall') ||
+           file.file_type.includes('learning_curve') ||
+           file.file_type.includes('feature_importance') ||
+           file.file_type.includes('true_vs_predicted') ||
+           file.file_type.includes('predicted_vs_residuals') ||
+           file.file_type.includes('roc_curve');
+  });
 
-    // Group visualization files by type for better organization
-    const groupedVisualizations = visualizationFiles.reduce((groups: Record<string, any[]>, file) => {
-      let category = 'other';
-      
-      if (file.file_type.includes('confusion_matrix')) {
-        category = 'confusion_matrix';
-      } else if (file.file_type.includes('roc_curve') || file.file_type.includes('precision_recall')) {
-        category = 'evaluation';
-      } else if (file.file_type.includes('learning_curve')) {
-        category = 'learning_curve';
-      } else if (file.file_type.includes('feature_importance')) {
-        category = 'feature_importance';
-      } else if (file.file_type.includes('calibration_curve')) {
-        category = 'calibration_curve';
-      } else if (file.file_type.includes('cumulative_gains')) {
-        category = 'cumulative_gains_curve';
-      } else if (file.file_type.includes('ks_statistic')) {
-        category = 'ks_statistic';
-      } else if (file.file_type.includes('lift_curve')) {
-        category = 'lift_curve';
-      }
-      
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      
-      groups[category].push({
-        ...file,
-        title: formatVisualizationName(file.file_type)
-      });
-      
-      return groups;
-    }, {});
-    
-    return groupedVisualizations;
-  };
-  
-  // Process visualizations using either the new visualizations_by_type or legacy approach
-  const visualizations = processVisualizations();
-  
-  console.log("[MLJARExperimentResults] Processed visualizations:", Object.keys(visualizations));
+  // Log visualization files to debug
+  console.log("[MLJARExperimentResults] Visualization files:", 
+    visualizationFiles.map(f => ({
+      file_type: f.file_type,
+      file_url: f.file_url
+    }))
+  );
 
-  // Get the model download URL
+  const modelMetadataFile = files.find(file => 
+    file.file_type === 'model_metadata' || 
+    file.file_type.includes('ensemble.json')
+  );
+  
+  const readmeFile = files.find(file => 
+    file.file_type === 'readme' || 
+    file.file_type.includes('README.md')
+  );
+  
+  const predictionsFile = files.find(file => 
+    file.file_type === 'predictions_csv' ||
+    file.file_type.includes('predictions')
+  );
+  
+  // Updated to prioritize model_file_url from experimentResults
+  // If not available, fall back to the existing method of searching through files
   const getModelFileUrl = () => {
     if (model_file_url) {
       console.log('[MLJARExperimentResults] Using model_file_url:', model_file_url);
@@ -485,25 +396,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
   const leaderboardFile = files.find(file => 
     file.file_type === 'leaderboard_csv' ||
     file.file_type.includes('leaderboard')
-  );
-
-  // Find the predictions file
-  const predictionsFile = files.find(file => 
-    file.file_type === 'predictions_csv' || 
-    file.file_type.includes('predictions')
-  );
-
-  // Find the model metadata file
-  const modelMetadataFile = files.find(file => 
-    file.file_type === 'model_metadata' || 
-    file.file_type === 'metadata_json' ||
-    file.file_type.includes('metadata')
-  );
-
-  // Find the README file
-  const readmeFile = files.find(file => 
-    file.file_type === 'readme' || 
-    file.file_type.includes('readme')
   );
 
   // Helper to render per-class metrics if present - Updated to handle both formats and include all classes
@@ -571,360 +463,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
           </div>
         </CollapsibleContent>
       </Collapsible>
-    );
-  };
-  
-  // New function to render visualizations based on the structured data
-  const renderVisualizations = () => {
-    if (!visualizations || Object.keys(visualizations).length === 0) {
-      return (
-        <div className="text-center py-12">
-          <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            No visualization files were found for this experiment.
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-8">
-        {/* Render Confusion Matrix section */}
-        {visualizations.confusion_matrix && visualizations.confusion_matrix.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Confusion Matrix</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.confusion_matrix.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Render Evaluation Curves section */}
-        {visualizations.evaluation && visualizations.evaluation.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Evaluation Curves</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.evaluation.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Render Learning Curves */}
-        {visualizations.learning_curve && visualizations.learning_curve.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Learning Curves</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.learning_curve.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-                
-        {/* Render KS Statistic */}
-        {visualizations.ks_statistic && visualizations.ks_statistic.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">KS Statistic</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.ks_statistic.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-                
-        {/* Render Lift & Cumulative Gains together */}
-        {(visualizations.lift_curve || visualizations.cumulative_gains_curve) && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Gains and Lift Curves</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.cumulative_gains_curve?.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-              
-              {visualizations.lift_curve?.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Show any other visualizations that might be useful */}
-        {visualizations.other && visualizations.other.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Other Visualizations</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {visualizations.other.map((item, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
-                          <img 
-                            src={item.file_url} 
-                            alt={item.title}
-                            className="object-contain max-h-full w-full"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{item.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="p-1">
-                      <img 
-                        src={item.file_url} 
-                        alt={item.title} 
-                        className="w-full rounded-md"
-                      />
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={item.file_url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Image
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -1140,9 +678,61 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
             </div>
           </TabsContent>
           
-          {/* Charts Tab - Updated to use the new visualization rendering logic */}
+          {/* Charts Tab */}
           <TabsContent value="charts" className="p-6">
-            {renderVisualizations()}
+            {visualizationFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visualizationFiles.map((file, index) => (
+                  <Dialog key={index}>
+                    <DialogTrigger asChild>
+                      <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">
+                            {formatVisualizationName(file.file_type)}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3">
+                          <div className="aspect-video bg-muted flex justify-center items-center rounded-md relative overflow-hidden">
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center"
+                              style={{ backgroundImage: `url(${file.file_url})` }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <DialogHeader>
+                        <DialogTitle>{formatVisualizationName(file.file_type)}</DialogTitle>
+                      </DialogHeader>
+                      <div className="p-1">
+                        <img 
+                          src={file.file_url} 
+                          alt={file.file_type} 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Image
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Image className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Charts Available</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  No visualization files were found for this experiment.
+                </p>
+              </div>
+            )}
           </TabsContent>
           
           {/* Predictions Tab */}
@@ -1364,4 +954,3 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
-

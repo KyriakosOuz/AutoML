@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
-import { getWorkingAPIUrl } from '@/lib/constants';
+import { API_BASE_URL } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useDatasetDownload } from '@/hooks/useDatasetDownload';
 import { 
@@ -65,27 +64,11 @@ const DatasetsTab: React.FC = () => {
   const { toast } = useToast();
   const { downloadDataset } = useDatasetDownload();
 
-  // Confirm API URL on component mount
-  useEffect(() => {
-    const confirmApiUrl = async () => {
-      const apiUrl = await getWorkingAPIUrl();
-      console.log("🔄 DatasetsTab confirmed API URL:", apiUrl);
-      if (!apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1")) {
-        console.warn("⚠️ Not using localhost development URL!");
-      }
-    };
-    
-    confirmApiUrl();
-  }, []);
-
   const { data: datasetsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['datasets'],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const apiUrl = await getWorkingAPIUrl();
-      console.log("🌍 API base:", apiUrl);
-      console.log("[Datasets] Calling:", `${apiUrl}/dataset-management/list-datasets/`);
-      const response = await fetch(`${apiUrl}/dataset-management/list-datasets/`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/list-datasets/`, {
         headers
       });
       return handleApiResponse<{ datasets: Dataset[] }>(response);
@@ -104,10 +87,7 @@ const DatasetsTab: React.FC = () => {
     
     try {
       const headers = await getAuthHeaders();
-      const apiUrl = await getWorkingAPIUrl();
-      console.log("[Preview] Calling:", `${apiUrl}/dataset-management/preview-dataset/${dataset.id}?stage=${stage}`);
-      
-      const response = await fetch(`${apiUrl}/dataset-management/preview-dataset/${dataset.id}?stage=${stage}`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/preview-dataset/${dataset.id}?stage=${stage}`, {
         headers
       });
       
@@ -137,9 +117,8 @@ const DatasetsTab: React.FC = () => {
     }
   };
 
-  const getDownloadUrl = async (dataset: Dataset, stage: string) => {
-    const apiUrl = await getWorkingAPIUrl();
-    return `${apiUrl}/dataset-management/download/${dataset.id}?stage=${stage}`;
+  const getDownloadUrl = (dataset: Dataset, stage: string) => {
+    return `${API_BASE_URL}/dataset-management/download/${dataset.id}?stage=${stage}`;
   };
 
   const openDeleteDialog = (datasetId: string) => {
@@ -152,10 +131,7 @@ const DatasetsTab: React.FC = () => {
     
     try {
       const headers = await getAuthHeaders();
-      const apiUrl = await getWorkingAPIUrl();
-      console.log("[Delete] Calling:", `${apiUrl}/dataset-management/delete-dataset/${deleteTargetId}`);
-      
-      const response = await fetch(`${apiUrl}/dataset-management/delete-dataset/${deleteTargetId}`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/delete-dataset/${deleteTargetId}`, {
         method: 'DELETE',
         headers
       });

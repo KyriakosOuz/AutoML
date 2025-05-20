@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -87,9 +86,6 @@ const AutoMLTraining: React.FC = () => {
     return null;
   };
   
-  // Check if the task type is regression to determine if stratify should be disabled
-  const isRegressionTask = taskType === 'regression';
-  
   // New effect to load saved configuration from localStorage on component mount
   useEffect(() => {
     const saved = localStorage.getItem("automlTrainingConfig");
@@ -99,15 +95,7 @@ const AutoMLTraining: React.FC = () => {
         setSubmittedValues(parsed);
         setExperimentName(parsed.experimentName);
         setTestSize(parsed.testSize);
-        
-        // Only set stratify if we're not in regression task type
-        if (!isRegressionTask) {
-          setStratify(parsed.stratify);
-        } else {
-          // Force stratify to false for regression tasks
-          setStratify(false);
-        }
-        
+        setStratify(parsed.stratify);
         setRandomSeed(parsed.randomSeed);
         
         // Set the automl engine if it's valid
@@ -124,15 +112,7 @@ const AutoMLTraining: React.FC = () => {
         console.warn("Failed to restore AutoML config:", e);
       }
     }
-  }, [setExperimentName, setTestSize, setStratify, setRandomSeed, setAutomlEngine, isRegressionTask]);
-  
-  // Force stratify to false when task type is regression
-  useEffect(() => {
-    if (isRegressionTask && stratify) {
-      console.log("Setting stratify to false for regression task");
-      setStratify(false);
-    }
-  }, [taskType, isRegressionTask, stratify, setStratify]);
+  }, [setExperimentName, setTestSize, setStratify, setRandomSeed, setAutomlEngine]);
   
   useEffect(() => {
     // Initialize userEditedName to false when component first mounts
@@ -811,17 +791,13 @@ const AutoMLTraining: React.FC = () => {
                     </Tooltip>
                   </TooltipProvider>
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  {isRegressionTask 
-                    ? "Not applicable for regression tasks"
-                    : "Essential for balanced datasets in classification tasks"}
-                </p>
+                <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
               </div>
               <Switch
                 id="stratify"
                 checked={stratify}
                 onCheckedChange={(checked) => setStratify(checked)}
-                disabled={isTraining || isSubmitting || isRegressionTask}
+                disabled={isTraining || isSubmitting}
                 aria-label="Stratify split"
               />
             </div>

@@ -1,5 +1,5 @@
 
-import { getWorkingAPIUrl } from '@/lib/constants';
+import { API_BASE_URL } from '@/lib/constants';
 import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { ApiResponse } from '@/types/api';
@@ -12,12 +12,7 @@ export const useDatasetDownload = () => {
   const downloadDataset = async (datasetId: string, stage: string, fileName?: string) => {
     try {
       const headers = await getAuthHeaders();
-      const apiUrl = await getWorkingAPIUrl();
-      
-      console.log("🌍 API base:", apiUrl);
-      console.log("[Download] Calling:", `${apiUrl}/dataset-management/download/${datasetId}?stage=${stage}`);
-      
-      const response = await fetch(`${apiUrl}/dataset-management/download/${datasetId}?stage=${stage}`, {
+      const response = await fetch(`${API_BASE_URL}/dataset-management/download/${datasetId}?stage=${stage}`, {
         headers
       });
       
@@ -28,13 +23,7 @@ export const useDatasetDownload = () => {
         throw new Error('No download URL received');
       }
 
-      // Check if the download URL is using localhost
-      if (apiUrl.includes('localhost') && !downloadUrl.includes('localhost')) {
-        console.warn("⚠️ Warning: API is on localhost but download URL is not:", downloadUrl);
-      }
-
       // Fetch the file content using the download URL
-      console.log("[Download] Fetching file from:", downloadUrl);
       const fileResponse = await fetch(downloadUrl);
       const blob = await fileResponse.blob();
       

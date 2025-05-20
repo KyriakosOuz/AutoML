@@ -12,28 +12,9 @@ interface RocCurveChartProps {
   fpr?: number[];
   tpr?: number[];
   auc?: number;
-  imageUrl?: string; // Added support for direct image URL
 }
 
-const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc, imageUrl }) => {
-  // If an image URL is provided, render the image directly
-  if (imageUrl) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>ROC Curve {auc !== undefined && <span className="text-sm font-normal ml-2">(AUC: {auc.toFixed(4)})</span>}</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px] flex justify-center items-center">
-          <img 
-            src={imageUrl} 
-            alt="ROC Curve" 
-            className="max-h-[280px] object-contain"
-          />
-        </CardContent>
-      </Card>
-    );
-  }
-
+const RocCurveChart: React.FC<RocCurveChartProps> = ({ fpr, tpr, auc }) => {
   if (!fpr || !tpr || fpr.length === 0 || tpr.length === 0) {
     return (
       <Card>

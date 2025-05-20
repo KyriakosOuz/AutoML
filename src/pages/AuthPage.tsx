@@ -67,11 +67,11 @@ const AuthPage = () => {
           <div className="flex justify-center mb-2">
             <img 
               src="/lovable-uploads/c9e22fa3-6ca8-4d5e-bcbd-976529ccc178.png" 
-              alt="ieeAutoML Logo" 
+              alt="IEE Logo" 
               className="h-10 w-10 mb-2" 
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">ieeAutoML</h1>
+          <h1 className="text-3xl font-bold text-gray-900">IEE AutoML</h1>
           <p className="text-gray-600 mt-2">Sign in to access your datasets and models</p>
         </div>
 
