@@ -323,8 +323,8 @@ const PublicDatasetSection: React.FC = () => {
   return (
     <Card className="mb-8 border-0 shadow-md bg-gradient-to-br from-white to-gray-50">
       <CardHeader className="pb-4 border-b bg-white rounded-t-lg">
-        <CardTitle className="flex items-center gap-2 text-2xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-          <Database className="h-6 w-6 text-blue-600" />
+        <CardTitle className="flex items-center gap-2 text-2xl text-gray-900">
+          <Database className="h-6 w-6 text-gray-900" />
           Try with Demo Datasets
         </CardTitle>
         <CardDescription className="text-base text-gray-600">
