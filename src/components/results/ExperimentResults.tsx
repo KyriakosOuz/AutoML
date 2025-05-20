@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,23 +179,42 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   // Check if this is a MLJAR experiment
   const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
   
-  // Find MLJAR visualization files
+  // Find MLJAR visualization files - with enhanced filtering
   const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
-    experimentResults.files.filter(file => 
-      file.file_url?.toLowerCase().endsWith('.png') || 
-      file.curve_subtype === 'roc' ||
-      file.curve_subtype === 'precision_recall' ||
-      file.curve_subtype === 'calibration' ||
-      (file.file_type && (
-        file.file_type.includes('roc_curve') ||
-        file.file_type.includes('precision_recall') ||
-        file.file_type.includes('learning_curve') ||
-        file.file_type.includes('calibration_curve') ||
-        file.file_type.includes('ks_statistic') ||
-        file.file_type.includes('lift_curve') ||
-        file.file_type.includes('cumulative_gains')
-      ))
-    ) : [];
+    experimentResults.files.filter(file => {
+      // Extract lowercase type and name for better comparison
+      const type = file.file_type?.toLowerCase() || '';
+      const name = file.file_name?.toLowerCase() || '';
+      const url = file.file_url?.toLowerCase() || '';
+      
+      // Exclude readme, model_metadata, and CSV files
+      const excludeTypes = ['readme', 'model_metadata', 'model', 'leaderboard_csv', 'predictions_csv', 'csv'];
+      const isExcluded = excludeTypes.some(ex => type === ex || name.includes(ex) || url.includes(`_${ex}_`));
+      
+      if (isExcluded) return false;
+      
+      // Include visualization files
+      return file.file_url?.toLowerCase().endsWith('.png') || 
+        file.curve_subtype === 'roc' ||
+        file.curve_subtype === 'precision_recall' ||
+        file.curve_subtype === 'calibration' ||
+        file.curve_subtype === 'learning' ||
+        (file.file_type && (
+          file.file_type.includes('roc_curve') ||
+          file.file_type.includes('precision_recall') ||
+          file.file_type.includes('learning_curve') ||
+          file.file_type.includes('calibration_curve') ||
+          file.file_type.includes('ks_statistic') ||
+          file.file_type.includes('lift_curve') ||
+          file.file_type.includes('cumulative_gains') ||
+          file.file_type.includes('confusion_matrix')
+        ));
+    }) : [];
+
+  // Log found MLJAR visualization files
+  console.log("[ExperimentResults] Found MLJAR visualization files:", 
+    mljarVisualFiles.map(f => ({ type: f.file_type, name: f.file_name, url: f.file_url }))
+  );
 
   return (
     <Card className="w-full">

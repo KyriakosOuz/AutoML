@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -43,10 +44,16 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'cumulative_gains'
     ];
     
-    // Exclude model and CSV files
+    // Exclude model, CSV, readme and documentation files
     const excludeTypes = [
-      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
+      'readme', 'documentation', 'model_metadata' // Added readme and model_metadata
     ];
+    
+    // Use proper type and name extraction for better comparison
+    const type = file.file_type?.toLowerCase() || '';
+    const name = file.file_name?.toLowerCase() || '';
+    const url = file.file_url?.toLowerCase() || '';
     
     // Check if filename has specific visualization patterns (for MLJAR)
     const isMLJARVisualization = file.file_name && (
@@ -56,14 +63,17 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       file.file_url.toLowerCase().endsWith('.png')
     );
     
+    // Improved visualization detection
     const isVisualization = 
       visualTypes.some(type => file.file_type?.toLowerCase().includes(type)) || 
       isMLJARVisualization ||
-      (file.curve_subtype && ['roc', 'precision_recall', 'calibration'].includes(file.curve_subtype));
-      
-    const isExcluded = excludeTypes.some(type => 
-      (file.file_type && file.file_type.toLowerCase().includes(type)) || 
-      (file.file_name && file.file_name.toLowerCase().includes(type))
+      (file.curve_subtype && ['roc', 'precision_recall', 'calibration', 'learning'].includes(file.curve_subtype));
+    
+    // Improved exclusion detection - use exact match for type and includes for name
+    const isExcluded = excludeTypes.some(excludeType => 
+      type === excludeType || 
+      name.includes(excludeType) ||
+      url.includes(`_${excludeType}_`)
     );
     
     return isVisualization && !isExcluded;
@@ -151,6 +161,9 @@ const formatVisualizationName = (fileType?: string, fileName?: string, curveSubt
     }
     if (curveSubtype === 'calibration') {
       return 'Calibration Curve';
+    }
+    if (curveSubtype === 'learning') {
+      return 'Learning Curve';
     }
   }
 
