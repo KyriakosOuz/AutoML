@@ -32,6 +32,7 @@ interface PublicDataset {
   task_type: string;
   created_at: string;
   description?: string;
+  is_public: boolean;
 }
 
 interface PreviewData {
@@ -78,26 +79,31 @@ const PublicDatasetSection: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [cloningDatasetId, setCloningDatasetId] = useState<string | null>(null);
 
-  // Fetch public datasets
-  const { data: publicDatasets, isLoading, error } = useQuery({
-    queryKey: ['publicDatasets'],
+  // Fetch datasets and filter to find public ones
+  const { data: allDatasets, isLoading, error } = useQuery({
+    queryKey: ['allDatasets'],
     queryFn: async () => {
       const headers = await getAuthHeaders();
       const apiUrl = await getWorkingAPIUrl();
-      console.log("[PublicDatasets] Calling:", `${apiUrl}/dataset-management/public-datasets/`);
+      console.log("[Datasets] Calling:", `${apiUrl}/dataset-management/list-datasets/`);
       
-      const response = await fetch(`${apiUrl}/dataset-management/public-datasets/`, {
+      const response = await fetch(`${apiUrl}/dataset-management/list-datasets/`, {
         headers
       });
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Public datasets fetch error:', errorText);
-        throw new Error('Failed to load public datasets');
+        console.error('Datasets fetch error:', errorText);
+        throw new Error('Failed to load datasets');
       }
       
       const data = await response.json();
-      return data.data.datasets as PublicDataset[];
+      // Filter to get only public datasets
+      const publicDatasets = data.data.datasets.filter(
+        (dataset: PublicDataset) => dataset.is_public === true
+      );
+      
+      return publicDatasets;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -152,7 +158,7 @@ const PublicDatasetSection: React.FC = () => {
       }
       
       const data = await response.json();
-      const newDatasetId = data.new_dataset_id;
+      const newDatasetId = data.data.new_dataset_id || data.new_dataset_id;
       
       // Reset dataset state to ensure clean slate for the newly cloned dataset
       resetState();
@@ -164,20 +170,6 @@ const PublicDatasetSection: React.FC = () => {
         method: 'GET',
         cache: 'reload'
       });
-      
-      // Preview the newly cloned dataset
-      const previewResponse = await fetch(`${apiUrl}/dataset-management/preview-dataset/${newDatasetId}?stage=raw`, {
-        headers
-      });
-      
-      if (!previewResponse.ok) {
-        throw new Error(`Failed to load cloned dataset preview`);
-      }
-      
-      const previewData = await previewResponse.json();
-      
-      // Update dataset context with the new dataset
-      resetState();
       
       toast({
         title: "Dataset Cloned",
@@ -205,6 +197,8 @@ const PublicDatasetSection: React.FC = () => {
     setSelectedDataset(null);
     setPreviewData(null);
   };
+
+  const publicDatasets = allDatasets || [];
 
   return (
     <Card className="mb-8">

@@ -45,6 +45,7 @@ interface Dataset {
   has_cleaned: boolean;
   has_final: boolean;
   has_processed: boolean;
+  is_public?: boolean;
 }
 
 interface PreviewData {
@@ -89,6 +90,9 @@ const DatasetsTab: React.FC = () => {
       return handleApiResponse<{ datasets: Dataset[] }>(response);
     },
   });
+
+  // Filter out public datasets that don't belong to user
+  const userDatasets = datasetsData?.data.datasets.filter(dataset => !dataset.is_public) || [];
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -225,7 +229,8 @@ const DatasetsTab: React.FC = () => {
     setPreviewStage(null);
   };
 
-  const datasets = datasetsData?.data.datasets?.slice(0, 100) || [];
+  // Show only user-owned datasets
+  const datasets = userDatasets.slice(0, 100) || [];
 
   return (
     <div className="space-y-4">
