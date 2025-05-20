@@ -1,11 +1,11 @@
 
-import { ExperimentFile } from '@/types/training';
+import { TrainingFile } from '@/types/training';
 
 /**
  * Filters experiment files to return only visualization files
  * while excluding model files, metadata, readme files, etc.
  */
-export const filterVisualizationFiles = (files: ExperimentFile[]) => {
+export const filterVisualizationFiles = (files: TrainingFile[]) => {
   // Early return if files is not an array
   if (!Array.isArray(files)) return [];
   
