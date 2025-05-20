@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -187,11 +186,33 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
       const name = file.file_name?.toLowerCase() || '';
       const url = file.file_url?.toLowerCase() || '';
       
-      // Exclude readme, model_metadata, and CSV files
-      const excludeTypes = ['readme', 'model_metadata', 'model', 'leaderboard_csv', 'predictions_csv', 'csv'];
-      const isExcluded = excludeTypes.some(ex => type === ex || name.includes(ex) || url.includes(`_${ex}_`));
+      // IMPROVED: Comprehensive list of files to exclude
+      const excludeTypes = [
+        'readme', 
+        'model_metadata', 
+        'metadata',
+        'model', 
+        'leaderboard_csv', 
+        'predictions_csv', 
+        'csv',
+        'json'
+      ];
       
-      if (isExcluded) return false;
+      // Strong exclusion check - first check exact matches
+      for (const excludeType of excludeTypes) {
+        if (type === excludeType) return false;
+        if (name === excludeType) return false;
+        // Special handling for readme and model_metadata
+        if (type.includes(excludeType) && 
+           (excludeType === 'readme' || excludeType === 'model_metadata' || excludeType === 'metadata')) {
+          return false;
+        }
+      }
+      
+      // Check if URL points to non-image file
+      if (!url.endsWith('.png') && !url.endsWith('.jpg') && !url.endsWith('.jpeg')) {
+        return false;
+      }
       
       // Include visualization files
       return file.file_url?.toLowerCase().endsWith('.png') || 

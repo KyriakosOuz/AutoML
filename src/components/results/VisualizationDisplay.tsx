@@ -16,6 +16,9 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
   // Enhanced filtering to capture ALL visualization types, now including pdp plots
   // and excluding model/CSV files
   const visualizationFiles = files.filter(file => {
+    // Early return if file doesn't have required properties
+    if (!file.file_type) return false;
+    
     const visualTypes = [
       'distribution', 
       'shap', 
@@ -44,10 +47,19 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'cumulative_gains'
     ];
     
-    // Exclude model, CSV, readme and documentation files
+    // IMPROVED: Comprehensive list of file types to exclude from visualizations
     const excludeTypes = [
-      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
-      'readme', 'documentation', 'model_metadata' // Added readme and model_metadata
+      'model', 
+      'trained_model', 
+      'leaderboard_csv', 
+      'predictions_csv', 
+      'csv',
+      'readme', 
+      'documentation', 
+      'model_metadata', // Explicitly exclude model metadata
+      'json',
+      'manifest',
+      'metadata'
     ];
     
     // Use proper type and name extraction for better comparison
@@ -60,23 +72,36 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       file.file_name.includes('learning_curves') ||
       file.file_name.includes('roc_curve') ||
       file.file_name.includes('precision_recall_curve') ||
-      file.file_url.toLowerCase().endsWith('.png')
+      (file.file_url.toLowerCase().endsWith('.png') && 
+       !file.file_url.toLowerCase().includes('readme') && 
+       !file.file_url.toLowerCase().includes('metadata'))
     );
     
-    // Improved visualization detection
+    // IMPROVED: Stronger exclusion check - first check exact type matches
+    // Check if this is explicitly one of our excluded types
+    for (const excludeType of excludeTypes) {
+      if (type === excludeType) return false;
+      if (name === excludeType) return false;
+      if (type.includes(excludeType) && 
+         (excludeType === 'readme' || excludeType === 'model_metadata' || excludeType === 'metadata')) {
+        return false;
+      }
+    }
+    
+    // IMPROVED: Visualization detection
     const isVisualization = 
-      visualTypes.some(type => file.file_type?.toLowerCase().includes(type)) || 
+      visualTypes.some(visType => type.includes(visType)) || 
       isMLJARVisualization ||
       (file.curve_subtype && ['roc', 'precision_recall', 'calibration', 'learning'].includes(file.curve_subtype));
     
-    // Improved exclusion detection - use exact match for type and includes for name
-    const isExcluded = excludeTypes.some(excludeType => 
-      type === excludeType || 
-      name.includes(excludeType) ||
-      url.includes(`_${excludeType}_`)
-    );
+    // Additional check for file extension - only accept image files
+    const isImageFile = url.endsWith('.png') || 
+                        url.endsWith('.jpg') || 
+                        url.endsWith('.jpeg') || 
+                        url.endsWith('.svg');
     
-    return isVisualization && !isExcluded;
+    // Final check: is visualization and not excluded and is an image file
+    return isVisualization && isImageFile;
   });
 
   // Log which visualizations were found
