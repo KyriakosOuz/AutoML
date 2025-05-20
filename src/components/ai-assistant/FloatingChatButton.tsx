@@ -40,7 +40,7 @@ const FloatingChatButton: React.FC = () => {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] h-[600px] p-0 gap-0">
         <DialogHeader className="sr-only">
-          <DialogTitle>IEE AutoML Assistant</DialogTitle>
+          <DialogTitle>ieeAutoML Assistant</DialogTitle>
         </DialogHeader>
         <ChatPanel />
       </DialogContent>
