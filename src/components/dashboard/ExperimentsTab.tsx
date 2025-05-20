@@ -850,7 +850,7 @@ const ExperimentsTab: React.FC = () => {
       )}
 
       <ExperimentDetailDrawer
-        experiment={experiments.find(exp => exp.id === selectedExperimentId)}
+        experimentId={selectedExperimentId}
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetailDrawer}
       />
