@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, RotateCcw, RefreshCw, AlertCircle } from 'lucide-react';
+import { AlertTriangle, RotateCcw, RefreshCw } from 'lucide-react';
 import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/types/training';
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
@@ -12,6 +12,7 @@ import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
 import MLJARVisualizations from './MLJARVisualizations';
+import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -178,59 +179,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   // Check if this is a MLJAR experiment
   const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
   
-  // Find MLJAR visualization files - with enhanced filtering
+  // Use our shared utility function to find MLJAR visualization files
   const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
-    experimentResults.files.filter(file => {
-      // Extract lowercase type and name for better comparison
-      const type = file.file_type?.toLowerCase() || '';
-      const name = file.file_name?.toLowerCase() || '';
-      const url = file.file_url?.toLowerCase() || '';
-      
-      // IMPROVED: Comprehensive list of files to exclude
-      const excludeTypes = [
-        'readme', 
-        'model_metadata', 
-        'metadata',
-        'model', 
-        'leaderboard_csv', 
-        'predictions_csv', 
-        'csv',
-        'json'
-      ];
-      
-      // Strong exclusion check - first check exact matches
-      for (const excludeType of excludeTypes) {
-        if (type === excludeType) return false;
-        if (name === excludeType) return false;
-        // Special handling for readme and model_metadata
-        if (type.includes(excludeType) && 
-           (excludeType === 'readme' || excludeType === 'model_metadata' || excludeType === 'metadata')) {
-          return false;
-        }
-      }
-      
-      // Check if URL points to non-image file
-      if (!url.endsWith('.png') && !url.endsWith('.jpg') && !url.endsWith('.jpeg')) {
-        return false;
-      }
-      
-      // Include visualization files
-      return file.file_url?.toLowerCase().endsWith('.png') || 
-        file.curve_subtype === 'roc' ||
-        file.curve_subtype === 'precision_recall' ||
-        file.curve_subtype === 'calibration' ||
-        file.curve_subtype === 'learning' ||
-        (file.file_type && (
-          file.file_type.includes('roc_curve') ||
-          file.file_type.includes('precision_recall') ||
-          file.file_type.includes('learning_curve') ||
-          file.file_type.includes('calibration_curve') ||
-          file.file_type.includes('ks_statistic') ||
-          file.file_type.includes('lift_curve') ||
-          file.file_type.includes('cumulative_gains') ||
-          file.file_type.includes('confusion_matrix')
-        ));
-    }) : [];
+    filterVisualizationFiles(experimentResults.files) : [];
 
   // Log found MLJAR visualization files
   console.log("[ExperimentResults] Found MLJAR visualization files:", 

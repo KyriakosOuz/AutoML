@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExperimentResults } from '@/types/training';
 import { Download, ImageIcon } from 'lucide-react';
+import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 interface VisualizationDisplayProps {
   results: ExperimentResults;
@@ -13,96 +13,8 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Enhanced filtering to capture ALL visualization types, now including pdp plots
-  // and excluding model/CSV files
-  const visualizationFiles = files.filter(file => {
-    // Early return if file doesn't have required properties
-    if (!file.file_type) return false;
-    
-    const visualTypes = [
-      'distribution', 
-      'shap', 
-      'confusion_matrix', 
-      'importance', 
-      'evaluation_curve',
-      'plot', 
-      'chart', 
-      'graph', 
-      'visualization',
-      'roc_curve',
-      'precision_recall_curve',
-      'precision_recall',
-      'class_distribution',
-      'variable_importance',
-      'learning_curve',
-      'true_vs_predicted',
-      'predicted_vs_residuals',
-      'residual_analysis',
-      'pdp', // Add PDP plots
-      'ice', // Add ICE plots
-      'partial_dependence', // Alternative naming for PDP
-      'calibration_curve', // Additional visualization types
-      'ks_statistic',
-      'lift_curve',
-      'cumulative_gains'
-    ];
-    
-    // IMPROVED: Comprehensive list of file types to exclude from visualizations
-    const excludeTypes = [
-      'model', 
-      'trained_model', 
-      'leaderboard_csv', 
-      'predictions_csv', 
-      'csv',
-      'readme', 
-      'documentation', 
-      'model_metadata', // Explicitly exclude model metadata
-      'json',
-      'manifest',
-      'metadata'
-    ];
-    
-    // Use proper type and name extraction for better comparison
-    const type = file.file_type?.toLowerCase() || '';
-    const name = file.file_name?.toLowerCase() || '';
-    const url = file.file_url?.toLowerCase() || '';
-    
-    // Check if filename has specific visualization patterns (for MLJAR)
-    const isMLJARVisualization = file.file_name && (
-      file.file_name.includes('learning_curves') ||
-      file.file_name.includes('roc_curve') ||
-      file.file_name.includes('precision_recall_curve') ||
-      (file.file_url.toLowerCase().endsWith('.png') && 
-       !file.file_url.toLowerCase().includes('readme') && 
-       !file.file_url.toLowerCase().includes('metadata'))
-    );
-    
-    // IMPROVED: Stronger exclusion check - first check exact type matches
-    // Check if this is explicitly one of our excluded types
-    for (const excludeType of excludeTypes) {
-      if (type === excludeType) return false;
-      if (name === excludeType) return false;
-      if (type.includes(excludeType) && 
-         (excludeType === 'readme' || excludeType === 'model_metadata' || excludeType === 'metadata')) {
-        return false;
-      }
-    }
-    
-    // IMPROVED: Visualization detection
-    const isVisualization = 
-      visualTypes.some(visType => type.includes(visType)) || 
-      isMLJARVisualization ||
-      (file.curve_subtype && ['roc', 'precision_recall', 'calibration', 'learning'].includes(file.curve_subtype));
-    
-    // Additional check for file extension - only accept image files
-    const isImageFile = url.endsWith('.png') || 
-                        url.endsWith('.jpg') || 
-                        url.endsWith('.jpeg') || 
-                        url.endsWith('.svg');
-    
-    // Final check: is visualization and not excluded and is an image file
-    return isVisualization && isImageFile;
-  });
+  // Use the shared utility function to filter visualization files
+  const visualizationFiles = filterVisualizationFiles(files);
 
   // Log which visualizations were found
   console.log("[VisualizationDisplay] Found visualization files:", 
