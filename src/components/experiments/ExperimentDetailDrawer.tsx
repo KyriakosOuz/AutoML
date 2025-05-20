@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose
 } from '@/components/ui/sheet';
@@ -7,35 +8,65 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { X, Download } from 'lucide-react';
 import { ExperimentResults, ExperimentStatus } from '@/types/training';
-import { formatDate } from '@/lib/dateUtils';
+import { formatDateForGreece } from '@/lib/dateUtils';
 import StatusBadge from '@/components/training/StatusBadge';
 import ClassificationReportTable from '@/components/training/ClassificationReportTable';
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 import MLJARVisualizations from '@/components/results/MLJARVisualizations';
+import { getExperimentResults } from '@/lib/training';
+import { useToast } from '@/hooks/use-toast';
 
 interface ExperimentDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   experimentId: string | null;
-  status: ExperimentStatus;
-  results: ExperimentResults | null;
 }
 
 const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
   isOpen,
   onClose,
-  experimentId,
-  status,
-  results
+  experimentId
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
+  const [status, setStatus] = useState<ExperimentStatus>('idle');
+  const [results, setResults] = useState<ExperimentResults | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
+  // Fetch experiment results when the drawer is opened
+  useEffect(() => {
+    if (isOpen && experimentId) {
+      fetchExperimentResults(experimentId);
+    }
+  }, [isOpen, experimentId]);
+
+  const fetchExperimentResults = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const data = await getExperimentResults(id);
+      if (data) {
+        setResults(data);
+        setStatus(data.status || 'completed');
+      }
+    } catch (error) {
+      console.error("Error fetching experiment results:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load experiment details",
+        variant: "destructive",
+      });
+      setStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Check if this is a MLJAR experiment
   const isMljarExperiment = results?.automl_engine === 'mljar';
 
-  // Use the shared utility function to filter visualization files for all cases
+  // Use the shared utility function to filter visualization files
   const visualizationFiles = results?.files ? filterVisualizationFiles(results.files) : [];
   
   console.log("[ExperimentDetailDrawer] Filtered visualization files:", 
@@ -57,7 +88,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
           </SheetTitle>
           <SheetDescription className="text-left">
             {experimentId && <span className="block">ID: {experimentId}</span>}
-            {results?.created_at && <span className="block">Created: {formatDate(results.created_at)}</span>}
+            {results?.created_at && <span className="block">Created: {formatDateForGreece(results.created_at)}</span>}
           </SheetDescription>
           <SheetClose className="absolute right-0 top-0" asChild>
             <Button variant="ghost" size="icon">
@@ -66,48 +97,54 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
           </SheetClose>
         </SheetHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="metrics">Metrics</TabsTrigger>
-            {visualizationFiles.length > 0 && (
-              <TabsTrigger value="visuals">Visuals</TabsTrigger>
-            )}
-          </TabsList>
-          
-          <TabsContent value="summary">
-            {results && <ModelSummary results={results} />}
-          </TabsContent>
-          
-          <TabsContent value="metrics">
-            {results && (
-              <>
-                <MetricsDisplay results={results} />
-                
-                {results.classification_report && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-medium mb-2">Classification Report</h3>
-                    <ClassificationReportTable report={results.classification_report} />
-                  </div>
-                )}
-              </>
-            )}
-          </TabsContent>
-          
-          {visualizationFiles.length > 0 && (
-            <TabsContent value="visuals">
-              {isMljarExperiment ? (
-                <MLJARVisualizations files={visualizationFiles} />
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {visualizationFiles.map((file, index) => (
-                    <VisualizationCard key={index} file={file} />
-                  ))}
-                </div>
+        {isLoading ? (
+          <div className="py-8 flex justify-center">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+              <TabsTrigger value="metrics">Metrics</TabsTrigger>
+              {visualizationFiles.length > 0 && (
+                <TabsTrigger value="visuals">Visuals</TabsTrigger>
+              )}
+            </TabsList>
+            
+            <TabsContent value="summary">
+              {results && <ModelSummary results={results} />}
+            </TabsContent>
+            
+            <TabsContent value="metrics">
+              {results && (
+                <>
+                  <MetricsDisplay results={results} />
+                  
+                  {results.training_results?.classification_report && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-medium mb-2">Classification Report</h3>
+                      <ClassificationReportTable report={results.training_results.classification_report} />
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
-          )}
-        </Tabs>
+            
+            {visualizationFiles.length > 0 && (
+              <TabsContent value="visuals">
+                {isMljarExperiment ? (
+                  <MLJARVisualizations files={visualizationFiles} />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {visualizationFiles.map((file, index) => (
+                      <VisualizationCard key={index} file={file} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+          </Tabs>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -150,7 +187,6 @@ const VisualizationCard = ({ file }: { file: any }) => {
       .join(' ');
   };
 
-  // Use the same dialog pattern as in MLJARVisualizations, including the sr-only DialogTitle
   return (
     <Dialog>
       <DialogTrigger asChild>

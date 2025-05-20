@@ -855,6 +855,7 @@ const ExperimentsTab: React.FC = () => {
         onClose={handleCloseDetailDrawer}
       />
 
+      {/* Dialog for experiment comparison */}
       <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
