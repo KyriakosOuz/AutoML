@@ -1,3 +1,22 @@
+export const API_BASE_PATH = "/api";
+
+// Set this to true when working with the production API
+// Set to false when working with localhost development
+export const USE_PRODUCTION_API = false;
+
+// 🌐 Dynamic API base URL
+export const API_BASE_URL = (() => {
+  // First check for environment variable
+  const viteUrl = import.meta.env.VITE_API_URL;
+  if (viteUrl) return viteUrl.endsWith("/") ? viteUrl.slice(0, -1) : viteUrl;
+
+  // Use the flag to determine which URL to use
+  if (USE_PRODUCTION_API) {
+    return "https://automl.iee.ihu.gr" + API_BASE_PATH;
+  } else {
+    return "http://localhost:8000" + API_BASE_PATH;
+  }
+})();
 
 export const ALLOWED_ALGORITHMS = {
   binary_classification: [
@@ -84,4 +103,8 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Enhanced API URL function with logging
+export const getWorkingAPIUrl = async (): Promise<string> => {
+  console.log("🌍 API base URL resolved to:", API_BASE_URL);
+  return API_BASE_URL;
+};

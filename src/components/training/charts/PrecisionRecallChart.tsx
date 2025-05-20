@@ -12,9 +12,28 @@ interface PrecisionRecallChartProps {
   precision?: number[];
   recall?: number[];
   f1Score?: number;
+  imageUrl?: string; // Added support for direct image URL
 }
 
-const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, recall, f1Score }) => {
+const PrecisionRecallChart: React.FC<PrecisionRecallChartProps> = ({ precision, recall, f1Score, imageUrl }) => {
+  // If an image URL is provided, render the image directly
+  if (imageUrl) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Precision-Recall Curve {f1Score !== undefined && <span className="text-sm font-normal ml-2">(F1: {f1Score.toFixed(4)})</span>}</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px] flex justify-center items-center">
+          <img 
+            src={imageUrl} 
+            alt="Precision-Recall Curve" 
+            className="max-h-[280px] object-contain"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!precision || !recall || precision.length === 0 || recall.length === 0) {
     return (
       <Card>

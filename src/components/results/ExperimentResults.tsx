@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +10,8 @@ import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
+import RocCurveChart from '@/components/training/charts/RocCurveChart';
+import MLJARVisualizations from './MLJARVisualizations';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -88,6 +89,12 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }, [experimentResults]);
 
   console.log("[ExperimentResults] Has interpretability plots:", hasInterpretabilityPlots);
+
+  // Find ROC curve file if available
+  const rocCurveFile = experimentResults?.files?.find(file => 
+    file.file_type === 'evaluation_curve' && 
+    (file.file_url?.includes('roc_curve') || file.file_type.includes('roc_curve'))
+  );
 
   if (isLoading) {
     return (
@@ -195,6 +202,15 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   const experimentTitle = experimentResults?.model_display_name || 
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
+  
+  // Check if this is a MLJAR experiment
+  const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
+  
+  // Find MLJAR visualization files
+  const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
+    experimentResults.files.filter(file => 
+      file.file_url.toLowerCase().endsWith('.png')
+    ) : [];
 
   return (
     <Card className="w-full">
@@ -212,12 +228,27 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+            {isMljarExperiment && mljarVisualFiles.length > 0 && (
+              <TabsTrigger value="mljar-charts">Charts</TabsTrigger>
+            )}
             {hasInterpretabilityPlots && (
               <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
             )}
           </TabsList>
           <TabsContent value="summary">
-            <ModelSummary results={experimentResults} />
+            <div className="space-y-4">
+              <ModelSummary results={experimentResults} />
+              
+              {/* Show ROC curve in summary if available */}
+              {rocCurveFile && (
+                <div className="mt-4">
+                  <RocCurveChart 
+                    imageUrl={rocCurveFile.file_url} 
+                    auc={experimentResults.metrics?.auc || experimentResults.metrics?.roc_auc}
+                  />
+                </div>
+              )}
+            </div>
           </TabsContent>
           <TabsContent value="metrics">
             <MetricsDisplay results={experimentResults} />
@@ -225,6 +256,11 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
+          {isMljarExperiment && mljarVisualFiles.length > 0 && (
+            <TabsContent value="mljar-charts">
+              <MLJARVisualizations files={mljarVisualFiles} />
+            </TabsContent>
+          )}
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
               <ModelInterpretabilityPlots 

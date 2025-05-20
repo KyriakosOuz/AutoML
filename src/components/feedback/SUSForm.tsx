@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -162,6 +161,7 @@ const SUSForm = ({ onSubmitSuccess }: { onSubmitSuccess: () => void }) => {
                     value={formValues[question.id]}
                     onChange={(value) => handleValueChange(question.id, value)}
                     reversed={question.reversed}
+                    questionId={question.id} // Pass the unique question ID
                   />
                 </div>
               </div>

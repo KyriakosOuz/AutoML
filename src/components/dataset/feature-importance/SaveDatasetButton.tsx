@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { datasetApi } from '@/lib/api';
@@ -32,6 +33,12 @@ const SaveDatasetButton: React.FC<SaveDatasetButtonProps> = ({
 
     try {
       setIsLoading(true);
+      
+      console.log("[SaveDatasetButton] Saving dataset with:", {
+        datasetId,
+        targetColumn,
+        selectedFeatures
+      });
       
       // Save the selected features
       const response = await datasetApi.saveDataset(

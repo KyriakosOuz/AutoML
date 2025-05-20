@@ -1,15 +1,15 @@
-
 import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, getWorkingAPIUrl } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Checking status for experiment:', experimentId);
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/training/check-status/${experimentId}`, {
+    const response = await fetch(`${apiUrl}/training/check-status/${experimentId}`, {
       headers
     });
 
@@ -32,6 +32,7 @@ export const automlTrain = async (
   presetProfile?: string | null
 ) => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Starting AutoML training with custom name:', experimentName);
     const headers = await getAuthHeaders();
     
@@ -57,7 +58,7 @@ export const automlTrain = async (
     
     // FIXED: When sending FormData, don't set Content-Type header
     // Let the browser set it automatically with proper multipart boundary
-    const response = await fetch(`${API_BASE_URL}/training/automl/`, {
+    const response = await fetch(`${apiUrl}/training/automl/`, {
       method: 'POST',
       headers: {
         Authorization: headers.Authorization
@@ -146,10 +147,11 @@ export const getExperimentResults = async (
   experimentId: string
 ): Promise<ExperimentResults | null> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Fetching full results for experiment:', experimentId);
     const headers = await getAuthHeaders();
     const response = await fetch(
-      `${API_BASE_URL}/experiments/experiment-results/${experimentId}`,
+      `${apiUrl}/experiments/experiment-results/${experimentId}`,
       { headers }
     );
 
@@ -255,11 +257,12 @@ export interface PredictionSchema {
 
 export const getPredictionSchema = async (experimentId: string): Promise<PredictionSchema> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Fetching prediction schema for experiment:', experimentId);
     const headers = await getAuthHeaders();
     // Use GET with auth headers
     const response = await fetch(
-      `${API_BASE_URL}/prediction/schema/${experimentId}`,
+      `${apiUrl}/prediction/schema/${experimentId}`,
       { headers }
     );
     if (!response.ok) {
@@ -299,6 +302,7 @@ export const submitManualPrediction = async (
   inputValues: Record<string, any>
 ): Promise<any> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Submitting manual prediction for experiment:', experimentId);
     console.log('[API] Input values:', inputValues);
     const headers = await getAuthHeaders();
@@ -306,7 +310,7 @@ export const submitManualPrediction = async (
     formData.append('experiment_id', experimentId);
     formData.append('input_values', JSON.stringify(inputValues));
     const response = await fetch(
-      `${API_BASE_URL}/prediction/predict-manual/`,
+      `${apiUrl}/prediction/predict-manual/`,
       { 
         method: 'POST',
         headers: {
@@ -331,11 +335,12 @@ export const submitManualPrediction = async (
 
 // Manual prediction helper: POST with FormData and auth headers
 export async function predictManual(experimentId: string, inputs: Record<string, any>) {
+  const apiUrl = await getWorkingAPIUrl();
   const headers = await getAuthHeaders();
   const form = new FormData();
   form.append('experiment_id', experimentId);
   form.append('input_values', JSON.stringify(inputs));
-  const url = `${API_BASE_URL}/prediction/predict-manual/`;
+  const url = `${apiUrl}/prediction/predict-manual/`;
   const res = await fetch(
     url,
     { 
@@ -358,9 +363,10 @@ export interface MLJARPreset {
 
 export const getMljarPresets = async (): Promise<MLJARPreset[]> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Fetching MLJAR presets');
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/training/automl/get-mljar-presets/`, { 
+    const response = await fetch(`${apiUrl}/training/automl/get-mljar-presets/`, { 
       headers 
     });
 
@@ -392,6 +398,7 @@ export interface H2OPreset {
 // Modified H2O presets function with improved error handling
 export const getH2OPresets = async (): Promise<H2OPreset[]> => {
   try {
+    const apiUrl = await getWorkingAPIUrl();
     console.log('[API] Fetching H2O presets');
     const headers = await getAuthHeaders();
     
@@ -399,7 +406,7 @@ export const getH2OPresets = async (): Promise<H2OPreset[]> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    const response = await fetch(`${API_BASE_URL}/training/automl/get-h2o-presets/`, { 
+    const response = await fetch(`${apiUrl}/training/automl/get-h2o-presets/`, { 
       headers,
       signal: controller.signal
     }).finally(() => clearTimeout(timeoutId));
