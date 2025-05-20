@@ -36,7 +36,11 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'residual_analysis',
       'pdp', // Add PDP plots
       'ice', // Add ICE plots
-      'partial_dependence' // Alternative naming for PDP
+      'partial_dependence', // Alternative naming for PDP
+      'calibration_curve', // Additional visualization types
+      'ks_statistic',
+      'lift_curve',
+      'cumulative_gains'
     ];
     
     // Exclude model and CSV files
@@ -53,11 +57,12 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
     );
     
     const isVisualization = 
-      visualTypes.some(type => file.file_type.toLowerCase().includes(type)) || 
-      isMLJARVisualization;
+      visualTypes.some(type => file.file_type?.toLowerCase().includes(type)) || 
+      isMLJARVisualization ||
+      (file.curve_subtype && ['roc', 'precision_recall', 'calibration'].includes(file.curve_subtype));
       
     const isExcluded = excludeTypes.some(type => 
-      file.file_type.toLowerCase().includes(type) || 
+      (file.file_type && file.file_type.toLowerCase().includes(type)) || 
       (file.file_name && file.file_name.toLowerCase().includes(type))
     );
     
@@ -69,7 +74,8 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
     visualizationFiles.map(f => ({ 
       type: f.file_type, 
       name: f.file_name,
-      url: f.file_url 
+      url: f.file_url,
+      curve_subtype: f.curve_subtype
     }))
   );
 
@@ -101,7 +107,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
                 </div>
                 <div className="mt-2 text-center">
                   <p className="text-sm font-medium capitalize">
-                    {formatVisualizationName(file.file_type, file.file_name)}
+                    {formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
                   </p>
                 </div>
               </CardContent>
@@ -111,12 +117,12 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
             <div className="p-1">
               <img 
                 src={file.file_url} 
-                alt={formatVisualizationName(file.file_type, file.file_name)}
+                alt={formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
                 className="w-full rounded-md"
               />
               <div className="mt-2 flex justify-between items-center">
                 <h3 className="font-medium capitalize">
-                  {formatVisualizationName(file.file_type, file.file_name)}
+                  {formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
                 </h3>
                 <Button variant="outline" size="sm" asChild>
                   <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
@@ -134,8 +140,21 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
 };
 
 // Enhanced helper function to format visualization names in a user-friendly way
-const formatVisualizationName = (fileType: string, fileName?: string): string => {
-  // First check if we have a specific file name to determine the visualization type
+const formatVisualizationName = (fileType?: string, fileName?: string, curveSubtype?: string): string => {
+  // First check for curve subtype for special visualization types
+  if (curveSubtype) {
+    if (curveSubtype === 'roc') {
+      return 'ROC Curve';
+    }
+    if (curveSubtype === 'precision_recall') {
+      return 'Precision-Recall Curve';
+    }
+    if (curveSubtype === 'calibration') {
+      return 'Calibration Curve';
+    }
+  }
+
+  // Then check if we have a specific file name to determine the visualization type
   if (fileName) {
     if (fileName.includes('learning_curve') || fileName.includes('learning_curves')) {
       return 'Learning Curve';
@@ -149,6 +168,8 @@ const formatVisualizationName = (fileType: string, fileName?: string): string =>
   }
   
   // Otherwise use the file type
+  if (!fileType) return 'Visualization';
+  
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
   } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
@@ -167,6 +188,14 @@ const formatVisualizationName = (fileType: string, fileName?: string): string =>
     return 'True vs Predicted';
   } else if (fileType.includes('predicted_vs_residuals') || fileType.includes('residual_analysis')) {
     return 'Residual Analysis';
+  } else if (fileType.includes('calibration_curve')) {
+    return 'Calibration Curve';
+  } else if (fileType.includes('ks_statistic')) {
+    return 'KS Statistic';
+  } else if (fileType.includes('lift_curve')) {
+    return 'Lift Curve';
+  } else if (fileType.includes('cumulative_gains')) {
+    return 'Cumulative Gains Curve';
   } else if (fileType.includes('pdp_')) {
     // Parse PDP plot names to show feature and class
     const parts = fileType.replace('pdp_', '').split('_');

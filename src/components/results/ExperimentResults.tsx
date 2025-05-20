@@ -93,7 +93,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   // Find ROC curve file if available
   const rocCurveFile = experimentResults?.files?.find(file => 
     file.file_type === 'evaluation_curve' && 
-    (file.file_url?.includes('roc_curve') || file.file_type.includes('roc_curve'))
+    (file.file_url?.includes('roc_curve') || file.file_type?.includes('roc_curve') || file.curve_subtype === 'roc')
   );
 
   if (isLoading) {
@@ -167,35 +167,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }
 
   if (!experimentResults) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            No Results Available
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertDescription>No results are available for this experiment.</AlertDescription>
-          </Alert>
-        </CardContent>
-        <CardFooter>
-          {onReset && (
-            <Button onClick={onReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Run New Experiment
-            </Button>
-          )}
-          {onRefresh && (
-            <Button onClick={onRefresh} variant="outline" className="ml-2">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Check Again
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
-    );
+    return null;
   }
 
   // Get the most appropriate title to display
@@ -209,7 +181,19 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   // Find MLJAR visualization files
   const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
     experimentResults.files.filter(file => 
-      file.file_url.toLowerCase().endsWith('.png')
+      file.file_url?.toLowerCase().endsWith('.png') || 
+      file.curve_subtype === 'roc' ||
+      file.curve_subtype === 'precision_recall' ||
+      file.curve_subtype === 'calibration' ||
+      (file.file_type && (
+        file.file_type.includes('roc_curve') ||
+        file.file_type.includes('precision_recall') ||
+        file.file_type.includes('learning_curve') ||
+        file.file_type.includes('calibration_curve') ||
+        file.file_type.includes('ks_statistic') ||
+        file.file_type.includes('lift_curve') ||
+        file.file_type.includes('cumulative_gains')
+      ))
     ) : [];
 
   return (
@@ -218,7 +202,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
         <CardTitle className="flex items-center gap-2">
           {experimentTitle}
           <span className="text-xs font-normal bg-gray-100 px-2 py-1 rounded">
-            {displayedTrainingType === 'automl' ? 'AutoML' : 'Custom'}
+            {trainingType === 'automl' || experimentResults?.training_type === 'automl' ? 'AutoML' : 'Custom'}
           </span>
         </CardTitle>
       </CardHeader>
