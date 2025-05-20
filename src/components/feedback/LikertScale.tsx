@@ -8,9 +8,10 @@ interface LikertScaleProps {
   value: string;
   onChange: (value: string) => void;
   reversed?: boolean;
+  questionId: string; // Added questionId prop for unique identification
 }
 
-const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = false }) => {
+const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = false, questionId }) => {
   // Always display labels in standard order (strongly disagree to strongly agree)
   const labels = ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'];
   
@@ -72,6 +73,8 @@ const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = f
     >
       {values.map((val, index) => {
         const isSelected = value === val;
+        // Create unique ID using questionId and value
+        const uniqueId = `likert-${questionId}-${val}`;
         
         return (
           <div 
@@ -85,7 +88,7 @@ const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = f
             <div className="mb-1">
               <RadioGroupItem
                 value={val}
-                id={`likert-${val}`}
+                id={uniqueId}
                 className={cn(
                   "transition-all",
                   isSelected && "scale-125"
@@ -93,7 +96,7 @@ const LikertScale: React.FC<LikertScaleProps> = ({ value, onChange, reversed = f
               />
             </div>
             <Label 
-              htmlFor={`likert-${val}`}
+              htmlFor={uniqueId}
               className={cn(
                 "text-xs text-center font-medium cursor-pointer transition-colors",
                 getColorClass(index)
