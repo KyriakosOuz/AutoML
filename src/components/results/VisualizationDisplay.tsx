@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,18 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
       'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
     ];
     
-    const isVisualization = visualTypes.some(type => file.file_type.toLowerCase().includes(type));
+    // Check if filename has specific visualization patterns (for MLJAR)
+    const isMLJARVisualization = file.file_name && (
+      file.file_name.includes('learning_curves') ||
+      file.file_name.includes('roc_curve') ||
+      file.file_name.includes('precision_recall_curve') ||
+      file.file_url.toLowerCase().endsWith('.png')
+    );
+    
+    const isVisualization = 
+      visualTypes.some(type => file.file_type.toLowerCase().includes(type)) || 
+      isMLJARVisualization;
+      
     const isExcluded = excludeTypes.some(type => 
       file.file_type.toLowerCase().includes(type) || 
       (file.file_name && file.file_name.toLowerCase().includes(type))
@@ -56,7 +66,11 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
 
   // Log which visualizations were found
   console.log("[VisualizationDisplay] Found visualization files:", 
-    visualizationFiles.map(f => ({ type: f.file_type, url: f.file_url }))
+    visualizationFiles.map(f => ({ 
+      type: f.file_type, 
+      name: f.file_name,
+      url: f.file_url 
+    }))
   );
 
   if (visualizationFiles.length === 0) {
@@ -87,7 +101,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
                 </div>
                 <div className="mt-2 text-center">
                   <p className="text-sm font-medium capitalize">
-                    {formatVisualizationName(file.file_type)}
+                    {formatVisualizationName(file.file_type, file.file_name)}
                   </p>
                 </div>
               </CardContent>
@@ -97,12 +111,12 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
             <div className="p-1">
               <img 
                 src={file.file_url} 
-                alt={file.file_type} 
+                alt={formatVisualizationName(file.file_type, file.file_name)}
                 className="w-full rounded-md"
               />
               <div className="mt-2 flex justify-between items-center">
                 <h3 className="font-medium capitalize">
-                  {formatVisualizationName(file.file_type)}
+                  {formatVisualizationName(file.file_type, file.file_name)}
                 </h3>
                 <Button variant="outline" size="sm" asChild>
                   <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
@@ -120,7 +134,21 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
 };
 
 // Enhanced helper function to format visualization names in a user-friendly way
-const formatVisualizationName = (fileType: string): string => {
+const formatVisualizationName = (fileType: string, fileName?: string): string => {
+  // First check if we have a specific file name to determine the visualization type
+  if (fileName) {
+    if (fileName.includes('learning_curve') || fileName.includes('learning_curves')) {
+      return 'Learning Curve';
+    }
+    if (fileName.includes('roc_curve')) {
+      return 'ROC Curve';
+    }
+    if (fileName.includes('precision_recall_curve') || fileName.includes('precision_recall')) {
+      return 'Precision-Recall Curve';
+    }
+  }
+  
+  // Otherwise use the file type
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
   } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
