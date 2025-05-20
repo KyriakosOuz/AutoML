@@ -1,10 +1,11 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, RotateCcw, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RotateCcw, RefreshCw, Download } from 'lucide-react';
 import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/types/training';
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
@@ -13,6 +14,7 @@ import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabili
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
 import MLJARVisualizations from './MLJARVisualizations';
 import { filterVisualizationFiles } from '@/utils/visualizationFilters';
+import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -54,6 +56,32 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                                (experimentResults?.automl_engine ? 'automl' : 'custom');
                                
   console.log("[ExperimentResults] Using display training type:", displayedTrainingType);
+
+  // Check for prediction file in MLJAR experiment
+  const predictionFile = React.useMemo(() => {
+    if (!experimentResults || experimentResults.automl_engine !== 'mljar') return null;
+    
+    // Look for prediction CSV in files array
+    return experimentResults.files?.find(file => 
+      file.file_type === 'prediction' || 
+      file.file_name?.includes('prediction') ||
+      file.file_url?.includes('prediction')
+    );
+  }, [experimentResults]);
+
+  console.log("[ExperimentResults] Prediction file:", predictionFile);
+
+  // Handle download of predictions CSV
+  const handleDownloadPredictions = () => {
+    if (!predictionFile || !predictionFile.file_url) return;
+    
+    // Generate a good filename using experiment details if available
+    const fileName = experimentResults?.model_display_name ? 
+      `${experimentResults.model_display_name.replace(/\s+/g, '_')}_predictions.csv` : 
+      'mljar_model_predictions.csv';
+      
+    downloadFile(predictionFile.file_url, fileName);
+  };
 
   // Determine if we have interpretability plots available
   const hasInterpretabilityPlots = React.useMemo(() => {
@@ -207,6 +235,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             {isMljarExperiment && mljarVisualFiles.length > 0 && (
               <TabsTrigger value="mljar-charts">Charts</TabsTrigger>
             )}
+            {predictionFile && (
+              <TabsTrigger value="predictions">Predictions</TabsTrigger>
+            )}
             {hasInterpretabilityPlots && (
               <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
             )}
@@ -235,6 +266,35 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           {isMljarExperiment && mljarVisualFiles.length > 0 && (
             <TabsContent value="mljar-charts">
               <MLJARVisualizations files={mljarVisualFiles} />
+            </TabsContent>
+          )}
+          {predictionFile && (
+            <TabsContent value="predictions">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Model Predictions</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDownloadPredictions}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Full CSV
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground mb-4">
+                    Preview of model predictions on the test dataset. Click the download button to get the full CSV file.
+                  </div>
+                  {predictionFile.file_url && (
+                    <iframe 
+                      src={predictionFile.file_url} 
+                      className="w-full h-64 border border-border rounded" 
+                      title="Predictions Preview"
+                    />
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
           {hasInterpretabilityPlots && (
