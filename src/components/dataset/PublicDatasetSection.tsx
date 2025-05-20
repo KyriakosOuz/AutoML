@@ -137,7 +137,7 @@ const cardVariants = {
 // Helper function to get detailed dataset description
 const getDatasetDescription = (datasetName: string): string => {
   const descriptions: Record<string, string> = {
-    'Diabetes.csv': 'A multiclass classification dataset for predicting diabetes progression based on patient health metrics.',
+    'IRIS.csv': 'A multiclass classification dataset containing measurements of iris flowers for species classification.',
     'Titanic.csv': 'A binary classification dataset for predicting passenger survival on the Titanic.',
     'House Price.csv': 'A regression dataset for predicting house prices based on various property features.'
   };
@@ -148,7 +148,7 @@ const getDatasetDescription = (datasetName: string): string => {
 // Helper function to get correct task type mapping for datasets
 const getDatasetTaskType = (datasetName: string): string => {
   const taskTypes: Record<string, string> = {
-    'Diabetes.csv': 'multiclass_classification',
+    'IRIS.csv': 'multiclass_classification',
     'Titanic.csv': 'binary_classification',
     'House Price.csv': 'regression'
   };
