@@ -134,6 +134,28 @@ const cardVariants = {
   })
 };
 
+// Helper function to get detailed dataset description
+const getDatasetDescription = (datasetName: string): string => {
+  const descriptions: Record<string, string> = {
+    'Diabetes.csv': 'A multiclass classification dataset for predicting diabetes progression based on patient health metrics.',
+    'Titanic.csv': 'A binary classification dataset for predicting passenger survival on the Titanic.',
+    'House Price.csv': 'A regression dataset for predicting house prices based on various property features.'
+  };
+  
+  return descriptions[datasetName] || `Demo dataset for machine learning tasks.`;
+};
+
+// Helper function to get correct task type mapping for datasets
+const getDatasetTaskType = (datasetName: string): string => {
+  const taskTypes: Record<string, string> = {
+    'Diabetes.csv': 'multiclass_classification',
+    'Titanic.csv': 'binary_classification',
+    'House Price.csv': 'regression'
+  };
+  
+  return taskTypes[datasetName] || '';
+};
+
 const PublicDatasetSection: React.FC = () => {
   const { toast } = useToast();
   const { resetState } = useDataset();
@@ -163,9 +185,21 @@ const PublicDatasetSection: React.FC = () => {
       
       const data = await response.json();
       // Filter to get only public datasets
-      const publicDatasets = data.data.datasets.filter(
+      let publicDatasets = data.data.datasets.filter(
         (dataset: PublicDataset) => dataset.is_public === true
       );
+      
+      // Enhance datasets with proper task types and descriptions if they don't have them
+      publicDatasets = publicDatasets.map((dataset: PublicDataset) => {
+        const taskType = dataset.task_type || getDatasetTaskType(dataset.dataset_name);
+        const description = dataset.description || getDatasetDescription(dataset.dataset_name);
+        
+        return {
+          ...dataset,
+          task_type: taskType,
+          description: description
+        };
+      });
       
       return publicDatasets;
     },
@@ -560,3 +594,4 @@ const PublicDatasetSection: React.FC = () => {
 };
 
 export default PublicDatasetSection;
+
