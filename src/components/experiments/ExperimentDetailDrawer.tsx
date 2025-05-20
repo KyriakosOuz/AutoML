@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose, DrawerFooter } from '@/components/ui/drawer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,11 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X, Download, Info, BarChart2, Image, FileDown } from 'lucide-react';
-import { ExperimentWithDataset, ExperimentStatus } from '@/types/training';
-import { formatDate } from '@/lib/dateUtils';
+import { ExperimentStatus, TrainingFile } from '@/types/training';
+import { formatDateForGreece } from '@/lib/dateUtils';
 import StatusBadge from '@/components/training/StatusBadge';
-import { getDownloadUrl } from '@/lib/training';
 import { filterVisualizationFiles } from '@/utils/visualizationFilters';
+
+interface ExperimentWithDataset {
+  experiment_id?: string;
+  experiment_name?: string;
+  status?: ExperimentStatus;
+  training_type?: string;
+  automl_engine?: string;
+  created_at?: string;
+  files?: TrainingFile[];
+  configuration?: any;
+  metrics?: Record<string, any>;
+  dataset?: {
+    dataset_id?: string;
+    dataset_name?: string;
+  };
+}
 
 interface ExperimentDetailDrawerProps {
   isOpen: boolean;
@@ -85,7 +101,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
           <DrawerDescription>
             <div className="flex flex-col space-y-2">
               <div className="flex items-center gap-2">
-                <StatusBadge status={experiment.status as ExperimentStatus} />
+                <StatusBadge status={experiment.status as any} />
                 <Badge variant="outline" className="bg-gray-100">
                   {experiment.training_type === 'automl' ? 'AutoML' : 'Custom Training'}
                 </Badge>
@@ -96,7 +112,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                 )}
               </div>
               <span className="text-sm text-muted-foreground">
-                Created {experiment.created_at ? formatDate(experiment.created_at) : 'recently'}
+                Created {experiment.created_at ? formatDateForGreece(experiment.created_at) : 'recently'}
               </span>
             </div>
           </DrawerDescription>
@@ -133,7 +149,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
                   <span className="font-bold">Dataset:</span> {experiment.dataset?.dataset_name}
                 </div>
                 <div>
-                  <span className="font-bold">Created At:</span> {formatDate(experiment.created_at)}
+                  <span className="font-bold">Created At:</span> {formatDateForGreece(experiment.created_at)}
                 </div>
                 <div>
                   <span className="font-bold">Training Type:</span> {experiment.training_type}
