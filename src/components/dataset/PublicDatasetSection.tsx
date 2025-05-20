@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDataset } from '@/contexts/DatasetContext';
@@ -164,6 +163,7 @@ const PublicDatasetSection: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [cloningDatasetId, setCloningDatasetId] = useState<string | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'data' | 'info'>('data');
+  const [isRedirecting, setIsRedirecting] = useState(false); // New state to track redirection status
 
   // Fetch datasets and filter to find public ones
   const { data: allDatasets, isLoading, error } = useQuery({
@@ -238,10 +238,13 @@ const PublicDatasetSection: React.FC = () => {
     }
   };
 
-  // Handle dataset cloning
+  // Handle dataset cloning with fix for infinite calls
   const handleCloneDataset = async (datasetId: string) => {
     try {
+      if (isRedirecting) return; // Prevent multiple calls if already redirecting
+      
       setCloningDatasetId(datasetId);
+      setIsRedirecting(true); // Set redirecting state to true
       
       const headers = await getAuthHeaders();
       const apiUrl = await getWorkingAPIUrl();
@@ -262,14 +265,6 @@ const PublicDatasetSection: React.FC = () => {
       // Reset dataset state to ensure clean slate for the newly cloned dataset
       resetState();
       
-      // Refresh cached data, this will trigger a refetch of datasets in DatasetsTab
-      // when the user navigates there
-      await fetch(`${apiUrl}/dataset-management/list-datasets/`, {
-        headers,
-        method: 'GET',
-        cache: 'reload'
-      });
-      
       toast({
         title: "Dataset Cloned Successfully",
         description: "Demo dataset has been added to your collection",
@@ -278,6 +273,8 @@ const PublicDatasetSection: React.FC = () => {
       
       // Redirect to the dataset page with the new ID
       window.location.href = `/dataset?id=${newDatasetId}`;
+      
+      // Note: No need to reset isRedirecting since we're navigating away
     } catch (error) {
       console.error('Error cloning dataset:', error);
       toast({
@@ -285,7 +282,7 @@ const PublicDatasetSection: React.FC = () => {
         description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive"
       });
-    } finally {
+      setIsRedirecting(false); // Reset redirecting state on error
       setCloningDatasetId(null);
     }
   };
@@ -401,7 +398,7 @@ const PublicDatasetSection: React.FC = () => {
                       </Button>
                       <Button
                         onClick={() => handleCloneDataset(dataset.id)}
-                        disabled={cloningDatasetId === dataset.id}
+                        disabled={cloningDatasetId === dataset.id || isRedirecting}
                         className="flex items-center gap-1 shadow-sm group-hover:shadow-md transition-shadow"
                       >
                         {cloningDatasetId === dataset.id ? (
@@ -571,7 +568,7 @@ const PublicDatasetSection: React.FC = () => {
                   handleCloneDataset(selectedDataset.id);
                 }
               }}
-              disabled={!selectedDataset || cloningDatasetId === selectedDataset?.id}
+              disabled={!selectedDataset || cloningDatasetId === selectedDataset?.id || isRedirecting}
               className="gap-2"
             >
               {cloningDatasetId === selectedDataset?.id ? (
@@ -594,4 +591,3 @@ const PublicDatasetSection: React.FC = () => {
 };
 
 export default PublicDatasetSection;
-
