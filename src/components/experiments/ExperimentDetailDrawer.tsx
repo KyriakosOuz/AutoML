@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getExperimentResults } from '@/lib/training';
 import { ExperimentResults as ExperimentResultsType } from '@/types/training';
@@ -129,7 +130,8 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
     ];
     
     const excludeTypes = [
-      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv',
+      'readme', 'documentation', 'model_metadata'
     ];
     
     // Check if the results have visualizations_by_type field for better categorization
