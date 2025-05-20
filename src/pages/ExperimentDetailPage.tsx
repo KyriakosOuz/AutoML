@@ -3,12 +3,13 @@ import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
 import { ExperimentResultsView } from '@/components/training/ExperimentResultsView';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
+  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -26,7 +27,7 @@ const ExperimentDetailPage: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [error]);
+  }, [error, toast]);
   
   // Add debug logging to see what data is available, including visualization types
   useEffect(() => {
@@ -56,9 +57,6 @@ const ExperimentDetailPage: React.FC = () => {
       });
     }
   }, [data, experimentId]);
-  
-  // Determine the status to pass to ExperimentResultsContainer
-  const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
   
   return (
     <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-8">
