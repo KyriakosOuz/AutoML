@@ -41,7 +41,7 @@ const FeedbackPage = () => {
 
           <div className="text-muted-foreground">
             <p className="text-lg">
-              Please rate your experience with IEE AutoML. Your feedback will help us improve the platform.
+              Please rate your experience with ieeAutoML. Your feedback will help us improve the platform.
               {submittedAt && (
                 <span className="block text-sm text-muted-foreground mt-2 font-medium">
                   Last submitted: {formatDateForGreece(submittedAt)}
