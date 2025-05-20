@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Download, ImageIcon } from 'lucide-react';
@@ -340,6 +340,9 @@ const VisualizationCard = ({ file }: { file: MLJARVisualizationsProps['files'][0
         </Card>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
+        <DialogTitle className="sr-only">
+          {getVisualizationName()}
+        </DialogTitle>
         <div className="p-1">
           <img 
             src={file.file_url} 

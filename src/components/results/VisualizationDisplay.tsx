@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExperimentResults } from '@/types/training';
@@ -61,6 +62,9 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
             </Card>
           </DialogTrigger>
           <DialogContent className="max-w-3xl">
+            <DialogTitle className="sr-only">
+              {formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
+            </DialogTitle>
             <div className="p-1">
               <img 
                 src={file.file_url} 
