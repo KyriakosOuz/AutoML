@@ -26,12 +26,19 @@ export const filterVisualizationFiles = (files: TrainingFile[]) => {
     // Early return if file doesn't have required properties
     if (!file.file_type && !file.file_name && !file.file_url) return false;
     
-    const type = file.file_type?.toLowerCase() || '';
-    const name = file.file_name?.toLowerCase() || '';
-    const url = file.file_url?.toLowerCase() || '';
+    const type = (file.file_type || '').toLowerCase();
+    const name = (file.file_name || '').toLowerCase();
+    const url = (file.file_url || '').toLowerCase();
 
-    // Strong exclusion check - first check exact matches
-    if (excludeTypes.includes(type)) return false;
+    // Strong exclusion first: Check exact matches and specifically exclude readme and model_metadata
+    if (excludeTypes.includes(type) || type === 'readme' || type === 'model_metadata') {
+      return false;
+    }
+    
+    // Check file extension for non-image files
+    if (url.endsWith('.json') || url.endsWith('.md') || url.endsWith('.txt') || url.endsWith('.csv')) {
+      return false;
+    }
     
     // Check for specific excluded keywords in any field
     if (['readme', 'model_metadata', 'metadata'].some(ex => 
@@ -40,7 +47,7 @@ export const filterVisualizationFiles = (files: TrainingFile[]) => {
     }
 
     // Check if this is an MLJAR image file (excluding readme and metadata)
-    const isMLJARVisualization = file.file_url?.endsWith('.png') && 
+    const isMLJARVisualization = url.endsWith('.png') && 
       !url.includes('readme') && 
       !url.includes('metadata');
 
