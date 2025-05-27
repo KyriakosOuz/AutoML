@@ -206,6 +206,13 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     };
   }, [data]);
 
+  // Helper function to convert ExperimentStatus to the limited status type expected by components
+  const convertStatus = (status: string): 'completed' | 'success' | 'failed' => {
+    if (status === 'completed' || status === 'success') return status as 'completed' | 'success';
+    // Convert any error-like status to 'failed'
+    return 'failed';
+  };
+
   // Use localLoadingState instead of isLoading to prevent UI flickering
   if (localLoadingState) {
     return (
@@ -247,7 +254,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <MLJARExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={convertStatus(data.status)}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -261,7 +268,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <H2OExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={convertStatus(data.status)}
           experimentResults={data}
           isLoading={false}
           error={null}
@@ -275,7 +282,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
       <div className="w-full">
         <StandardExperimentResults
           experimentId={experimentId}
-          status={data.status as ExperimentStatus}
+          status={convertStatus(data.status)}
           experimentResults={data}
           isLoading={false}
           error={null}
