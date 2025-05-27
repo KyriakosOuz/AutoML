@@ -22,6 +22,7 @@ import {
   Link
 } from 'lucide-react';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
+import MLJARExperimentResults from '@/components/results/MLJARExperimentResults';
 
 const POLL_INTERVAL = 2000; // 2 seconds
 const MAX_RETRY_ATTEMPTS = 3;
@@ -274,6 +275,16 @@ const ExperimentResultsPage: React.FC = () => {
   }
 
   if (results?.status === 'completed' || results?.status === 'success') {
+    // Check if this is an MLJAR experiment and route to the specialized component
+    if (results.automl_engine === 'mljar') {
+      return (
+        <div className="container py-10">
+          <MLJARExperimentResults experiment={results} />
+        </div>
+      );
+    }
+
+    // For non-MLJAR experiments, keep the existing generic handling
     const { training_results, files = [] } = results;
     const metrics = training_results?.metrics || {};
     const modelFile = files.find(file => file.file_type === 'model');
