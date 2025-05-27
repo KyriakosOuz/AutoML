@@ -11,7 +11,6 @@ import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
-import MLJARVisualizations from './MLJARVisualizations';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
