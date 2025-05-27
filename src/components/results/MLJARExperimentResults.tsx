@@ -71,87 +71,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
     }
   }, [status, error, toast]);
 
-  const processVisualizations = (files: any[]) => {
-    const visualizations = [];
-  
-    // Confusion Matrix
-    const confusionMatrixFile = files.find(file => file.file_type === 'confusion_matrix');
-    if (confusionMatrixFile) {
-      visualizations.push({
-        title: 'Confusion Matrix',
-        src: confusionMatrixFile.file_url,
-        fileType: confusionMatrixFile.file_type
-      });
-    }
-  
-    // Evaluation Curve (ROC)
-    const rocCurveFile = files.find(file => file.file_type === 'evaluation_curve' && file.curve_subtype === 'roc');
-    if (rocCurveFile) {
-      visualizations.push({
-        title: 'ROC Curve',
-        src: rocCurveFile.file_url,
-        fileType: rocCurveFile.file_type
-      });
-    }
-  
-    // Evaluation Curve (Precision-Recall)
-    const prCurveFile = files.find(file => file.file_type === 'evaluation_curve' && file.curve_subtype === 'precision_recall');
-    if (prCurveFile) {
-      visualizations.push({
-        title: 'Precision-Recall Curve',
-        src: prCurveFile.file_url,
-        fileType: prCurveFile.file_type
-      });
-    }
-  
-    // Learning Curve
-    const learningCurveFile = files.find(file => file.file_type === 'learning_curve');
-    if (learningCurveFile) {
-      visualizations.push({
-        title: 'Learning Curve',
-        src: learningCurveFile.file_url,
-        fileType: learningCurveFile.file_type
-      });
-    }
-  
-    return visualizations;
-  };
-
-  const renderVisualizations = () => {
-    if (isLoading) {
-      return <Skeleton className="w-full h-40 rounded-md" />;
-    }
-  
-    if (!experimentResults || !experimentResults.files) {
-      return <AlertDescription>No visualizations available.</AlertDescription>;
-    }
-  
-    const visualizations = processVisualizations(experimentResults.files);
-  
-    if (visualizations.length === 0) {
-      return <AlertDescription>No visualizations found.</AlertDescription>;
-    }
-  
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visualizations.map((viz, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <CardTitle>{viz.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <img src={viz.src} alt={viz.title} className="w-full rounded-md" />
-              <Button variant="outline" size="sm" className="mt-2" onClick={() => downloadFile(viz.src, `${viz.fileType}.png`)}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
   const results = experimentResults;
   if (!results) return null;
 
@@ -342,7 +261,6 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
                   </div>
                 </div>
                 
-                {/* NEW CLEAN CHARTS IMPLEMENTATION */}
                 <NewMLJARCharts files={files} />
               </div>
             </TabsContent>
