@@ -70,10 +70,10 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({ results
                   <p className="text-sm font-medium">Status</p>
                   <p className="text-sm text-muted-foreground">{results.status}</p>
                 </div>
-                {results.training_time && (
+                {results.training_time_sec && (
                   <div>
                     <p className="text-sm font-medium">Training Time</p>
-                    <p className="text-sm text-muted-foreground">{results.training_time}s</p>
+                    <p className="text-sm text-muted-foreground">{results.training_time_sec}s</p>
                   </div>
                 )}
                 {results.completed_at && (

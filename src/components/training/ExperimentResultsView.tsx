@@ -246,13 +246,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     return (
       <div className="w-full">
         <MLJARExperimentResults
-          experimentId={experimentId}
-          status={data.status as ExperimentStatus}
-          experimentResults={data}
-          isLoading={false}
-          error={null}
-          onReset={handleReset}
-          onRefresh={handleRefresh}
+          results={data}
         />
       </div>
     );

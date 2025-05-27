@@ -4,15 +4,13 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Icons } from '@/components/ui/icons';
 import { formatDistanceToNow } from 'date-fns';
-import { Experiment, ExperimentStatus } from '@/types/training';
+import { ExperimentResults, ExperimentStatus } from '@/types/training';
 import StatusBadge from '../training/StatusBadge';
 import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
-// Updated interface to match the structure we need
-export interface ExperimentWithDataset extends Experiment {
-  status: ExperimentStatus;
+// Updated interface to use ExperimentResults as base
+export interface ExperimentWithDataset extends ExperimentResults {
   dataset_name?: string;
 }
 
@@ -39,7 +37,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
             <StatusBadge status={experiment.status} />
           </DrawerTitle>
           <DrawerDescription>
-            {experiment.experiment_name || `Experiment ${experiment.id?.substring(0, 8)}`}
+            {experiment.experiment_name || `Experiment ${experiment.experimentId?.substring(0, 8)}`}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -117,7 +115,7 @@ const ExperimentDetailDrawer: React.FC<ExperimentDetailDrawerProps> = ({
         <DrawerFooter>
           <Button onClick={onClose} variant="outline">Close</Button>
           <Button asChild>
-            <a href={`/results/${experiment.id}`} target="_blank" rel="noreferrer">
+            <a href={`/results/${experiment.experimentId}`} target="_blank" rel="noreferrer">
               View Full Results
             </a>
           </Button>
