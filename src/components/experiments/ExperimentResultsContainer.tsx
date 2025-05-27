@@ -184,7 +184,13 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     <div className="w-full overflow-x-hidden">
       {isMljarExperiment ? (
         <MLJARExperimentResults
-          files={results?.files || []}
+          experimentId={experimentId}
+          status={status}
+          experimentResults={results}
+          isLoading={isLoading}
+          error={error}
+          onReset={handleReset}
+          onRefresh={handleRefresh}
         />
       ) : isH2OExperiment ? (
         <H2OExperimentResults
