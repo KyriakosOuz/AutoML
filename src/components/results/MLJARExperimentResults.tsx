@@ -11,6 +11,7 @@ import { formatTrainingTime } from '@/utils/formatUtils';
 import { downloadFile } from '@/components/training/prediction/utils/downloadUtils';
 
 interface MLJARExperimentResultsProps {
+  experimentId: string | null;
   experimentResults: ExperimentResults;
   status: string;
   isLoading: boolean;
@@ -199,6 +200,7 @@ const MLJARCharts: React.FC<{ files: TrainingFile[] }> = ({ files }) => {
 };
 
 const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
+  experimentId,
   experimentResults,
   status,
   isLoading,
