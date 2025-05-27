@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -381,66 +380,77 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
       return visualizationsData;
     }
     
-    // Fallback to legacy file-based visualizations if visualizations_by_type isn't available
+    // Fallback to legacy file-based visualizations - FIXED LOGIC
     console.log("[MLJARExperimentResults] Falling back to legacy file processing");
+    console.log("[MLJARExperimentResults] Processing files:", files.map(f => ({
+      file_type: f.file_type,
+      curve_subtype: f.curve_subtype,
+      filename: f.file_url?.split('/').pop()
+    })));
     
-    // Enhanced filter to capture all visualization types
-    const visualizationFiles = files.filter(file => {
-      return file.file_type.includes('confusion_matrix') ||
-             file.file_type.includes('evaluation_curve') ||
-             file.file_type.includes('precision_recall') ||
-             file.file_type.includes('learning_curve') ||
-             file.file_type.includes('feature_importance') ||
-             file.file_type.includes('true_vs_predicted') ||
-             file.file_type.includes('predicted_vs_residuals') ||
-             file.file_type.includes('roc_curve') ||
-             file.file_type.includes('calibration_curve') ||
-             file.file_type.includes('cumulative_gains') ||
-             file.file_type.includes('ks_statistic') ||
-             file.file_type.includes('lift_curve');
-    });
-
-    // Group visualization files by type for better organization
-    const groupedVisualizations = visualizationFiles.reduce((groups: Record<string, any[]>, file) => {
-      let category = 'other';
+    // Create a structured organization of visualizations by category
+    const visualizationsData: Record<string, any[]> = {};
+    
+    // Process each file and categorize it properly
+    files.forEach(file => {
+      if (!file.file_url || !isPngImage(file.file_url)) {
+        return; // Skip non-PNG files
+      }
       
-      if (file.file_type.includes('confusion_matrix')) {
+      let category = '';
+      let title = '';
+      
+      // Categorize based on file_type and curve_subtype
+      if (file.file_type === 'confusion_matrix') {
         category = 'confusion_matrix';
-      } else if (file.file_type.includes('roc_curve') || file.file_type.includes('precision_recall')) {
+        // Check filename for normalized matrix
+        title = file.file_url.toLowerCase().includes('normalized') ? 
+          'Normalized Confusion Matrix' : 'Confusion Matrix';
+      } else if (file.file_type === 'evaluation_curve') {
         category = 'evaluation';
-      } else if (file.file_type.includes('learning_curve')) {
+        // Use curve_subtype to determine the specific evaluation curve type
+        if (file.curve_subtype === 'roc') {
+          title = 'ROC Curve';
+        } else if (file.curve_subtype === 'precision_recall') {
+          title = 'Precision-Recall Curve';
+        } else {
+          title = formatVisualizationName('evaluation_curve', file.curve_subtype);
+        }
+      } else if (file.file_type === 'learning_curve') {
         category = 'learning_curve';
-      } else if (file.file_type.includes('feature_importance')) {
-        category = 'feature_importance';
-      } else if (file.file_type.includes('calibration_curve')) {
-        category = 'calibration_curve';
-      } else if (file.file_type.includes('cumulative_gains')) {
-        category = 'cumulative_gains_curve';
-      } else if (file.file_type.includes('ks_statistic')) {
-        category = 'ks_statistic';
-      } else if (file.file_type.includes('lift_curve')) {
-        category = 'lift_curve';
+        title = 'Learning Curve';
+      } else {
+        // Handle other visualization types
+        category = 'other';
+        title = formatVisualizationName(file.file_type);
       }
       
-      if (!groups[category]) {
-        groups[category] = [];
+      if (category) {
+        if (!visualizationsData[category]) {
+          visualizationsData[category] = [];
+        }
+        
+        visualizationsData[category].push({
+          ...file,
+          title: title
+        });
       }
-      
-      groups[category].push({
-        ...file,
-        title: formatVisualizationName(file.file_type)
-      });
-      
-      return groups;
-    }, {});
+    });
     
-    return groupedVisualizations;
+    console.log("[MLJARExperimentResults] Categorized visualizations:", {
+      categories: Object.keys(visualizationsData),
+      counts: Object.fromEntries(
+        Object.entries(visualizationsData).map(([key, value]) => [key, value.length])
+      )
+    });
+    
+    return visualizationsData;
   };
   
   // Process visualizations using either the new visualizations_by_type or legacy approach
   const visualizations = processVisualizations();
   
-  console.log("[MLJARExperimentResults] Processed visualizations:", Object.keys(visualizations));
+  console.log("[MLJARExperimentResults] Final processed visualizations:", Object.keys(visualizations));
 
   // Get the model download URL
   const getModelFileUrl = () => {
@@ -1364,4 +1374,3 @@ const MLJARExperimentResults: React.FC<MLJARExperimentResultsProps> = ({
 };
 
 export default MLJARExperimentResults;
-
