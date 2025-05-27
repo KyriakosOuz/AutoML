@@ -246,13 +246,7 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
     return (
       <div className="w-full">
         <MLJARExperimentResults
-          experimentId={experimentId}
-          status={data.status as ExperimentStatus}
-          experimentResults={data}
-          isLoading={false}
-          error={null}
-          onReset={handleReset}
-          onRefresh={handleRefresh}
+          files={data.files || []}
         />
       </div>
     );
@@ -281,7 +275,6 @@ export const ExperimentResultsView: React.FC<ExperimentResultsViewProps> = ({
           error={null}
           onReset={handleReset}
           onRefresh={handleRefresh}
-          // ✅ FIXED: Ensure training type is properly validated as a literal type
           trainingType={data.training_type === 'custom' ? 'custom' : 'automl'}
         />
       </div>
