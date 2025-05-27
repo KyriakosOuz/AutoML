@@ -31,7 +31,7 @@ export interface TrainingFile {
   file_url: string;
   file_name?: string;
   created_at: string;
-  curve_subtype?: string;
+  curve_subtype?: string;  // Added curve_subtype field
 }
 
 // New interface for visualization by type

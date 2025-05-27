@@ -1,7 +1,7 @@
-import { getAuthHeaders, handleApiResponse, getWorkingAPIUrl } from './utils';
+import { getAuthHeaders, handleApiResponse } from './utils';
 import { ApiResponse, ExperimentStatusResponse } from '@/types/api';
 import { ExperimentResults } from '@/types/training';
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, getWorkingAPIUrl } from './constants';
 
 // Check training status endpoint (returns { status, hasTrainingResults, ... })
 export const checkStatus = async (experimentId: string): Promise<ApiResponse<ExperimentStatusResponse>> => {

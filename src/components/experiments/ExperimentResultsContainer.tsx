@@ -180,19 +180,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
     modelName: results?.model_display_name
   });
 
-  // Helper function to convert ExperimentStatus to the limited status type expected by components
-  const convertStatus = (status: ExperimentStatus): 'completed' | 'success' | 'failed' => {
-    if (status === 'completed' || status === 'success') return status;
-    // Convert any error-like status to 'failed'
-    return 'failed';
-  };
-
   return (
     <div className="w-full overflow-x-hidden">
       {isMljarExperiment ? (
         <MLJARExperimentResults
           experimentId={experimentId}
-          status={convertStatus(status)}
+          status={status}
           experimentResults={results}
           isLoading={isLoading}
           error={error}
@@ -202,7 +195,7 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       ) : isH2OExperiment ? (
         <H2OExperimentResults
           experimentId={experimentId}
-          status={convertStatus(status)}
+          status={status}
           experimentResults={results}
           isLoading={isLoading}
           error={error}
@@ -212,13 +205,12 @@ const ExperimentResultsContainer: React.FC<ExperimentResultsContainerProps> = ({
       ) : (
         <ExperimentResults
           experimentId={experimentId}
-          status={convertStatus(status)}
+          status={status}
           experimentResults={results}
           isLoading={isLoading}
           error={error}
           onReset={handleReset}
           onRefresh={handleRefresh}
-          // ✅ FIXED: Ensure training type is properly validated as a literal type
           trainingType={currentTrainingType}
         />
       )}

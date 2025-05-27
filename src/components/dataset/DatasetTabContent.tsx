@@ -19,7 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import PublicDatasetSection from './PublicDatasetSection';
 
 interface TabContentProps {
   activeTab: string;
@@ -75,8 +74,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   } = useDataset();
   
   const { toast } = useToast();
-  
-  const [hasInitializedTabs, setHasInitializedTabs] = useState(false);
   
   const hasNoMissingValues = overview && 
     (!overview.total_missing_values || overview.total_missing_values === 0);
@@ -245,7 +242,6 @@ const DatasetTabContent: React.FC<TabContentProps> = ({
   return (
     <>
       <TabsContent value="upload" className="pt-4">
-        <PublicDatasetSection />
         <FileUpload />
         {datasetId && (
           <>

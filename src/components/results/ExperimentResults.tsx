@@ -1,17 +1,18 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, RotateCcw, RefreshCw, AlertCircle } from 'lucide-react';
+import { AlertTriangle, RotateCcw, RefreshCw } from 'lucide-react';
 import { ExperimentStatus, ExperimentResults as ExperimentResultsType } from '@/types/training';
 import MetricsDisplay from '@/components/results/MetricsDisplay';
 import VisualizationDisplay from '@/components/results/VisualizationDisplay';
 import ModelSummary from '@/components/results/ModelSummary';
 import ModelInterpretabilityPlots from '@/components/results/ModelInterpretabilityPlots';
 import RocCurveChart from '@/components/training/charts/RocCurveChart';
+import MLJARVisualizations from './MLJARVisualizations';
+import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 interface ExperimentResultsProps {
   experimentId: string | null;
@@ -21,7 +22,7 @@ interface ExperimentResultsProps {
   error: string | null;
   onReset?: () => void; 
   onRefresh?: () => void;
-  trainingType?: 'automl' | 'custom' | null;
+  trainingType?: 'automl' | 'custom' | null; // New prop to explicitly specify training type
 }
 
 const ExperimentResults: React.FC<ExperimentResultsProps> = ({
@@ -93,8 +94,18 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   // Find ROC curve file if available
   const rocCurveFile = experimentResults?.files?.find(file => 
     file.file_type === 'evaluation_curve' && 
-    (file.file_url?.includes('roc_curve') || file.file_type.includes('roc_curve'))
+    (file.file_url?.includes('roc_curve') || file.file_type?.includes('roc_curve') || file.curve_subtype === 'roc')
   );
+
+  // Check if we have MLJAR predictions data
+  const mljarPredictionsData = React.useMemo(() => {
+    if (experimentResults?.automl_engine === 'mljar' && 
+        experimentResults.predictions && 
+        Array.isArray(experimentResults.predictions)) {
+      return experimentResults.predictions;
+    }
+    return null;
+  }, [experimentResults]);
 
   if (isLoading) {
     return (
@@ -167,41 +178,47 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
   }
 
   if (!experimentResults) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            No Results Available
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertDescription>No results are available for this experiment.</AlertDescription>
-          </Alert>
-        </CardContent>
-        <CardFooter>
-          {onReset && (
-            <Button onClick={onReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Run New Experiment
-            </Button>
-          )}
-          {onRefresh && (
-            <Button onClick={onRefresh} variant="outline" className="ml-2">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Check Again
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
-    );
+    return null;
   }
 
   // Get the most appropriate title to display
   const experimentTitle = experimentResults?.model_display_name || 
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
+  
+  // Determine if this is a MLJAR experiment
+  const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
+  
+  // Use our shared utility function to find MLJAR visualization files
+  const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
+    filterVisualizationFiles(experimentResults.files) : [];
+  
+  // Add predictions data to MLJAR files if available
+  if (mljarPredictionsData && mljarVisualFiles.length > 0) {
+    // Find if we already have a predictions file
+    const predictionFileIndex = mljarVisualFiles.findIndex(f => 
+      f.file_type === 'predictions' || 
+      f.file_name?.includes('predictions')
+    );
+    
+    if (predictionFileIndex >= 0) {
+      // Add predictions data to existing file
+      mljarVisualFiles[predictionFileIndex].predictions = mljarPredictionsData;
+    } else {
+      // Create a virtual file for predictions if none exists
+      mljarVisualFiles.push({
+        file_type: 'predictions',
+        file_name: 'Model Predictions',
+        file_url: '#',
+        predictions: mljarPredictionsData
+      });
+    }
+  }
+
+  // Log found MLJAR visualization files
+  console.log("[ExperimentResults] Found MLJAR visualization files:", 
+    mljarVisualFiles.map(f => ({ type: f.file_type, name: f.file_name, url: f.file_url }))
+  );
 
   return (
     <Card className="w-full">
@@ -209,7 +226,7 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
         <CardTitle className="flex items-center gap-2">
           {experimentTitle}
           <span className="text-xs font-normal bg-gray-100 px-2 py-1 rounded">
-            {displayedTrainingType === 'automl' ? 'AutoML' : 'Custom'}
+            {trainingType === 'automl' || experimentResults?.training_type === 'automl' ? 'AutoML' : 'Custom'}
           </span>
         </CardTitle>
       </CardHeader>
@@ -219,6 +236,9 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+            {isMljarExperiment && mljarVisualFiles.length > 0 && (
+              <TabsTrigger value="mljar-charts">Charts</TabsTrigger>
+            )}
             {hasInterpretabilityPlots && (
               <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
             )}
@@ -244,6 +264,11 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
+          {isMljarExperiment && mljarVisualFiles.length > 0 && (
+            <TabsContent value="mljar-charts">
+              <MLJARVisualizations files={mljarVisualFiles} />
+            </TabsContent>
+          )}
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
               <ModelInterpretabilityPlots 

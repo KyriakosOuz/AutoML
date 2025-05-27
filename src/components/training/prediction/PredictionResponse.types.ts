@@ -29,10 +29,5 @@ export interface BatchPredictionResponse {
   y_true?: any[];
   y_pred?: any[];
   target_column?: string;
-  automl_engine?: string;
-  predictions_csv_file?: {
-    file_type: string;
-    file_url: string;
-    file_name?: string;
-  };
+  automl_engine?: string; // Added this property to match what's being used
 }

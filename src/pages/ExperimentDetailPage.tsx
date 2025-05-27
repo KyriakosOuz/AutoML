@@ -3,13 +3,13 @@ import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
 import { ExperimentResultsView } from '@/components/training/ExperimentResultsView';
+import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
-  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -27,9 +27,9 @@ const ExperimentDetailPage: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [error, toast]);
+  }, [error]);
   
-  // Enhanced debug logging to track new file structure
+  // Add debug logging to see what data is available, including visualization types
   useEffect(() => {
     if (data) {
       console.log('ExperimentDetailPage: Experiment data loaded:', {
@@ -40,23 +40,26 @@ const ExperimentDetailPage: React.FC = () => {
         model: data.model_display_name,
         metrics: data.metrics ? Object.keys(data.metrics) : [],
         filesCount: data.files?.length,
-        // Enhanced file type logging for new metadata structure
-        fileTypes: data.files?.map(f => ({
-          file_type: f.file_type,
-          curve_subtype: f.curve_subtype,
-          file_url: f.file_url?.split('/').pop() // Just filename for cleaner logging
-        })),
-        // Specific file type counts
-        confusionMatrixFiles: data.files?.filter(f => f.file_type === 'confusion_matrix').length || 0,
-        evaluationCurveFiles: data.files?.filter(f => f.file_type === 'evaluation_curve').length || 0,
-        learningCurveFiles: data.files?.filter(f => f.file_type === 'learning_curve').length || 0,
-        predictionsCsvFiles: data.files?.filter(f => f.file_type === 'predictions_csv').length || 0,
-        // ROC and PR curve specific detection
-        rocCurves: data.files?.filter(f => f.file_type === 'evaluation_curve' && f.curve_subtype === 'roc').length || 0,
-        prCurves: data.files?.filter(f => f.file_type === 'evaluation_curve' && f.curve_subtype === 'precision_recall').length || 0
+        // Log file types to debug visualization filtering
+        fileTypes: data.files?.map(f => f.file_type),
+        // Log model and CSV files specifically
+        modelFiles: data.files?.filter(f => 
+          f.file_type?.includes('model') || 
+          f.file_url?.includes('model')
+        ).map(f => f.file_type),
+        csvFiles: data.files?.filter(f => 
+          f.file_type?.includes('csv') || 
+          f.file_url?.includes('csv')
+        ).map(f => f.file_type),
+        // Log visualization files filtered with our shared utility
+        visualizationFiles: data.files ? filterVisualizationFiles(data.files)
+          .map(f => ({ type: f.file_type, name: f.file_name })) : []
       });
     }
   }, [data, experimentId]);
+  
+  // Determine the status to pass to ExperimentResultsContainer
+  const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
   
   return (
     <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-8">

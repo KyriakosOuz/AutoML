@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -12,9 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getAuthHeaders, getWorkingAPIUrl } from '@/lib/utils';
+import { getAuthHeaders } from '@/lib/utils';
 import { trainingApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import { getWorkingAPIUrl } from '@/lib/constants';
 
 interface TuneModelModalProps {
   experimentId: string;

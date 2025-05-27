@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Upload, BarChart2, LineChart, Database } from "lucide-react";
+import { ArrowRight, Upload, BarChart2, LineChart, Github } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -54,22 +54,12 @@ const Index = () => {
             A complete platform for automated machine learning — from dataset upload and cleaning 
             to training, evaluation, and prediction. No code required.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link to={user ? "/dataset" : "/auth"}>
-              <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 w-full">
-                {user ? "Get Started" : "Sign In to Start"}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            {user && (
-              <Link to="/dataset">
-                <Button size="lg" variant="outline" className="border-gray-900 text-gray-900 hover:bg-gray-100 w-full">
-                  <Database className="mr-2 h-5 w-5" />
-                  Try Demo Datasets
-                </Button>
-              </Link>
-            )}
-          </div>
+          <Link to={user ? "/dataset" : "/auth"}>
+            <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 w-full sm:w-auto">
+              {user ? "Get Started" : "Sign In to Start"}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
         
         {/* Three Main Cards */}
@@ -129,25 +119,32 @@ const Index = () => {
                 Upload your dataset and follow the guided ML pipeline — designed for students, researchers, and practitioners.
               </p>
             </div>
-            <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
-              <Link to={user ? "/dataset" : "/auth"} className="w-full md:w-auto">
-                <Button size="lg" variant="secondary" className="w-full md:w-auto bg-white text-gray-900 hover:bg-gray-100">
-                  Get Started
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              {user && (
-                <Link to="/dataset" className="w-full md:w-auto">
-                  <Button size="lg" variant="outline" className="w-full md:w-auto border-white text-white hover:bg-white/10">
-                    <Database className="mr-2 h-5 w-5" />
-                    Try a Demo Dataset
-                  </Button>
-                </Link>
-              )}
-            </div>
+            <Link to={user ? "/dataset" : "/auth"} className="w-full md:w-auto">
+              <Button size="lg" variant="secondary" className="w-full md:w-auto bg-white text-gray-900 hover:bg-gray-100">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
+      
+      {/* Subtle GitHub Footer - commented out as requested */}
+      {/*
+      <footer className="py-6 border-t border-gray-100">
+        <div className="container max-w-6xl mx-auto px-4 flex justify-center">
+          <a 
+            href="https://github.com/kyroai/kyro-automl" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors"
+          >
+            <Github className="h-3 w-3" />
+            <span>View source on GitHub</span>
+          </a>
+        </div>
+      </footer>
+      */}
     </div>
   );
 };

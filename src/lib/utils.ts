@@ -3,7 +3,6 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ApiResponse } from "@/types/api"
 import { supabase } from "@/integrations/supabase/client"
-import { API_BASE_URL } from "./constants"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -23,12 +22,6 @@ export const getAuthHeaders = async () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
-};
-
-// Enhanced API URL function with logging
-export const getWorkingAPIUrl = async (): Promise<string> => {
-  console.log("🌍 API base URL resolved to:", API_BASE_URL);
-  return API_BASE_URL;
 };
 
 // Ensure we only process JSON, handle errors clearly, and log non-JSON responses

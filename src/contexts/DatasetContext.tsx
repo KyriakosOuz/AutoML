@@ -249,13 +249,6 @@ export const DatasetProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Use this when you need to update multiple related properties to avoid multiple re-renders
   const updateState = (newState: Partial<DatasetContextState>) => {
     console.log('Updating dataset state with:', newState);
-    
-    // Skip redundant updates if attempting to set the same datasetId
-    if (newState.datasetId && newState.datasetId === state.datasetId) {
-      console.log('Skipping redundant dataset update for same datasetId:', newState.datasetId);
-      return;
-    }
-    
     setState(prev => {
       // Special handling for overview to ensure all fields are preserved
       const updatedState = { ...prev, ...newState };

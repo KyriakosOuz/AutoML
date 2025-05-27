@@ -1,4 +1,3 @@
-
 export const API_BASE_PATH = "/api";
 
 // Set this to true when working with the production API
@@ -104,4 +103,8 @@ export const generateExperimentName = (prefix: string, identifier: string): stri
   }
 };
 
-// Note: getWorkingAPIUrl has been moved to lib/utils.ts
+// Enhanced API URL function with logging
+export const getWorkingAPIUrl = async (): Promise<string> => {
+  console.log("🌍 API base URL resolved to:", API_BASE_URL);
+  return API_BASE_URL;
+};
