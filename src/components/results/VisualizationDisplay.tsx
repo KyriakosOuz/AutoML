@@ -1,10 +1,10 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExperimentResults } from '@/types/training';
 import { Download, ImageIcon } from 'lucide-react';
-import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 interface VisualizationDisplayProps {
   results: ExperimentResults;
@@ -13,17 +13,50 @@ interface VisualizationDisplayProps {
 const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) => {
   const files = results?.files || [];
   
-  // Use the shared utility function to filter visualization files
-  const visualizationFiles = filterVisualizationFiles(files);
+  // Enhanced filtering to capture ALL visualization types, now including pdp plots
+  // and excluding model/CSV files
+  const visualizationFiles = files.filter(file => {
+    const visualTypes = [
+      'distribution', 
+      'shap', 
+      'confusion_matrix', 
+      'importance', 
+      'evaluation_curve',
+      'plot', 
+      'chart', 
+      'graph', 
+      'visualization',
+      'roc_curve',
+      'precision_recall_curve',
+      'precision_recall',
+      'class_distribution',
+      'variable_importance',
+      'learning_curve',
+      'true_vs_predicted',
+      'predicted_vs_residuals',
+      'residual_analysis',
+      'pdp', // Add PDP plots
+      'ice', // Add ICE plots
+      'partial_dependence' // Alternative naming for PDP
+    ];
+    
+    // Exclude model and CSV files
+    const excludeTypes = [
+      'model', 'trained_model', 'leaderboard_csv', 'predictions_csv', 'csv'
+    ];
+    
+    const isVisualization = visualTypes.some(type => file.file_type.toLowerCase().includes(type));
+    const isExcluded = excludeTypes.some(type => 
+      file.file_type.toLowerCase().includes(type) || 
+      (file.file_name && file.file_name.toLowerCase().includes(type))
+    );
+    
+    return isVisualization && !isExcluded;
+  });
 
   // Log which visualizations were found
   console.log("[VisualizationDisplay] Found visualization files:", 
-    visualizationFiles.map(f => ({ 
-      type: f.file_type, 
-      name: f.file_name,
-      url: f.file_url,
-      curve_subtype: f.curve_subtype
-    }))
+    visualizationFiles.map(f => ({ type: f.file_type, url: f.file_url }))
   );
 
   if (visualizationFiles.length === 0) {
@@ -54,7 +87,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
                 </div>
                 <div className="mt-2 text-center">
                   <p className="text-sm font-medium capitalize">
-                    {formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
+                    {formatVisualizationName(file.file_type)}
                   </p>
                 </div>
               </CardContent>
@@ -64,12 +97,12 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
             <div className="p-1">
               <img 
                 src={file.file_url} 
-                alt={formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
+                alt={file.file_type} 
                 className="w-full rounded-md"
               />
               <div className="mt-2 flex justify-between items-center">
                 <h3 className="font-medium capitalize">
-                  {formatVisualizationName(file.file_type, file.file_name, file.curve_subtype)}
+                  {formatVisualizationName(file.file_type)}
                 </h3>
                 <Button variant="outline" size="sm" asChild>
                   <a href={file.file_url} download={file.file_name || `${file.file_type}.png`} target="_blank" rel="noopener noreferrer">
@@ -87,39 +120,7 @@ const VisualizationDisplay: React.FC<VisualizationDisplayProps> = ({ results }) 
 };
 
 // Enhanced helper function to format visualization names in a user-friendly way
-const formatVisualizationName = (fileType?: string, fileName?: string, curveSubtype?: string): string => {
-  // First check for curve subtype for special visualization types
-  if (curveSubtype) {
-    if (curveSubtype === 'roc') {
-      return 'ROC Curve';
-    }
-    if (curveSubtype === 'precision_recall') {
-      return 'Precision-Recall Curve';
-    }
-    if (curveSubtype === 'calibration') {
-      return 'Calibration Curve';
-    }
-    if (curveSubtype === 'learning') {
-      return 'Learning Curve';
-    }
-  }
-
-  // Then check if we have a specific file name to determine the visualization type
-  if (fileName) {
-    if (fileName.includes('learning_curve') || fileName.includes('learning_curves')) {
-      return 'Learning Curve';
-    }
-    if (fileName.includes('roc_curve')) {
-      return 'ROC Curve';
-    }
-    if (fileName.includes('precision_recall_curve') || fileName.includes('precision_recall')) {
-      return 'Precision-Recall Curve';
-    }
-  }
-  
-  // Otherwise use the file type
-  if (!fileType) return 'Visualization';
-  
+const formatVisualizationName = (fileType: string): string => {
   if (fileType.includes('confusion_matrix')) {
     return fileType.includes('normalized') ? 'Normalized Confusion Matrix' : 'Confusion Matrix';
   } else if (fileType.includes('roc_curve') || fileType.includes('evaluation_curve')) {
@@ -138,14 +139,6 @@ const formatVisualizationName = (fileType?: string, fileName?: string, curveSubt
     return 'True vs Predicted';
   } else if (fileType.includes('predicted_vs_residuals') || fileType.includes('residual_analysis')) {
     return 'Residual Analysis';
-  } else if (fileType.includes('calibration_curve')) {
-    return 'Calibration Curve';
-  } else if (fileType.includes('ks_statistic')) {
-    return 'KS Statistic';
-  } else if (fileType.includes('lift_curve')) {
-    return 'Lift Curve';
-  } else if (fileType.includes('cumulative_gains')) {
-    return 'Cumulative Gains Curve';
   } else if (fileType.includes('pdp_')) {
     // Parse PDP plot names to show feature and class
     const parts = fileType.replace('pdp_', '').split('_');

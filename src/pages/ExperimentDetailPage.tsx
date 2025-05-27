@@ -3,13 +3,13 @@ import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getExperimentResults } from '@/lib/training';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import ExperimentSidePanel from '@/components/ai-assistant/ExperimentSidePanel';
 import { ExperimentResultsView } from '@/components/training/ExperimentResultsView';
-import { filterVisualizationFiles } from '@/utils/visualizationFilters';
 
 const ExperimentDetailPage: React.FC = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
+  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -27,7 +27,7 @@ const ExperimentDetailPage: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [error]);
+  }, [error, toast]);
   
   // Add debug logging to see what data is available, including visualization types
   useEffect(() => {
@@ -44,22 +44,19 @@ const ExperimentDetailPage: React.FC = () => {
         fileTypes: data.files?.map(f => f.file_type),
         // Log model and CSV files specifically
         modelFiles: data.files?.filter(f => 
-          f.file_type?.includes('model') || 
-          f.file_url?.includes('model')
+          f.file_type.includes('model') || 
+          f.file_url.includes('model')
         ).map(f => f.file_type),
         csvFiles: data.files?.filter(f => 
-          f.file_type?.includes('csv') || 
-          f.file_url?.includes('csv')
+          f.file_type.includes('csv') || 
+          f.file_url.includes('csv')
         ).map(f => f.file_type),
-        // Log visualization files filtered with our shared utility
-        visualizationFiles: data.files ? filterVisualizationFiles(data.files)
-          .map(f => ({ type: f.file_type, name: f.file_name })) : []
+        // Log PDP and ICE visualization files separately
+        pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
+        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
       });
     }
   }, [data, experimentId]);
-  
-  // Determine the status to pass to ExperimentResultsContainer
-  const status = data?.status || (isLoading ? 'processing' : error ? 'failed' : 'completed');
   
   return (
     <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-8">

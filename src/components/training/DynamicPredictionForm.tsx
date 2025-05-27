@@ -120,11 +120,12 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
   const handleInputChange = (col: string, value: string) => {
     setManualInputs(prev => {
-      // Convert numerical values to numbers
+      // Store input as string during typing to preserve decimal places
       const columnSchema = columnSchemas.find(schema => schema.name === col);
       
       // Check if the input is out of range for numerical columns
       if (columnSchema?.type === 'numerical' && value !== '') {
+        // Only convert to number for range checking, not for storage
         const numValue = parseFloat(value);
         
         // Check if the value is significantly outside the recommended range
@@ -140,10 +141,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
             [col]: isOutOfRange
           }));
         }
-        
-        return { ...prev, [col]: isNaN(numValue) ? value : numValue };
       }
       
+      // Always store the raw string value during input
       return { ...prev, [col]: value };
     });
   };
@@ -158,11 +158,11 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     try {
       console.log('Input values before processing:', manualInputs);
       
+      // Now convert strings to numbers only when submitting the form
       const processedInputs: Record<string, any> = {};
       for (const [key, value] of Object.entries(manualInputs)) {
-        // Ensure numeric values are sent as numbers
         const columnSchema = columnSchemas.find(schema => schema.name === key);
-        if (columnSchema?.type === 'numerical' && typeof value === 'string') {
+        if (columnSchema?.type === 'numerical' && typeof value === 'string' && value !== '') {
           const numValue = Number(value);
           processedInputs[key] = isNaN(numValue) ? value : numValue;
         } else {
@@ -224,9 +224,9 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
 
   // Render the appropriate input control based on column type
   const renderInputControl = (column: ColumnSchema) => {
-    // Fix: Use a conditional to properly handle 0 values
+    // Use the raw string value for display
     const value = manualInputs[column.name];
-    const displayValue = value === 0 ? '0' : value || '';
+    const displayValue = value !== undefined && value !== null ? String(value) : '';
     const placeholder = example[column.name] !== undefined ? String(example[column.name]) : '';
     const isOutOfRange = outOfRangeWarnings[column.name];
 
@@ -390,13 +390,13 @@ const DynamicPredictionForm: React.FC<DynamicPredictionFormProps> = ({ experimen
     );
   }
 
-  // Helper to check if all inputs are filled - updated to properly handle zero values
+  // Helper to check if all inputs are filled
   const areAllInputsFilled = () => {
     return columnSchemas.every(col => {
       const value = manualInputs[col.name];
       // Check if the value is defined and not an empty string
-      // For numbers, explicitly check if it's 0 or any other number
-      if (typeof value === 'number') {
+      // For numbers, accept any string that's not empty
+      if (typeof value === 'number' || value === '0') {
         return true; // Any number including 0 is valid
       }
       return value !== undefined && value !== '';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -648,10 +648,6 @@ const ExperimentsTab: React.FC = () => {
     );
   };
 
-  const selectedExperiment = useMemo(() => {
-    return experiments.find(experiment => experiment.id === selectedExperimentId);
-  }, [experiments, selectedExperimentId]);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -853,13 +849,11 @@ const ExperimentsTab: React.FC = () => {
         </Card>
       )}
 
-      {selectedExperiment && (
-        <ExperimentDetailDrawer
-          experiment={selectedExperiment as any} // Using type assertion temporarily to fix build error
-          isOpen={isDetailDrawerOpen}
-          onClose={() => setIsDetailDrawerOpen(false)}
-        />
-      )}
+      <ExperimentDetailDrawer
+        experimentId={selectedExperimentId}
+        isOpen={isDetailDrawerOpen}
+        onClose={handleCloseDetailDrawer}
+      />
 
       <Dialog open={isComparisonDialogOpen} onOpenChange={handleCloseComparisonDialog}>
         <DialogContent className="max-w-4xl">

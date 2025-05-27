@@ -1,4 +1,3 @@
-
 export type TrainingEngine = 'mljar' | 'autokeras' | 'h2o' | 'h2o_automl';
 export type TaskType = 'binary_classification' | 'multiclass_classification' | 'regression';
 export type ExperimentStatus = 'running' | 'completed' | 'failed' | 'success' | 'processing' | 'idle' | 'error';
@@ -33,7 +32,6 @@ export interface TrainingFile {
   file_name?: string;
   created_at: string;
   curve_subtype?: string;  // Added curve_subtype field
-  predictions?: any[]; // Add predictions property for MLJAR
 }
 
 // New interface for visualization by type
@@ -125,8 +123,6 @@ export interface ExperimentResults {
   visualizations_by_type?: VisualizationsByType;
   // New property for PDP/ICE metadata from H2O
   pdp_ice_metadata?: PDPICEMetadata[];
-  // Add predictions property for MLJAR
-  predictions?: any[];
 }
 
 export interface ExperimentStatusResponse {

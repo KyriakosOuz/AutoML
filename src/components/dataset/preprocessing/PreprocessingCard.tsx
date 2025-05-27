@@ -65,7 +65,14 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
 
   // Function to check class imbalance - extracted to be reusable
   const checkClassImbalance = async (forceRefresh = false) => {
-    if (!datasetId || !isClassification) return;
+    if (!datasetId || !isClassification || !targetColumn) {
+      console.log('PreprocessingCard: Not checking class imbalance - missing required data:', {
+        datasetId,
+        isClassification,
+        targetColumn
+      });
+      return;
+    }
     
     try {
       setIsCheckingImbalance(true);
@@ -111,10 +118,15 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
   // Effect to check for class imbalance when the component mounts
   useEffect(() => {
     // Only check if we don't have data yet or if we're forcing a refresh
-    if (!classImbalanceData && !isCheckingImbalance && datasetId && isClassification) {
+    if (!classImbalanceData && !isCheckingImbalance && datasetId && isClassification && targetColumn) {
+      console.log('PreprocessingCard: Checking class imbalance on mount', {
+        datasetId,
+        targetColumn,
+        taskType
+      });
       checkClassImbalance();
     }
-  }, [datasetId, isClassification, classImbalanceData, isCheckingImbalance]);
+  }, [datasetId, isClassification, classImbalanceData, isCheckingImbalance, targetColumn]);
 
   const handlePreprocess = async () => {
     if (!datasetId) {
@@ -211,7 +223,7 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
                 variant="outline" 
                 size="sm" 
                 onClick={() => checkClassImbalance(true)}
-                disabled={isCheckingImbalance}
+                disabled={isCheckingImbalance || !targetColumn}
                 className="text-xs flex items-center gap-1"
               >
                 <RefreshCw className="h-3 w-3" />
@@ -219,7 +231,16 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
               </Button>
             </div>
             
-            {classImbalanceData && !isCheckingImbalance ? (
+            {!targetColumn && (
+              <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+                <InfoIcon className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700">
+                  You need to select a target column first to analyze class distribution.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {targetColumn && classImbalanceData && !isCheckingImbalance ? (
               <>
                 <ClassImbalanceAlert classImbalanceData={classImbalanceData} />
                 {/* Display chart for class distribution */}
@@ -228,7 +249,7 @@ const PreprocessingCard: React.FC<PreprocessingCardProps> = ({
                   targetColumn={classImbalanceData.target_column} 
                 />
               </>
-            ) : !isCheckingImbalance && (
+            ) : targetColumn && !isCheckingImbalance && (
               <Alert className="mb-4 bg-blue-50 border-blue-200">
                 <InfoIcon className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-700">

@@ -1,6 +1,5 @@
 
-import { getWorkingAPIUrl } from '@/lib/constants';
-import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
+import { getAuthHeaders, handleApiResponse, getWorkingAPIUrl } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { ApiResponse } from '@/types/api';
 

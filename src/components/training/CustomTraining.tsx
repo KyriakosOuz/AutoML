@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useTraining } from '@/contexts/training/TrainingContext';
@@ -77,6 +76,9 @@ const CustomTraining: React.FC = () => {
 
   const navigate = useNavigate();
 
+  // Check if the task type is regression to determine if stratify should be disabled
+  const isRegressionTask = datasetTaskType === 'regression';
+
   // Set button disabled state based on training and submission states
   useEffect(() => {
     if (isTraining || isSubmitting) {
@@ -93,6 +95,14 @@ const CustomTraining: React.FC = () => {
       isButtonDisabled: isTraining || isSubmitting 
     });
   }, [isTraining, isSubmitting]);
+
+  // Force stratify to false when task type is regression
+  useEffect(() => {
+    if (isRegressionTask && customParameters.stratify) {
+      console.log("[CustomTraining] Setting stratify to false for regression task");
+      setCustomParameters({ stratify: false });
+    }
+  }, [datasetTaskType, isRegressionTask, customParameters.stratify, setCustomParameters]);
 
   useEffect(() => {
     return () => {
@@ -461,13 +471,17 @@ const CustomTraining: React.FC = () => {
                     </Tooltip>
                   </TooltipProvider>
                 </Label>
-                <p className="text-xs text-muted-foreground">Essential for balanced datasets in classification tasks</p>
+                <p className="text-xs text-muted-foreground">
+                  {isRegressionTask 
+                    ? "Not applicable for regression tasks"
+                    : "Essential for balanced datasets in classification tasks"}
+                </p>
               </div>
               <Switch
                 id="stratify"
                 checked={customParameters.stratify}
                 onCheckedChange={(checked) => setCustomParameters({ stratify: checked })}
-                disabled={isButtonDisabled}
+                disabled={isButtonDisabled || isRegressionTask}
                 aria-label="Stratify split"
               />
             </div>

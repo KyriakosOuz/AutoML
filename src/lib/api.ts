@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { getAuthToken } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +5,8 @@ import {
   ExperimentResults,
   TaskType 
 } from '@/types/training';
-import { API_BASE_URL, getWorkingAPIUrl } from './constants';
+import { API_BASE_URL } from './constants';
+import { getWorkingAPIUrl } from './utils';
 
 // Define the Dataset type
 export interface Dataset {

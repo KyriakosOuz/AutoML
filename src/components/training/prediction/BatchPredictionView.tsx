@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,8 +7,7 @@ import { Upload, Download, FileText, Loader2, RefreshCw, AlertTriangle } from 'l
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { getWorkingAPIUrl } from '@/lib/constants';
-import { getAuthHeaders } from '@/lib/utils';
+import { getAuthHeaders, getWorkingAPIUrl } from '@/lib/utils';
 import { BatchPredictionResponse } from './PredictionResponse.types';
 import { ProbabilitiesCell } from './table/ProbabilitiesCell';
 import { Badge } from '@/components/ui/badge';

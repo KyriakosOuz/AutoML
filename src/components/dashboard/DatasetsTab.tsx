@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getAuthHeaders, handleApiResponse } from '@/lib/utils';
-import { getWorkingAPIUrl } from '@/lib/constants';
+import { getAuthHeaders, handleApiResponse, getWorkingAPIUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useDatasetDownload } from '@/hooks/useDatasetDownload';
 import { 
@@ -29,7 +27,8 @@ import {
   Trash2, 
   AlertCircle,
   DownloadCloud,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 import {
   Alert,
@@ -47,6 +46,7 @@ interface Dataset {
   has_cleaned: boolean;
   has_final: boolean;
   has_processed: boolean;
+  is_public?: boolean;
 }
 
 interface PreviewData {
@@ -62,6 +62,7 @@ const DatasetsTab: React.FC = () => {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const { downloadDataset } = useDatasetDownload();
 
@@ -91,6 +92,9 @@ const DatasetsTab: React.FC = () => {
       return handleApiResponse<{ datasets: Dataset[] }>(response);
     },
   });
+
+  // Filter out public datasets that don't belong to user
+  const userDatasets = datasetsData?.data.datasets.filter(dataset => !dataset.is_public) || [];
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -227,14 +231,52 @@ const DatasetsTab: React.FC = () => {
     setPreviewStage(null);
   };
 
-  const datasets = datasetsData?.data.datasets?.slice(0, 100) || [];
+  // Handle manual refresh with loading state
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast({
+        title: "Datasets Refreshed",
+        description: "The dataset list has been updated",
+      });
+    } catch (error) {
+      console.error('Error refreshing datasets:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh datasets. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Show only user-owned datasets
+  const datasets = userDatasets.slice(0, 100) || [];
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Available Datasets</h2>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-          Refresh
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh} 
+          disabled={isLoading || isRefreshing}
+          className="gap-2"
+        >
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </>
+          )}
         </Button>
       </div>
       

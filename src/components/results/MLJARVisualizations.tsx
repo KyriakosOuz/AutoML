@@ -1,101 +1,211 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { TrainingFile } from '@/types/training';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { FileDown } from 'lucide-react';
-import { downloadCSV } from '@/components/training/prediction/utils/downloadUtils';
-
-interface MLJARVisualizationFile {
-  file_name?: string;
-  file_type?: string;
-  file_url: string;
-  predictions?: any[];
-}
+import { Download } from 'lucide-react';
 
 interface MLJARVisualizationsProps {
-  files: MLJARVisualizationFile[];
+  files: TrainingFile[];
 }
 
 const MLJARVisualizations: React.FC<MLJARVisualizationsProps> = ({ files }) => {
-  if (files.length === 0) {
+  // Debug logging to help track file filtering
+  useEffect(() => {
+    console.log('MLJARVisualizations - All Files:', files);
+  }, [files]);
+
+  // Filter only PNG image files for visualization with improved logic
+  const visualizationFiles = files.filter(file => {
+    // Must have a file_url and be a PNG file
+    if (!file.file_url || !file.file_url.toLowerCase().endsWith('.png')) {
+      return false;
+    }
+    
+    // Exclude model files, CSV files, and readme files
+    if (
+      file.file_type?.includes('model') || 
+      file.file_url?.toLowerCase().includes('model') ||
+      file.file_type?.includes('csv') || 
+      file.file_url?.toLowerCase().includes('csv') ||
+      file.file_type?.includes('readme') || 
+      file.file_url?.toLowerCase().includes('readme') ||
+      file.file_type?.includes('metadata') ||
+      file.file_url?.toLowerCase().includes('metadata')
+    ) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Debug the filtered visualization files
+  useEffect(() => {
+    console.log('MLJARVisualizations - Filtered Files:', visualizationFiles);
+    console.log('MLJARVisualizations - File Types:', visualizationFiles.map(f => f.file_type));
+  }, [visualizationFiles]);
+
+  if (visualizationFiles.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No visualizations available
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No visualization charts available</p>
       </div>
     );
   }
 
-  // Find the predictions file if it exists
-  const predictionFile = files.find(file => 
-    file.file_type === 'predictions' || 
-    file.file_name?.includes('predictions') ||
-    file.file_url?.includes('predictions')
-  );
+  // Helper function to format file type into a readable title
+  const formatFileType = (fileType: string): string => {
+    return fileType
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
-  // Handle downloading predictions data
-  const handleDownloadPredictions = async () => {
-    if (predictionFile?.predictions) {
-      // If we already have predictions data in memory
-      downloadCSV(predictionFile.predictions, 'mljar_predictions.csv');
-    } else if (predictionFile?.file_url) {
-      try {
-        // Fetch the predictions data from the file URL
-        const response = await fetch(predictionFile.file_url);
-        const data = await response.json();
-        
-        // Check if data has predictions array
-        const predictionsData = data.predictions || data;
-        
-        if (Array.isArray(predictionsData)) {
-          downloadCSV(predictionsData, 'mljar_predictions.csv');
-        } else {
-          console.error('Predictions data is not an array:', predictionsData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch predictions data:', error);
+  // Improved chart title determination with more mapping options
+  const getChartTitle = (file: TrainingFile): string => {
+    // Check if this is a normalized confusion matrix
+    if (file.file_type === 'confusion_matrix' && 
+        file.file_url.toLowerCase().includes('normalized')) {
+      return "Normalized Confusion Matrix";
+    }
+    
+    // First check curve_subtype for specific curve types
+    if (file.curve_subtype) {
+      const subtypeMap: Record<string, string> = {
+        roc: "ROC Curve",
+        precision_recall: "Precision-Recall Curve",
+        calibration: "Calibration Curve", 
+        lift: "Lift Curve",
+        ks: "KS Statistic",
+        learning: "Learning Curve"
+      };
+      
+      return subtypeMap[file.curve_subtype] || formatFileType(file.curve_subtype);
+    }
+    
+    // Check for known file_type patterns - enhanced with all MLJAR file types
+    const fileTypeMap: Record<string, string> = {
+      confusion_matrix: "Confusion Matrix",
+      calibration_curve: "Calibration Curve",
+      calibration_curve_curve: "Calibration Curve", // Added for MLJAR
+      cumulative_gains: "Cumulative Gains Curve",
+      cumulative_gains_curve: "Cumulative Gains Curve", // Added for MLJAR
+      lift_curve: "Lift Curve",
+      learning_curve: "Learning Curve",
+      learning_curves: "Learning Curve", // Added for MLJAR filename pattern
+      ks_statistic: "KS Statistic",
+      feature_importance: "Feature Importance",
+      evaluation_curve: "Evaluation Curve" // Added for MLJAR
+    };
+    
+    // Try to match known file types
+    for (const [key, value] of Object.entries(fileTypeMap)) {
+      if (file.file_type?.toLowerCase().includes(key)) {
+        return value;
       }
     }
+    
+    // Debug unknown file types
+    console.log('MLJARVisualizations - Unknown file type:', file.file_type, file.file_url);
+    
+    // Default to formatted file_type
+    return formatFileType(file.file_type);
+  };
+
+  // Group visualizations by type for better organization
+  const groupedVisualizations = visualizationFiles.reduce((groups: Record<string, TrainingFile[]>, file) => {
+    const title = getChartTitle(file);
+    if (!groups[title]) {
+      groups[title] = [];
+    }
+    groups[title].push(file);
+    return groups;
+  }, {});
+
+  // Log the grouped visualizations for debugging
+  useEffect(() => {
+    console.log('MLJARVisualizations - Grouped Visualizations:', groupedVisualizations);
+  }, [groupedVisualizations]);
+
+  // Handle image download
+  const handleDownload = (url: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'chart.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6">
-      {predictionFile && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex justify-between items-center">
-              <span>Model Predictions</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownloadPredictions} 
-                className="ml-auto"
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Download Predictions CSV
-              </Button>
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {files.map((file, idx) => (
-          <Card key={idx}>
-            <CardHeader className="py-2">
-              <CardTitle className="text-sm font-medium">
-                {file.file_name || file.file_type?.replace(/_/g, ' ') || `Chart ${idx + 1}`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-hidden">
-              <img 
-                src={file.file_url} 
-                alt={file.file_name || file.file_type || 'MLJAR visualization'} 
-                className="w-full h-auto"
-              />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+    <div className="space-y-8">
+      {Object.entries(groupedVisualizations).map(([title, files], groupIndex) => (
+        <div key={`group-${groupIndex}`} className="space-y-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {files.map((file, index) => (
+              <Card key={`${groupIndex}-${index}`} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">
+                    {files.length > 1 ? `${title} ${index + 1}` : title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <div className="cursor-pointer hover:opacity-90 transition-opacity">
+                        <img 
+                          src={file.file_url} 
+                          alt={title} 
+                          className="w-full h-auto rounded-md object-contain"
+                          style={{ maxHeight: "240px" }}
+                        />
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <div className="p-2">
+                        <img 
+                          src={file.file_url} 
+                          alt={title} 
+                          className="w-full rounded-md"
+                        />
+                        <div className="mt-4 flex justify-between items-center">
+                          <h3 className="font-medium">{title}</h3>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDownload(
+                              file.file_url, 
+                              `${title.toLowerCase().replace(/\s+/g, '_')}.png`
+                            )}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDownload(
+                        file.file_url, 
+                        `${title.toLowerCase().replace(/\s+/g, '_')}.png`
+                      )}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
