@@ -29,7 +29,7 @@ const ExperimentDetailPage: React.FC = () => {
     }
   }, [error, toast]);
   
-  // Add debug logging to see what data is available, including visualization types
+  // Enhanced debug logging to track new file structure
   useEffect(() => {
     if (data) {
       console.log('ExperimentDetailPage: Experiment data loaded:', {
@@ -40,20 +40,20 @@ const ExperimentDetailPage: React.FC = () => {
         model: data.model_display_name,
         metrics: data.metrics ? Object.keys(data.metrics) : [],
         filesCount: data.files?.length,
-        // Log file types to debug visualization filtering
-        fileTypes: data.files?.map(f => f.file_type),
-        // Log model and CSV files specifically
-        modelFiles: data.files?.filter(f => 
-          f.file_type.includes('model') || 
-          f.file_url.includes('model')
-        ).map(f => f.file_type),
-        csvFiles: data.files?.filter(f => 
-          f.file_type.includes('csv') || 
-          f.file_url.includes('csv')
-        ).map(f => f.file_type),
-        // Log PDP and ICE visualization files separately
-        pdpFiles: data.files?.filter(f => f.file_type.includes('pdp_')).map(f => f.file_type),
-        iceFiles: data.files?.filter(f => f.file_type.includes('ice_')).map(f => f.file_type)
+        // Enhanced file type logging for new metadata structure
+        fileTypes: data.files?.map(f => ({
+          file_type: f.file_type,
+          curve_subtype: f.curve_subtype,
+          file_url: f.file_url?.split('/').pop() // Just filename for cleaner logging
+        })),
+        // Specific file type counts
+        confusionMatrixFiles: data.files?.filter(f => f.file_type === 'confusion_matrix').length || 0,
+        evaluationCurveFiles: data.files?.filter(f => f.file_type === 'evaluation_curve').length || 0,
+        learningCurveFiles: data.files?.filter(f => f.file_type === 'learning_curve').length || 0,
+        predictionsCsvFiles: data.files?.filter(f => f.file_type === 'predictions_csv').length || 0,
+        // ROC and PR curve specific detection
+        rocCurves: data.files?.filter(f => f.file_type === 'evaluation_curve' && f.curve_subtype === 'roc').length || 0,
+        prCurves: data.files?.filter(f => f.file_type === 'evaluation_curve' && f.curve_subtype === 'precision_recall').length || 0
       });
     }
   }, [data, experimentId]);

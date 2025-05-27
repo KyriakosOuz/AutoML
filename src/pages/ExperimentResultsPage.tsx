@@ -278,10 +278,26 @@ const ExperimentResultsPage: React.FC = () => {
     const metrics = training_results?.metrics || {};
     const modelFile = files.find(file => file.file_type === 'model');
     
-    // Updated: Filter out both 'model' and 'label_encoder' files from visualizations
-    const visualizationFiles = files.filter(file => 
-      file.file_type !== 'model' && !file.file_type.includes('label_encoder')
-    );
+    // Updated: Filter visualization files using new metadata structure
+    const visualizationFiles = files.filter(file => {
+      // Exclude model and label encoder files
+      if (file.file_type === 'model' || file.file_type.includes('label_encoder')) {
+        return false;
+      }
+      
+      // Include specific visualization types based on new metadata structure
+      const visualizationTypes = [
+        'confusion_matrix',
+        'evaluation_curve', 
+        'learning_curve',
+        'feature_importance'
+      ];
+      
+      return visualizationTypes.includes(file.file_type);
+    });
+
+    // Find predictions CSV file using new metadata structure
+    const predictionsCsvFile = files.find(file => file.file_type === 'predictions_csv');
 
     return (
       <div className="container py-10">
@@ -411,7 +427,11 @@ const ExperimentResultsPage: React.FC = () => {
                               </div>
                               <div className="mt-2">
                                 <p className="font-medium text-sm capitalize">
-                                  {file.file_type.replace('_', ' ')}
+                                  {/* Enhanced title generation using metadata */}
+                                  {file.file_type === 'evaluation_curve' && file.curve_subtype 
+                                    ? `${file.curve_subtype.replace('_', ' ')} curve`.replace(/\b\w/g, l => l.toUpperCase())
+                                    : file.file_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                  }
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {new Date(file.created_at).toLocaleString()}
@@ -453,6 +473,15 @@ const ExperimentResultsPage: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <p className="text-muted-foreground">No visualizations available</p>
+                    <div className="mt-4 text-sm text-muted-foreground">
+                      <p>Expected visualization types:</p>
+                      <ul className="list-disc list-inside mt-2">
+                        <li>Confusion Matrix not available</li>
+                        <li>ROC Curve not available</li>
+                        <li>Precision-Recall Curve not available</li>
+                        <li>Learning Curve not available</li>
+                      </ul>
+                    </div>
                   </div>
                 )}
               </TabsContent>
