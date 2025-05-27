@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { trainingApi } from '@/lib/api';
@@ -279,7 +280,15 @@ const ExperimentResultsPage: React.FC = () => {
     if (results.automl_engine === 'mljar') {
       return (
         <div className="container py-10">
-          <MLJARExperimentResults experiment={results} />
+          <MLJARExperimentResults 
+            experimentId={experimentId}
+            status={results.status === 'completed' ? 'completed' : 'success'}
+            experimentResults={results}
+            isLoading={false}
+            error={null}
+            onReset={() => navigate('/training')}
+            onRefresh={fetchResults}
+          />
         </div>
       );
     }
