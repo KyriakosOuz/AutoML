@@ -203,14 +203,8 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
                          experimentResults?.experiment_name || 
                          `Experiment ${experimentId?.substring(0, 8)}`;
   
-  // Check if this is a MLJAR experiment
+  // Check if this is a MLJAR experiment - but we'll use unified visualization now
   const isMljarExperiment = experimentResults?.automl_engine === 'mljar';
-  
-  // Find MLJAR visualization files
-  const mljarVisualFiles = isMljarExperiment && experimentResults.files ? 
-    experimentResults.files.filter(file => 
-      file.file_url.toLowerCase().endsWith('.png')
-    ) : [];
 
   return (
     <Card className="w-full">
@@ -228,9 +222,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
-            {isMljarExperiment && mljarVisualFiles.length > 0 && (
-              <TabsTrigger value="mljar-charts">Charts</TabsTrigger>
-            )}
             {hasInterpretabilityPlots && (
               <TabsTrigger value="interpretability">Interpretability</TabsTrigger>
             )}
@@ -256,11 +247,6 @@ const ExperimentResults: React.FC<ExperimentResultsProps> = ({
           <TabsContent value="visualizations">
             <VisualizationDisplay results={experimentResults} />
           </TabsContent>
-          {isMljarExperiment && mljarVisualFiles.length > 0 && (
-            <TabsContent value="mljar-charts">
-              <MLJARVisualizations files={mljarVisualFiles} />
-            </TabsContent>
-          )}
           {hasInterpretabilityPlots && (
             <TabsContent value="interpretability">
               <ModelInterpretabilityPlots 
